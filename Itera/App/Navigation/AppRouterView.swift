@@ -14,6 +14,12 @@ enum AppRouterView {
         switch route {
         case .home:
             ContentView()
+        case .routineConfiguration:
+            RoutineConfigurationView()
+        case .exercisePicker:
+            RoutineExercisePicker()
+        case .therapySession:
+            SessionDestination()
         }
     }
 }
@@ -41,6 +47,8 @@ private struct RouterPreview: View {
             .typography(.body)
             .withAppRouter()
             .environment(router)
+            .environment(AppDependencies())
+            .environment(PermissionManager())
     }
 }
 
@@ -56,3 +64,11 @@ private struct RouterPreview: View {
     RouterPreview(route: .home, sheet: true)
 }
 #endif
+
+private struct SessionDestination: View {
+    @Environment(AppDependencies.self) private var dependencies
+
+    var body: some View {
+        TherapySessionView(model: dependencies.makeSession())
+    }
+}
