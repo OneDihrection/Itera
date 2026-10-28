@@ -1,0 +1,76 @@
+# Author: dimaswisodewo
+name: Itera
+options:
+  createIntermediateGroups: true
+  developmentLanguage: en
+configs:
+  Debug: debug
+  Release: release
+targets:
+  Itera:
+    type: application
+    platform: iOS
+    deploymentTarget: "17.0"
+    sources:
+      - path: Itera
+        type: group
+        excludes:
+          - "**/*.md"
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: devplaceholder.SXTZ4HVL.Itera
+        DEVELOPMENT_TEAM: A2WQZ32XVK
+        CODE_SIGN_STYLE: Automatic
+        TARGETED_DEVICE_FAMILY: "2"
+        SUPPORTS_MACCATALYST: NO
+        SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD: NO
+        ASSETCATALOG_COMPILER_APPICON_NAME: ""
+        SWIFT_VERSION: "5.0"
+        CURRENT_PROJECT_VERSION: 1
+        MARKETING_VERSION: "1.0"
+        SWIFT_EMIT_LOC_STRINGS: YES
+        SWIFT_GENERATE_LOCALIZATION_SYMBOLS: NO
+        LOCALIZATION_PREFERS_STRING_CATALOGS: YES
+    info:
+      path: Generated/Info.plist
+      properties:
+        UIAppFonts:
+          - Poppins-Black.ttf
+          - Poppins-BlackItalic.ttf
+          - Poppins-Bold.ttf
+          - Poppins-BoldItalic.ttf
+          - Poppins-ExtraBold.ttf
+          - Poppins-ExtraBoldItalic.ttf
+          - Poppins-ExtraLight.ttf
+          - Poppins-ExtraLightItalic.ttf
+          - Poppins-Italic.ttf
+          - Poppins-Light.ttf
+          - Poppins-LightItalic.ttf
+          - Poppins-Medium.ttf
+          - Poppins-MediumItalic.ttf
+          - Poppins-Regular.ttf
+          - Poppins-SemiBold.ttf
+          - Poppins-SemiBoldItalic.ttf
+          - Poppins-Thin.ttf
+          - Poppins-ThinItalic.ttf
+        CFBundleDisplayName: Itera
+        CFBundleShortVersionString: "$(MARKETING_VERSION)"
+        CFBundleVersion: "$(CURRENT_PROJECT_VERSION)"
+        UILaunchScreen: {}
+        UIApplicationSceneManifest:
+          UIApplicationSupportsMultipleScenes: false
+        NSCameraUsageDescription: Camera access enables on-device exercise tracking.
+        NSMicrophoneUsageDescription: Microphone access enables spoken exercise controls.
+        NSSpeechRecognitionUsageDescription: Speech recognition enables pause, resume, and stop commands.
+        UISupportedInterfaceOrientations~ipad:
+          - UIInterfaceOrientationLandscapeLeft
+          - UIInterfaceOrientationLandscapeRight
+schemes:
+  Itera:
+    build:
+      targets:
+        Itera: all
+    run:
+      config: Debug
+    archive:
+      config: Release

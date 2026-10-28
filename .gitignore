@@ -1,0 +1,14 @@
+# Generated Xcode projects and files
+*.xcodeproj/
+Generated/
+
+# Build output
+DerivedData/
+build/
+
+# Local Xcode state
+xcuserdata/
+*.xcuserstate
+
+# macOS metadata
+.DS_Store

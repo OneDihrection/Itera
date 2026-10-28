@@ -1,0 +1,23 @@
+{
+  "sourceLanguage": "en",
+  "strings": {
+    "home.greeting": {
+      "comment": "Greeting on the initial home screen.",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hello, world!"
+          }
+        },
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Halo, dunia!"
+          }
+        }
+      }
+    }
+  },
+  "version": "1.0"
+}

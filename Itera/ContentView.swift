@@ -3,7 +3,8 @@ import Playgrounds
 
 struct ContentView: View {
     var body: some View {
-        Text("Hello, world!")
+        Text("home.greeting")
+            .typography(.body)
             .padding()
     }
 }
