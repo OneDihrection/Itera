@@ -9,18 +9,41 @@ import SwiftUI
 
 private struct RouterViewModifier: ViewModifier {
     @Environment(NavigationRouter.self) private var router
+    @Environment(\.buttonFeedback) private var buttonFeedback
 
     func body(content: Content) -> some View {
         @Bindable var router = router
 
-        NavigationStack(path: $router.path) {
-            content
-                .navigationDestination(for: AppRoute.self) {
-                    AppRouterView.destination($0)
+        TabView(selection: Binding(
+            get: { router.selectedTab },
+            set: { tab in
+                if router.selectedTab != tab {
+                    buttonFeedback()
                 }
-                .modifier(ModalStackModifier(index: 0, isCover: false))
-                .modifier(ModalStackModifier(index: 0, isCover: true))
+                router.selectedTab = tab
+            }
+        )) {
+            NavigationStack(path: $router.homePath) {
+                content
+                    .navigationDestination(for: AppRoute.self) {
+                        AppRouterView.destination($0)
+                    }
+            }
+            .tabItem { Label("tab.home", systemImage: "house") }
+            .tag(AppTab.home)
+
+            NavigationStack(path: $router.reportsPath) {
+                FingerReportsView()
+                    .navigationDestination(for: AppRoute.self) {
+                        AppRouterView.destination($0)
+                    }
+            }
+            .tabItem { Label("tab.reports", systemImage: "chart.bar.xaxis") }
+            .tag(AppTab.reports)
         }
+        .tint(TherapyPalette.green)
+        .modifier(ModalStackModifier(index: 0, isCover: false))
+        .modifier(ModalStackModifier(index: 0, isCover: true))
     }
 }
 
@@ -65,9 +88,17 @@ private struct ModalStackModifier: ViewModifier {
     }
 
     private func modalContent(_ item: RoutePresentation) -> some View {
-        AppRouterView.destination(item.route)
-            .environment(router)
-            .modifier(ModalStackModifier(index: index + 1, isCover: isCover))
+        Group {
+            if isCover {
+                AppRouterView.destination(item.route)
+            } else {
+                NavigationStack {
+                    AppRouterView.destination(item.route)
+                }
+            }
+        }
+        .environment(router)
+        .modifier(ModalStackModifier(index: index + 1, isCover: isCover))
     }
 }
 

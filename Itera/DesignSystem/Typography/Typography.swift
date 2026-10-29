@@ -7,9 +7,9 @@
 
 import SwiftUI
 
-// MARK: - Poppins Font Weights
+// MARK: - PlusJakartaSans Font Weights
 
-/// Available font weights for the Poppins font family.
+/// Available font weights for the PlusJakartaSans font family.
 public enum AppFontWeight: String, CaseIterable, Sendable {
     case thin = "Thin"
     case extraLight = "ExtraLight"
@@ -23,15 +23,11 @@ public enum AppFontWeight: String, CaseIterable, Sendable {
 
     /// Resolves the PostScript font name for this weight, accounting for italics.
     public nonisolated func postScriptName(isItalic: Bool = false) -> String {
-        switch (self, isItalic) {
-        case (.regular, true):
-            return "Poppins-Italic"
-        case (.regular, false):
-            return "Poppins-Regular"
-        case (let weight, true):
-            return "Poppins-\(weight.rawValue)Italic"
-        case (let weight, false):
-            return "Poppins-\(weight.rawValue)"
+        switch self {
+        case .bold, .extraBold, .black, .semiBold:
+            return "PlusJakartaSans-Bold"
+        default:
+            return "PlusJakartaSans-Regular"
         }
     }
 
@@ -82,25 +78,25 @@ public enum AppTypography: Equatable, Sendable {
     public var defaultSize: CGFloat {
         switch self {
         case .largeTitle:
-            return 34
+            return 48
         case .title:
-            return 28
+            return 36
         case .title2:
-            return 22
+            return 30
         case .title3:
-            return 20
+            return 26
         case .headline, .body:
-            return 17
+            return 24
         case .callout:
-            return 16
+            return 22
         case .subheadline:
-            return 15
+            return 22
         case .footnote:
-            return 13
+            return 20
         case .caption:
-            return 12
+            return 18
         case .caption2:
-            return 11
+            return 18
         case .custom(let size, _, _, _):
             return size
         }
@@ -175,7 +171,18 @@ public enum AppTypography: Equatable, Sendable {
 // MARK: - Font Helpers
 
 enum AppFont {
-    /// Returns a Poppins font configured with weight, size, optional italic style, and Dynamic Type scaling.
+    static func applyBodyStyle(to label: UILabel) {
+        label.font = uiFont(size: 24)
+        label.adjustsFontForContentSizeCategory = true
+    }
+
+    private static func uiFont(size: CGFloat) -> UIFont {
+        UIFontMetrics(forTextStyle: .body).scaledFont(
+            for: UIFont(name: "PlusJakartaSans-Regular", size: size) ?? .systemFont(ofSize: size)
+        )
+    }
+
+    /// Returns a PlusJakartaSans font configured with weight, size, optional italic style, and Dynamic Type scaling.
     static func font(
         _ weight: AppFontWeight = .regular,
         size: CGFloat,
@@ -190,7 +197,7 @@ enum AppFont {
         }
     }
 
-    /// Returns a Poppins font corresponding to an `AppTypography` semantic style.
+    /// Returns a PlusJakartaSans font corresponding to an `AppTypography` semantic style.
     static func font(
         _ style: AppTypography,
         weight: AppFontWeight? = nil,
@@ -202,7 +209,7 @@ enum AppFont {
 
 // MARK: - Typography View Modifier
 
-/// A ViewModifier that applies the Poppins typography system with accessibility scaling.
+/// A ViewModifier that applies the PlusJakartaSans typography system with accessibility scaling.
 public struct TypographyModifier: ViewModifier {
     public let font: Font
 
@@ -235,7 +242,7 @@ public struct TypographyModifier: ViewModifier {
 // MARK: - View Extension
 
 public extension View {
-    /// Applies a semantic typography style using the Poppins font family.
+    /// Applies a semantic typography style using the PlusJakartaSans font family.
     /// - Parameters:
     ///   - style: The semantic typography style (e.g. `.headline`, `.body`, `.title`).
     ///   - weight: Optional weight override (e.g. `.bold`, `.medium`). If nil, uses style default.
@@ -248,10 +255,10 @@ public extension View {
         modifier(TypographyModifier(style, weight: weight, isItalic: isItalic))
     }
 
-    /// Applies custom Poppins typography with explicit size and weight.
+    /// Applies custom PlusJakartaSans typography with explicit size and weight.
     /// - Parameters:
     ///   - size: Point size of the font.
-    ///   - weight: Poppins weight. Defaults to `.regular`.
+    ///   - weight: PlusJakartaSans weight. Defaults to `.regular`.
     ///   - isItalic: Whether to use the italic variation. Defaults to `false`.
     ///   - relativeTo: Font text style for Dynamic Type scaling. Defaults to `.body`.
     func typography(

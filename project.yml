@@ -35,6 +35,8 @@ targets:
       path: Generated/Info.plist
       properties:
         UIAppFonts:
+          - PlusJakartaSans-Regular.ttf
+          - PlusJakartaSans-Bold.ttf
           - Poppins-Black.ttf
           - Poppins-BlackItalic.ttf
           - Poppins-Bold.ttf

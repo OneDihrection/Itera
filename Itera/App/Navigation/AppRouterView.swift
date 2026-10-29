@@ -13,7 +13,27 @@ enum AppRouterView {
     static func destination(_ route: AppRoute) -> some View {
         switch route {
         case .home:
-            ContentView()
+            FingerHomeView()
+        case .plan:
+            FingerPlanView()
+        case .reports:
+            FingerReportsView()
+        case .achievements:
+            PracticeAchievementsView()
+        case .achievementCelebration:
+            AchievementCelebrationView()
+        case .achievement(let id):
+            PracticeAchievementDetailView(id: id)
+        case .report(let id):
+            FingerReportDetailView(id: id)
+        case .fingerSession:
+            FingerSessionView()
+        case .reflection:
+            FingerReflectionView()
+        case .routineSettings:
+            FingerRoutineSettingsView()
+        case .exercisePreview(let exercise):
+            FingerExercisePreviewView(exercise: exercise)
         }
     }
 }
@@ -21,6 +41,7 @@ enum AppRouterView {
 #if DEBUG
 private struct RouterPreview: View {
     @State private var router: NavigationRouter
+    @State private var dependencies = AppDependencies(permissions: PermissionManager())
 
     init(route: AppRoute? = nil, sheet: Bool = false) {
         let router = NavigationRouter()
@@ -41,6 +62,8 @@ private struct RouterPreview: View {
             .typography(.body)
             .withAppRouter()
             .environment(router)
+            .environment(dependencies)
+            .environment(dependencies.permissions)
     }
 }
 
