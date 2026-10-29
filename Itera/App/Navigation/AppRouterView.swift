@@ -13,6 +13,8 @@ enum AppRouterView {
     static func destination(_ route: AppRoute) -> some View {
         switch route {
         case .home:
+            HomeView()
+        case .fingerHome:
             FingerHomeView()
         case .therapyOverview:
             TherapyOverview()

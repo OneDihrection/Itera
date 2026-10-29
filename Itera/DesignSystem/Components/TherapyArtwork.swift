@@ -12,7 +12,7 @@ struct TherapyArtwork: View {
     var mirrored = false
 
     var body: some View {
-        Image(name)
+        (name.hasPrefix("symbol:") ? Image(systemName: String(name.dropFirst(7))) : Image(name))
             .resizable()
             .scaledToFit()
             .scaleEffect(x: mirrored ? -1 : 1, y: 1)

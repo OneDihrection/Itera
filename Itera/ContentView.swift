@@ -8,5 +8,5 @@
 import SwiftUI
 
 struct ContentView: View {
-    var body: some View { FingerHomeView() }
+    var body: some View { HomeView() }
 }

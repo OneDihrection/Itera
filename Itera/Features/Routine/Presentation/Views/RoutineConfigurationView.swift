@@ -29,7 +29,7 @@ private struct RoutineEditor: View {
     var body: some View {
         List {
             Section {
-                Text("routine.heading").typography(.title2)
+                Text("routine.heading").typography(.largeTitle)
                 Text("routine.detail")
                 Text("routine.phases")
                 Text("home.positioning")
@@ -37,6 +37,7 @@ private struct RoutineEditor: View {
             Section("routine.exercises") {
                 ForEach($model.configuration.exercises) { $exercise in
                     RoutineExerciseRow(exercise: $exercise)
+                        .listRowBackground(TherapyPalette.surface)
                 }
                 .onMove { model.configuration.exercises.move(fromOffsets: $0, toOffset: $1) }
                 .onDelete { model.configuration.exercises.remove(atOffsets: $0) }
@@ -84,7 +85,7 @@ private struct RoutineEditor: View {
                     Text(verbatim: failure).foregroundStyle(.red)
                     Button("home.retry") { Task { await model.load() } }
                 }
-                Button("therapy.session.start") {
+                TherapyButton(title: "therapy.session.start", symbol: "play.fill") {
                     Task {
                         guard await model.save(), await readiness.performAction() else { return }
                         dependencies.selectedRoutine = model.configuration.snapshot
@@ -95,6 +96,9 @@ private struct RoutineEditor: View {
                 Text("routine.comfort").typography(.footnote)
             }
         }
+        .scrollContentBackground(.hidden)
+        .background(TherapyPalette.cream)
+        .listStyle(.insetGrouped)
         .navigationTitle("therapy.session.title")
         .toolbar { EditButton() }
         .task {

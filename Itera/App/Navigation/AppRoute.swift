@@ -9,6 +9,7 @@ import Foundation
 
 enum AppRoute: Hashable {
     case home
+    case fingerHome
     case routineConfiguration
     case exercisePicker
     case therapySession
