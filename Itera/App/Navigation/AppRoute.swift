@@ -9,6 +9,9 @@ import Foundation
 
 enum AppRoute: Hashable {
     case home
+    case routineConfiguration
+    case exercisePicker
+    case therapySession
 }
 
 struct RoutePresentation: Identifiable {

@@ -12,7 +12,7 @@ Include arm raises, elbow bends, directional reaching, and cup practice. Trackin
 
 Support one patient per installation, without accounts, patient selection, or cloud synchronization. Save routines and completion history locally. Do not save video, microphone recordings, landmarks, or detailed measurement streams. Sessions work without internet after initial device voice setup; bundle all exercise and detection resources.
 
-Support Indonesian and English using String Catalogs. Follow the app's selected language for text, narration, and recognition; freeze that selection during an active session. Use system speech for instructions and counts. Check voice resources before starting; readable guidance remains available if synthesis fails. On-device speech recognition is mandatory for voice mode. If unavailable, require caregiver acknowledgment of touch-only operation.
+Support Indonesian and English using String Catalogs. Follow the app's selected language for text and narration; freeze that selection during an active session. Voice command recognition and command phrases remain English (en-US) in both app languages. Use system speech for instructions and counts. Check voice resources before starting; readable guidance remains available if synthesis fails. Camera, microphone, and speech-recognition authorization and available English on-device command recognition are mandatory before therapy. There is no touch-only bypass. Setup returns to Home; an explicit Start Therapy action validates listening startup before navigation. Session entry independently validates readiness before capture, checkpoints, or progression. Home never continuously listens while idle.
 
 ## 2. Domain glossary
 
@@ -135,11 +135,11 @@ Routine defaults: movement goals five per side, left first; reach/cup one round;
 
 ## 7. Audio and bilingual behavior
 
-One audio service owns synthesis, microphone capture, recognition, interruption handling, and audio-session configuration. Use `SFSpeechRecognizer` for the iPadOS 17 baseline, checking locale availability and `supportsOnDeviceRecognition`, with `requiresOnDeviceRecognition = true`. Never silently send audio to a server. Recognition availability can change mid-session; pause and request caregiver acknowledgment if hands-free control becomes unavailable.
+One audio service owns synthesis, microphone capture, recognition, interruption handling, and audio-session configuration. Use `SFSpeechRecognizer` for the iPadOS 17 baseline, checking locale availability and `supportsOnDeviceRecognition`, with `requiresOnDeviceRecognition = true`. Never silently send audio to a server. Recognition availability can change mid-session; pause and block resume if command recognition becomes unavailable. Recovery must validate permissions and listening startup, then wait for explicit Resume.
 
-Pause and stop must interrupt narration and counts. Unlike the prototype, do not tear recognition down for every spoken cue. Validate simultaneous playback/listening, echo handling, recognition restart boundaries, and self-trigger rejection on the physical baseline. A startup capability check alone does not prove this requirement. Failure to demonstrate reliable interruption means hands-free mode is not accepted; show touch fallback rather than advertise continuous listening.
+Pause and stop must interrupt narration and counts. Unlike the prototype, do not tear recognition down for every spoken cue. Validate simultaneous playback/listening, echo handling, recognition restart boundaries, and self-trigger rejection on the physical baseline. A startup capability check alone does not prove this requirement. Failure to demonstrate reliable interruption means hands-free mode is not accepted; block therapy rather than advertise continuous listening. Touch Pause and Stop remain available throughout.
 
-Use a deliberately small localized command vocabulary. Process each recognition utterance once, regardless of revised partial transcripts. Scope callbacks by recognition generation. Stop/pause have priority over queued guidance; resume only applies in a resumable paused state. Display listening/unavailable status. Avoid command phrases inside app narration. Serialize utterances, cancel obsolete cues, and never let an old completion advance a new instruction.
+Use a deliberately small English command vocabulary, resolved from the English String Catalog entries independently of the app language. Process each recognition utterance once, regardless of revised partial transcripts. Scope callbacks by recognition generation. Stop/pause have priority over queued guidance; resume only applies in a resumable paused state. Display listening/unavailable status. Avoid command phrases inside app narration. Serialize utterances, cancel obsolete cues, and never let an old completion advance a new instruction.
 
 String Catalogs contain UI text, spoken instructions, pluralization, accessibility descriptions, and command phrases. Persist stable identifiers and numeric values, never localized display strings. Format history in the current language. No hard-coded Indonesian domain enum values.
 
@@ -167,7 +167,7 @@ Keep assets self-contained. USD conventions: default prim Exercise, Y-up, meters
 
 Select the first discoverable animation recursively. Use its imported duration, not an assumed six seconds: observed prototype durations were approximately 5.333 seconds for raise and 5.067 for curl. Start pose uses paused time zero; peak uses paused imported midpoint and requires visual verification. Loop demonstrations and active examples; Reduce Motion shows a paused midpoint. Preserve materials and frame with a parent container rather than overwriting authored transforms.
 
-Keep examples hidden during instruction cards, preparation, countdown, rest, and pause; static start/peak capture examples remain visible when holds reset. Missing assets show text fallback, never block scoring, and time out loading after ten seconds. Ignore obsolete loads. Full demonstration cards advance eight seconds after narration completes/fails; ordinary instruction cards retain three seconds. Verify this timing with both languages. No new generated assets are required.
+Keep examples hidden during instruction cards, preparation, countdown, rest, and pause; static start/peak capture examples remain visible when holds reset. Missing assets show text fallback, never block scoring, and time out loading after ten seconds. Ignore obsolete loads. Card delays start when narration completes or fails: eight seconds for full demonstrations and three seconds for ordinary instructions. Identified reading completion is an independent advancement gate, so an elapsed card delay cannot advance until reading also completes. Presentation reports measured reading status to the session engine, which alone owns advancement. VoiceOver requires explicit reading acknowledgment. Replayed or interrupted guidance receives a new identity; obsolete reading and narration callbacks cannot advance it. Movement capture begins only after the post-card five-second preparation stage. The directional-reaching opening failure watchdog remains referenced to guidance start (12 seconds), while the cup opening failure path retains its 20-second guidance-start reference and 12-second minimum recovery window. Verify this timing with both languages. No new generated assets are required.
 
 ## 10. Architectural decisions
 
@@ -189,7 +189,7 @@ Accepted, 2026-10-28. Preserve completed results but do not resume saved calibra
 
 ### ADR-005 — Offline voice with interruptible guidance
 
-Accepted, 2026-10-28. Require local recognition and voice interruption during playback, with explicit caregiver touch fallback when unsupported. Listening only between cues is simpler but leaves periods when the patient cannot issue a voice stop. Physical verification is an acceptance gate, not an assumed framework guarantee.
+Accepted, 2026-10-28. Require local recognition and voice interruption during playback, with mandatory readiness and no touch-only fallback when unsupported. Listening only between cues is simpler but leaves periods when the patient cannot issue a voice stop. Physical verification is an acceptance gate, not an assumed framework guarantee.
 
 ## 11. Implementation order
 
@@ -197,7 +197,7 @@ Accepted, 2026-10-28. Require local recognition and voice interruption during pl
 2. Implement routine configuration, storage, and history with snapshot ownership and interrupted-session recovery.
 3. Implement session lifecycle and movement activity rules; connect camera observations through the tracking boundary.
 4. Add directional reach and cup logic, bundled model, and consistent preview/acceptance geometry.
-5. Add bilingual catalogs, system narration, interruptible voice controls, and capability fallback.
+5. Add bilingual catalogs, system narration, interruptible voice controls, and mandatory capability gating.
 6. Integrate animation conventions, lifecycle cleanup, error states, and physical-device acceptance.
 
 ## 12. Verification and acceptance
@@ -473,4 +473,10 @@ Verification: physical-device authorization, localization, Settings recovery, an
 
 ## Localization implementation
 
-Resources/Localization/Localizable.xcstrings owns app text; InfoPlist.xcstrings owns permission descriptions. Use searchable namespaced string literal keys such as `home.greeting` with native Text and String(localized:) APIs. Reusable SwiftUI controls accept LocalizedStringKey. Do not generate Swift symbols or maintain wrapper APIs or key enums. English is the development/fallback language and Indonesian is supported. Language selection follows iPad Settings, without custom bundle overrides or an in-app selector. Future audio services resolve the app language and freeze it during sessions. See the localization README for authoring and verification steps. Physical-device language and permission verification remains pending.
+Resources/Localization/Localizable.xcstrings owns app text; InfoPlist.xcstrings owns permission descriptions. Use searchable namespaced string literal keys such as `home.greeting` with native Text and String(localized:) APIs. Reusable SwiftUI controls accept LocalizedStringKey. Do not generate Swift symbols or maintain wrapper APIs or key enums. English is the development/fallback language and Indonesian is supported. Language selection uses a persistent English / Bahasa Indonesia selector on Home, applying immediately to app text, narration, and counts without global bundle overrides. Recognition and voice commands remain English. Sessions retain their selected language. Future audio services resolve the app language and freeze it during sessions. See the localization README for authoring and verification steps. Physical-device language and permission verification remains pending.
+
+## Consolidated session guidance
+
+Each exercise and side presents one concise opening instruction card. Movement activities then show a separate demonstration and five-second preparation. Target capture retains five-second preparation with live cues; return-to-start and practice use live cues without additional instruction cards. Positioning guidance appears on the first opening card only. Identified narration, measured reading, VoiceOver acknowledgment, and recovery gates remain required. This replaces the reference multi-card boundaries.
+
+Patient guidance uses a short immediate action with one optional smaller supporting sentence. English and Indonesian retain relevant side, comfort, positioning, and cup safety details. The 1–2 second glance target applies to the main cue, not advancement timing. Narration and measured reading include both lines.

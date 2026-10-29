@@ -3,14 +3,14 @@ import Playgrounds
 
 struct ContentView: View {
     var body: some View {
-        Text("home.greeting")
-            .typography(.body)
-            .padding()
+        TherapyOverview()
     }
 }
 
 #Preview {
     ContentView()
+        .environment(AppDependencies())
+        .environment(NavigationRouter())
 }
 
 #Playground {

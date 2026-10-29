@@ -1,57 +1,81 @@
 {
-  "sourceLanguage": "en",
-  "strings": {
-    "NSCameraUsageDescription": {
-      "comment": "System permission prompt explaining why Itera needs access.",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Camera access enables on-device exercise tracking."
-          }
-        },
-        "id": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Akses kamera memungkinkan pelacakan latihan di perangkat."
+  "sourceLanguage" : "en",
+  "strings" : {
+    "CFBundleDisplayName" : {
+      "comment" : "Bundle display name",
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Itera"
           }
         }
       }
     },
-    "NSMicrophoneUsageDescription": {
-      "comment": "System permission prompt explaining why Itera needs access.",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Microphone access enables spoken exercise controls."
-          }
-        },
-        "id": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Akses mikrofon memungkinkan kontrol latihan dengan suara."
+    "CFBundleName" : {
+      "comment" : "Bundle name",
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Itera"
           }
         }
       }
     },
-    "NSSpeechRecognitionUsageDescription": {
-      "comment": "System permission prompt explaining why Itera needs access.",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Speech recognition enables pause, resume, and stop commands."
+    "NSCameraUsageDescription" : {
+      "comment" : "System permission prompt explaining why Itera needs access.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Camera access enables on-device exercise tracking."
           }
         },
-        "id": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Pengenalan ucapan memungkinkan perintah jeda, lanjutkan, dan berhenti."
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Akses kamera memungkinkan pelacakan latihan di perangkat."
+          }
+        }
+      }
+    },
+    "NSMicrophoneUsageDescription" : {
+      "comment" : "System permission prompt explaining why Itera needs access.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Microphone access enables spoken exercise controls."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Akses mikrofon memungkinkan kontrol latihan dengan suara."
+          }
+        }
+      }
+    },
+    "NSSpeechRecognitionUsageDescription" : {
+      "comment" : "System permission prompt explaining why Itera needs access.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Speech recognition enables pause, resume, and stop commands."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pengenalan ucapan memungkinkan perintah jeda, lanjutkan, dan berhenti."
           }
         }
       }
     }
   },
-  "version": "1.0"
+  "version" : "1.0"
 }

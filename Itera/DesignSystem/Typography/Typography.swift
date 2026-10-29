@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import UIKit
 
 // MARK: - Poppins Font Weights
 
@@ -66,6 +67,17 @@ public enum AppFontWeight: String, CaseIterable, Sendable {
 
 /// Semantic typography styles scaled for Dynamic Type accessibility.
 public enum AppTypography: Equatable, Sendable {
+    public static let homeHeading = Self.custom(size: 64, weight: .bold, relativeTo: .largeTitle)
+    public static let homeLabel = Self.custom(size: 32, weight: .semiBold, relativeTo: .title)
+
+    public static let therapyInstruction = Self.custom(size: 96, weight: .bold, relativeTo: .largeTitle)
+    public static let therapyDemonstration = Self.custom(size: 64, weight: .bold, relativeTo: .largeTitle)
+    public static let therapyCue = Self.custom(size: 44, weight: .bold, relativeTo: .largeTitle)
+    public static let therapyPhase = Self.custom(size: 36, weight: .bold, relativeTo: .largeTitle)
+    public static let therapyControl = Self.custom(size: 32, weight: .bold, relativeTo: .largeTitle)
+    public static let therapyPause = Self.custom(size: 80, weight: .bold, relativeTo: .largeTitle)
+    public static let therapyCountdown = Self.custom(size: 288, weight: .bold, relativeTo: .largeTitle)
+
     case largeTitle
     case title
     case title2
@@ -175,6 +187,11 @@ public enum AppTypography: Equatable, Sendable {
 // MARK: - Font Helpers
 
 enum AppFont {
+    static func uiFont(size: CGFloat) -> UIFont {
+        UIFont(name: AppFontWeight.bold.postScriptName(), size: size)
+            ?? UIFont.systemFont(ofSize: size, weight: .bold)
+    }
+
     /// Returns a Poppins font configured with weight, size, optional italic style, and Dynamic Type scaling.
     static func font(
         _ weight: AppFontWeight = .regular,
@@ -261,5 +278,14 @@ public extension View {
         relativeTo: Font.TextStyle = .body
     ) -> some View {
         modifier(TypographyModifier(size: size, weight: weight, isItalic: isItalic, relativeTo: relativeTo))
+    }
+}
+
+// MARK: - Canvas labels
+
+extension AppTypography {
+    /// Canvas resolves Text rather than a modified View; font construction stays here.
+    static func overlayText(_ key: LocalizedStringKey, size: CGFloat, weight: AppFontWeight) -> Text {
+        Text(key).font(AppFont.font(weight, size: size)).foregroundColor(.white)
     }
 }
