@@ -8,7 +8,7 @@ Screens may use native SwiftUI layout directly; navigation must use the shared r
 
 Design system components accept values, bindings, content, and actions as needed. They must not depend on feature view models, repositories, or exercise logic.
 
-The folder starts with documentation only. Add Swift components when a real UI need arises; the existing recursive source entry in project.yml includes them automatically.
+Typography owns the bundled Plus Jakarta Sans faces and semantic scaling. Components/TherapyControls.swift owns semantic light/dark surfaces, pastel illustration colors, large action buttons, cards, status labels, metrics, value controls, and error presentation. Components/TherapyArtwork.swift owns illustration panels and accessible image rows; it accepts asset names, values, and actions without exercise logic. Native tabs and navigation stacks remain owned by App/Navigation, and settings use native Form, Picker, Toggle, and DisclosureGroup layouts. Extend these controls when compatible instead of adding feature-local copies. The existing recursive source entry in project.yml includes new components automatically.
 
 ## Navigation, typography, and code conventions
 
@@ -21,6 +21,12 @@ Keep body focused on composition. Prefer named private computed view properties,
 Every newly authored file must have a format-appropriate header with its filename, actual author, and creation date. Use an explicitly supplied author first, otherwise effective git config user.name; ask if neither exists. Never hard-code a team member or use the AI's name. Preserve existing creation authorship. Swift uses Xcode-style // Created by headers; YAML uses comments and Markdown uses HTML comments. Preserve copied binaries and third-party licenses unchanged and document their source separately; never corrupt formats without comment support.
 
 Prefer generous spacing and readable multiline declarations, calls, expressions, and conditions. Use /// Markdown API documentation when helpful and // MARK: - sections in longer files. Comment non-obvious purpose, constraints, and lifecycle behavior rather than restating syntax.
+
+Components/TherapyFeedback.swift owns value-driven progress rings, a timer-only countdown with accessible pause/end actions, bounded success confetti, and large feeling choices. Primary green, secondary sage, and tertiary peach roles are defined in TherapyPalette; mediaBackground matches the fixed rendered hand studio. No component owns session timing, tracking, or persistence.
+
+Components/TherapyProgressArtwork.swift supplies value-driven medallions and native Charts visuals without history/achievement logic. Components/TherapyButtonFeedback.swift supplies a primitive button style whose activation calls an injected environment feedback action, then the original action. The composition root injects the sole audio owner's click method. Controls retain native disabled/activation behavior.
+
+TherapyIconButton in Components/TherapyControls.swift provides a large icon action with an explicit localized accessibility label. Components/TherapyRestBackdrop.swift owns only decorative garden motion, taking a paused value and respecting Reduce Motion and scene activity; it never changes rest duration or session state.
 
 ## Session guidance
 

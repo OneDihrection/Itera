@@ -1,18 +1,12 @@
+//
+//  ContentView.swift
+//  Itera
+//
+//  Created by Amelia Putri Aftiana on 29/10/2026.
+//
+
 import SwiftUI
-import Playgrounds
 
 struct ContentView: View {
-    var body: some View {
-        TherapyOverview()
-    }
-}
-
-#Preview {
-    ContentView()
-        .environment(AppDependencies())
-        .environment(NavigationRouter())
-}
-
-#Playground {
-    _ = 1 + 2
+    var body: some View { FingerHomeView() }
 }

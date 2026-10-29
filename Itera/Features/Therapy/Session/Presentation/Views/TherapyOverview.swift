@@ -76,6 +76,7 @@ private struct HomeContent: View {
             }
             .padding(32)
         }
+        .environment(\.locale, Locale(identifier: language))
         .task { model.refresh() }
         .onChange(of: language) { _, _ in model.refresh() }
         .onChange(of: scenePhase) { _, phase in
