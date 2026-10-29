@@ -84,10 +84,6 @@ struct FingerHomeView: View {
             }
             .clipShape(RoundedRectangle(cornerRadius: 30))
 
-            TherapyButton(title: "home.armPractice", symbol: "figure.strengthtraining.traditional", secondary: true) {
-                router.push(.therapyOverview)
-            }
-
             if dependencies.home.checkpoint != nil {
                 TherapyButton(title: "home.continueShort", symbol: "arrow.clockwise", secondary: true) {
                     dependencies.prepareSession(continuing: true)

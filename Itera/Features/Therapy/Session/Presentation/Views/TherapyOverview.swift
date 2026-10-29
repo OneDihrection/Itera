@@ -31,13 +31,13 @@ private struct HomeContent: View {
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 32) {
+            VStack(alignment: .leading, spacing: 28) {
                 Text("therapy.overview.title")
-                    .typography(.homeHeading)
+                    .typography(.largeTitle)
                     .accessibilityAddTraits(.isHeader)
                 LanguageSelector(language: $language)
                     .disabled(model.busy)
-                Text("home.positioning").typography(.homeLabel)
+                Text("home.positioning").typography(.body)
                 exercises
                 Label(
                     LocalizedStringKey(model.message),
@@ -74,7 +74,8 @@ private struct HomeContent: View {
                 .disabled(model.busy)
                 if model.busy { ProgressView().accessibilityLabel(Text("home.working")) }
             }
-            .padding(32)
+            .padding(28)
+        .background(TherapyPalette.cream)
         }
         .environment(\.locale, Locale(identifier: language))
         .task { model.refresh() }
@@ -85,15 +86,39 @@ private struct HomeContent: View {
     }
 
     private var exercises: some View {
-        let layout = dynamicTypeSize.isAccessibilitySize
-            ? AnyLayout(VStackLayout(spacing: 24))
-            : AnyLayout(HStackLayout(alignment: .top, spacing: 24))
-        return layout {
-            ExerciseIllustration(title: "therapy.armRaise", symbol: "figure.arms.open")
-            ExerciseIllustration(title: "therapy.elbowBend", symbol: "figure.strengthtraining.traditional")
-            ExerciseIllustration(title: "therapy.directionalReach", symbol: "hand.point.up.left")
+        VStack(spacing: 12) {
+            TherapyArtworkPanel(
+                title: "home.armPractice",
+                subtitle: "",
+                artwork: "symbol:figure.arms.open"
+            )
+            .clipShape(RoundedRectangle(cornerRadius: 30))
+            TherapyButton(title: "home.viewShort", symbol: "slider.horizontal.3") {
+                router.push(.routineConfiguration)
+            }
+            ForEach(Array(TherapyKind.allCases.enumerated()), id: \.element) { index, kind in
+                TherapyExerciseRow(
+                    title: LocalizedStringKey("session." + kind.rawValue),
+                    subtitle: "",
+                    artwork: "symbol:" + symbol(for: kind),
+                    color: TherapyPalette.illustrationBackground(at: index)
+                ) {
+                    router.push(.routineConfiguration)
+                }
+                .accessibilityHint("routine.configureHint")
+            }
         }
     }
+
+    private func symbol(for kind: TherapyKind) -> String {
+        switch kind {
+        case .armRaise: return "figure.arms.open"
+        case .elbowBend: return "figure.strengthtraining.traditional"
+        case .directionalReach: return "hand.point.up.left"
+        case .cup: return "cup.and.saucer.fill"
+        }
+    }
+
 }
 
 private extension AppPermission {
