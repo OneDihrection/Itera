@@ -9,6 +9,7 @@ import SwiftUI
 
 @main
 struct MyApp: App {
+    @Environment(\.scenePhase) private var scenePhase
     @State private var router = NavigationRouter()
     @State private var dependencies: AppDependencies
 
@@ -26,11 +27,11 @@ struct MyApp: App {
                 .environment(dependencies.permissions)
                 .environment(\.buttonFeedback, dependencies.playButtonClick)
                 .buttonStyle(TherapySoundButtonStyle())
+                .task { await dependencies.recoverHistory() }
                 .onChange(of: scenePhase) { _, phase in
                     if phase == .active { dependencies.permissions.refresh() }
                 }
         }
     }
 
-    @Environment(\.scenePhase) private var scenePhase
 }

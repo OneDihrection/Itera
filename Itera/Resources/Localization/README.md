@@ -2,7 +2,7 @@
 
 # Localization
 
-`Localizable.xcstrings` contains app text. `InfoPlist.xcstrings` contains system permission descriptions. Both catalogs were created by dimaswisodewo on 28/10/2026. English (`en`) is the development and fallback language; Indonesian (`id`) is supported. Select the app language in iPad Settings → Itera → Language.
+`Localizable.xcstrings` contains app text. `InfoPlist.xcstrings` contains system permission descriptions. Both catalogs were created by dimaswisodewo on 28/10/2026. English (`en`) is the development and fallback language; Indonesian (`id`) is supported. Select English or Bahasa Indonesia on Home. The selection is saved and applies to app text, narration, and counts; active sessions retain their language. Voice recognition and command phrases remain English (en-US) in both app languages. Therapy requires available English on-device recognition.
 
 ## Adding text
 

@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import UIKit
 
 // MARK: - PlusJakartaSans Font Weights
 
@@ -62,6 +63,17 @@ public enum AppFontWeight: String, CaseIterable, Sendable {
 
 /// Semantic typography styles scaled for Dynamic Type accessibility.
 public enum AppTypography: Equatable, Sendable {
+    public static let homeHeading = Self.custom(size: 64, weight: .bold, relativeTo: .largeTitle)
+    public static let homeLabel = Self.custom(size: 32, weight: .semiBold, relativeTo: .title)
+
+    public static let therapyInstruction = Self.custom(size: 96, weight: .bold, relativeTo: .largeTitle)
+    public static let therapyDemonstration = Self.custom(size: 64, weight: .bold, relativeTo: .largeTitle)
+    public static let therapyCue = Self.custom(size: 44, weight: .bold, relativeTo: .largeTitle)
+    public static let therapyPhase = Self.custom(size: 36, weight: .bold, relativeTo: .largeTitle)
+    public static let therapyControl = Self.custom(size: 32, weight: .bold, relativeTo: .largeTitle)
+    public static let therapyPause = Self.custom(size: 80, weight: .bold, relativeTo: .largeTitle)
+    public static let therapyCountdown = Self.custom(size: 288, weight: .bold, relativeTo: .largeTitle)
+
     case largeTitle
     case title
     case title2
@@ -172,14 +184,15 @@ public enum AppTypography: Equatable, Sendable {
 
 enum AppFont {
     static func applyBodyStyle(to label: UILabel) {
-        label.font = uiFont(size: 24)
+        label.font = UIFontMetrics(forTextStyle: .body).scaledFont(
+            for: UIFont(name: "PlusJakartaSans-Regular", size: 24) ?? .systemFont(ofSize: 24)
+        )
         label.adjustsFontForContentSizeCategory = true
     }
 
-    private static func uiFont(size: CGFloat) -> UIFont {
-        UIFontMetrics(forTextStyle: .body).scaledFont(
-            for: UIFont(name: "PlusJakartaSans-Regular", size: size) ?? .systemFont(ofSize: size)
-        )
+    static func uiFont(size: CGFloat) -> UIFont {
+        UIFont(name: AppFontWeight.bold.postScriptName(), size: size)
+            ?? UIFont.systemFont(ofSize: size, weight: .bold)
     }
 
     /// Returns a PlusJakartaSans font configured with weight, size, optional italic style, and Dynamic Type scaling.
@@ -268,5 +281,14 @@ public extension View {
         relativeTo: Font.TextStyle = .body
     ) -> some View {
         modifier(TypographyModifier(size: size, weight: weight, isItalic: isItalic, relativeTo: relativeTo))
+    }
+}
+
+// MARK: - Canvas labels
+
+extension AppTypography {
+    /// Canvas resolves Text rather than a modified View; font construction stays here.
+    static func overlayText(_ key: LocalizedStringKey, size: CGFloat, weight: AppFontWeight) -> Text {
+        Text(key).font(AppFont.font(weight, size: size)).foregroundColor(.white)
     }
 }

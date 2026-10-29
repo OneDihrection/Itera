@@ -14,6 +14,22 @@ enum AppRouterView {
         switch route {
         case .home:
             FingerHomeView()
+        case .therapyOverview:
+            TherapyOverview()
+                .environment(\.buttonFeedback, {})
+                .environment(\.locale, AppLanguage.selected.locale)
+        case .routineConfiguration:
+            RoutineConfigurationView()
+                .environment(\.buttonFeedback, {})
+                .environment(\.locale, AppLanguage.selected.locale)
+        case .exercisePicker:
+            RoutineExercisePicker()
+                .environment(\.buttonFeedback, {})
+                .environment(\.locale, AppLanguage.selected.locale)
+        case .therapySession:
+            SessionDestination()
+                .environment(\.buttonFeedback, {})
+                .environment(\.locale, AppLanguage.selected.locale)
         case .plan:
             FingerPlanView()
         case .reports:
@@ -79,3 +95,11 @@ private struct RouterPreview: View {
     RouterPreview(route: .home, sheet: true)
 }
 #endif
+
+private struct SessionDestination: View {
+    @Environment(AppDependencies.self) private var dependencies
+
+    var body: some View {
+        TherapySessionView(model: dependencies.makeSession())
+    }
+}

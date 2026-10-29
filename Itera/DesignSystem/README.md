@@ -27,3 +27,14 @@ Components/TherapyFeedback.swift owns value-driven progress rings, a timer-only 
 Components/TherapyProgressArtwork.swift supplies value-driven medallions and native Charts visuals without history/achievement logic. Components/TherapyButtonFeedback.swift supplies a primitive button style whose activation calls an injected environment feedback action, then the original action. The composition root injects the sole audio owner's click method. Controls retain native disabled/activation behavior.
 
 TherapyIconButton in Components/TherapyControls.swift provides a large icon action with an explicit localized accessibility label. Components/TherapyRestBackdrop.swift owns only decorative garden motion, taking a paused value and respecting Reduce Motion and scene activity; it never changes rest duration or session state.
+
+## Session guidance
+
+`MeasuredInstructionText` adapts VisionPoc’s measured, scrollable instruction reader. It accepts rendered text, a request identity, scaled font size, accessibility settings, and a reading-status callback. It owns measurement and presentation pacing only; the session engine decides when to advance. Typography resolves UIKit fonts alongside SwiftUI fonts in Typography.
+
+
+`ExerciseIllustration` presents a noninteractive SF Symbol and scalable label. Home uses `homeHeading` (64 points) and `homeLabel` (32 points); `SessionButtonStyle` already provides scalable 32-point primary text and a 72-point minimum height.
+
+## Full-screen session presentation
+
+`SessionStageSurface` provides the reference experience’s full-screen surface, 48-point inset, 24-point section spacing, and continuous 36-point border. It accepts content and controls without knowing about session state. `SessionCelebration` provides a cancellable three-second visual celebration and pauses its animation timeline afterward; the caller handles Reduce Motion. Its particle layout was adapted from VisionPoc’s `TherapyClosingSection.swift`.
