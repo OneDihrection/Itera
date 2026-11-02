@@ -1390,17 +1390,18 @@
       }
     },
     "balance.returnHold" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Hold briefly in the blue circle"
+            "value" : "Hold in the blue circle for 5 seconds"
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Tahan sebentar di lingkaran biru"
+            "value" : "Tahan di lingkaran biru selama 5 detik"
           }
         }
       }
@@ -1850,13 +1851,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Done. Return your hand to the starting position, then switch sides."
+            "value" : "Done. Return to the blue circle and hold for 5 seconds, then switch sides."
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Selesai. Kembalikan tangan ke posisi awal, lalu ganti sisi."
+            "value" : "Selesai. Kembali ke lingkaran biru dan tahan 5 detik, lalu ganti sisi."
           }
         }
       }
@@ -1867,13 +1868,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Done. Return your hand to the starting position, then use the same arm again."
+            "value" : "Done. Return to the blue circle and hold for 5 seconds, then use the same arm again."
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Selesai. Kembalikan tangan ke posisi awal, lalu gunakan tangan yang sama lagi."
+            "value" : "Selesai. Kembali ke lingkaran biru dan tahan 5 detik, lalu gunakan tangan yang sama lagi."
           }
         }
       }
