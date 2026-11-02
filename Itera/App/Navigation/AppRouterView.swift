@@ -20,6 +20,12 @@ enum AppRouterView {
             TherapyOverview()
                 .environment(\.buttonFeedback, {})
                 .environment(\.locale, AppLanguage.selected.locale)
+        case .balanceOverview:
+            BalanceOverviewView()
+                .environment(\.locale, AppLanguage.selected.locale)
+        case .balanceSession(let repetitions, let holdSeconds):
+            BalanceSessionDestination(repetitions: repetitions, holdSeconds: holdSeconds)
+                .environment(\.locale, AppLanguage.selected.locale)
         case .routineConfiguration:
             RoutineConfigurationView()
                 .environment(\.buttonFeedback, {})
@@ -103,5 +109,20 @@ private struct SessionDestination: View {
 
     var body: some View {
         TherapySessionView(model: dependencies.makeSession())
+    }
+}
+
+private struct BalanceSessionDestination: View {
+    @Environment(AppDependencies.self) private var dependencies
+    let repetitions: Int
+    let holdSeconds: Int
+
+    var body: some View {
+        BalanceSessionView(model: BalanceSessionViewModel(
+            tracking: dependencies.tracking,
+            audio: dependencies.audio,
+            repetitions: repetitions,
+            holdSeconds: holdSeconds
+        ))
     }
 }

@@ -14,6 +14,8 @@ enum AppRoute: Hashable {
     case exercisePicker
     case therapySession
     case therapyOverview
+    case balanceOverview
+    case balanceSession(repetitions: Int, holdSeconds: Int)
     case plan
     case reports
     case achievements

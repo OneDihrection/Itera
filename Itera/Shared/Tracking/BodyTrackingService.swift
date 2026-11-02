@@ -306,7 +306,8 @@ final class BodyTrackingService: NSObject, AVCaptureVideoDataOutputSampleBufferD
     }
 
     private static let jointMap: [(BodyJoint, VNHumanBodyPoseObservation.JointName)] = [
-        (.nose, .nose), (.leftShoulder, .leftShoulder), (.rightShoulder, .rightShoulder),
+        (.nose, .nose), (.neck, .neck), (.root, .root),
+        (.leftShoulder, .leftShoulder), (.rightShoulder, .rightShoulder),
         (.leftElbow, .leftElbow), (.rightElbow, .rightElbow), (.leftWrist, .leftWrist),
         (.rightWrist, .rightWrist), (.leftHip, .leftHip), (.rightHip, .rightHip),
     ]

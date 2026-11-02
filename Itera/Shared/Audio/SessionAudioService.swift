@@ -353,7 +353,8 @@ final class SessionAudioService: NSObject, VoiceReadinessProviding, AVSpeechSynt
 
     private func command(_ words: String) -> AudioCommand? {
         let keys: [(String, AudioCommand)] = [
-            ("command.stop", .stop), ("command.pause", .pause), ("command.resume", .resume),
+            ("command.stop", .stop), ("command.end", .stop), ("command.pause", .pause),
+            ("command.start", .resume), ("command.resume", .resume),
             ("command.skip", .skip), ("command.repeat", .repeatInstruction), ("command.recalibrate", .retryCalibration),
             ("command.help", .help), ("command.redo", .redo),
             ("command.adjustTarget", .adjustTarget), ("command.retryStep", .retryStep),

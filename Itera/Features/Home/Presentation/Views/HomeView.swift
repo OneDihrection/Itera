@@ -18,18 +18,51 @@ struct HomeView: View {
                     .foregroundStyle(TherapyPalette.muted)
                 Text("home.chooseTherapy").typography(.largeTitle)
                     .accessibilityAddTraits(.isHeader)
-                let layout = typeSize.isAccessibilitySize
-                    ? AnyLayout(VStackLayout(spacing: 28))
-                    : AnyLayout(HStackLayout(alignment: .top, spacing: 28))
-                layout {
-                    category(title: "plan.fingerTitle", artwork: "hand-hero", route: .fingerHome)
-                    category(title: "home.armPractice", artwork: "symbol:figure.arms.open", route: .therapyOverview)
-                }
+                therapyCategories
             }
             .padding(28)
         }
         .background(TherapyPalette.cream)
         .navigationTitle("Itera")
+    }
+
+    @ViewBuilder
+    private var therapyCategories: some View {
+        if typeSize.isAccessibilitySize {
+            VStack(spacing: 28) {
+                fingerCategory
+                armCategory
+                balanceCategory
+            }
+        } else {
+            VStack(spacing: 28) {
+                HStack(alignment: .top, spacing: 28) {
+                    fingerCategory
+                    armCategory
+                }
+                balanceCategory
+            }
+        }
+    }
+
+    private var fingerCategory: some View {
+        category(title: "plan.fingerTitle", artwork: "hand-hero", route: .fingerHome)
+    }
+
+    private var armCategory: some View {
+        category(
+            title: "home.armPractice",
+            artwork: "symbol:figure.arms.open",
+            route: .therapyOverview
+        )
+    }
+
+    private var balanceCategory: some View {
+        category(
+            title: "balance.title",
+            artwork: "symbol:figure.stand",
+            route: .balanceOverview
+        )
     }
 
     private func category(title: LocalizedStringKey, artwork: String, route: AppRoute) -> some View {
