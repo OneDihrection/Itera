@@ -1378,13 +1378,29 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Return your hand to its starting side"
+            "value" : "Return your hand to the blue starting circle"
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Kembalikan tangan ke sisi awal"
+            "value" : "Kembalikan tangan ke lingkaran awal berwarna biru"
+          }
+        }
+      }
+    },
+    "balance.returnHold" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hold briefly in the blue circle"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tahan sebentar di lingkaran biru"
           }
         }
       }

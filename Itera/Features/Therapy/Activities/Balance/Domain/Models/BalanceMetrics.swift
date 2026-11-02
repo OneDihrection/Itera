@@ -30,7 +30,7 @@ struct TrunkCompensation: Equatable {
     var isCompensating: Bool { !reasons.isEmpty }
 }
 
-enum CrossingArm: String, Equatable {
+enum CrossingArm: String, Equatable, Hashable {
     case left
     case right
 
@@ -68,6 +68,7 @@ struct BalanceOverlay: Equatable {
     let rightHip: TherapyPoint
     let wrist: TherapyPoint?
     let target: TherapyPoint?
+    let isReturnTarget: Bool
     let targetRadius: Double
     let crossedMidline: Bool
     let targetProgress: Double

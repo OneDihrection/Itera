@@ -343,14 +343,15 @@ private struct BalancePoseOverlay: View {
 
             if let target = state.target {
                 let radius = state.targetRadius * scale
+                let targetColor: Color = state.isReturnTarget ? .cyan : .orange
                 let rect = CGRect(
                     x: point(target).x - radius,
                     y: point(target).y - radius,
                     width: radius * 2,
                     height: radius * 2
                 )
-                context.fill(Path(ellipseIn: rect), with: .color(.orange.opacity(0.28)))
-                context.stroke(Path(ellipseIn: rect), with: .color(.orange), lineWidth: 6)
+                context.fill(Path(ellipseIn: rect), with: .color(targetColor.opacity(0.28)))
+                context.stroke(Path(ellipseIn: rect), with: .color(targetColor), lineWidth: 6)
                 if state.targetProgress > 0 {
                     var progress = Path()
                     progress.addArc(

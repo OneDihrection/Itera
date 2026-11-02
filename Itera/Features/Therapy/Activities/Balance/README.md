@@ -43,7 +43,7 @@ index = max(lean, shift, rotation)
 
 ## Target and movement metrics
 
-The active wrist must cross the midline, enter a radius equal to 28% of current shoulder width around the opposite shoulder, and remain there for the configured 3–20 seconds. The patient hears a localized countdown, then returns the wrist to its anatomical side before the next arm begins. The completed shoulder target disappears until the next arm becomes active.
+The active wrist must cross the midline, enter a radius equal to 28% of current shoulder width around the opposite shoulder, and remain there for the configured 3–20 seconds. The engine captures each visible wrist's neutral position at baseline. After every successful touch, the orange shoulder target disappears and a generous blue return target appears at that neutral position. The wrist must return to its anatomical side, enter the return target, and remain stable for 0.75 seconds before another repetition can begin. This return gate is mandatory for Right, Left, and Both modes, and remains active through temporary compensation warnings so a posture warning cannot bypass it.
 
 Across-midline time accumulates only from fresh, safe frames. Path smoothness uses finite differences of aspect-corrected wrist position:
 

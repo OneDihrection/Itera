@@ -108,6 +108,8 @@ struct CrossMidlineBalanceEngine {
     private var generation: UUID?
     private var lastTimestamp: Double?
     private var targetHoldStartedAt: Double?
+    private var returnHoldStartedAt: Double?
+    private var homeWristPositions: [CrossingArm: TherapyPoint] = [:]
     private var compensationLatched = false
     private var compensationCandidateSince: Double?
     private var compensationClearSince: Double?
@@ -119,6 +121,7 @@ struct CrossMidlineBalanceEngine {
 
     private let baselineDuration = 1.0
     private let targetHoldDuration: Double
+    private let returnHoldDuration = 0.75
     private let leanThresholdDegrees = 18.0
     private let lateralShiftThreshold = 0.40
     private let rotationThreshold = 0.40
@@ -182,6 +185,7 @@ struct CrossMidlineBalanceEngine {
                 target: nil,
                 crossed: false,
                 progress: 0,
+                isReturnTarget: false,
                 warning: false
             )
             clearTransientEvidence()
@@ -193,7 +197,8 @@ struct CrossMidlineBalanceEngine {
                 nil
             } else {
                 switch snapshot.phase {
-                case .returning, .complete: nil
+                case .returning: homeWristPositions[snapshot.activeArm]
+                case .complete: nil
                 default: point(snapshot.activeArm.targetShoulder, in: geometry)
                 }
             }
@@ -206,7 +211,10 @@ struct CrossMidlineBalanceEngine {
                 frame: frame,
                 target: target,
                 crossed: crossed,
-                progress: targetProgress(at: frame.timestamp),
+                progress: snapshot.phase == .returning
+                    ? returnProgress(at: frame.timestamp)
+                    : targetProgress(at: frame.timestamp),
+                isReturnTarget: snapshot.phase == .returning,
                 warning: snapshot.compensation.isCompensating
             )
             lastOverlayTimestamp = frame.timestamp
@@ -252,6 +260,7 @@ struct CrossMidlineBalanceEngine {
             target: nil,
             crossed: false,
             progress: snapshot.calibrationProgress,
+            isReturnTarget: false,
             warning: false
         )
         lastOverlayTimestamp = frame.timestamp
@@ -267,6 +276,12 @@ struct CrossMidlineBalanceEngine {
             return
         }
         baseline = captured
+        if let leftWrist = geometry.leftWrist {
+            homeWristPositions[.left] = leftWrist
+        }
+        if let rightWrist = geometry.rightWrist {
+            homeWristPositions[.right] = rightWrist
+        }
         baselineCapture = nil
         snapshot.phase = .reaching
         snapshot.instructionKey = instruction(for: snapshot.activeArm)
@@ -285,6 +300,7 @@ struct CrossMidlineBalanceEngine {
                 target: nil,
                 crossed: false,
                 progress: 0,
+                isReturnTarget: false,
                 warning: false
             )
             lastOverlayTimestamp = frame.timestamp
@@ -304,8 +320,11 @@ struct CrossMidlineBalanceEngine {
                 compensationLatched = true
             }
             targetHoldStartedAt = nil
+            returnHoldStartedAt = nil
             kinematics = nil
-            snapshot.phase = .reaching
+            if snapshot.phase != .returning {
+                snapshot.phase = .reaching
+            }
             snapshot.instructionKey = "balance.compensationWarning"
         } else {
             compensationLatched = false
@@ -320,7 +339,8 @@ struct CrossMidlineBalanceEngine {
         }
 
         let target: TherapyPoint? = switch snapshot.phase {
-        case .returning, .complete: nil
+        case .returning: homeWristPositions[snapshot.activeArm]
+        case .complete: nil
         default: point(snapshot.activeArm.targetShoulder, in: geometry)
         }
         let wrist = point(snapshot.activeArm.wrist, in: geometry)
@@ -332,7 +352,10 @@ struct CrossMidlineBalanceEngine {
             frame: frame,
             target: target,
             crossed: crossed,
-            progress: targetProgress(at: frame.timestamp),
+            progress: snapshot.phase == .returning
+                ? returnProgress(at: frame.timestamp)
+                : targetProgress(at: frame.timestamp),
+            isReturnTarget: snapshot.phase == .returning,
             warning: compensation.isCompensating
         )
         lastOverlayTimestamp = frame.timestamp
@@ -356,15 +379,42 @@ struct CrossMidlineBalanceEngine {
 
         if snapshot.phase == .returning {
             guard let ownShoulder = point(snapshot.activeArm.ownShoulder, in: geometry) else { return }
-            if crossedMidline(wrist: wrist, target: ownShoulder, geometry: geometry) {
+            let home = homeWristPositions[snapshot.activeArm]
+                ?? fallbackHomePosition(for: snapshot.activeArm, geometry: geometry)
+            homeWristPositions[snapshot.activeArm] = home
+            let returnRadius = max(0.06, geometry.shoulderWidth * 0.38)
+            let isOnStartingSide = crossedMidline(
+                wrist: wrist,
+                target: ownShoulder,
+                geometry: geometry
+            )
+            let isInsideStart = (wrist - home).length <= returnRadius
+
+            guard isOnStartingSide, isInsideStart else {
+                returnHoldStartedAt = nil
+                snapshot.instructionKey = "balance.return"
+                return
+            }
+
+            if returnHoldStartedAt == nil {
+                returnHoldStartedAt = frame.timestamp
+            }
+            snapshot.instructionKey = "balance.returnHold"
+            if returnProgress(at: frame.timestamp) >= 1 {
+                returnHoldStartedAt = nil
                 snapshot.activeArm = snapshot.armSelection.arm(after: snapshot.activeArm)
                 snapshot.phase = .reaching
                 snapshot.instructionKey = instruction(for: snapshot.activeArm)
                 resetPath()
-            } else {
-                snapshot.instructionKey = "balance.return"
             }
             return
+        }
+
+        if homeWristPositions[snapshot.activeArm] == nil,
+            let ownShoulder = point(snapshot.activeArm.ownShoulder, in: geometry),
+            crossedMidline(wrist: wrist, target: ownShoulder, geometry: geometry)
+        {
+            homeWristPositions[snapshot.activeArm] = wrist
         }
 
         if crossed, delta > 0, delta <= 0.3 {
@@ -536,6 +586,7 @@ struct CrossMidlineBalanceEngine {
 
     private mutating func clearTransientEvidence() {
         targetHoldStartedAt = nil
+        returnHoldStartedAt = nil
         kinematics = nil
         compensationCandidateSince = nil
         compensationClearSince = nil
@@ -547,6 +598,20 @@ struct CrossMidlineBalanceEngine {
     private func targetProgress(at time: Double) -> Double {
         guard let targetHoldStartedAt else { return 0 }
         return min(1, max(0, (time - targetHoldStartedAt) / targetHoldDuration))
+    }
+
+    private func returnProgress(at time: Double) -> Double {
+        guard let returnHoldStartedAt else { return 0 }
+        return min(1, max(0, (time - returnHoldStartedAt) / returnHoldDuration))
+    }
+
+    private func fallbackHomePosition(
+        for arm: CrossingArm,
+        geometry: Geometry
+    ) -> TherapyPoint {
+        let shoulder = arm == .left ? geometry.leftShoulder : geometry.rightShoulder
+        let hip = arm == .left ? geometry.leftHip : geometry.rightHip
+        return shoulder + (hip - shoulder).scaled(0.72)
     }
 
     private func instruction(for arm: CrossingArm) -> String {
@@ -653,6 +718,7 @@ struct CrossMidlineBalanceEngine {
         target: TherapyPoint?,
         crossed: Bool,
         progress: Double,
+        isReturnTarget: Bool,
         warning: Bool
     ) -> BalanceOverlay {
         BalanceOverlay(
@@ -665,10 +731,15 @@ struct CrossMidlineBalanceEngine {
             rightHip: geometry.rightHip,
             wrist: point(snapshot.activeArm.wrist, in: geometry),
             target: target,
-            targetRadius: max(0.045, geometry.shoulderWidth * 0.28),
+            isReturnTarget: isReturnTarget,
+            targetRadius: isReturnTarget
+                ? max(0.06, geometry.shoulderWidth * 0.38)
+                : max(0.045, geometry.shoulderWidth * 0.28),
             crossedMidline: crossed,
             targetProgress: progress,
-            holdSecondsRemaining: target == nil ? nil : holdSecondsRemaining(at: frame.timestamp),
+            holdSecondsRemaining: target == nil || isReturnTarget
+                ? nil
+                : holdSecondsRemaining(at: frame.timestamp),
             compensationWarning: warning
         )
     }
