@@ -1,6 +1,38 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
+    "achievement.shareCaption" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "I earned “%@” in Itera. Every small step counts!"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Saya meraih “%@” di Itera. Setiap langkah kecil berarti!"
+          }
+        }
+      }
+    },
+    "achievement.share" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Share badge"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bagikan lencana"
+          }
+        }
+      }
+    },
     "" : {
 
     },
@@ -198,6 +230,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Langkah berikutnya"
+          }
+        }
+      }
+    },
+    "achievement.nextAward" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Next achievement"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pencapaian berikutnya"
           }
         }
       }
@@ -2030,6 +2078,7 @@
       }
     },
     "camera.hint" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -2242,6 +2291,118 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Hari"
+          }
+        }
+      }
+    },
+    "cognitive.calm" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Calm display"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tampilan tenang"
+          }
+        }
+      }
+    },
+    "cognitive.calmHelp" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hide decorative motion during rest and celebrations."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sembunyikan animasi hias saat istirahat dan perayaan."
+          }
+        }
+      }
+    },
+    "cognitive.celebrationSounds" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Achievement sounds"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Suara pencapaian"
+          }
+        }
+      }
+    },
+    "cognitive.clicks" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Button sounds"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Suara tombol"
+          }
+        }
+      }
+    },
+    "cognitive.settings" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Comfort"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kenyamanan"
+          }
+        }
+      }
+    },
+    "cognitive.soundHelp" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Spoken instructions and exercise cues stay on."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Panduan suara dan aba-aba latihan tetap aktif."
+          }
+        }
+      }
+    },
+    "cognitive.step %lld %lld" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Exercise %1$lld of %2$lld"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Latihan %1$lld dari %2$lld"
           }
         }
       }
@@ -3367,7 +3528,57 @@
         }
       }
     },
+    "guide.hold" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hold"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tahan"
+          }
+        }
+      }
+    },
+    "guide.holdDuration %lld" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hold for %lld seconds."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tahan %lld detik."
+          }
+        }
+      }
+    },
+    "guide.movingTime" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Movement time"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Waktu gerak"
+          }
+        }
+      }
+    },
     "guide.position" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -3383,7 +3594,24 @@
         }
       }
     },
+    "guide.secondsUnit" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "sec"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "dtk"
+          }
+        }
+      }
+    },
     "guide.start" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -3400,6 +3628,7 @@
       }
     },
     "guide.target" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -7045,6 +7274,22 @@
         }
       }
     },
+    "session.duration" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Session duration"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Durasi sesi"
+          }
+        }
+      }
+    },
     "session.elapsed %lld" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -8428,6 +8673,7 @@
       }
     },
     "session.time" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {

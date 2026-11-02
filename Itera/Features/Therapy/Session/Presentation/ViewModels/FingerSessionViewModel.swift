@@ -12,6 +12,9 @@ import UIKit
 @MainActor
 @Observable
 final class FingerSessionViewModel {
+    private(set) var sessionElapsedSeconds = 0.0
+    @ObservationIgnored private var durationClock = SessionDurationClock()
+    @ObservationIgnored private var overlaySmoother = HandOverlaySmoother()
     private(set) var engine: FingerSessionEngine
     private(set) var evidence: HandEvidence?
     private(set) var trackingReady = false
@@ -37,6 +40,7 @@ final class FingerSessionViewModel {
     @ObservationIgnored private var generation: UUID?
     @ObservationIgnored private var lastFrame = 0.0
     @ObservationIgnored private var lastHandFrame = 0.0
+    private var lastGuideEvidence: HandEvidence?
     @ObservationIgnored private var speechID: UUID?
     @ObservationIgnored private var speechDeadline: Double?
     @ObservationIgnored private var previousInstruction = ""
@@ -62,6 +66,30 @@ final class FingerSessionViewModel {
     var activity: FingerActivity { engine.activity }
     var paused: Bool { engine.paused }
     var routine: FingerRoutine { engine.summary.routine }
+    /// Completed cues may use their last accepted anchor briefly; it is never scored again.
+    var guideEvidence: HandEvidence? {
+        if trackingReady {
+            return lastGuideEvidence
+        }
+        guard activity.holdCompletionID != nil, previewAttached, !waitingForCamera,
+              ProcessInfo.processInfo.systemUptime - lastHandFrame <= 0.5 else {
+            return nil
+        }
+        return lastGuideEvidence
+    }
+
+    var showsGuideTimer: Bool {
+        guard !paused, guideEvidence != nil else {
+            return false
+        }
+        switch activity.phase {
+        case .baseline, .target, .active:
+            return true
+        case .demonstration, .countdown, .feedback, .rest, .finished:
+            return false
+        }
+    }
+
     var fingerKey: String { "finger." + String(activity.finger) }
     var instructionKey: String {
         switch activity.phase {
@@ -87,11 +115,11 @@ final class FingerSessionViewModel {
         }
     }
     var timeText: String {
-        let value = Int(activity.activeSeconds)
+        let value = Int(sessionElapsedSeconds)
         return String(format: "%02d:%02d", value / 60, value % 60)
     }
     var demonstrationTimeText: String {
-        let seconds = Int(activity.demonstrationSeconds)
+        let seconds = max(0, Int(ceil(activity.demonstrationRemaining)))
         return String(format: "%02d:%02d", seconds / 60, seconds % 60)
     }
     var countdown: Int { max(0, Int(ceil(activity.remaining))) }
@@ -170,6 +198,9 @@ final class FingerSessionViewModel {
             return
         }
         camera.start()
+        if !paused {
+            durationClock.resume(at: ProcessInfo.processInfo.systemUptime)
+        }
         startTimer()
         await saveCheckpoint()
     }
@@ -219,6 +250,13 @@ final class FingerSessionViewModel {
         }.store(in: &subscriptions)
     }
 
+    func holdCompletionPresented(_ id: UUID) {
+        guard guideEvidence != nil, !paused, !waitingForCamera else {
+            return
+        }
+        engine.holdCompletionPresented(id)
+    }
+
     func previewReady(_ ready: Bool) { previewAttached = ready }
 
     private func receive(_ event: HandCameraEvent) {
@@ -229,6 +267,8 @@ final class FingerSessionViewModel {
         case .failure(let key):
             trackingReady = false
             evidence = nil
+            lastGuideEvidence = nil
+            overlaySmoother.reset()
             cameraMessage = key
             errorKey = key
             engine.recalibrate()
@@ -240,6 +280,8 @@ final class FingerSessionViewModel {
             }
             if generation != sample.generation {
                 generation = sample.generation
+                lastGuideEvidence = nil
+                overlaySmoother.reset()
                 engine.recalibrate()
                 previousInstruction = ""
             }
@@ -248,11 +290,17 @@ final class FingerSessionViewModel {
             guard let hand = sample.evidence, hand.side == routine.side,
                   hand.metric(for: activity.kind, finger: activity.finger) != nil else {
                 trackingReady = false
-                cameraMessage = sample.evidence?.side == routine.side ? "camera.showFingers" : "camera.selectedHand"
+                overlaySmoother.reset()
+                if let hand = sample.evidence {
+                    cameraMessage = hand.side == routine.side ? "camera.showFingers" : "camera.selectedHand"
+                } else {
+                    cameraMessage = "camera.position"
+                }
                 handleMissingHand(now: now)
                 return
             }
             lastHandFrame = sample.timestamp
+            lastGuideEvidence = overlaySmoother.consume(hand)
             trackingReady = previewAttached
             cameraMessage = "camera.tracking"
             if errorKey?.hasPrefix("camera.") == true {
@@ -279,6 +327,7 @@ final class FingerSessionViewModel {
             return
         }
         let now = ProcessInfo.processInfo.systemUptime
+        sessionElapsedSeconds = durationClock.elapsed(at: now)
         if let deadline = speechDeadline, now >= deadline, !paused {
             speechDeadline = nil
             speechID = nil
@@ -289,6 +338,7 @@ final class FingerSessionViewModel {
         if now - lastFrame > 0.3 {
             trackingReady = false
             evidence = nil
+            overlaySmoother.reset()
             handleMissingHand(now: now)
             cameraMessage = "camera.position"
         }
@@ -333,6 +383,11 @@ final class FingerSessionViewModel {
         if activity.kind.isSequential && [.baseline, .target, .active].contains(activity.phase) {
             text += ". " + String(localized: String.LocalizationValue(fingerKey))
         }
+        if activity.phase == .target || activity.phase == .active {
+            text += ". " + String.localizedStringWithFormat(
+                String(localized: "guide.holdDuration %lld"), Int64(activity.holdDuration)
+            )
+        }
         engine.guidanceStarted()
         speechDeadline = ProcessInfo.processInfo.systemUptime + max(15, Double(text.count) * 0.25)
         speechID = audio.speak(text)
@@ -357,6 +412,9 @@ final class FingerSessionViewModel {
             return
         }
         engine.pause()
+        let now = ProcessInfo.processInfo.systemUptime
+        durationClock.pause(at: now)
+        sessionElapsedSeconds = durationClock.elapsed(at: now)
         speechID = nil
         speechDeadline = nil
         audio.cancelSpeech()
@@ -368,6 +426,7 @@ final class FingerSessionViewModel {
             return
         }
         engine.resume()
+        durationClock.resume(at: ProcessInfo.processInfo.systemUptime)
         camera.start()
         audio.resumeAmbient()
         previousInstruction = ""
@@ -377,7 +436,10 @@ final class FingerSessionViewModel {
     func retryCamera() async {
         if await permissions.request(.camera) == .authorized {
             errorKey = nil
-        camera.start()
+            camera.start()
+            if !paused {
+                durationClock.resume(at: ProcessInfo.processInfo.systemUptime)
+            }
             startTimer()
         }
     }
@@ -517,6 +579,13 @@ final class FingerSessionViewModel {
     }
 
     func cleanup() {
+        let now = ProcessInfo.processInfo.systemUptime
+        durationClock.pause(at: now)
+        sessionElapsedSeconds = durationClock.elapsed(at: now)
+        overlaySmoother.reset()
+        lastGuideEvidence = nil
+        evidence = nil
+        trackingReady = false
         timer?.cancel()
         timer = nil
         subscriptions.removeAll()

@@ -51,6 +51,13 @@ struct FingerSessionEngine {
     }
 
     mutating func recalibrate() { activity.recalibrate() }
+    mutating func holdCompletionPresented(_ id: UUID) {
+        guard !paused, !finished else {
+            return
+        }
+        activity.holdCompletionPresented(id)
+    }
+
     mutating func guidanceStarted() { activity.guidanceStarted() }
     mutating func guidanceCompleted() { activity.guidanceCompleted() }
 

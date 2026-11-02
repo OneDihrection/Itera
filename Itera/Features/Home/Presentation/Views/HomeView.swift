@@ -24,6 +24,17 @@ struct HomeView: View {
         }
         .background(TherapyPalette.cream)
         .navigationTitle("Itera")
+        .toolbar {
+            ToolbarItem(placement: .primaryAction) {
+                Button {
+                    router.presentSheet(.practicePreferences)
+                } label: {
+                    Label("cognitive.settings", systemImage: "slider.horizontal.3")
+                        .typography(.headline)
+                        .frame(minHeight: 64)
+                }
+            }
+        }
     }
 
     @ViewBuilder

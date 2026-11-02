@@ -16,6 +16,7 @@ struct TherapySessionView: View {
     @Environment(PermissionManager.self) private var permissions
     @Environment(NavigationRouter.self) private var router
     @Environment(\.scenePhase) private var scenePhase
+    @AppStorage(PracticePreferences.calmMode) private var calmMode = false
     @State private var celebrationStart: Date?
     @State private var model: TherapySessionViewModel
 
@@ -61,6 +62,7 @@ struct TherapySessionView: View {
                         .frame(height: barsHeight * 0.4)
                     camera.frame(height: cameraHeight)
                     ScrollView {
+                        trackingStatus
                         footer
                         if let error = model.saveFailure { saveError(error) }
                     }
@@ -76,7 +78,7 @@ struct TherapySessionView: View {
             }
         }
         .overlay {
-            if let celebrationStart, !reduceMotion {
+            if let celebrationStart, !reduceMotion, !calmMode {
                 SessionCelebration(start: celebrationStart).ignoresSafeArea()
             }
         }
@@ -119,7 +121,7 @@ struct TherapySessionView: View {
 
     private var hasFullScreenPresentation: Bool {
         model.cameraDenied || !model.voiceReady || model.snapshot.paused
-            || model.snapshot.cameraWaiting || model.snapshot.stage == .instruction
+            || model.snapshot.stage == .preparing || model.snapshot.stage == .instruction
             || model.snapshot.stage == .demonstration || model.snapshot.stage == .preparationWait || model.snapshot.stage == .rest
             || model.snapshot.stage == .feedback
             || model.snapshot.presentation?.countdownSeconds != nil
@@ -127,9 +129,14 @@ struct TherapySessionView: View {
 
     private var fullScreenPresentation: some View {
         SessionStageSurface(background: presentationBackground, border: phaseColor) {
+            sessionContext
             presentationContent
+            trackingStatus
         } controls: {
-            HStack(spacing: 24) {
+            let layout = dynamicTypeSize.isAccessibilitySize
+                ? AnyLayout(VStackLayout(spacing: 16))
+                : AnyLayout(HStackLayout(spacing: 24))
+            layout {
                 Button("session.help") { model.command(.help) }
                 Button(model.snapshot.paused ? "session.resume" : "session.pause") {
                     model.command(model.snapshot.paused ? .resume : .pause)
@@ -145,25 +152,40 @@ struct TherapySessionView: View {
         }
     }
 
-    private var presentationBackground: Color {
-        switch model.snapshot.stage {
-        case .instruction, .demonstration:
-            return Color(red: 0.03, green: 0.14, blue: 0.34)
-        default:
-            if model.snapshot.paused || model.snapshot.cameraWaiting { return .black }
-            if model.snapshot.presentation?.countdownSeconds != nil {
-                return Color(red: 0.04, green: 0.24, blue: 0.14)
+    private var sessionContext: some View {
+        VStack(spacing: 6) {
+            if let activity = model.snapshot.activity {
+                HStack(spacing: 16) {
+                    Text(kindKey(activity.kind))
+                    Text(LocalizedStringKey("side." + activity.side.rawValue))
+                }
+                .typography(.title2)
             }
-            return Color(white: 0.12)
+            if model.snapshot.activityCount > 0 {
+                Text("cognitive.step \(min(model.snapshot.index + 1, model.snapshot.activityCount)) \(model.snapshot.activityCount)")
+                    .typography(.body)
+            }
         }
+        .accessibilityElement(children: .combine)
+    }
+
+    private var trackingStatus: some View {
+        Text("session.cameraWait")
+            .typography(.body)
+            .frame(maxWidth: .infinity)
+            .opacity(model.snapshot.cameraWaiting ? 1 : 0)
+            .accessibilityHidden(!model.snapshot.cameraWaiting)
+    }
+
+    private var presentationBackground: Color {
+        // Keep a steady surface across stages and temporary tracking interruptions.
+        Color(white: 0.08)
     }
 
     @ViewBuilder
     private var presentationContent: some View {
         if model.cameraDenied {
             recoveryPanel("therapy.session.cameraDenied")
-        } else if !model.voiceReady {
-            controlChoice
         } else if model.snapshot.paused {
             ScrollView {
                 SessionPanel {
@@ -186,7 +208,9 @@ struct TherapySessionView: View {
                     }
                 }
             }
-        } else if model.snapshot.cameraWaiting {
+        } else if !model.voiceReady {
+            controlChoice
+        } else if model.snapshot.stage == .preparing {
             recoveryPanel("session.cameraWait")
         } else if model.snapshot.stage == .preparationWait {
             VStack(spacing: 24) {
@@ -331,7 +355,7 @@ struct TherapySessionView: View {
     }
 
     private var phaseColor: Color {
-        if model.snapshot.paused || model.snapshot.cameraWaiting {
+        if model.snapshot.paused {
             return .gray
         }
         switch model.snapshot.stage {

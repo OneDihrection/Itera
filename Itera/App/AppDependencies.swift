@@ -44,7 +44,17 @@ final class AppDependencies: HistoryRecovering {
     }
 
     func playButtonClick() {
+        guard UserDefaults.standard.object(forKey: PracticePreferences.buttonSounds) as? Bool ?? true else {
+            return
+        }
         fingerAudio.playButtonClick()
+    }
+
+    func playAchievementCue() {
+        guard UserDefaults.standard.object(forKey: PracticePreferences.celebrationSounds) as? Bool ?? true else {
+            return
+        }
+        fingerAudio.playAchievementCue()
     }
 
     func prepareSession(continuing: Bool = false) {

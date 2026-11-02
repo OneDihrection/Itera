@@ -105,12 +105,13 @@ struct TherapyMetric: View {
     let title: LocalizedStringKey
     let value: String
     var light = false
+    var compact = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
             Text(title).typography(.footnote).fixedSize(horizontal: false, vertical: true)
-                .frame(minHeight: 50, alignment: .bottomLeading)
+                .frame(minHeight: compact ? 0 : 50, alignment: .bottomLeading)
                 .foregroundStyle(light ? TherapyPalette.onAccent.opacity(0.8) : TherapyPalette.muted)
             Text(verbatim: value).typography(size: 36, weight: .bold)
                 .foregroundStyle(light ? TherapyPalette.onAccent : TherapyPalette.ink)

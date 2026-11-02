@@ -25,9 +25,12 @@ enum AppRoute: Hashable {
     case achievements
     case achievementCelebration
     case achievement(String)
+    case achievementShare(String)
     case report(UUID)
+    case fingerPause
     case fingerSession
     case reflection
+    case practicePreferences
     case routineSettings
     case exercisePreview(FingerExercise)
 }
