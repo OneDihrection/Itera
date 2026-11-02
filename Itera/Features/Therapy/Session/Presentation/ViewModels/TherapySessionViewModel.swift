@@ -265,6 +265,8 @@ final class TherapySessionViewModel {
             return
         }
         switch event {
+        case .cancelled:
+            break
         case .feedbackUnavailable:
             failure = String(localized: "parity.audioUnavailable", bundle: sessionLanguage.resourceBundle, locale: sessionLocale)
         case .completed(let id, let available): send(.guidanceCompleted(id, available))

@@ -42,6 +42,11 @@ struct MovementActivity: TherapyActivity {
 
     mutating func handle(_ event: ActivityEvent) -> ActivityTransition {
         switch event {
+        case .countdownReady(let time):
+            if snapshot.countingDown {
+                countdown = time + 3
+                snapshot.seconds = 3
+            }
         case .guidanceCompleted:
             break
         case .viewport(let value):

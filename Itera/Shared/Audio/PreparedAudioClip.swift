@@ -19,7 +19,7 @@ final class PreparedAudioClip {
         guard player.prepareToPlay() else { throw Failure.unavailable }
     }
 
-    func play(id: UUID, completion: @escaping (UUID, Bool) -> Void) -> Bool {
+    func play(id: UUID, volume: Float = 1, completion: @escaping (UUID, Bool) -> Void) -> Bool {
         stop()
         identity = id
         let delegate = PlaybackDelegate { [weak self] success in
@@ -33,7 +33,7 @@ final class PreparedAudioClip {
         self.delegate = delegate
         player.delegate = delegate
         player.currentTime = 0
-        player.volume = 1
+        player.volume = volume
         return player.play()
     }
 

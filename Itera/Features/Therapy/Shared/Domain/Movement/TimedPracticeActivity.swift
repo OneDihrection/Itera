@@ -52,7 +52,7 @@ struct TimedPracticeActivity: TherapyActivity {
                 elapsed = min(duration, elapsed + min(0.2, frame.timestamp - last))
             }
             last = frame.timestamp
-        case .tick, .viewport, .guidanceCompleted: break
+        case .tick, .viewport, .guidanceCompleted, .countdownReady: break
         }
         return ActivityTransition(
             status: elapsed >= duration ? .finished : (suspended ? .suspended : .running),

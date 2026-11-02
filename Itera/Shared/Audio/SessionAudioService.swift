@@ -13,6 +13,7 @@ import OSLog
 // Audio events are scoped by utterance identity; recognition callbacks have their own generation.
 enum AudioEvent {
     case completed(UUID, Bool)
+    case cancelled(UUID)
     case command(AudioCommand)
     case interrupted
     case voiceUnavailable
@@ -63,10 +64,15 @@ final class SessionAudioService: NSObject, VoiceReadinessProviding, AVSpeechSynt
     private var voice: AVSpeechSynthesisVoice?
     private var tapInstalled = false
     private var clips: [String: PreparedAudioClip] = [:]
+    private var targetEffect: PreparedAudioClip?
     private var activeClip: PreparedAudioClip?
     private var clipID: UUID?
     private var clipWatchdog: Task<Void, Never>?
     private var afterClip: (() -> Void)?
+    private var failedClip: (() -> Void)?
+    private var pendingSpeech: (id: UUID, text: String)?
+    private var pendingCounts: [(id: UUID, number: Int)] = []
+    private var speechWatchdog: Task<Void, Never>?
     private var closingWatchdog: Task<Void, Never>?
 
     override init() {
@@ -103,14 +109,26 @@ final class SessionAudioService: NSObject, VoiceReadinessProviding, AVSpeechSynt
         for number in 1...100 {
             prepareClip("count-\(language)-\(number)")
         }
+        if let url = Bundle.main.url(forResource: "target-reached", withExtension: "wav") {
+            targetEffect = try? PreparedAudioClip(url: url)
+        }
         prepareClip("target-reached")
         prepareClip("closing-chime")
     }
 
     func speak(id: UUID, text: String) {
-        cancelSpeech()
+        if !utteranceIDs.isEmpty || clipID != nil {
+            if let previous = pendingSpeech { events.send(.cancelled(previous.id)) }
+            pendingSpeech = (id, text)
+            return
+        }
         guard let voice else {
-            events.send(.completed(id, false))
+            // Defer failure so callers finish applying the transition before recovery.
+            Task { @MainActor [weak self] in
+                self?.events.send(.feedbackUnavailable)
+                self?.events.send(.completed(id, false))
+                self?.drainPendingAudio()
+            }
             return
         }
         let utterance = AVSpeechUtterance(string: text)
@@ -119,19 +137,38 @@ final class SessionAudioService: NSObject, VoiceReadinessProviding, AVSpeechSynt
         utterance.rate = AVSpeechUtteranceDefaultSpeechRate * 0.8
         utteranceIDs[ObjectIdentifier(utterance)] = id
         synthesizer.speak(utterance)
+        speechWatchdog?.cancel()
+        speechWatchdog = Task { [weak self] in
+            do { try await Task.sleep(for: .seconds(45)) } catch { return }
+            guard let self, self.utteranceIDs.values.contains(id) else { return }
+            self.utteranceIDs.removeAll()
+            self.synthesizer.stopSpeaking(at: .immediate)
+            self.events.send(.feedbackUnavailable)
+            self.events.send(.completed(id, false))
+            self.drainPendingAudio()
+        }
     }
 
     func cancelSpeech() {
+        let cancelled = Array(utteranceIDs.values) + [clipID, pendingSpeech?.id].compactMap { $0 }
+            + pendingCounts.map(\.id)
+        pendingSpeech = nil
+        pendingCounts.removeAll(keepingCapacity: true)
+        speechWatchdog?.cancel()
+        speechWatchdog = nil
+        targetEffect?.stop()
         clipID = nil
         clipWatchdog?.cancel()
         clipWatchdog = nil
         afterClip = nil
+        failedClip = nil
         activeClip?.stop()
         activeClip = nil
         closingWatchdog?.cancel()
         closingWatchdog = nil
         utteranceIDs.removeAll()
         synthesizer.stopSpeaking(at: .immediate)
+        for id in cancelled { events.send(.cancelled(id)) }
     }
 
     private func prepareClip(_ name: String) {
@@ -142,15 +179,44 @@ final class SessionAudioService: NSObject, VoiceReadinessProviding, AVSpeechSynt
     func play(id: UUID, cue: SessionAudioCue) {
         switch cue {
         case .target:
-            // Ordinary target feedback never interrupts guidance or an accepted count.
-            guard utteranceIDs.isEmpty, clipID == nil else { return }
-            playClip("target-reached", id: id, timeout: 1)
+            let volume: Float = utteranceIDs.isEmpty && clipID == nil ? 1 : 0.4
+            guard let targetEffect,
+                  targetEffect.play(id: id, volume: volume, completion: { [weak self] _, success in
+                      if !success { self?.events.send(.feedbackUnavailable) }
+                  }) else {
+                events.send(.feedbackUnavailable)
+                return
+            }
         case .count(let number):
+            if !utteranceIDs.isEmpty || clipID != nil {
+                guard pendingCounts.count < 32 else {
+                    events.send(.feedbackUnavailable)
+                    return
+                }
+                pendingCounts.append((id, number))
+                return
+            }
+            let language = synthesisLocale.hasPrefix("id") ? "id" : "en"
+            let name = "count-\(language)-\(number)"
+            if clips[name] != nil {
+                playClip(name, id: id, timeout: 20, failure: { [weak self] in
+                    self?.speak(id: id, text: String(number))
+                })
+            } else {
+                speak(id: id, text: String(number))
+            }
+        case .countdown(let number):
+            // Countdown time is authoritative; never queue an expired number.
             cancelSpeech()
             let language = synthesisLocale.hasPrefix("id") ? "id" : "en"
-            playClip("count-\(language)-\(number)", id: id, timeout: 20)
-        case .countdown(let number):
-            speak(id: id, text: String(number))
+            let name = "count-\(language)-\(number)"
+            if clips[name] != nil {
+                playClip(name, id: id, timeout: 1, failure: { [weak self] in
+                    self?.speak(id: id, text: String(number))
+                })
+            } else {
+                speak(id: id, text: String(number))
+            }
         case .guidance(let prefix, let key):
             cancelSpeech()
             let name: String
@@ -189,15 +255,18 @@ final class SessionAudioService: NSObject, VoiceReadinessProviding, AVSpeechSynt
         }
     }
 
-    private func playClip(_ name: String, id: UUID, timeout: Double, completion: (() -> Void)? = nil) {
+    private func playClip(_ name: String, id: UUID, timeout: Double, failure: (() -> Void)? = nil, completion: (() -> Void)? = nil) {
         guard let clip = clips[name] else {
             events.send(.feedbackUnavailable)
+            failure?()
             completion?()
+            drainPendingAudio()
             return
         }
         activeClip = clip
         clipID = id
         afterClip = completion
+        failedClip = failure
         guard clip.play(id: id, completion: { [weak self] id, success in
             self?.finishClip(id, success: success)
         }) else {
@@ -213,14 +282,31 @@ final class SessionAudioService: NSObject, VoiceReadinessProviding, AVSpeechSynt
     private func finishClip(_ id: UUID, success: Bool) {
         guard clipID == id else { return }
         let completion = afterClip
+        let failure = failedClip
+        failedClip = nil
         clipID = nil
         afterClip = nil
         clipWatchdog?.cancel()
         clipWatchdog = nil
         activeClip?.stop()
         activeClip = nil
-        if !success { events.send(.feedbackUnavailable) }
+        if !success {
+            events.send(.feedbackUnavailable)
+            failure?()
+        }
         completion?()
+        drainPendingAudio()
+    }
+
+    private func drainPendingAudio() {
+        guard utteranceIDs.isEmpty, clipID == nil else { return }
+        if !pendingCounts.isEmpty {
+            let next = pendingCounts.removeFirst()
+            play(id: next.id, cue: .count(next.number))
+        } else if let next = pendingSpeech {
+            pendingSpeech = nil
+            speak(id: next.id, text: next.text)
+        }
     }
 
     nonisolated func speechSynthesizer(
@@ -232,7 +318,24 @@ final class SessionAudioService: NSObject, VoiceReadinessProviding, AVSpeechSynt
             else {
                 return
             }
+            self.speechWatchdog?.cancel()
+            self.speechWatchdog = nil
             self.events.send(.completed(id, true))
+            self.drainPendingAudio()
+        }
+    }
+
+    nonisolated func speechSynthesizer(
+        _ synthesizer: AVSpeechSynthesizer, didCancel utterance: AVSpeechUtterance
+    ) {
+        Task { @MainActor [weak self] in
+            guard let self,
+                  let id = self.utteranceIDs.removeValue(forKey: ObjectIdentifier(utterance)) else { return }
+            self.speechWatchdog?.cancel()
+            self.speechWatchdog = nil
+            self.events.send(.feedbackUnavailable)
+            self.events.send(.completed(id, false))
+            self.drainPendingAudio()
         }
     }
 
