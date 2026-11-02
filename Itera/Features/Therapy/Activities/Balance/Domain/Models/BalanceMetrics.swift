@@ -30,7 +30,7 @@ struct TrunkCompensation: Equatable {
     var isCompensating: Bool { !reasons.isEmpty }
 }
 
-enum CrossingArm: String, Equatable {
+enum CrossingArm: String, Equatable, Hashable {
     case left
     case right
 
@@ -38,6 +38,24 @@ enum CrossingArm: String, Equatable {
     var ownShoulder: BodyJoint { self == .left ? .leftShoulder : .rightShoulder }
     var targetShoulder: BodyJoint { self == .left ? .rightShoulder : .leftShoulder }
     var next: CrossingArm { self == .left ? .right : .left }
+}
+
+enum BalanceArmSelection: String, CaseIterable, Hashable {
+    case right
+    case left
+    case both
+
+    var initialArm: CrossingArm {
+        self == .left ? .left : .right
+    }
+
+    func arm(after completedArm: CrossingArm) -> CrossingArm {
+        switch self {
+        case .right: .right
+        case .left: .left
+        case .both: completedArm.next
+        }
+    }
 }
 
 struct BalanceOverlay: Equatable {
@@ -50,6 +68,7 @@ struct BalanceOverlay: Equatable {
     let rightHip: TherapyPoint
     let wrist: TherapyPoint?
     let target: TherapyPoint?
+    let isReturnTarget: Bool
     let targetRadius: Double
     let crossedMidline: Bool
     let targetProgress: Double
@@ -71,6 +90,7 @@ struct BalanceSnapshot: Equatable {
     var instructionKey = "balance.tracking"
     var calibrationProgress = 0.0
     var activeArm: CrossingArm = .right
+    var armSelection: BalanceArmSelection = .both
     var metrics = BalanceMetrics()
     var compensation = TrunkCompensation()
     var overlay: BalanceOverlay?

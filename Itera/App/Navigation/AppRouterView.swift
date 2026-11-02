@@ -23,8 +23,12 @@ enum AppRouterView {
         case .balanceOverview:
             BalanceOverviewView()
                 .environment(\.locale, AppLanguage.selected.locale)
-        case .balanceSession(let repetitions, let holdSeconds):
-            BalanceSessionDestination(repetitions: repetitions, holdSeconds: holdSeconds)
+        case .balanceSession(let repetitions, let holdSeconds, let armSelection):
+            BalanceSessionDestination(
+                repetitions: repetitions,
+                holdSeconds: holdSeconds,
+                armSelection: armSelection
+            )
                 .environment(\.locale, AppLanguage.selected.locale)
         case .routineConfiguration:
             RoutineConfigurationView()
@@ -116,13 +120,15 @@ private struct BalanceSessionDestination: View {
     @Environment(AppDependencies.self) private var dependencies
     let repetitions: Int
     let holdSeconds: Int
+    let armSelection: BalanceArmSelection
 
     var body: some View {
         BalanceSessionView(model: BalanceSessionViewModel(
             tracking: dependencies.tracking,
             audio: dependencies.audio,
             repetitions: repetitions,
-            holdSeconds: holdSeconds
+            holdSeconds: holdSeconds,
+            armSelection: armSelection
         ))
     }
 }

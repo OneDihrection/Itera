@@ -724,6 +724,86 @@
         }
       }
     },
+    "balance.arm.both" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Both"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Keduanya"
+          }
+        }
+      }
+    },
+    "balance.arm.left" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Left"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kiri"
+          }
+        }
+      }
+    },
+    "balance.arm.right" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Right"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kanan"
+          }
+        }
+      }
+    },
+    "balance.armSelection" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Arm to practice"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tangan yang dilatih"
+          }
+        }
+      }
+    },
+    "balance.armSelectionHint" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Right or Left repeats only that arm. Both alternates right and left."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kanan atau Kiri hanya mengulang tangan tersebut. Keduanya bergantian kanan dan kiri."
+          }
+        }
+      }
+    },
     "balance.begin" : {
       "localizations" : {
         "en" : {
@@ -971,13 +1051,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Say “repeat” to practice again or “end” to return."
+            "value" : "Say “repeat” or “ulangi” to practice again. Say “end” or “akhiri” to return."
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Ucapkan “repeat” untuk mengulang atau “end” untuk kembali."
+            "value" : "Ucapkan “ulangi” atau “repeat” untuk berlatih lagi. Ucapkan “akhiri” atau “end” untuk kembali."
           }
         }
       }
@@ -1198,13 +1278,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Paused — say “start” or tap Play"
+            "value" : "Paused — say “start” or “mulai”, or tap Play"
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Dijeda — ucapkan “start” atau tekan Putar"
+            "value" : "Dijeda — ucapkan “mulai” atau “start”, atau tekan Putar"
           }
         }
       }
@@ -1281,13 +1361,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Right and left arms alternate until this total is reached."
+            "value" : "Each successful shoulder hold counts toward this total."
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Tangan kanan dan kiri bergantian hingga jumlah ini tercapai."
+            "value" : "Setiap tahan di bahu yang berhasil dihitung ke jumlah ini."
           }
         }
       }
@@ -1298,13 +1378,29 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Return your hand to its starting side"
+            "value" : "Return your hand to the blue starting circle"
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Kembalikan tangan ke sisi awal"
+            "value" : "Kembalikan tangan ke lingkaran awal berwarna biru"
+          }
+        }
+      }
+    },
+    "balance.returnHold" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hold briefly in the blue circle"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tahan sebentar di lingkaran biru"
           }
         }
       }
@@ -1703,13 +1799,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Keep your shoulders, hips, and both wrists visible"
+            "value" : "Keep your shoulders, hips, and working wrist visible"
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Pastikan bahu, pinggul, dan kedua pergelangan tangan terlihat"
+            "value" : "Pastikan bahu, pinggul, dan pergelangan tangan yang dilatih terlihat"
           }
         }
       }
@@ -1737,13 +1833,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Switch sides. Move your left hand to your right shoulder."
+            "value" : "Move your left hand to your right shoulder."
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Ganti sisi. Gerakkan tangan kiri ke bahu kanan."
+            "value" : "Gerakkan tangan kiri ke bahu kanan."
           }
         }
       }
@@ -1765,19 +1861,36 @@
         }
       }
     },
+    "balance.voice.returnSameSide" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Done. Return your hand to the starting position, then use the same arm again."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Selesai. Kembalikan tangan ke posisi awal, lalu gunakan tangan yang sama lagi."
+          }
+        }
+      }
+    },
     "balance.voice.rightTarget" : {
       "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Switch sides. Move your right hand to your left shoulder."
+            "value" : "Move your right hand to your left shoulder."
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Ganti sisi. Gerakkan tangan kanan ke bahu kiri."
+            "value" : "Gerakkan tangan kanan ke bahu kiri."
           }
         }
       }
@@ -1787,13 +1900,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Say “pause” or “start”"
+            "value" : "Say pause/start/end/repeat, or jeda/mulai/akhiri/ulangi"
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Ucapkan “pause” atau “start”"
+            "value" : "Ucapkan jeda/mulai/akhiri/ulangi, atau pause/start/end/repeat"
           }
         }
       }

@@ -36,14 +36,16 @@ final class BalanceSessionViewModel {
         tracking: BodyTrackingService,
         audio: SessionAudioService,
         repetitions: Int,
-        holdSeconds: Int
+        holdSeconds: Int,
+        armSelection: BalanceArmSelection
     ) {
         self.tracking = tracking
         self.audio = audio
         self.holdSeconds = min(20, max(3, holdSeconds))
         engine = CrossMidlineBalanceEngine(
             goal: repetitions,
-            holdDuration: Double(holdSeconds)
+            holdDuration: Double(holdSeconds),
+            armSelection: armSelection
         )
     }
 
@@ -239,14 +241,14 @@ final class BalanceSessionViewModel {
     private func updateAudio(from previous: BalanceSnapshot, to current: BalanceSnapshot) {
         if current.metrics.completedTouches > previous.metrics.completedTouches {
             lastSpokenCountdown = nil
-            let key = current.phase == .complete
-                ? "balance.voice.complete"
-                : "balance.voice.returnAndSwitch"
+            let key = completionGuidanceKey(for: current)
             audio.play(id: UUID(), cue: .guidance(prefix: .target, key: key))
             return
         }
 
-        if current.activeArm != previous.activeArm {
+        if current.activeArm != previous.activeArm
+            || (previous.phase == .returning && current.phase == .reaching)
+        {
             lastSpokenCountdown = nil
             let key = current.activeArm == .right
                 ? "balance.voice.rightTarget"
@@ -273,5 +275,14 @@ final class BalanceSessionViewModel {
         guard remaining != lastSpokenCountdown else { return }
         lastSpokenCountdown = remaining
         audio.play(id: UUID(), cue: .count(remaining))
+    }
+
+    private func completionGuidanceKey(for snapshot: BalanceSnapshot) -> String {
+        if snapshot.phase == .complete {
+            return "balance.voice.complete"
+        }
+        return snapshot.armSelection == .both
+            ? "balance.voice.returnAndSwitch"
+            : "balance.voice.returnSameSide"
     }
 }

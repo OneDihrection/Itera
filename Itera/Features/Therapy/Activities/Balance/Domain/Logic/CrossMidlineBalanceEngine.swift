@@ -35,6 +35,7 @@ struct CrossMidlineBalanceEngine {
     private struct Baseline {
         let spineUnit: TherapyPoint
         let lateralUnit: TherapyPoint
+        let shoulderUnit: TherapyPoint
         let shoulderWidth: Double
         let normalizedShoulderWidth: Double
         let neckLateralOffset: Double
@@ -68,9 +69,12 @@ struct CrossMidlineBalanceEngine {
             guard spine.length > 0.08, shoulderWidth > 0.08 else { return nil }
             let spineUnit = spine.scaled(1 / spine.length)
             let lateralUnit = TherapyPoint(x: spineUnit.y, y: -spineUnit.x)
+            let shoulderUnit = (averagedRightShoulder - averagedLeftShoulder)
+                .scaled(1 / shoulderWidth)
             return Baseline(
                 spineUnit: spineUnit,
                 lateralUnit: lateralUnit,
+                shoulderUnit: shoulderUnit,
                 shoulderWidth: shoulderWidth,
                 normalizedShoulderWidth: shoulderWidth / spine.length,
                 neckLateralOffset: Self.dot(spine, lateralUnit)
@@ -102,12 +106,19 @@ struct CrossMidlineBalanceEngine {
         var timestamp: Double
     }
 
+    private struct TorsoAnchor {
+        var point: TherapyPoint
+        var timestamp: Double
+    }
+
     private(set) var snapshot = BalanceSnapshot()
     private var baseline: Baseline?
     private var baselineCapture: BaselineCapture?
     private var generation: UUID?
     private var lastTimestamp: Double?
     private var targetHoldStartedAt: Double?
+    private var returnHoldStartedAt: Double?
+    private var homeWristPositions: [CrossingArm: TherapyPoint] = [:]
     private var compensationLatched = false
     private var compensationCandidateSince: Double?
     private var compensationClearSince: Double?
@@ -116,21 +127,29 @@ struct CrossMidlineBalanceEngine {
     private var jerkSquareSum = 0.0
     private var jerkSampleCount = 0
     private var cachedJoints: [BodyJoint: CachedJoint] = [:]
+    private var lastTorsoAnchor: TorsoAnchor?
 
     private let baselineDuration = 1.0
     private let targetHoldDuration: Double
+    private let returnHoldDuration = 0.75
     private let leanThresholdDegrees = 18.0
     private let lateralShiftThreshold = 0.40
     private let rotationThreshold = 0.40
     private let compensationEntryDuration = 0.75
     private let compensationExitDuration = 0.50
     private let overlayGracePeriod = 1.25
-    private let balanceConfidence: Float = 0.25
+    private let balanceConfidence: Float = 0.20
 
-    init(goal: Int = 6, holdDuration: Double = 10) {
+    init(
+        goal: Int = 6,
+        holdDuration: Double = 10,
+        armSelection: BalanceArmSelection = .both
+    ) {
         snapshot.goal = max(2, goal)
         targetHoldDuration = min(20, max(3, holdDuration))
         snapshot.holdDuration = targetHoldDuration
+        snapshot.armSelection = armSelection
+        snapshot.activeArm = armSelection.initialArm
     }
 
     mutating func consume(_ frame: TrackingObservation, scoringEnabled: Bool = true) {
@@ -176,6 +195,7 @@ struct CrossMidlineBalanceEngine {
                 target: nil,
                 crossed: false,
                 progress: 0,
+                isReturnTarget: false,
                 warning: false
             )
             clearTransientEvidence()
@@ -187,7 +207,8 @@ struct CrossMidlineBalanceEngine {
                 nil
             } else {
                 switch snapshot.phase {
-                case .returning, .complete: nil
+                case .returning: homeWristPositions[snapshot.activeArm]
+                case .complete: nil
                 default: point(snapshot.activeArm.targetShoulder, in: geometry)
                 }
             }
@@ -200,7 +221,10 @@ struct CrossMidlineBalanceEngine {
                 frame: frame,
                 target: target,
                 crossed: crossed,
-                progress: targetProgress(at: frame.timestamp),
+                progress: snapshot.phase == .returning
+                    ? returnProgress(at: frame.timestamp)
+                    : targetProgress(at: frame.timestamp),
+                isReturnTarget: snapshot.phase == .returning,
                 warning: snapshot.compensation.isCompensating
             )
             lastOverlayTimestamp = frame.timestamp
@@ -231,7 +255,8 @@ struct CrossMidlineBalanceEngine {
     mutating func restart() {
         self = CrossMidlineBalanceEngine(
             goal: snapshot.goal,
-            holdDuration: snapshot.holdDuration
+            holdDuration: snapshot.holdDuration,
+            armSelection: snapshot.armSelection
         )
     }
 
@@ -245,6 +270,7 @@ struct CrossMidlineBalanceEngine {
             target: nil,
             crossed: false,
             progress: snapshot.calibrationProgress,
+            isReturnTarget: false,
             warning: false
         )
         lastOverlayTimestamp = frame.timestamp
@@ -260,6 +286,12 @@ struct CrossMidlineBalanceEngine {
             return
         }
         baseline = captured
+        if let leftWrist = geometry.leftWrist {
+            homeWristPositions[.left] = leftWrist
+        }
+        if let rightWrist = geometry.rightWrist {
+            homeWristPositions[.right] = rightWrist
+        }
         baselineCapture = nil
         snapshot.phase = .reaching
         snapshot.instructionKey = instruction(for: snapshot.activeArm)
@@ -278,6 +310,7 @@ struct CrossMidlineBalanceEngine {
                 target: nil,
                 crossed: false,
                 progress: 0,
+                isReturnTarget: false,
                 warning: false
             )
             lastOverlayTimestamp = frame.timestamp
@@ -297,8 +330,11 @@ struct CrossMidlineBalanceEngine {
                 compensationLatched = true
             }
             targetHoldStartedAt = nil
+            returnHoldStartedAt = nil
             kinematics = nil
-            snapshot.phase = .reaching
+            if snapshot.phase != .returning {
+                snapshot.phase = .reaching
+            }
             snapshot.instructionKey = "balance.compensationWarning"
         } else {
             compensationLatched = false
@@ -313,7 +349,8 @@ struct CrossMidlineBalanceEngine {
         }
 
         let target: TherapyPoint? = switch snapshot.phase {
-        case .returning, .complete: nil
+        case .returning: homeWristPositions[snapshot.activeArm]
+        case .complete: nil
         default: point(snapshot.activeArm.targetShoulder, in: geometry)
         }
         let wrist = point(snapshot.activeArm.wrist, in: geometry)
@@ -325,7 +362,10 @@ struct CrossMidlineBalanceEngine {
             frame: frame,
             target: target,
             crossed: crossed,
-            progress: targetProgress(at: frame.timestamp),
+            progress: snapshot.phase == .returning
+                ? returnProgress(at: frame.timestamp)
+                : targetProgress(at: frame.timestamp),
+            isReturnTarget: snapshot.phase == .returning,
             warning: compensation.isCompensating
         )
         lastOverlayTimestamp = frame.timestamp
@@ -349,15 +389,42 @@ struct CrossMidlineBalanceEngine {
 
         if snapshot.phase == .returning {
             guard let ownShoulder = point(snapshot.activeArm.ownShoulder, in: geometry) else { return }
-            if crossedMidline(wrist: wrist, target: ownShoulder, geometry: geometry) {
-                snapshot.activeArm = snapshot.activeArm.next
+            let home = homeWristPositions[snapshot.activeArm]
+                ?? fallbackHomePosition(for: snapshot.activeArm, geometry: geometry)
+            homeWristPositions[snapshot.activeArm] = home
+            let returnRadius = max(0.06, geometry.shoulderWidth * 0.38)
+            let isOnStartingSide = crossedMidline(
+                wrist: wrist,
+                target: ownShoulder,
+                geometry: geometry
+            )
+            let isInsideStart = (wrist - home).length <= returnRadius
+
+            guard isOnStartingSide, isInsideStart else {
+                returnHoldStartedAt = nil
+                snapshot.instructionKey = "balance.return"
+                return
+            }
+
+            if returnHoldStartedAt == nil {
+                returnHoldStartedAt = frame.timestamp
+            }
+            snapshot.instructionKey = "balance.returnHold"
+            if returnProgress(at: frame.timestamp) >= 1 {
+                returnHoldStartedAt = nil
+                snapshot.activeArm = snapshot.armSelection.arm(after: snapshot.activeArm)
                 snapshot.phase = .reaching
                 snapshot.instructionKey = instruction(for: snapshot.activeArm)
                 resetPath()
-            } else {
-                snapshot.instructionKey = "balance.return"
             }
             return
+        }
+
+        if homeWristPositions[snapshot.activeArm] == nil,
+            let ownShoulder = point(snapshot.activeArm.ownShoulder, in: geometry),
+            crossedMidline(wrist: wrist, target: ownShoulder, geometry: geometry)
+        {
+            homeWristPositions[snapshot.activeArm] = wrist
         }
 
         if crossed, delta > 0, delta <= 0.3 {
@@ -529,6 +596,7 @@ struct CrossMidlineBalanceEngine {
 
     private mutating func clearTransientEvidence() {
         targetHoldStartedAt = nil
+        returnHoldStartedAt = nil
         kinematics = nil
         compensationCandidateSince = nil
         compensationClearSince = nil
@@ -540,6 +608,20 @@ struct CrossMidlineBalanceEngine {
     private func targetProgress(at time: Double) -> Double {
         guard let targetHoldStartedAt else { return 0 }
         return min(1, max(0, (time - targetHoldStartedAt) / targetHoldDuration))
+    }
+
+    private func returnProgress(at time: Double) -> Double {
+        guard let returnHoldStartedAt else { return 0 }
+        return min(1, max(0, (time - returnHoldStartedAt) / returnHoldDuration))
+    }
+
+    private func fallbackHomePosition(
+        for arm: CrossingArm,
+        geometry: Geometry
+    ) -> TherapyPoint {
+        let shoulder = arm == .left ? geometry.leftShoulder : geometry.rightShoulder
+        let hip = arm == .left ? geometry.leftHip : geometry.rightHip
+        return shoulder + (hip - shoulder).scaled(0.72)
     }
 
     private func instruction(for arm: CrossingArm) -> String {
@@ -565,21 +647,28 @@ struct CrossMidlineBalanceEngine {
 
         let shoulderWidth = (rightShoulder - leftShoulder).length
         guard shoulderWidth > 0.08 else { return nil }
-        let observedLeftHip = resolvedPoint(.leftHip, frame: frame)
-        let observedRightHip = resolvedPoint(.rightHip, frame: frame)
-        let observedRoot = resolvedPoint(.root, frame: frame) ?? {
-            guard let observedLeftHip, let observedRightHip else { return nil }
-            return (observedLeftHip + observedRightHip).scaled(0.5)
+        let shoulderAxis = (rightShoulder - leftShoulder).scaled(1 / shoulderWidth)
+        let rawLeftHip = resolvedPoint(.leftHip, frame: frame)
+        let rawRightHip = resolvedPoint(.rightHip, frame: frame)
+        let coherentHips: (left: TherapyPoint, right: TherapyPoint)? = {
+            guard let rawLeftHip, let rawRightHip else { return nil }
+            let hipAxis = rawRightHip - rawLeftHip
+            let hipWidthRatio = hipAxis.length / shoulderWidth
+            guard Self.dot(shoulderAxis, hipAxis) > 0,
+                (0.25...1.35).contains(hipWidthRatio)
+            else { return nil }
+            return (rawLeftHip, rawRightHip)
         }()
+        let observedRoot = resolvedPoint(.root, frame: frame)
+            ?? coherentHips.map { ($0.left + $0.right).scaled(0.5) }
         let shoulderCenter = (leftShoulder + rightShoulder).scaled(0.5)
         let root = observedRoot ?? TherapyPoint(
             x: shoulderCenter.x,
             y: shoulderCenter.y - shoulderWidth * 1.05
         )
-        let shoulderAxis = (rightShoulder - leftShoulder).scaled(1 / shoulderWidth)
         let hipHalfWidth = shoulderWidth * 0.22
-        let leftHip = observedLeftHip ?? root - shoulderAxis.scaled(hipHalfWidth)
-        let rightHip = observedRightHip ?? root + shoulderAxis.scaled(hipHalfWidth)
+        let leftHip = coherentHips?.left ?? root - shoulderAxis.scaled(hipHalfWidth)
+        let rightHip = coherentHips?.right ?? root + shoulderAxis.scaled(hipHalfWidth)
         let geometry = Geometry(
             neck: neck,
             root: root,
@@ -597,6 +686,13 @@ struct CrossMidlineBalanceEngine {
         guard geometry.spineLength > 0.08,
             geometry.shoulderWidth > 0.08
         else { return nil }
+        if let baseline {
+            let widthRatio = geometry.shoulderWidth / baseline.shoulderWidth
+            guard (0.35...2.50).contains(widthRatio),
+                Self.dot(geometry.spineUnit, baseline.spineUnit) > 0.35,
+                Self.dot(shoulderAxis, baseline.shoulderUnit) > 0.20
+            else { return nil }
+        }
         return geometry
     }
 
@@ -604,19 +700,41 @@ struct CrossMidlineBalanceEngine {
 
     private mutating func updateJointCache(from frame: TrackingObservation) {
         guard frame.personCount == 1 else { return }
-        for joint in BodyJoint.allCases {
-            guard let current = frame.point(joint, minimumConfidence: balanceConfidence) else { continue }
-            let smoothed: TherapyPoint
-            if let previous = cachedJoints[joint],
-                frame.timestamp - previous.timestamp <= 0.25,
-                (current - previous.point).length <= 0.35
-            {
-                let currentWeight = smoothingWeight(for: joint)
-                smoothed = previous.point.scaled(1 - currentWeight)
-                    + current.scaled(currentWeight)
-            } else {
-                smoothed = current
+        let observed = Dictionary(uniqueKeysWithValues: BodyJoint.allCases.compactMap { joint in
+            frame.point(joint, minimumConfidence: balanceConfidence).map { (joint, $0) }
+        })
+        translateOccludedJoints(with: observed, timestamp: frame.timestamp)
+
+        let referenceScale = shoulderScale(from: observed)
+        for (joint, current) in observed {
+            guard let previous = cachedJoints[joint] else {
+                cachedJoints[joint] = CachedJoint(point: current, timestamp: frame.timestamp)
+                continue
             }
+            let elapsed = frame.timestamp - previous.timestamp
+            guard elapsed > 0, elapsed <= overlayGracePeriod else {
+                cachedJoints[joint] = CachedJoint(point: current, timestamp: frame.timestamp)
+                continue
+            }
+
+            let displacement = (current - previous.point).length
+            if elapsed <= 0.20,
+                displacement / referenceScale > maximumFrameDisplacement(for: joint)
+            {
+                // A single impossible landmark jump is safer to hold than to draw as a
+                // folded torso. The cached point can still follow whole-body translation.
+                continue
+            }
+
+            let confidence = Double(frame.joints[joint]?.confidence ?? balanceConfidence)
+            let weight = adaptiveSmoothingWeight(
+                for: joint,
+                displacement: displacement,
+                elapsed: elapsed,
+                scale: referenceScale,
+                confidence: confidence
+            )
+            let smoothed = previous.point.scaled(1 - weight) + current.scaled(weight)
             cachedJoints[joint] = CachedJoint(point: smoothed, timestamp: frame.timestamp)
         }
         cachedJoints = cachedJoints.filter {
@@ -624,12 +742,83 @@ struct CrossMidlineBalanceEngine {
         }
     }
 
-    private func smoothingWeight(for joint: BodyJoint) -> Double {
+    private mutating func translateOccludedJoints(
+        with observed: [BodyJoint: TherapyPoint],
+        timestamp: Double
+    ) {
+        guard let anchor = torsoAnchor(from: observed) else { return }
+        defer { lastTorsoAnchor = TorsoAnchor(point: anchor, timestamp: timestamp) }
+        guard let previous = lastTorsoAnchor else { return }
+        let elapsed = timestamp - previous.timestamp
+        let translation = anchor - previous.point
+        guard elapsed > 0, elapsed <= 0.20, translation.length <= 0.16 else { return }
+
+        for joint in BodyJoint.allCases where observed[joint] == nil {
+            guard var cached = cachedJoints[joint],
+                timestamp - cached.timestamp <= overlayGracePeriod
+            else { continue }
+            cached.point = cached.point + translation
+            cachedJoints[joint] = cached
+        }
+    }
+
+    private func torsoAnchor(from points: [BodyJoint: TherapyPoint]) -> TherapyPoint? {
+        if let leftShoulder = points[.leftShoulder], let rightShoulder = points[.rightShoulder] {
+            return (leftShoulder + rightShoulder).scaled(0.5)
+        }
+        if let neck = points[.neck], let root = points[.root] {
+            return (neck + root).scaled(0.5)
+        }
+        if let leftHip = points[.leftHip], let rightHip = points[.rightHip] {
+            return (leftHip + rightHip).scaled(0.5)
+        }
+        let anchors = [
+            points[.neck], points[.root], points[.leftShoulder], points[.rightShoulder],
+            points[.leftHip], points[.rightHip],
+        ].compactMap { $0 }
+        guard anchors.count >= 2 else { return nil }
+        return anchors.reduce(TherapyPoint(x: 0, y: 0), +).scaled(1 / Double(anchors.count))
+    }
+
+    private func shoulderScale(from observed: [BodyJoint: TherapyPoint]) -> Double {
+        if let left = cachedJoints[.leftShoulder]?.point,
+            let right = cachedJoints[.rightShoulder]?.point
+        {
+            return max(0.08, (right - left).length)
+        }
+        if let left = observed[.leftShoulder], let right = observed[.rightShoulder] {
+            return max(0.08, (right - left).length)
+        }
+        return 0.25
+    }
+
+    private func adaptiveSmoothingWeight(
+        for joint: BodyJoint,
+        displacement: Double,
+        elapsed: Double,
+        scale: Double,
+        confidence: Double
+    ) -> Double {
+        let normalizedSpeed = displacement / max(0.001, scale * elapsed)
+        let speedResponse = min(1, normalizedSpeed / 2.2)
+        let range: ClosedRange<Double> = switch joint {
+        case .nose, .neck, .root, .leftShoulder, .rightShoulder, .leftHip, .rightHip:
+            0.18...0.72
+        case .leftElbow, .rightElbow, .leftWrist, .rightWrist:
+            0.30...0.88
+        }
+        let motionWeight = range.lowerBound
+            + (range.upperBound - range.lowerBound) * speedResponse
+        let confidenceWeight = 0.65 + min(1, max(0, confidence)) * 0.35
+        return min(range.upperBound, max(range.lowerBound, motionWeight * confidenceWeight))
+    }
+
+    private func maximumFrameDisplacement(for joint: BodyJoint) -> Double {
         switch joint {
         case .nose, .neck, .root, .leftShoulder, .rightShoulder, .leftHip, .rightHip:
-            return 0.45
-        case .leftElbow, .rightElbow, .leftWrist, .rightWrist:
             return 0.70
+        case .leftElbow, .rightElbow, .leftWrist, .rightWrist:
+            return 1.30
         }
     }
 
@@ -646,6 +835,7 @@ struct CrossMidlineBalanceEngine {
         target: TherapyPoint?,
         crossed: Bool,
         progress: Double,
+        isReturnTarget: Bool,
         warning: Bool
     ) -> BalanceOverlay {
         BalanceOverlay(
@@ -658,10 +848,15 @@ struct CrossMidlineBalanceEngine {
             rightHip: geometry.rightHip,
             wrist: point(snapshot.activeArm.wrist, in: geometry),
             target: target,
-            targetRadius: max(0.045, geometry.shoulderWidth * 0.28),
+            isReturnTarget: isReturnTarget,
+            targetRadius: isReturnTarget
+                ? max(0.06, geometry.shoulderWidth * 0.38)
+                : max(0.045, geometry.shoulderWidth * 0.28),
             crossedMidline: crossed,
             targetProgress: progress,
-            holdSecondsRemaining: target == nil ? nil : holdSecondsRemaining(at: frame.timestamp),
+            holdSecondsRemaining: target == nil || isReturnTarget
+                ? nil
+                : holdSecondsRemaining(at: frame.timestamp),
             compensationWarning: warning
         )
     }

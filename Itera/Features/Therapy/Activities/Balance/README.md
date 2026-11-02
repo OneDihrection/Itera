@@ -28,7 +28,7 @@ A wrist has crossed when its signed side has the same sign as the opposite shoul
 
 Baseline posture is the mean of one contiguous second of stable neck, root, and shoulder observations. Movement beyond 30% of shoulder width or a shoulder-width change above 35% restarts calibration. These relaxed limits prevent ordinary posture adjustments and landmark jitter from repeatedly restarting setup.
 
-Balancing accepts body joints at confidence 0.25. Torso landmarks use a 45% current / 55% previous temporal filter for stability, while elbows and wrists use 70% current / 30% previous so the target interaction remains responsive. The overlay retains each last-known joint for at most 1.25 seconds so brief occlusion from loose clothing or a hand touching the opposite shoulder does not make the guide flash. Cached joints may render the guide, but a touch is credited only while the active wrist and central posture anchors are fresh in the current frame.
+Balancing accepts body joints at confidence 0.20, then applies a confidence-aware adaptive filter. Slow landmark motion uses stronger smoothing to remove stationary jitter, while fast intentional motion raises the current-frame weight so the wrist guide remains responsive. Single-frame jumps beyond a joint-specific fraction of shoulder width are rejected. When a joint is temporarily occluded, its cached point follows the observed torso translation for at most 1.25 seconds instead of remaining frozen while the rest of the skeleton moves. Hip orientation, hip width, shoulder orientation, and spine direction are checked before rendering; an incoherent frame keeps the last stable overlay instead of drawing a folded torso. Cached joints may render the guide, but a touch is credited only while the active wrist and central posture anchors are fresh in the current frame.
 
 The compensation index is the maximum of three normalized signals:
 
@@ -43,7 +43,7 @@ index = max(lean, shift, rotation)
 
 ## Target and movement metrics
 
-The active wrist must cross the midline, enter a radius equal to 28% of current shoulder width around the opposite shoulder, and remain there for the configured 3–20 seconds. The patient hears a localized countdown, then returns the wrist to its anatomical side before the next arm begins. The completed shoulder target disappears until the next arm becomes active.
+The active wrist must cross the midline, enter a radius equal to 28% of current shoulder width around the opposite shoulder, and remain there for the configured 3–20 seconds. The engine captures each visible wrist's neutral position at baseline. After every successful touch, the orange shoulder target disappears and a generous blue return target appears at that neutral position. The wrist must return to its anatomical side, enter the return target, and remain stable for 0.75 seconds before another repetition can begin. This return gate is mandatory for Right, Left, and Both modes, and remains active through temporary compensation warnings so a posture warning cannot bypass it.
 
 Across-midline time accumulates only from fresh, safe frames. Path smoothness uses finite differences of aspect-corrected wrist position:
 
@@ -58,6 +58,8 @@ Frames with gaps above 300 ms clear transient evidence. The output is an exercis
 
 ## Presentation and completion
 
-The setup screen stores the touch goal and hold duration. A bundled RealityKit demonstration loads `crossMidline.usdz`, with the editable Blender source retained under `ArtSource/BalanceCrossMidline.blend`. Touch and English voice commands can pause or resume the session.
+The setup screen stores the touch goal, hold duration, and active-arm choice. Right and Left repeat only the selected arm after every return-to-start phase; Both begins on the right and alternates arms. A bundled RealityKit demonstration loads `crossMidline.usdz`, with the editable Blender source retained under `ArtSource/BalanceCrossMidline.blend`. The mannequin includes a clear face, hands, clothing, legs, target ring, and midline so the cross-body movement remains legible at the setup-card size.
 
-After the final target, capture stops and a modal-style overlay presents target completion, across-midline time, compensation load, and the jerk-derived smoothness estimate. The chart explicitly identifies camera results as session estimates rather than clinical assessment. The patient can repeat with fresh calibration or end and return to the Balancing overview; the English on-device commands are `repeat` and `end`.
+After the final target, capture stops and a modal-style overlay presents target completion, across-midline time, compensation load, and the jerk-derived smoothness estimate. The chart explicitly identifies camera results as session estimates rather than clinical assessment. The patient can repeat with fresh calibration or end and return to the Balancing overview.
+
+On-device voice recognition continuously restarts after a command, a final transcription, or a transient recognition error. It accepts the English commands `pause`, `start`, `end`, and `repeat`, plus the Indonesian equivalents `jeda`, `mulai`, `akhiri`, and `ulangi`. The selected app language determines the preferred recognition locale, with the other supported locale used as an availability fallback. Touch controls remain available whenever recognition is unavailable or a command is missed.
