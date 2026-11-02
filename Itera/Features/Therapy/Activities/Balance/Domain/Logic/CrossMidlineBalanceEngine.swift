@@ -127,10 +127,16 @@ struct CrossMidlineBalanceEngine {
     private let overlayGracePeriod = 1.25
     private let balanceConfidence: Float = 0.25
 
-    init(goal: Int = 6, holdDuration: Double = 10) {
+    init(
+        goal: Int = 6,
+        holdDuration: Double = 10,
+        armSelection: BalanceArmSelection = .both
+    ) {
         snapshot.goal = max(2, goal)
         targetHoldDuration = min(20, max(3, holdDuration))
         snapshot.holdDuration = targetHoldDuration
+        snapshot.armSelection = armSelection
+        snapshot.activeArm = armSelection.initialArm
     }
 
     mutating func consume(_ frame: TrackingObservation, scoringEnabled: Bool = true) {
@@ -231,7 +237,8 @@ struct CrossMidlineBalanceEngine {
     mutating func restart() {
         self = CrossMidlineBalanceEngine(
             goal: snapshot.goal,
-            holdDuration: snapshot.holdDuration
+            holdDuration: snapshot.holdDuration,
+            armSelection: snapshot.armSelection
         )
     }
 
@@ -350,7 +357,7 @@ struct CrossMidlineBalanceEngine {
         if snapshot.phase == .returning {
             guard let ownShoulder = point(snapshot.activeArm.ownShoulder, in: geometry) else { return }
             if crossedMidline(wrist: wrist, target: ownShoulder, geometry: geometry) {
-                snapshot.activeArm = snapshot.activeArm.next
+                snapshot.activeArm = snapshot.armSelection.arm(after: snapshot.activeArm)
                 snapshot.phase = .reaching
                 snapshot.instructionKey = instruction(for: snapshot.activeArm)
                 resetPath()

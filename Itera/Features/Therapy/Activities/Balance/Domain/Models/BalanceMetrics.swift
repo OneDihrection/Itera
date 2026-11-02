@@ -40,6 +40,24 @@ enum CrossingArm: String, Equatable {
     var next: CrossingArm { self == .left ? .right : .left }
 }
 
+enum BalanceArmSelection: String, CaseIterable, Hashable {
+    case right
+    case left
+    case both
+
+    var initialArm: CrossingArm {
+        self == .left ? .left : .right
+    }
+
+    func arm(after completedArm: CrossingArm) -> CrossingArm {
+        switch self {
+        case .right: .right
+        case .left: .left
+        case .both: completedArm.next
+        }
+    }
+}
+
 struct BalanceOverlay: Equatable {
     let aspect: Double
     let midlineBase: TherapyPoint
@@ -71,6 +89,7 @@ struct BalanceSnapshot: Equatable {
     var instructionKey = "balance.tracking"
     var calibrationProgress = 0.0
     var activeArm: CrossingArm = .right
+    var armSelection: BalanceArmSelection = .both
     var metrics = BalanceMetrics()
     var compensation = TrunkCompensation()
     var overlay: BalanceOverlay?

@@ -11,6 +11,7 @@ struct BalanceOverviewView: View {
     @Environment(NavigationRouter.self) private var router
     @AppStorage("balance.repetitions") private var repetitions = 6
     @AppStorage("balance.holdSeconds") private var holdSeconds = 10
+    @AppStorage("balance.armSelection") private var armSelectionRaw = BalanceArmSelection.both.rawValue
     @State private var animationPaused = false
 
     var body: some View {
@@ -59,6 +60,25 @@ struct BalanceOverviewView: View {
                     VStack(alignment: .leading, spacing: 12) {
                         Text("balance.settings")
                             .typography(.headline)
+                        VStack(alignment: .leading, spacing: 12) {
+                            Text("balance.armSelection")
+                                .typography(.body)
+                            Picker("balance.armSelection", selection: $armSelectionRaw) {
+                                Text("balance.arm.right")
+                                    .tag(BalanceArmSelection.right.rawValue)
+                                Text("balance.arm.left")
+                                    .tag(BalanceArmSelection.left.rawValue)
+                                Text("balance.arm.both")
+                                    .tag(BalanceArmSelection.both.rawValue)
+                            }
+                            .pickerStyle(.segmented)
+                            .accessibilityHint("balance.armSelectionHint")
+                            Text("balance.armSelectionHint")
+                                .typography(.footnote)
+                                .foregroundStyle(TherapyPalette.muted)
+                        }
+                        .padding(18)
+                        .background(TherapyPalette.cream, in: RoundedRectangle(cornerRadius: 22))
                         TherapyAdjustmentControl(
                             title: "balance.repetitions",
                             value: $repetitions,
@@ -101,7 +121,8 @@ struct BalanceOverviewView: View {
                 TherapyButton(title: "balance.begin", symbol: "camera.fill") {
                     router.push(.balanceSession(
                         repetitions: repetitions,
-                        holdSeconds: holdSeconds
+                        holdSeconds: holdSeconds,
+                        armSelection: BalanceArmSelection(rawValue: armSelectionRaw) ?? .both
                     ))
                 }
             }

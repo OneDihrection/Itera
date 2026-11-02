@@ -53,12 +53,11 @@ final class SessionAudioService: NSObject, VoiceReadinessProviding, AVSpeechSynt
     private var recognition: SFSpeechRecognitionTask?
     private var request: SFSpeechAudioBufferRecognitionRequest?
     private var recognitionGeneration = UUID()
+    private var recognitionRestartTask: Task<Void, Never>?
     private var utteranceIDs: [ObjectIdentifier: UUID] = [:]
     private var interruption: NSObjectProtocol?
     private var consumed = false
     private var language = AppLanguage.selected
-    // Command recognition stays English independently of narration language.
-    private let recognitionLocale = Locale(identifier: "en-US")
     private var synthesisLocale = "en-US"
     private var voice: AVSpeechSynthesisVoice?
     private var tapInstalled = false
@@ -237,17 +236,22 @@ final class SessionAudioService: NSObject, VoiceReadinessProviding, AVSpeechSynt
     }
 
     func capability() -> VoiceCapability {
-        guard let recognizer = SFSpeechRecognizer(locale: recognitionLocale),
-            recognizer.supportsOnDeviceRecognition
-        else {
+        let recognizers = recognitionLocaleIdentifiers.compactMap {
+            SFSpeechRecognizer(locale: Locale(identifier: $0))
+        }
+        guard recognizers.contains(where: \.supportsOnDeviceRecognition) else {
             return .unsupported
         }
-        return recognizer.isAvailable ? .ready : .unavailable
+        return recognizers.contains {
+            $0.supportsOnDeviceRecognition && $0.isAvailable
+        } ? .ready : .unavailable
     }
 
     @discardableResult
     func startListening() -> VoiceStartupResult {
-        stopListening()
+        recognitionRestartTask?.cancel()
+        recognitionRestartTask = nil
+        tearDownListening(notify: false)
         guard AVAudioApplication.shared.recordPermission == .granted,
             SFSpeechRecognizer.authorizationStatus() == .authorized
         else {
@@ -255,9 +259,7 @@ final class SessionAudioService: NSObject, VoiceReadinessProviding, AVSpeechSynt
             return .permissionDenied
         }
         let readiness = capability()
-        guard readiness == .ready,
-            let recognizer = SFSpeechRecognizer(locale: recognitionLocale)
-        else {
+        guard readiness == .ready, let recognizer = preferredRecognizer() else {
             events.send(.voiceUnavailable)
             return readiness == .unsupported ? .unsupported : .unavailable
         }
@@ -281,6 +283,8 @@ final class SessionAudioService: NSObject, VoiceReadinessProviding, AVSpeechSynt
             let request = SFSpeechAudioBufferRecognitionRequest()
             request.requiresOnDeviceRecognition = true
             request.shouldReportPartialResults = true
+            request.contextualStrings = commandPhrases
+            request.taskHint = .confirmation
             self.request = request
             let input = engine.inputNode
             let format = input.outputFormat(forBus: 0)
@@ -298,23 +302,19 @@ final class SessionAudioService: NSObject, VoiceReadinessProviding, AVSpeechSynt
                         return
                     }
                     if let result, !self.consumed {
-                        let words = result.bestTranscription.formattedString.lowercased()
-                            .trimmingCharacters(in: .whitespacesAndNewlines)
-                        // Exact short utterances avoid substring triggers from app narration.
+                        let words = result.bestTranscription.formattedString
                         if let command = self.command(words) {
                             self.consumed = true
                             self.events.send(.command(command))
-                            // Begin a fresh utterance after a command so the next command can interrupt it.
-                            if self.recognitionGeneration == generation { self.startListening() }
+                            if self.recognitionGeneration == generation {
+                                self.scheduleListeningRestart(after: 0.12)
+                            }
                             return
                         }
                     }
                     if result?.isFinal == true || error != nil {
-                        if error != nil {
-                            self.stopListening()
-                            self.events.send(.voiceUnavailable)
-                        } else {
-                            self.startListening()
+                        if self.recognitionGeneration == generation {
+                            self.scheduleListeningRestart(after: error == nil ? 0.08 : 0.30)
                         }
                     }
                 }
@@ -344,15 +344,24 @@ final class SessionAudioService: NSObject, VoiceReadinessProviding, AVSpeechSynt
         }
     }
 
-    private var commandBundle: Bundle {
-        guard let path = Bundle.main.path(forResource: "en", ofType: "lproj"),
-            let bundle = Bundle(path: path)
-        else { return .main }
-        return bundle
+    private func command(_ words: String) -> AudioCommand? {
+        let normalizedWords = normalizeCommand(words)
+        let heardTokens = normalizedWords.split(separator: " ")
+        guard heardTokens.count <= 3 else { return nil }
+        return commandKeys.first { key, _ in
+            commandBundles.contains { bundle in
+                let phrase = normalizeCommand(String(
+                    localized: String.LocalizationValue(key),
+                    bundle: bundle
+                ))
+                return normalizedWords == phrase
+                    || heardTokens.contains(Substring(phrase))
+            }
+        }?.1
     }
 
-    private func command(_ words: String) -> AudioCommand? {
-        let keys: [(String, AudioCommand)] = [
+    private var commandKeys: [(String, AudioCommand)] {
+        [
             ("command.stop", .stop), ("command.end", .stop), ("command.pause", .pause),
             ("command.start", .resume), ("command.resume", .resume),
             ("command.skip", .skip), ("command.repeat", .repeatInstruction), ("command.recalibrate", .retryCalibration),
@@ -360,9 +369,66 @@ final class SessionAudioService: NSObject, VoiceReadinessProviding, AVSpeechSynt
             ("command.adjustTarget", .adjustTarget), ("command.retryStep", .retryStep),
             ("command.skipStep", .skipStep), ("command.timedPractice", .timedPractice),
         ]
-        return keys.first {
-            String(localized: String.LocalizationValue($0.0), bundle: commandBundle).lowercased() == words
-        }?.1
+    }
+
+    private var commandBundles: [Bundle] {
+        ["en", "id"].compactMap { language in
+            guard let path = Bundle.main.path(forResource: language, ofType: "lproj") else {
+                return nil
+            }
+            return Bundle(path: path)
+        }
+    }
+
+    private var commandPhrases: [String] {
+        Array(Set(commandKeys.flatMap { key, _ in
+            commandBundles.map {
+                String(localized: String.LocalizationValue(key), bundle: $0)
+            }
+        })).sorted()
+    }
+
+    private var recognitionLocaleIdentifiers: [String] {
+        language == .indonesian ? ["id-ID", "en-US"] : ["en-US", "id-ID"]
+    }
+
+    private func preferredRecognizer() -> SFSpeechRecognizer? {
+        recognitionLocaleIdentifiers.lazy.compactMap {
+            SFSpeechRecognizer(locale: Locale(identifier: $0))
+        }.first {
+            $0.supportsOnDeviceRecognition && $0.isAvailable
+        }
+    }
+
+    private func normalizeCommand(_ words: String) -> String {
+        let folded = words.lowercased()
+            .folding(options: [.diacriticInsensitive], locale: language.locale)
+        let cleaned = folded.unicodeScalars.map { scalar -> Character in
+            CharacterSet.alphanumerics.contains(scalar) || CharacterSet.whitespaces.contains(scalar)
+                ? Character(String(scalar))
+                : " "
+        }
+        var tokens = String(cleaned).split(whereSeparator: \.isWhitespace).map(String.init)
+        let fillers: Set<String> = ["please", "tolong", "hey", "itera"]
+        while let first = tokens.first, fillers.contains(first) {
+            tokens.removeFirst()
+        }
+        return tokens.joined(separator: " ")
+    }
+
+    private func scheduleListeningRestart(after delay: Double) {
+        tearDownListening(notify: false)
+        recognitionRestartTask?.cancel()
+        recognitionRestartTask = Task { [weak self] in
+            do {
+                try await Task.sleep(for: .seconds(delay))
+            } catch {
+                return
+            }
+            guard let self else { return }
+            self.recognitionRestartTask = nil
+            _ = self.startListening()
+        }
     }
 
     /// Logs configuration only; never logs recognized words or microphone samples.
@@ -373,6 +439,12 @@ final class SessionAudioService: NSObject, VoiceReadinessProviding, AVSpeechSynt
     }
 
     func stopListening() {
+        recognitionRestartTask?.cancel()
+        recognitionRestartTask = nil
+        tearDownListening(notify: true)
+    }
+
+    private func tearDownListening(notify: Bool) {
         recognitionGeneration = UUID()
         recognizer?.delegate = nil
         recognizer = nil
@@ -385,7 +457,9 @@ final class SessionAudioService: NSObject, VoiceReadinessProviding, AVSpeechSynt
             engine.inputNode.removeTap(onBus: 0)
             tapInstalled = false
         }
-        events.send(.listening(false))
+        if notify {
+            events.send(.listening(false))
+        }
     }
 
     func stop() {

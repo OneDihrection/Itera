@@ -15,7 +15,11 @@ enum AppRoute: Hashable {
     case therapySession
     case therapyOverview
     case balanceOverview
-    case balanceSession(repetitions: Int, holdSeconds: Int)
+    case balanceSession(
+        repetitions: Int,
+        holdSeconds: Int,
+        armSelection: BalanceArmSelection
+    )
     case plan
     case reports
     case achievements
