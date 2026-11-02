@@ -194,7 +194,7 @@ struct BalanceSessionView: View {
                         .accessibilityLabel("balance.calibrationProgress")
                 }
 
-                if model.snapshot.phase == .holding,
+                if (model.snapshot.phase == .holding || model.snapshot.phase == .returning),
                     let remaining = model.snapshot.overlay?.holdSecondsRemaining
                 {
                     HStack(spacing: 14) {

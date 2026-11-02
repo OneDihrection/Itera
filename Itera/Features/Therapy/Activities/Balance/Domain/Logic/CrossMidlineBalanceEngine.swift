@@ -118,6 +118,8 @@ struct CrossMidlineBalanceEngine {
     private var lastTimestamp: Double?
     private var targetHoldStartedAt: Double?
     private var returnHoldStartedAt: Double?
+    private var targetOutsideSince: Double?
+    private var returnOutsideSince: Double?
     private var homeWristPositions: [CrossingArm: TherapyPoint] = [:]
     private var compensationLatched = false
     private var compensationCandidateSince: Double?
@@ -131,7 +133,12 @@ struct CrossMidlineBalanceEngine {
 
     private let baselineDuration = 1.0
     private let targetHoldDuration: Double
-    private let returnHoldDuration = 0.75
+    private let returnHoldDuration = 5.0
+    private let targetTrackingGracePeriod = 0.40
+    private let targetRadiusRatio = 0.34
+    private let targetExitRadiusRatio = 0.40
+    private let returnRadiusRatio = 0.38
+    private let returnExitRadiusRatio = 0.44
     private let leanThresholdDegrees = 18.0
     private let lateralShiftThreshold = 0.40
     private let rotationThreshold = 0.40
@@ -331,6 +338,8 @@ struct CrossMidlineBalanceEngine {
             }
             targetHoldStartedAt = nil
             returnHoldStartedAt = nil
+            targetOutsideSince = nil
+            returnOutsideSince = nil
             kinematics = nil
             if snapshot.phase != .returning {
                 snapshot.phase = .reaching
@@ -344,6 +353,9 @@ struct CrossMidlineBalanceEngine {
                 processTarget(geometry, frame: frame, delta: delta)
             } else {
                 targetHoldStartedAt = nil
+                returnHoldStartedAt = nil
+                targetOutsideSince = nil
+                returnOutsideSince = nil
                 snapshot.instructionKey = "balance.holdPosition"
             }
         }
@@ -380,8 +392,7 @@ struct CrossMidlineBalanceEngine {
         guard geometry.isFresh(snapshot.activeArm.wrist),
             let wrist = point(snapshot.activeArm.wrist, in: geometry)
         else {
-            targetHoldStartedAt = nil
-            snapshot.instructionKey = "balance.activeWristMissing"
+            handleWristTrackingLoss(at: frame.timestamp)
             return
         }
         guard let target = point(snapshot.activeArm.targetShoulder, in: geometry) else { return }
@@ -392,7 +403,12 @@ struct CrossMidlineBalanceEngine {
             let home = homeWristPositions[snapshot.activeArm]
                 ?? fallbackHomePosition(for: snapshot.activeArm, geometry: geometry)
             homeWristPositions[snapshot.activeArm] = home
-            let returnRadius = max(0.06, geometry.shoulderWidth * 0.38)
+            let returnRadius = max(
+                0.06,
+                geometry.shoulderWidth * (returnHoldStartedAt == nil
+                    ? returnRadiusRatio
+                    : returnExitRadiusRatio)
+            )
             let isOnStartingSide = crossedMidline(
                 wrist: wrist,
                 target: ownShoulder,
@@ -401,17 +417,18 @@ struct CrossMidlineBalanceEngine {
             let isInsideStart = (wrist - home).length <= returnRadius
 
             guard isOnStartingSide, isInsideStart else {
-                returnHoldStartedAt = nil
-                snapshot.instructionKey = "balance.return"
+                maintainOrResetReturnHold(at: frame.timestamp)
                 return
             }
 
+            returnOutsideSince = nil
             if returnHoldStartedAt == nil {
                 returnHoldStartedAt = frame.timestamp
             }
             snapshot.instructionKey = "balance.returnHold"
             if returnProgress(at: frame.timestamp) >= 1 {
                 returnHoldStartedAt = nil
+                returnOutsideSince = nil
                 snapshot.activeArm = snapshot.armSelection.arm(after: snapshot.activeArm)
                 snapshot.phase = .reaching
                 snapshot.instructionKey = instruction(for: snapshot.activeArm)
@@ -433,14 +450,21 @@ struct CrossMidlineBalanceEngine {
         updatePath(position: wrist, time: frame.timestamp, scale: geometry.shoulderWidth)
 
         let proximity = (wrist - target).length
-        let targetRadius = max(0.045, geometry.shoulderWidth * 0.28)
-        guard crossed, proximity <= targetRadius else {
-            targetHoldStartedAt = nil
-            snapshot.phase = .reaching
-            snapshot.instructionKey = instruction(for: snapshot.activeArm)
+        let targetRadius = max(
+            0.055,
+            geometry.shoulderWidth * (targetHoldStartedAt == nil
+                ? targetRadiusRatio
+                : targetExitRadiusRatio)
+        )
+        // The visible, body-anchored target is authoritative for contact. It is already
+        // centered on the opposite shoulder; requiring a second midline predicate here
+        // can reject a wrist that is visibly inside the circle when the torso axis jitters.
+        guard proximity <= targetRadius else {
+            maintainOrResetTargetHold(at: frame.timestamp)
             return
         }
 
+        targetOutsideSince = nil
         if targetHoldStartedAt == nil { targetHoldStartedAt = frame.timestamp }
         snapshot.phase = .holding
         snapshot.instructionKey = "balance.hold"
@@ -448,6 +472,7 @@ struct CrossMidlineBalanceEngine {
 
         snapshot.metrics.completedTouches += 1
         targetHoldStartedAt = nil
+        targetOutsideSince = nil
         resetPath()
         if snapshot.metrics.completedTouches >= snapshot.goal {
             snapshot.phase = .complete
@@ -594,9 +619,61 @@ struct CrossMidlineBalanceEngine {
         kinematics = nil
     }
 
+    private mutating func handleWristTrackingLoss(at time: Double) {
+        if snapshot.phase == .returning {
+            maintainOrResetReturnHold(at: time)
+        } else {
+            maintainOrResetTargetHold(at: time)
+        }
+        if targetHoldStartedAt == nil, returnHoldStartedAt == nil {
+            snapshot.instructionKey = "balance.activeWristMissing"
+        }
+    }
+
+    private mutating func maintainOrResetTargetHold(at time: Double) {
+        guard targetHoldStartedAt != nil else {
+            targetOutsideSince = nil
+            snapshot.phase = .reaching
+            snapshot.instructionKey = instruction(for: snapshot.activeArm)
+            return
+        }
+        if targetOutsideSince == nil {
+            targetOutsideSince = time
+        }
+        guard time - (targetOutsideSince ?? time) > targetTrackingGracePeriod else {
+            snapshot.phase = .holding
+            snapshot.instructionKey = "balance.hold"
+            return
+        }
+        targetHoldStartedAt = nil
+        targetOutsideSince = nil
+        snapshot.phase = .reaching
+        snapshot.instructionKey = instruction(for: snapshot.activeArm)
+    }
+
+    private mutating func maintainOrResetReturnHold(at time: Double) {
+        guard returnHoldStartedAt != nil else {
+            returnOutsideSince = nil
+            snapshot.instructionKey = "balance.return"
+            return
+        }
+        if returnOutsideSince == nil {
+            returnOutsideSince = time
+        }
+        guard time - (returnOutsideSince ?? time) > targetTrackingGracePeriod else {
+            snapshot.instructionKey = "balance.returnHold"
+            return
+        }
+        returnHoldStartedAt = nil
+        returnOutsideSince = nil
+        snapshot.instructionKey = "balance.return"
+    }
+
     private mutating func clearTransientEvidence() {
         targetHoldStartedAt = nil
         returnHoldStartedAt = nil
+        targetOutsideSince = nil
+        returnOutsideSince = nil
         kinematics = nil
         compensationCandidateSince = nil
         compensationClearSince = nil
@@ -850,18 +927,30 @@ struct CrossMidlineBalanceEngine {
             target: target,
             isReturnTarget: isReturnTarget,
             targetRadius: isReturnTarget
-                ? max(0.06, geometry.shoulderWidth * 0.38)
-                : max(0.045, geometry.shoulderWidth * 0.28),
+                ? max(0.06, geometry.shoulderWidth * returnRadiusRatio)
+                : max(0.055, geometry.shoulderWidth * targetRadiusRatio),
             crossedMidline: crossed,
             targetProgress: progress,
-            holdSecondsRemaining: target == nil || isReturnTarget
-                ? nil
-                : holdSecondsRemaining(at: frame.timestamp),
+            holdSecondsRemaining: holdSecondsRemaining(
+                at: frame.timestamp,
+                targetVisible: target != nil,
+                isReturnTarget: isReturnTarget
+            ),
             compensationWarning: warning
         )
     }
 
-    private func holdSecondsRemaining(at time: Double) -> Int? {
+    private func holdSecondsRemaining(
+        at time: Double,
+        targetVisible: Bool,
+        isReturnTarget: Bool
+    ) -> Int? {
+        guard targetVisible else { return nil }
+        if isReturnTarget {
+            guard let returnHoldStartedAt else { return nil }
+            let remaining = max(0, returnHoldDuration - (time - returnHoldStartedAt))
+            return max(1, Int(ceil(remaining)))
+        }
         guard let targetHoldStartedAt else { return nil }
         let remaining = max(0, targetHoldDuration - (time - targetHoldStartedAt))
         return max(1, Int(ceil(remaining)))
