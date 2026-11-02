@@ -30,7 +30,10 @@ struct FingerActivity {
     private(set) var baselines = [Double](repeating: 0, count: 4)
     private(set) var targets = [Double](repeating: 0, count: 4)
     private(set) var best = [Double](repeating: 0, count: 4)
-    private var holdStart: Double?
+    private(set) var holdElapsed = 0.0
+    private(set) var holdCompletionID: UUID?
+    private var holdCompletionWasPresented = false
+    private var lastHoldTimestamp: Double?
     private var holdValue = 0.0
     private var holdSum = 0.0
     private var holdCount = 0
@@ -54,7 +57,15 @@ struct FingerActivity {
 
 
 
+    static let demonstrationDuration = 10.0
+
     var needsStart: Bool { awaitingStart }
+    var holdDuration: Double { 2 }
+    var isHolding: Bool { lastHoldTimestamp != nil || holdCompletionID != nil }
+    var holdRemaining: Double { max(0, holdDuration - holdElapsed) }
+    var demonstrationRemaining: Double {
+        max(0, Self.demonstrationDuration - demonstrationSeconds)
+    }
     var calibrationCount: Int { kind.isSequential ? 4 : 1 }
     var observedGain: Double? {
         let changes = (0..<calibrationCount).filter { initialized[$0] }.map {
@@ -73,15 +84,17 @@ struct FingerActivity {
 
     // Evidence loss resets holds/cycles, independently of the preview-driven stage clock.
     mutating func suspendEvidence() {
-        // Retain the accepted outward leg briefly, but credit no missing time or pending dwell.
-        holdStart = nil
+        // An earned endpoint may finish its visual acknowledgment during a brief occlusion.
+        // Partial holds still reset immediately and no missing time receives credit.
+        if holdCompletionID == nil {
+            resetHold()
+        }
         peakStart = nil
         lastTimestamp = nil
-        progress = 0
     }
 
     mutating func breakEvidence() {
-        holdStart = nil
+        resetHold()
         peakStart = nil
         awaitingStart = true
         lastTimestamp = nil
@@ -116,16 +129,25 @@ struct FingerActivity {
             return
         }
         defer { lastTick = now }
+        if holdCompletionID != nil {
+            if holdCompletionWasPresented && narrationFinished {
+                commitCompletedHold()
+            }
+            return
+        }
         let delta = min(0.2, max(0, now - (lastTick ?? now)))
         switch phase {
         case .demonstration, .feedback:
             if phase == .demonstration {
-                demonstrationSeconds += delta
+                demonstrationSeconds = min(Self.demonstrationDuration, demonstrationSeconds + delta)
+                remaining = demonstrationRemaining
             }
             guard narrationFinished else {
                 return
             }
-            remaining -= delta
+            if phase == .feedback {
+                remaining -= delta
+            }
             if remaining <= 0 {
                 if phase == .demonstration {
                     phase = .countdown
@@ -169,9 +191,14 @@ struct FingerActivity {
             breakEvidence()
             return
         }
+        // A completed hold remains the current instruction until its full ring is presented.
+        if holdCompletionID != nil {
+            lastTimestamp = evidence.timestamp
+            return
+        }
         let delta = evidence.timestamp - (lastTimestamp ?? evidence.timestamp)
-        if delta > 0.15 {
-            holdStart = nil
+        if delta > 0.3 {
+            resetHold()
             peakStart = nil
             if delta > 0.5 {
                 returning = false
@@ -179,6 +206,10 @@ struct FingerActivity {
             }
         }
         lastTimestamp = evidence.timestamp
+        if !narrationFinished, [.baseline, .target, .active].contains(phase) {
+            resetHold()
+            return
+        }
         switch phase {
         case .baseline, .target:
             capture(value, time: evidence.timestamp)
@@ -193,46 +224,29 @@ struct FingerActivity {
             movementFraction = min(1, max(0, normalized))
             capturePeak(value, time: evidence.timestamp, tolerance: range * 0.12)
             if awaitingStart {
-                guard normalized <= 0.25 else {
-                    holdStart = nil
+                guard normalized <= (lastHoldTimestamp == nil ? 0.25 : 0.35) else {
+                    resetHold()
                     return
                 }
-                if stable(value, time: evidence.timestamp, tolerance: range * 0.20, duration: 0.25) {
-                    awaitingStart = false
-                    holdStart = nil
+                if stable(value, time: evidence.timestamp, tolerance: range * 0.20, duration: holdDuration) {
+                    markHoldComplete()
                 }
                 return
             }
             progress = min(1, max(0, returning ? 1 - normalized : normalized))
-            let arrived = returning ? normalized <= 0.25 : normalized >= 0.80
+            // Separate entry/exit bands prevent tiny boundary noise from restarting a valid hold.
+            let holding = lastHoldTimestamp != nil
+            let arrived = returning
+                ? normalized <= (holding ? 0.35 : 0.25)
+                : normalized >= (holding ? 0.70 : 0.80)
             guard arrived else {
-                holdStart = nil
+                resetHold()
                 return
             }
-            guard stable(value, time: evidence.timestamp, tolerance: range * 0.20, duration: 0.25) else {
+            guard stable(value, time: evidence.timestamp, tolerance: range * 0.20, duration: holdDuration) else {
                 return
             }
-            if !returning {
-                best[finger] = max(best[finger], holdSum / Double(holdCount))
-                returning = true
-            } else {
-                returning = false
-                peakStart = nil
-                if kind.isSequential && finger < 3 {
-                    finger += 1
-                } else {
-                    finger = 0
-                    repetitions += 1
-                    totalRepetitions += 1
-                    if repetitions >= routine.repetitions {
-                        completedSets += 1
-                        phase = .feedback
-                        remaining = 3
-                        narrationFinished = false
-                    }
-                }
-            }
-            holdStart = nil
+            markHoldComplete()
         default:
             break
         }
@@ -253,19 +267,45 @@ struct FingerActivity {
     }
 
     private mutating func capture(_ value: Double, time: Double) {
-        guard stable(value, time: time, tolerance: 0.10, duration: 2) else {
+        // A stationary hand outside the requested target must never run its hold clock.
+        if phase == .target, value - baselines[finger] <= 0.08 {
+            resetHold()
+            progress = 0
+            return
+        }
+        guard stable(value, time: time, tolerance: 0.10, duration: holdDuration) else {
+            return
+        }
+        markHoldComplete()
+    }
+
+    mutating func holdCompletionPresented(_ id: UUID) {
+        guard id == holdCompletionID, holdElapsed >= holdDuration else {
+            return
+        }
+        holdCompletionWasPresented = true
+    }
+
+    private mutating func markHoldComplete() {
+        guard holdCompletionID == nil else {
+            return
+        }
+        holdElapsed = holdDuration
+        progress = 1
+        holdCompletionID = UUID()
+        holdCompletionWasPresented = false
+    }
+
+    private mutating func commitCompletedHold() {
+        guard holdCompletionID != nil, holdCompletionWasPresented, holdCount > 0 else {
             return
         }
         let mean = holdSum / Double(holdCount)
-        if phase == .baseline {
+        switch phase {
+        case .baseline:
             baselines[finger] = mean
             phase = .target
-        } else {
-            guard mean - baselines[finger] > 0.08 else {
-                holdStart = nil
-                progress = 0
-                return
-            }
+        case .target:
             targets[finger] = mean
             best[finger] = mean
             initialized[finger] = true
@@ -275,24 +315,60 @@ struct FingerActivity {
             } else {
                 finger = 0
                 phase = .demonstration
-                remaining = kind.isSequential ? 16 : 8
+                remaining = Self.demonstrationDuration
                 narrationFinished = false
             }
+        case .active:
+            if awaitingStart {
+                awaitingStart = false
+            } else if !returning {
+                best[finger] = max(best[finger], mean)
+                returning = true
+            } else {
+                returning = false
+                peakStart = nil
+                if kind.isSequential && finger < 3 {
+                    finger += 1
+                } else {
+                    finger = 0
+                    repetitions += 1
+                    totalRepetitions += 1
+                    if repetitions >= routine.repetitions {
+                        completedSets += 1
+                        phase = .feedback
+                        remaining = 3
+                        narrationFinished = false
+                    }
+                }
+            }
+        default:
+            break
         }
-        holdStart = nil
+        resetHold()
+    }
+
+    private mutating func resetHold() {
+        lastHoldTimestamp = nil
+        holdElapsed = 0
+        holdSum = 0
+        holdCount = 0
+        holdCompletionID = nil
+        holdCompletionWasPresented = false
         progress = 0
     }
 
     private mutating func stable(_ value: Double, time: Double, tolerance: Double, duration: Double) -> Bool {
-        if holdStart == nil || abs(value - holdValue) > tolerance {
-            holdStart = time
+        if lastHoldTimestamp == nil || abs(value - holdValue) > tolerance {
+            resetHold()
             holdValue = value
-            holdSum = 0
-            holdCount = 0
         }
+        let interval = max(0, time - (lastHoldTimestamp ?? time))
+        lastHoldTimestamp = time
         holdSum += value
         holdCount += 1
-        progress = min(1, (time - (holdStart ?? time)) / duration)
-        return progress >= 1
+        // Accumulate only fresh observed intervals, with bounded per-frame credit.
+        holdElapsed = min(duration, holdElapsed + min(0.3, interval))
+        progress = holdElapsed / duration
+        return holdElapsed >= duration
     }
 }

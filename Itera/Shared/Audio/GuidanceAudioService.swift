@@ -103,13 +103,7 @@ final class GuidanceAudioService: NSObject, AVSpeechSynthesizerDelegate {
         }
         lastButtonSound = now
         do {
-            // The same owner configures quiet UI playback outside therapy sessions.
-            if !audioSessionActive {
-                let session = AVAudioSession.sharedInstance()
-                try session.setCategory(.ambient, mode: .default, options: [.mixWithOthers])
-                try session.setActive(true)
-                audioSessionActive = true
-            }
+            try prepareOptionalPlayback()
             if buttonPlayer == nil, let url = Bundle.main.url(forResource: "button-click", withExtension: "wav") {
                 buttonPlayer = try AVAudioPlayer(contentsOf: url)
                 buttonPlayer?.volume = 0.18
@@ -120,6 +114,25 @@ final class GuidanceAudioService: NSObject, AVSpeechSynthesizerDelegate {
         } catch {
             // Optional touch reinforcement must not disable an action or interrupt narration.
             buttonPlayer = nil
+        }
+    }
+
+    private func prepareOptionalPlayback() throws {
+        guard !audioSessionActive else {
+            return
+        }
+        let session = AVAudioSession.sharedInstance()
+        try session.setCategory(.ambient, mode: .default, options: [.mixWithOthers])
+        try session.setActive(true)
+        audioSessionActive = true
+    }
+
+    func playAchievementCue() {
+        do {
+            try prepareOptionalPlayback()
+            playCue(.setCompleted)
+        } catch {
+            // Celebrations remain usable when optional sound is unavailable.
         }
     }
 

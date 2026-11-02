@@ -52,12 +52,18 @@ enum AppRouterView {
             AchievementCelebrationView()
         case .achievement(let id):
             PracticeAchievementDetailView(id: id)
+        case .achievementShare(let id):
+            AchievementShareDestination(id: id)
         case .report(let id):
             FingerReportDetailView(id: id)
+        case .fingerPause:
+            FingerPauseView()
         case .fingerSession:
             FingerSessionView()
         case .reflection:
             FingerReflectionView()
+        case .practicePreferences:
+            PracticePreferencesView()
         case .routineSettings:
             FingerRoutineSettingsView()
         case .exercisePreview(let exercise):

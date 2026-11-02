@@ -51,6 +51,7 @@ private struct ModalStackModifier: ViewModifier {
     @Environment(NavigationRouter.self) private var router
     let index: Int
     let isCover: Bool
+    var sheetHostCoverID: UUID? = nil
 
     private var presentations: [RoutePresentation] {
         isCover ? router.presentedFullScreenCovers : router.presentedSheets
@@ -59,7 +60,11 @@ private struct ModalStackModifier: ViewModifier {
     private var presentation: Binding<RoutePresentation?> {
         Binding(
             get: {
-                presentations.indices.contains(index) ? presentations[index] : nil
+                // Sheets belong to the visible cover, or the root when no cover is open.
+                if !isCover, router.presentedFullScreenCovers.last?.id != sheetHostCoverID {
+                    return nil
+                }
+                return presentations.indices.contains(index) ? presentations[index] : nil
             },
             set: { value in
                 guard value == nil, presentations.indices.contains(index) else { return }
@@ -91,6 +96,7 @@ private struct ModalStackModifier: ViewModifier {
         Group {
             if isCover {
                 AppRouterView.destination(item.route)
+                    .modifier(ModalStackModifier(index: 0, isCover: false, sheetHostCoverID: item.id))
             } else {
                 NavigationStack {
                     AppRouterView.destination(item.route)
@@ -98,7 +104,7 @@ private struct ModalStackModifier: ViewModifier {
             }
         }
         .environment(router)
-        .modifier(ModalStackModifier(index: index + 1, isCover: isCover))
+        .modifier(ModalStackModifier(index: index + 1, isCover: isCover, sheetHostCoverID: sheetHostCoverID))
     }
 }
 
