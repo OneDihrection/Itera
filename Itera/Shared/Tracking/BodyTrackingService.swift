@@ -232,7 +232,10 @@ final class BodyTrackingService: NSObject, AVCaptureVideoDataOutputSampleBufferD
             return
         }
         let time = rawTime + timestampOffset
-        guard time - lastPublished >= 1.0 / 20 else {
+        // Body-only tracking follows delivered camera frames. A 50 ms gate on
+        // a 30 FPS stream otherwise skips every second frame, yielding 15 FPS.
+        // Retain the existing inference budget when cup detection is enabled.
+        guard !cupEnabled || time - lastPublished >= 1.0 / 20 else {
             return
         }
         lastPublished = time

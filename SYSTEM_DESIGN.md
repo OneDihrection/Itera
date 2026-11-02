@@ -107,7 +107,7 @@ Require one person and usable required joints (confidence at least 0.5). Correct
 | Rule | Requirement |
 | --- | --- |
 | Geometry | Arm raise uses hip–shoulder–elbow; elbow bend uses shoulder–elbow–wrist. Store offsets relative to the middle joint and normalize by its reference segment. |
-| Start capture | Five contiguous steady seconds. |
+| Start capture | Three contiguous steady seconds. |
 | Target capture | Three contiguous steady seconds. |
 | Valid geometry | Reference segment and tracked displacement exceed 0.03 aspect-correct image-height units. |
 | Stability | Reset hold if displacement from its first sample exceeds 10% of current normalized limb length. Nonincreasing time or a gap over 150 ms clears hold. |
