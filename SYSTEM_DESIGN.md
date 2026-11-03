@@ -489,3 +489,7 @@ Body-therapy preparation and exercise countdowns start after identified introduc
 SessionAudioService remains the sole audio-session owner. Foreground speech retains only the latest pending live prompt; accepted repetition counts are serialized ahead of pending prompts in a bounded queue (32 entries, reporting feedback unavailable on overflow). Stage replacement, pause, stop, and interruption cancel obsolete work. Intentional cancellation is reported separately and never advances guidance; unexpected synthesis cancellation reports failure. Speech has a bounded watchdog.
 
 Target success effects use a separate prepared player, at 40% volume when foreground audio is active and normal volume otherwise. No effect backlog is retained. Finger-therapy audio is unchanged. Physical verification of both languages, pause/stop recognition during playback, route/interruption recovery, missing clips, and narration self-trigger rejection remains pending.
+
+## Mac Catalyst compatibility
+
+Mac Catalyst support is retained from main as an explicit exception to the original iPad-only platform scope. Physical M1-iPad acceptance remains required. Voice commands remain exact English phrases with en-US on-device recognition in both interface languages. Catalyst camera and audio acceptance remains pending.

@@ -216,6 +216,9 @@ struct PracticeAchievementDetailView: View {
                 Text("achievement.earned").typography(.headline)
                 Text(award.earned, format: .dateTime.day().month(.wide).year()).typography(.body)
                 Text("achievement.encouragement").typography(.title2).multilineTextAlignment(.center)
+                TherapyButton(title: "achievement.share", symbol: "square.and.arrow.up") {
+                    router.presentSheet(.achievementShare(badge.id))
+                }
             } else {
                 Text(LocalizedStringKey(badge.family.title)).typography(.body)
                 Text(verbatim: "\(min(badge.target, model.progress.value(for: badge)))/\(badge.target)")
@@ -230,29 +233,41 @@ struct PracticeAchievementDetailView: View {
 struct AchievementCelebrationView: View {
     @Environment(AppDependencies.self) private var dependencies
     @Environment(NavigationRouter.self) private var router
+    @AppStorage(PracticePreferences.calmMode) private var calmMode = false
 
     var body: some View {
         ScrollView {
-            VStack(spacing: 26) {
-                Text("achievement.new").typography(.largeTitle).multilineTextAlignment(.center)
-                Text("achievement.encouragement").typography(.body).multilineTextAlignment(.center)
-                LazyVGrid(columns: [GridItem(.adaptive(minimum: 170))], spacing: 24) {
-                    ForEach(dependencies.progress.pending) { badge in
-                        VStack(spacing: 12) {
-                            TherapyBadge(symbol: badge.symbol, value: String(badge.target), earned: true, size: 110)
-                            Text(verbatim: dependencies.progress.title(for: badge))
-                                .typography(.headline).multilineTextAlignment(.center)
+            if let badge = dependencies.progress.pending.first {
+                VStack(spacing: 26) {
+                    Text("achievement.new").typography(.largeTitle).multilineTextAlignment(.center)
+                    TherapyAwardReveal(symbol: badge.symbol, value: String(badge.target), animated: !calmMode)
+                        .id(badge.id)
+                    Text(verbatim: dependencies.progress.title(for: badge))
+                        .typography(.title).multilineTextAlignment(.center)
+                    Text("achievement.encouragement").typography(.body).multilineTextAlignment(.center)
+                    if dependencies.progress.award(for: badge) != nil {
+                        TherapyButton(title: "achievement.share", symbol: "square.and.arrow.up", secondary: true) {
+                            router.presentSheet(.achievementShare(badge.id))
                         }
                     }
+                    if let error = dependencies.progress.errorKey { TherapyError(key: error) }
                 }
-                if let error = dependencies.progress.errorKey { TherapyError(key: error) }
-            }.padding(36)
+                .padding(36)
+                .frame(maxWidth: .infinity)
+                .task(id: badge.id) { dependencies.playAchievementCue() }
+            }
         }
         .foregroundStyle(TherapyPalette.ink).background(TherapyPalette.cream)
         .safeAreaInset(edge: .bottom) {
-            TherapyButton(title: "achievement.keepGoing", symbol: "checkmark", disabled: dependencies.progress.acknowledging) {
+            TherapyButton(
+                title: dependencies.progress.pending.count > 1 ? "achievement.nextAward" : "achievement.keepGoing",
+                symbol: "checkmark", disabled: dependencies.progress.acknowledging
+            ) {
+                guard let id = dependencies.progress.pending.first?.id else {
+                    return
+                }
                 Task {
-                    if await dependencies.progress.acknowledge() {
+                    if await dependencies.progress.acknowledge(id), dependencies.progress.pending.isEmpty {
                         router.dismissSheet()
                     }
                 }
@@ -261,5 +276,39 @@ struct AchievementCelebrationView: View {
         }
         .presentationDetents([.large])
         .interactiveDismissDisabled()
+    }
+}
+
+
+struct AchievementShareDestination: View {
+    let id: String
+    @Environment(AppDependencies.self) private var dependencies
+    @Environment(NavigationRouter.self) private var router
+    @Environment(\.locale) private var locale
+
+    var body: some View {
+        if let badge = PracticeAchievement.catalog.first(where: { $0.id == id }),
+           let award = dependencies.progress.award(for: badge) {
+            TherapyAchievementShareSheet(
+                symbol: badge.symbol,
+                value: String(badge.target),
+                title: dependencies.progress.title(for: badge),
+                earnedDate: award.earned,
+                caption: String.localizedStringWithFormat(
+                    String(localized: "achievement.shareCaption", bundle: AppLanguage.selected.resourceBundle),
+                    dependencies.progress.title(for: badge)
+                ),
+                locale: locale
+            ) {
+                if router.presentedSheets.last?.route == .achievementShare(id) {
+                    router.dismissSheet()
+                }
+            }
+        } else {
+            TherapyButton(title: "action.done") {
+                router.dismissSheet()
+            }
+            .padding(24)
+        }
     }
 }

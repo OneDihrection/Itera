@@ -27,6 +27,14 @@ struct HandEvidence {
     let side: HandSide?
     let points: [HandPoint]
 
+    /// The same landmarks attributed to a known hand.
+    func assigning(side: HandSide) -> HandEvidence {
+        HandEvidence(
+            timestamp: timestamp, generation: generation, width: width,
+            height: height, side: side, points: points
+        )
+    }
+
     func distance(_ a: Int, _ b: Int) -> Double {
         hypot((points[a].x - points[b].x) * width / height, points[a].y - points[b].y)
     }

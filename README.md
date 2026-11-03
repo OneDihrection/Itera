@@ -117,3 +117,7 @@ Follow-up screen verification, 29 October 2026: iPad Pro 13-inch (M5) Simulator,
 ## Arm and reaching sessions
 
 The arm-raise, elbow-bend, and directional-reaching workflow from main remains available from Home alongside finger practice. It retains its separate routine and session repositories. See [session verification](SESSION_VERIFICATION.md) for checks and outstanding physical-device acceptance.
+
+## Mac Catalyst compatibility
+
+Mac Catalyst support is retained from main as an explicit exception to the original iPad-only platform scope. Physical M1-iPad acceptance remains required. Voice commands remain exact English phrases with en-US on-device recognition in both interface languages. Catalyst camera and audio acceptance remains pending.

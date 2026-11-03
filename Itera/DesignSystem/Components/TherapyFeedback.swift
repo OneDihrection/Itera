@@ -10,6 +10,8 @@ import SwiftUI
 struct TherapyProgressRing: View {
     let progress: Double
     var lineWidth: CGFloat = 12
+    var animatesProgress = true
+    var animationDuration = 0.12
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
@@ -18,7 +20,7 @@ struct TherapyProgressRing: View {
             Circle().trim(from: 0, to: min(1, max(0, progress)))
                 .stroke(TherapyPalette.primary, style: StrokeStyle(lineWidth: lineWidth, lineCap: .round))
                 .rotationEffect(.degrees(-90))
-                .animation(reduceMotion ? nil : .linear(duration: 0.12), value: progress)
+                .animation(reduceMotion || !animatesProgress ? nil : .linear(duration: animationDuration), value: progress)
         }
         .accessibilityElement()
         .accessibilityLabel("session.holdProgress")

@@ -14,26 +14,40 @@ enum AppRouterView {
         switch route {
         case .home:
             HomeView()
-        case .fingerHome:
-            FingerHomeView()
-        case .therapyOverview:
-            TherapyOverview()
+        case .fingerHome(let category):
+            FingerHomeView(category: category)
+        case .therapyOverview(let category):
+            TherapyOverview(category: category)
                 .environment(\.buttonFeedback, {})
                 .environment(\.locale, AppLanguage.selected.locale)
-        case .routineConfiguration:
-            RoutineConfigurationView()
+        case .armRotationHome:
+            ArmRotationHomeView()
+                .environment(\.locale, AppLanguage.selected.locale)
+        case .balanceOverview(let exercise):
+            BalanceOverviewView(exercise: exercise)
+                .environment(\.locale, AppLanguage.selected.locale)
+        case .balanceSession(let exercise, let repetitions, let holdSeconds, let armSelection):
+            BalanceSessionDestination(
+                exercise: exercise,
+                repetitions: repetitions,
+                holdSeconds: holdSeconds,
+                armSelection: armSelection
+            )
+                .environment(\.locale, AppLanguage.selected.locale)
+        case .routineConfiguration(let category):
+            RoutineConfigurationView(category: category)
                 .environment(\.buttonFeedback, {})
                 .environment(\.locale, AppLanguage.selected.locale)
-        case .exercisePicker:
-            RoutineExercisePicker()
+        case .exercisePicker(let category):
+            RoutineExercisePicker(category: category)
                 .environment(\.buttonFeedback, {})
                 .environment(\.locale, AppLanguage.selected.locale)
         case .therapySession:
             SessionDestination()
                 .environment(\.buttonFeedback, {})
                 .environment(\.locale, AppLanguage.selected.locale)
-        case .plan:
-            FingerPlanView()
+        case .plan(let category):
+            FingerPlanView(category: category)
         case .reports:
             FingerReportsView()
         case .achievements:
@@ -42,14 +56,20 @@ enum AppRouterView {
             AchievementCelebrationView()
         case .achievement(let id):
             PracticeAchievementDetailView(id: id)
+        case .achievementShare(let id):
+            AchievementShareDestination(id: id)
         case .report(let id):
             FingerReportDetailView(id: id)
+        case .fingerPause:
+            FingerPauseView()
         case .fingerSession:
             FingerSessionView()
         case .reflection:
             FingerReflectionView()
-        case .routineSettings:
-            FingerRoutineSettingsView()
+        case .practicePreferences:
+            PracticePreferencesView()
+        case .routineSettings(let category):
+            FingerRoutineSettingsView(category: category)
         case .exercisePreview(let exercise):
             FingerExercisePreviewView(exercise: exercise)
         }
@@ -103,5 +123,24 @@ private struct SessionDestination: View {
 
     var body: some View {
         TherapySessionView(model: dependencies.makeSession())
+    }
+}
+
+private struct BalanceSessionDestination: View {
+    @Environment(AppDependencies.self) private var dependencies
+    let exercise: BalanceExercise
+    let repetitions: Int
+    let holdSeconds: Int
+    let armSelection: BalanceArmSelection
+
+    var body: some View {
+        BalanceSessionView(model: BalanceSessionViewModel(
+            tracking: dependencies.tracking,
+            audio: dependencies.audio,
+            repetitions: repetitions,
+            holdSeconds: holdSeconds,
+            armSelection: armSelection,
+            exercise: exercise
+        ))
     }
 }

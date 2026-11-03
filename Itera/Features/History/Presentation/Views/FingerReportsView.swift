@@ -27,7 +27,7 @@ struct FingerReportsView: View {
                             Image(systemName: "chart.bar.doc.horizontal").typography(size: 56, weight: .bold)
                             Text("reports.empty").typography(.title)
                             Text("reports.emptyDetail").typography(.body)
-                            TherapyButton(title: "home.viewPlan", symbol: "play.fill") { router.push(.plan) }
+                            TherapyButton(title: "home.viewPlan", symbol: "play.fill") { router.push(.plan(.fingers)) }
                         }
                     }
                 } else {

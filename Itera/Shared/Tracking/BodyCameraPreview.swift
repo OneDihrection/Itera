@@ -71,7 +71,12 @@ struct BodyCameraPreview: UIViewRepresentable {
         override func layoutSubviews() {
             super.layoutSubviews()
             reportReadiness()
+            #if targetEnvironment(macCatalyst)
+            // Mac windows have no interface orientation and Mac cameras deliver upright frames, so use the unrotated (0°) landscapeRight path.
+            let orientation = UIInterfaceOrientation.landscapeRight
+            #else
             let orientation = window?.windowScene?.interfaceOrientation ?? .landscapeLeft
+            #endif
             let right = orientation == .landscapeRight
             if let connection = previewLayer.connection {
                 let angle: CGFloat = right ? 0 : 180

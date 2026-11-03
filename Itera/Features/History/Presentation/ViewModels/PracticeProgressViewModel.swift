@@ -59,14 +59,14 @@ final class PracticeProgressViewModel {
         week = progress.week(offset: weekOffset)
     }
 
-    func acknowledge() async -> Bool {
-        guard !acknowledging else {
+    func acknowledge(_ id: String) async -> Bool {
+        guard !acknowledging, pending.first?.id == id else {
             return false
         }
         acknowledging = true
         defer { acknowledging = false }
         do {
-            awards = try await repository.acknowledge(Set(pending.map(\.id)))
+            awards = try await repository.acknowledge([id])
             errorKey = nil
             return true
         } catch {

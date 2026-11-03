@@ -38,3 +38,15 @@ TherapyIconButton in Components/TherapyControls.swift provides a large icon acti
 ## Full-screen session presentation
 
 `SessionStageSurface` provides the reference experience’s full-screen surface, 48-point inset, 24-point section spacing, and continuous 36-point border. It accepts content and controls without knowing about session state. `SessionCelebration` provides a cancellable three-second visual celebration and pauses its animation timeline afterward; the caller handles Reduce Motion. Its particle layout was adapted from VisionPoc’s `TherapyClosingSection.swift`.
+
+`TherapyGuideBubble` displays supplied time, progress and target completion without owning tracking or timers. `TherapyAwardReveal` combines the shared badge and bounded confetti with a Reduce Motion-aware entrance. Button activation uses a short press response without changing the original action or accessibility activation.
+
+`TherapyGuideBubble` accepts an optional diameter and outline-only styling for enclosing indicators. Its explicit `showsTimer` input controls timer text and timed progress; labels use an overlay so timer visibility never shifts the tracked circle center.
+
+`TherapyGuideBubble` accepts a completion identity and presentation callback. It reports a completed, visible cue after a cancellable 250 ms settle period, only while active in the foreground. This is presentation acknowledgment, not exercise-time credit. The activity retains its full/zero snapshot until the session receives that matching acknowledgment. Final progress renders without animation lag; partial ring updates interpolate independently of the acceptance clock.
+
+`TherapyMetric` supports compact label spacing for horizontal session headers, retaining its large numeric value and combined accessibility label.
+
+`TherapyAchievementShareSheet` renders a value-driven badge card in memory and exposes the native iPad sharing controller. The shared router owns presentation and completion; the component has no achievement eligibility or persistence logic.
+
+`TherapyRangeGauge` (Components/TherapyRangeGauge.swift) draws a measured movement range as a start zone, a target zone, and end labels. It takes labels and zone fractions only; the caller decides what the range means.

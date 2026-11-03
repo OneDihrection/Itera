@@ -8,9 +8,13 @@
 import SwiftUI
 
 struct FingerSessionView: View {
+    @ScaledMetric(relativeTo: .body) private var guidanceHeight = 156.0
+    @AppStorage(PracticePreferences.calmMode) private var calmMode = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(AppDependencies.self) private var dependencies
     @Environment(NavigationRouter.self) private var router
     @Environment(\.scenePhase) private var scenePhase
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     var body: some View {
         Group {
@@ -25,8 +29,20 @@ struct FingerSessionView: View {
                             model.background()
                         }
                     }
+                    .onChange(of: model.paused, initial: true) { _, paused in
+                        if paused {
+                            if router.presentedSheets.last?.route != .fingerPause {
+                                router.presentSheet(.fingerPause)
+                            }
+                        } else if router.presentedSheets.last?.route == .fingerPause {
+                            router.dismissSheet()
+                        }
+                    }
                     .onChange(of: model.needsReflection) { _, finished in
                         if finished {
+                            if router.presentedSheets.last?.route == .fingerPause {
+                                router.dismissSheet()
+                            }
                             router.replaceFullScreenCover(with: .reflection)
                         }
                     }
@@ -36,16 +52,25 @@ struct FingerSessionView: View {
     }
 
     private func session(_ model: FingerSessionViewModel) -> some View {
-        VStack(spacing: 18) {
-            header(model)
-            stage(model)
-            if model.waitingForCamera && !model.paused {
-                TherapyStatus(title: "camera.waiting", symbol: "video.slash")
+        GeometryReader { geometry in
+            VStack(spacing: 14) {
+                header(model)
+                stage(model)
+                    .overlay(alignment: .top) {
+                        if model.waitingForCamera && !model.paused {
+                            TherapyStatus(title: "camera.waiting", symbol: "video.slash")
+                                .background(TherapyPalette.surface, in: Capsule())
+                                .padding(16)
+                        }
+                    }
+                ScrollView {
+                    instruction(model)
+                }
+                .frame(height: min(guidanceHeight, geometry.size.height * 0.25))
             }
-            instruction(model)
+            .padding(18)
+            .background(TherapyPalette.cream)
         }
-        .padding(24)
-        .background(TherapyPalette.cream)
         .accessibilityHidden(model.activity.phase == .countdown || model.paused)
         .overlay {
             if model.activity.phase == .countdown {
@@ -54,131 +79,169 @@ struct FingerSessionView: View {
                     .ignoresSafeArea()
             }
         }
-        .overlay {
-            if model.paused {
-                pausePanel(model)
-            }
-        }
-        .statusBarHidden(model.activity.phase == .countdown && !model.paused)
+        .statusBarHidden(true)
     }
 
     private func header(_ model: FingerSessionViewModel) -> some View {
-        HStack(spacing: 20) {
-            VStack(alignment: .leading, spacing: 4) {
-                Text(LocalizedStringKey(model.stageKey)).typography(.footnote)
-                    .foregroundStyle(TherapyPalette.primary)
-                Text(LocalizedStringKey(model.activity.kind.title)).typography(.title)
+        let layout = dynamicTypeSize.isAccessibilitySize
+            ? AnyLayout(VStackLayout(spacing: 8))
+            : AnyLayout(HStackLayout(spacing: 24))
+
+        return layout {
+            sessionTitle(model)
+                .frame(maxWidth: .infinity, alignment: .leading)
+            HStack(spacing: 20) {
+                TherapyMetric(title: "session.duration", value: model.timeText, compact: true)
+                TherapyMetric(
+                    title: "session.set",
+                    value: "\(model.activity.set)/\(model.routine.sets)",
+                    compact: true
+                )
+                TherapyMetric(
+                    title: "session.repetitions",
+                    value: "\(model.activity.repetitions)/\(model.routine.repetitions)",
+                    compact: true
+                )
+                pauseButton(model)
             }
-            Spacer(minLength: 8)
-            if model.activity.phase == .active || model.activity.phase == .feedback || model.activity.phase == .rest {
-                TherapyMetric(title: "session.time", value: model.timeText).frame(width: 100)
-                TherapyMetric(title: "session.set", value: "\(model.activity.set)/\(model.routine.sets)").frame(width: 80)
-                TherapyMetric(title: "session.repetitions", value: "\(model.activity.repetitions)/\(model.routine.repetitions)").frame(width: 115)
-            }
-            TherapyIconButton(title: "action.pause", symbol: "pause.fill", size: 92) {
-                model.handleCommand(.pause)
-            }
+            .frame(maxWidth: .infinity)
         }
         .foregroundStyle(TherapyPalette.ink)
     }
 
-    private func stage(_ model: FingerSessionViewModel) -> some View {
-        ZStack {
-            // The single preview stays mounted beneath every phase-specific composition.
-            camera(model)
-                .accessibilityHidden([.demonstration, .feedback, .rest].contains(model.activity.phase))
-            if model.activity.phase == .demonstration {
-                demonstration(model)
-            } else if model.activity.phase == .feedback {
-                VStack(spacing: 20) {
-                    TherapyCelebration().id(model.celebrationID).frame(height: 250)
-                    Text("session.setComplete").typography(.largeTitle)
-                }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .background(TherapyPalette.cream)
-            } else if model.activity.phase == .rest {
-                rest(model)
-            }
+    private func sessionTitle(_ model: FingerSessionViewModel) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(LocalizedStringKey(model.stageKey))
+                .typography(.footnote)
+                .foregroundStyle(TherapyPalette.primary)
+            Text(LocalizedStringKey(model.activity.kind.title))
+                .typography(.title)
+                .lineLimit(2, reservesSpace: true)
         }
-        .clipShape(RoundedRectangle(cornerRadius: 30))
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    private func pauseButton(_ model: FingerSessionViewModel) -> some View {
+        TherapyIconButton(title: "action.pause", symbol: "pause.fill", size: 92) {
+            model.handleCommand(.pause)
+        }
+    }
+
+    private func stage(_ model: FingerSessionViewModel) -> some View {
+        // Overlays must not impose a new minimum size on the persistent camera viewport.
+        camera(model)
+            .accessibilityHidden([.demonstration, .feedback, .rest].contains(model.activity.phase))
+            .overlay {
+                if model.activity.phase == .demonstration {
+                    demonstration(model)
+                } else if model.activity.phase == .feedback {
+                    VStack(spacing: 20) {
+                        if !calmMode && !reduceMotion {
+                            TherapyCelebration().id(model.celebrationID).frame(height: 250)
+                        }
+                        Text("session.setComplete").typography(.largeTitle)
+                    }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .background(TherapyPalette.cream)
+                } else if model.activity.phase == .rest {
+                    rest(model)
+                } else if model.activity.phase == .rangeResult {
+                    rangeResult(model)
+                }
+            }
+            .clipShape(RoundedRectangle(cornerRadius: 30))
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    /// Shows the calibrated range, then lets the patient or caregiver start or measure again.
+    private func rangeResult(_ model: FingerSessionViewModel) -> some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 24) {
+                Text("range.resultTitle").typography(.title)
+                    .accessibilityAddTraits(.isHeader)
+                TherapyRangeGauge(startLabel: "range.startEnd", endLabel: "range.farEnd")
+                Text("range.target").typography(.headline)
+                Text("range.repExplainer").typography(.body)
+                    .foregroundStyle(TherapyPalette.muted)
+                Text("range.disclaimer").typography(.footnote)
+                    .foregroundStyle(TherapyPalette.muted)
+                HStack(spacing: 16) {
+                    TherapyButton(title: "range.start", symbol: "play.fill", action: model.confirmRange)
+                    TherapyButton(title: "range.remeasure", symbol: "arrow.clockwise", secondary: true, action: model.remeasureRange)
+                }
+            }
+            .frame(maxWidth: 640, alignment: .leading)
+            .padding(28)
+            .frame(maxWidth: .infinity)
+        }
+        .background(TherapyPalette.cream)
     }
 
     private func rest(_ model: FingerSessionViewModel) -> some View {
-        ZStack {
-            TherapyRestBackdrop(paused: model.paused || model.waitingForCamera)
-            VStack(spacing: 20) {
-                Text("stage.rest").typography(.title)
-                ZStack {
-                    TherapyProgressRing(progress: model.activity.remaining / Double(model.routine.restSeconds))
-                    Text(verbatim: String(model.countdown)).typography(size: 100, weight: .bold)
-                        .monospacedDigit().contentTransition(.numericText(countsDown: true))
-                }.frame(width: 250, height: 250)
-                Text("rest.reassurance").typography(.body).foregroundStyle(TherapyPalette.muted)
+        GeometryReader { geometry in
+            ZStack {
+                TherapyPalette.cream
+                if !calmMode {
+                    TherapyRestBackdrop(paused: model.paused || model.waitingForCamera)
+                }
+                ScrollView {
+                    VStack(spacing: 20) {
+                        Text("stage.rest").typography(.title)
+                        ZStack {
+                            TherapyProgressRing(progress: model.activity.remaining / Double(model.routine.restSeconds))
+                            Text(verbatim: String(model.countdown)).typography(size: 100, weight: .bold)
+                                .monospacedDigit().contentTransition(.numericText(countsDown: true))
+                                .lineLimit(1).minimumScaleFactor(0.4)
+                        }
+                        .frame(width: min(250, geometry.size.height * 0.52), height: min(250, geometry.size.height * 0.52))
+                        Text("rest.reassurance").typography(.body).foregroundStyle(TherapyPalette.muted)
+                    }
+                    .padding(28)
+                    .frame(maxWidth: .infinity, minHeight: geometry.size.height)
+                }
             }
-            .padding(28)
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
     private func camera(_ model: FingerSessionViewModel) -> some View {
-        ZStack(alignment: .topTrailing) {
-            TherapyPalette.cameraBackground
-            HandCameraPreview(camera: model.camera, ready: model.previewReady)
-                .accessibilityLabel("camera.preview")
-            if let evidence = model.evidence {
-                FingerLandmarkOverlay(evidence: evidence,
-                                      progress: model.activity.progress,
-                                      calibrating: model.activity.phase == .baseline || model.activity.phase == .target)
-            }
-            HStack(alignment: .top) {
-                VStack(alignment: .leading, spacing: 12) {
-                    TherapyStatus(title: LocalizedStringKey(model.cameraMessage),
-                                  symbol: model.trackingReady ? "checkmark.circle.fill" : "viewfinder",
-                                  color: TherapyPalette.primary)
-                        .background(TherapyPalette.surface, in: Capsule())
+        GeometryReader { geometry in
+            ZStack(alignment: .topTrailing) {
+                TherapyPalette.cameraBackground
+                HandCameraPreview(camera: model.camera, ready: model.previewReady)
+                    .accessibilityLabel("camera.preview")
+                if let evidence = model.guideEvidence {
+                    FingerLandmarkOverlay(
+                        evidence: evidence,
+                        progress: model.activity.holdElapsed / model.activity.holdDuration,
+                        remaining: model.activity.holdRemaining,
+                        exercise: model.activity.kind,
+                        finger: model.activity.finger,
+                        returning: model.activity.returning,
+                        showsTimer: model.showsGuideTimer,
+                        guiding: model.showsGuideTimer,
+                        completionID: model.activity.holdCompletionID,
+                        onCompletionPresented: model.holdCompletionPresented
+                    )
+                }
+                HStack(alignment: .top) {
                     Text(LocalizedStringKey(model.routine.side.title)).typography(.headline)
                         .padding(14).background(TherapyPalette.surface, in: Capsule())
-                    Spacer()
-                    if !model.trackingReady {
-                        Text("camera.hint").typography(.title2)
-                            .foregroundStyle(.white).padding(22)
-                            .background(.black.opacity(0.65), in: RoundedRectangle(cornerRadius: 20))
+                    Spacer(minLength: 16)
+                    if [.baseline, .target, .range, .active].contains(model.activity.phase) {
+                        example(model)
+                            .frame(
+                                width: min(250, geometry.size.width * 0.3),
+                                height: min(265, geometry.size.height * 0.8)
+                            )
+                            .clipShape(RoundedRectangle(cornerRadius: 24))
                     }
                 }
-                Spacer(minLength: 16)
-                if [.baseline, .target, .active].contains(model.activity.phase) {
-                    example(model)
-                        .frame(width: 250, height: 265)
-                        .clipShape(RoundedRectangle(cornerRadius: 24))
-                }
-            }.padding(20)
-            if model.activity.phase == .active && model.trackingReady {
-                VStack {
-                    Spacer()
-                    movementGuide(model)
-                }.frame(maxWidth: .infinity).padding(20)
+                .padding(20)
             }
         }
-    }
-
-    private func movementGuide(_ model: FingerSessionViewModel) -> some View {
-        HStack(spacing: 18) {
-            Label("guide.start", systemImage: "circle")
-            ProgressView(value: model.activity.movementFraction)
-                .tint(TherapyPalette.primary)
-                .accessibilityLabel("guide.position")
-            Label("guide.target", systemImage: "scope")
-        }
-        .typography(.headline)
-        .foregroundStyle(TherapyPalette.primary)
-        .padding(18)
-        .background(TherapyPalette.surface.opacity(0.95), in: RoundedRectangle(cornerRadius: 22))
-        .frame(maxWidth: 600)
     }
 
     private func example(_ model: FingerSessionViewModel) -> some View {
-        FingerDemonstrationView(
+        FingerExampleView(
             exercise: model.activity.kind, phase: model.activity.phase,
             returning: model.activity.returning || model.activity.needsStart,
             finger: model.activity.finger, side: model.routine.side, paused: model.paused || model.waitingForCamera
@@ -242,11 +305,15 @@ struct FingerSessionView: View {
                         Text(LocalizedStringKey(model.instructionKey))
                             .typography(size: 36, weight: .bold, relativeTo: .title)
                             .fixedSize(horizontal: false, vertical: true)
+                        if model.activity.phase == .target || model.activity.phase == .active {
+                            Text("guide.holdDuration \(Int(model.activity.holdDuration))")
+                                .typography(.callout)
+                        }
                         HStack(spacing: 14) {
                             if model.activity.kind.isSequential && [.baseline, .target, .active].contains(model.activity.phase) {
                                 Text(LocalizedStringKey(model.fingerKey)).typography(.headline)
                             }
-                            if [.baseline, .target, .active].contains(model.activity.phase) {
+                            if [.baseline, .target, .range, .active].contains(model.activity.phase) && model.trackingReady {
                                 Text(LocalizedStringKey(model.liveFeedbackKey)).typography(.callout)
                                     .foregroundStyle(TherapyPalette.primary)
                             }
@@ -270,8 +337,16 @@ struct FingerSessionView: View {
                     .accessibilityLabel(model.voiceEnabled ? "voice.on" : "voice.off")
                 }
                 if [.baseline, .target, .active].contains(model.activity.phase) {
-                    ProgressView(value: model.activity.progress).tint(TherapyPalette.primary)
+                    ProgressView(value: model.activity.holdElapsed / model.activity.holdDuration).tint(TherapyPalette.primary)
                         .accessibilityLabel("session.holdProgress")
+                } else if model.activity.phase == .range {
+                    ProgressView(
+                        value: model.activity.rangeReady
+                            ? model.activity.rangeProgress
+                            : model.activity.holdElapsed / model.activity.holdDuration
+                    )
+                    .tint(TherapyPalette.primary)
+                        .accessibilityLabel("session.rangeProgress")
                 }
                 if let key = model.errorKey {
                     HStack {
@@ -288,105 +363,4 @@ struct FingerSessionView: View {
         }
     }
 
-    private func pausePanel(_ model: FingerSessionViewModel) -> some View {
-        ZStack {
-            Color.black.opacity(0.65).ignoresSafeArea()
-            ScrollView {
-                TherapyCard {
-                    VStack(spacing: 22) {
-                        Text("session.paused").typography(.largeTitle)
-                        Text(LocalizedStringKey(model.activity.kind.title)).typography(.title2)
-                        HStack {
-                            TherapyMetric(title: "session.time", value: model.timeText)
-                            TherapyMetric(title: "session.set", value: "\(model.activity.set)/\(model.routine.sets)")
-                            TherapyMetric(title: "session.repetitions", value: "\(model.activity.repetitions)/\(model.routine.repetitions)")
-                        }
-                        if model.voiceEnabled {
-                            TherapyStatus(title: "voice.pauseListening", symbol: "mic.fill")
-                        }
-                        if model.voiceNeedsAcknowledgment {
-                            TherapyError(key: "voice.unavailable")
-                            TherapyButton(title: "voice.useTouch", secondary: true) { model.acknowledgeTouch() }
-                        }
-                        if let key = model.errorKey {
-                            TherapyError(key: key)
-                            if key == "storage.error" {
-                                TherapyButton(title: "action.retry", secondary: true) {
-                                    Task { await model.saveCheckpoint() }
-                                }
-                            }
-                        }
-                        TherapyButton(title: "action.resume", symbol: "play.fill",
-                                      disabled: !model.canResume) { model.handleCommand(.resume) }
-                        TherapyButton(title: "action.later", symbol: "bookmark", secondary: true, disabled: model.saving) {
-                            Task {
-                                if await model.saveForLater() {
-                                    router.dismissFullScreenCover()
-                                    await dependencies.home.refresh()
-                                }
-                            }
-                        }
-                        TherapyButton(title: "action.recalibrate", secondary: true) { model.retryCalibration() }
-                        TherapyButton(title: "action.skip", secondary: true) { model.skipCurrent() }
-                        TherapyButton(title: "action.end", symbol: "stop.fill", destructive: true) { model.finish() }
-                    }
-                }
-                .frame(maxWidth: 660).padding(32).frame(maxWidth: .infinity)
-            }
-        }
-        .foregroundStyle(TherapyPalette.ink)
-        .accessibilityAddTraits(.isModal)
-    }
-}
-
-private struct FingerLandmarkOverlay: View {
-    let evidence: HandEvidence
-    let progress: Double
-    let calibrating: Bool
-
-    var body: some View {
-        GeometryReader { geometry in
-            let scale = min(geometry.size.width / evidence.width, geometry.size.height / evidence.height)
-            let width = evidence.width * scale
-            let height = evidence.height * scale
-            let origin = CGPoint(x: (geometry.size.width - width) / 2, y: (geometry.size.height - height) / 2)
-            if calibrating, evidence.points.count == 21, evidence.points[0].confidence >= 0.5 {
-                TherapyProgressRing(progress: progress, lineWidth: 7)
-                    .frame(width: 72, height: 72)
-                    .background(TherapyPalette.surface.opacity(0.85), in: Circle())
-                    .position(point(0, width: width, height: height, origin: origin))
-            }
-            Canvas { context, _ in
-                for base in [1, 5, 9, 13, 17] {
-                    let chain = [0, base, base + 1, base + 2, base + 3]
-                    for pair in zip(chain, chain.dropFirst()) {
-                        guard evidence.points[pair.0].confidence >= 0.5,
-                              evidence.points[pair.1].confidence >= 0.5 else { continue }
-                        var path = Path()
-                        path.move(to: point(pair.0, width: width, height: height, origin: origin))
-                        path.addLine(to: point(pair.1, width: width, height: height, origin: origin))
-                        context.stroke(path, with: .color(TherapyPalette.secondary), lineWidth: 4)
-                    }
-                }
-                for index in evidence.points.indices where evidence.points[index].confidence >= 0.5 {
-                    let p = point(index, width: width, height: height, origin: origin)
-                    context.fill(Path(ellipseIn: CGRect(x: p.x - 5, y: p.y - 5, width: 10, height: 10)), with: .color(.white))
-                }
-            }
-            ForEach(Array([0, 4, 8, 12, 16, 20].enumerated()), id: \.offset) { number, joint in
-                if evidence.points[joint].confidence >= 0.5 {
-                    Text(verbatim: String(number)).typography(size: 20, weight: .bold)
-                        .foregroundStyle(TherapyPalette.ink).frame(width: 34, height: 34)
-                        .background(TherapyPalette.mint, in: Circle())
-                        .position(point(joint, width: width, height: height, origin: origin))
-                }
-            }
-        }
-        .allowsHitTesting(false).accessibilityHidden(true)
-    }
-
-    private func point(_ index: Int, width: Double, height: Double, origin: CGPoint) -> CGPoint {
-        let p = evidence.points[index]
-        return CGPoint(x: origin.x + (1 - p.x) * width, y: origin.y + (1 - p.y) * height)
-    }
 }

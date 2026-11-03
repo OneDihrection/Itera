@@ -13,15 +13,43 @@ extension HandEvidence {
         let bases = [5, 9, 13, 17]
         switch exercise {
         case .fullFist, .hookFist:
-            return [0, 9] + bases.flatMap { [$0, $0 + 1, $0 + 2] }
+            return [0]
         case .opposition:
             return [0, 9, 4, bases[finger] + 3]
         case .spreading:
             return [0, 9, 8, 12, 16, 20]
         case .extensionSequence:
             let base = bases[finger]
-            return [0, 9, base, base + 1, base + 2]
+            // The selected fingertip must also be visible to present its completion ring.
+            return [0, 9, base, base + 1, base + 2, base + 3]
+        case .forearmRotation:
+            // The wrist, palm axis, and both outer knuckles define how far the palm faces the camera.
+            return [0, 5, 9, 17]
         }
+    }
+
+    /// Signed apparent palm width relative to palm length: positive when the palm faces the
+    /// camera, near zero with the thumb side toward the camera, and negative when the back
+    /// of the hand faces it. Needs the hand's side, because a palm and the back of the
+    /// opposite hand look alike in a 2D silhouette.
+    private func palmFacing() -> Double? {
+        guard let side else {
+            return nil
+        }
+        let aspect = width / height
+        let axisX = (points[9].x - points[0].x) * aspect
+        let axisY = points[9].y - points[0].y
+        let palmLength = hypot(axisX, axisY)
+        guard palmLength > 0.04 else {
+            return nil
+        }
+        let knuckleX = (points[5].x - points[17].x) * aspect
+        let knuckleY = points[5].y - points[17].y
+        // Component of the index-to-little knuckle line across the palm axis. For a right hand
+        // with the palm toward an unmirrored camera, the index knuckle lies on the right.
+        let across = (knuckleX * axisY - knuckleY * axisX) / palmLength
+        let sign: Double = side == .right ? 1 : -1
+        return sign * across / palmLength
     }
 
     /// Dimensionless visible-motion metrics; these are not grip force or clinical joint angles.
@@ -30,19 +58,33 @@ extension HandEvidence {
               requiredJoints(for: exercise, finger: finger).allSatisfy({
                   points[$0].confidence >= 0.5 && points[$0].x.isFinite && points[$0].y.isFinite
               }),
-              width > 0, height > 0,
-              distance(0, 9) > 0.04 else { return nil }
-        let palm = distance(0, 9)
+              width.isFinite, height.isFinite, width > 0, height > 0 else { return nil }
         let bases = [5, 9, 13, 17]
+        let isGrip = exercise == .fullFist || exercise == .hookFist
+        let visibleBases = isGrip ? bases.filter { base in
+            [base, base + 1, base + 2].allSatisfy {
+                points[$0].confidence >= 0.5 && points[$0].x.isFinite && points[$0].y.isFinite
+            } && angle(base, base + 1, base + 2).isFinite
+        } : []
+        // A fist naturally occludes some fingers. Require two usable chains, never infer hidden ones.
+        if isGrip && visibleBases.count < 2 {
+            return nil
+        }
+        let palm = isGrip
+            ? visibleBases.map { distance(0, $0) }.reduce(0, +) / Double(visibleBases.count)
+            : distance(0, 9)
+        guard palm > 0.04 else {
+            return nil
+        }
         switch exercise {
         case .fullFist:
-            return bases.map { (180 - angle($0, $0 + 1, $0 + 2)) / 180 }.reduce(0, +) / 4
+            return visibleBases.map { (180 - angle($0, $0 + 1, $0 + 2)) / 180 }.reduce(0, +) / Double(visibleBases.count)
         case .hookFist:
-            let knuckles = bases.map { angle(0, $0, $0 + 1) }.reduce(0, +) / 4
+            let knuckles = visibleBases.map { angle(0, $0, $0 + 1) }.reduce(0, +) / Double(visibleBases.count)
             guard knuckles > 125 else {
                 return nil
             }
-            return bases.map { (180 - angle($0, $0 + 1, $0 + 2)) / 180 }.reduce(0, +) / 4
+            return visibleBases.map { (180 - angle($0, $0 + 1, $0 + 2)) / 180 }.reduce(0, +) / Double(visibleBases.count)
         case .opposition:
             return -distance(4, bases[finger] + 3) / palm
         case .spreading:
@@ -50,6 +92,8 @@ extension HandEvidence {
         case .extensionSequence:
             let base = bases[finger]
             return angle(base, base + 1, base + 2) / 180
+        case .forearmRotation:
+            return palmFacing()
         }
     }
 }

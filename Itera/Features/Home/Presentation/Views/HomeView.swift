@@ -18,18 +18,96 @@ struct HomeView: View {
                     .foregroundStyle(TherapyPalette.muted)
                 Text("home.chooseTherapy").typography(.largeTitle)
                     .accessibilityAddTraits(.isHeader)
-                let layout = typeSize.isAccessibilitySize
-                    ? AnyLayout(VStackLayout(spacing: 28))
-                    : AnyLayout(HStackLayout(alignment: .top, spacing: 28))
-                layout {
-                    category(title: "plan.fingerTitle", artwork: "hand-hero", route: .fingerHome)
-                    category(title: "home.armPractice", artwork: "symbol:figure.arms.open", route: .therapyOverview)
-                }
+                therapyCategories
             }
             .padding(28)
         }
         .background(TherapyPalette.cream)
         .navigationTitle("Itera")
+        .toolbar {
+            ToolbarItem(placement: .primaryAction) {
+                Button {
+                    router.presentSheet(.practicePreferences)
+                } label: {
+                    Label("cognitive.settings", systemImage: "slider.horizontal.3")
+                        .typography(.headline)
+                        .frame(minHeight: 64)
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var therapyCategories: some View {
+        if typeSize.isAccessibilitySize {
+            VStack(spacing: 28) {
+                fingerCategory
+                forearmCategory
+                armCategory
+                trunkCategory
+                balanceCategory
+                armRotationCategory
+            }
+        } else {
+            VStack(spacing: 28) {
+                HStack(alignment: .top, spacing: 28) {
+                    fingerCategory
+                    forearmCategory
+                }
+                HStack(alignment: .top, spacing: 28) {
+                    armCategory
+                    trunkCategory
+                }
+                HStack(alignment: .top, spacing: 28) {
+                    balanceCategory
+                    armRotationCategory
+                }
+            }
+        }
+    }
+
+    private var fingerCategory: some View {
+        category(title: "plan.fingerTitle", artwork: "hand-hero", route: .fingerHome(.fingers))
+    }
+
+    private var forearmCategory: some View {
+        category(
+            title: LocalizedStringKey(ExerciseCategory.forearm.title),
+            artwork: ExerciseCategory.forearm.artwork,
+            route: .fingerHome(.forearm)
+        )
+    }
+
+    private var armCategory: some View {
+        category(
+            title: "home.armPractice",
+            artwork: "symbol:figure.arms.open",
+            route: .therapyOverview(.arm)
+        )
+    }
+
+    private var trunkCategory: some View {
+        category(
+            title: LocalizedStringKey(TherapyCategory.trunk.title),
+            artwork: TherapyCategory.trunk.artwork,
+            route: .therapyOverview(.trunk)
+        )
+    }
+
+    private var armRotationCategory: some View {
+        category(
+            title: "rotation.category",
+            artwork: "symbol:arrow.triangle.2.circlepath",
+            route: .armRotationHome
+        )
+    }
+
+    private var balanceCategory: some View {
+        category(
+            title: "balance.title",
+            artwork: "symbol:figure.stand",
+            route: .balanceOverview(.crossMidline)
+        )
     }
 
     private func category(title: LocalizedStringKey, artwork: String, route: AppRoute) -> some View {

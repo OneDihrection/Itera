@@ -29,6 +29,8 @@ final class HandCameraService: NSObject, AVCaptureVideoDataOutputSampleBufferDel
     private let request = VNDetectHumanHandPoseRequest()
     private var generation = UUID()
     private var configured = false
+    private var device: AVCaptureDevice?
+    private var previousCenterStage: (mode: AVCaptureDevice.CenterStageControlMode, enabled: Bool)?
     private var lastInference = 0.0
     private var notifications: [NSObjectProtocol] = []
 
@@ -53,11 +55,13 @@ final class HandCameraService: NSObject, AVCaptureVideoDataOutputSampleBufferDel
                     try configure()
                 }
                 if !session.isRunning {
+                    try beginFixedFraming()
                     generation = UUID()
                     lastInference = 0
                     session.startRunning()
                 }
             } catch {
+                restoreCenterStage()
                 events.send(.failure("camera.unavailable"))
             }
         }
@@ -69,24 +73,33 @@ final class HandCameraService: NSObject, AVCaptureVideoDataOutputSampleBufferDel
                 session.stopRunning()
             }
             generation = UUID()
+            restoreCenterStage()
         }
     }
 
     func orient(_ orientation: AVCaptureVideoOrientation) {
+        #if targetEnvironment(macCatalyst)
+        // Mac cameras already deliver upright landscape frames; forcing an orientation rotates them.
+        return
+        #else
         queue.async { [self] in
             if let connection = output.connection(with: .video), connection.videoOrientation != orientation {
                 connection.videoOrientation = orientation
                 generation = UUID()
             }
         }
+        #endif
     }
 
     private func configure() throws {
+        // Macs report their built-in camera as .unspecified, so fall back to the system default there.
         guard AVCaptureDevice.authorizationStatus(for: .video) == .authorized,
-              let camera = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: .front) else {
+              let camera = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: .front)
+                ?? AVCaptureDevice.default(for: .video) else {
             throw CameraError.unavailable
         }
         let input = try AVCaptureDeviceInput(device: camera)
+        device = camera
         session.beginConfiguration()
         defer { session.commitConfiguration() }
         session.sessionPreset = .hd1280x720
@@ -98,15 +111,51 @@ final class HandCameraService: NSObject, AVCaptureVideoDataOutputSampleBufferDel
         output.setSampleBufferDelegate(self, queue: queue)
         session.addOutput(output)
         if let connection = output.connection(with: .video) {
+            #if !targetEnvironment(macCatalyst)
             connection.videoOrientation = .landscapeLeft
+            #endif
             connection.automaticallyAdjustsVideoMirroring = false
             connection.isVideoMirrored = false
+            if connection.isVideoStabilizationSupported {
+                connection.preferredVideoStabilizationMode = .off
+            }
         }
         configured = true
     }
 
+    private func beginFixedFraming() throws {
+        if previousCenterStage == nil {
+            previousCenterStage = (AVCaptureDevice.centerStageControlMode, AVCaptureDevice.isCenterStageEnabled)
+        }
+        AVCaptureDevice.centerStageControlMode = .app
+        AVCaptureDevice.isCenterStageEnabled = false
+        guard let device else {
+            return
+        }
+        try device.lockForConfiguration()
+        defer { device.unlockForConfiguration() }
+        device.cancelVideoZoomRamp()
+        device.videoZoomFactor = max(1, device.minAvailableVideoZoomFactor)
+    }
+
+    private func restoreCenterStage() {
+        guard let previousCenterStage else {
+            return
+        }
+        AVCaptureDevice.centerStageControlMode = .app
+        AVCaptureDevice.isCenterStageEnabled = previousCenterStage.enabled
+        AVCaptureDevice.centerStageControlMode = previousCenterStage.mode
+        self.previousCenterStage = nil
+    }
+
     func captureOutput(_ output: AVCaptureOutput, didOutput buffer: CMSampleBuffer, from connection: AVCaptureConnection) {
-        let timestamp = CMSampleBufferGetPresentationTimeStamp(buffer).seconds
+        // The session clock is not always the host clock on Mac, which the view model's freshness check assumes.
+        let presentationTime = CMSampleBufferGetPresentationTimeStamp(buffer)
+        let timestamp = CMSyncConvertTime(
+            presentationTime,
+            from: session.synchronizationClock ?? CMClockGetHostTimeClock(),
+            to: CMClockGetHostTimeClock()
+        ).seconds
         guard timestamp - lastInference >= 1.0 / 15,
               let pixelBuffer = CMSampleBufferGetImageBuffer(buffer) else { return }
         lastInference = timestamp

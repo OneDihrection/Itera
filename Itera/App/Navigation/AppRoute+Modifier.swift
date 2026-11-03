@@ -49,8 +49,12 @@ private struct RouterViewModifier: ViewModifier {
 
 private struct ModalStackModifier: ViewModifier {
     @Environment(NavigationRouter.self) private var router
+    @Environment(AppDependencies.self) private var dependencies
+    @Environment(PermissionManager.self) private var permissions
+    @Environment(\.buttonFeedback) private var buttonFeedback
     let index: Int
     let isCover: Bool
+    var sheetHostCoverID: UUID? = nil
 
     private var presentations: [RoutePresentation] {
         isCover ? router.presentedFullScreenCovers : router.presentedSheets
@@ -59,7 +63,11 @@ private struct ModalStackModifier: ViewModifier {
     private var presentation: Binding<RoutePresentation?> {
         Binding(
             get: {
-                presentations.indices.contains(index) ? presentations[index] : nil
+                // Sheets belong to the visible cover, or the root when no cover is open.
+                if !isCover, router.presentedFullScreenCovers.last?.id != sheetHostCoverID {
+                    return nil
+                }
+                return presentations.indices.contains(index) ? presentations[index] : nil
             },
             set: { value in
                 guard value == nil, presentations.indices.contains(index) else { return }
@@ -91,14 +99,22 @@ private struct ModalStackModifier: ViewModifier {
         Group {
             if isCover {
                 AppRouterView.destination(item.route)
+                    .modifier(ModalStackModifier(index: 0, isCover: false, sheetHostCoverID: item.id))
             } else {
                 NavigationStack {
                     AppRouterView.destination(item.route)
                 }
             }
         }
+        .modifier(ModalStackModifier(index: index + 1, isCover: isCover, sheetHostCoverID: sheetHostCoverID))
+        // Applied last so nested presentations see them too; Mac Catalyst does not
+        // reliably forward the presenter's environment into sheet and cover content.
         .environment(router)
-        .modifier(ModalStackModifier(index: index + 1, isCover: isCover))
+        .environment(dependencies)
+        .environment(permissions)
+        .environment(\.buttonFeedback, buttonFeedback)
+        .typography(.body)
+        .buttonStyle(TherapySoundButtonStyle())
     }
 }
 

@@ -146,6 +146,7 @@ enum SessionPresentationFixtures {
         case .elbowBend: return "session.assistance.elbowBend"
         case .directionalReach: return "session.assistance.reach"
         case .cup: return "session.assistance.cup"
+        case .sitToStand: return "session.assistance.sitToStand"
         }
     }
 

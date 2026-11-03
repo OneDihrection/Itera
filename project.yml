@@ -22,7 +22,7 @@ targets:
         DEVELOPMENT_TEAM: A2WQZ32XVK
         CODE_SIGN_STYLE: Automatic
         TARGETED_DEVICE_FAMILY: "2"
-        SUPPORTS_MACCATALYST: NO
+        SUPPORTS_MACCATALYST: YES
         SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD: NO
         ASSETCATALOG_COMPILER_APPICON_NAME: ""
         SWIFT_VERSION: "5.0"
@@ -31,6 +31,12 @@ targets:
         SWIFT_EMIT_LOC_STRINGS: YES
         SWIFT_GENERATE_LOCALIZATION_SYMBOLS: NO
         LOCALIZATION_PREFERS_STRING_CATALOGS: YES
+    entitlements:
+      path: Generated/Itera.entitlements
+      properties:
+        # Required on Mac Catalyst, where hardened runtime silently denies capture without them.
+        com.apple.security.device.camera: true
+        com.apple.security.device.audio-input: true
     info:
       path: Generated/Info.plist
       properties:

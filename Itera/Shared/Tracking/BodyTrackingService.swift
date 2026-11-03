@@ -34,6 +34,11 @@ final class BodyTrackingService: NSObject, AVCaptureVideoDataOutputSampleBufferD
     private var timestampOffset: Double?
     private var lastPublished = 0.0
     private var lastInferenceFailure = 0.0
+    #if DEBUG
+    private var perfFrames = 0
+    private var perfVisionTotal = 0.0
+    private var perfLastMain = 0.0
+    #endif
     private var cupRequest: VNCoreMLRequest?
     private var cupEnabled = false
     private var watchdogIdentity = UUID()
@@ -219,13 +224,15 @@ final class BodyTrackingService: NSObject, AVCaptureVideoDataOutputSampleBufferD
         guard !configured else {
             return
         }
-        guard
-            let camera = AVCaptureDevice.default(
+        var selectedCamera = AVCaptureDevice.default(
                 .builtInWideAngleCamera, for: .video, position: position
             ) ?? AVCaptureDevice.default(
                 .builtInUltraWideCamera, for: .video, position: position
             )
-        else {
+        #if targetEnvironment(macCatalyst)
+        selectedCamera = selectedCamera ?? AVCaptureDevice.default(for: .video)
+        #endif
+        guard let camera = selectedCamera else {
             throw TrackingError.cameraUnavailable
         }
         let input = try AVCaptureDeviceInput(device: camera)
@@ -298,6 +305,18 @@ final class BodyTrackingService: NSObject, AVCaptureVideoDataOutputSampleBufferD
     private func process(_ image: CVPixelBuffer, time: Double, generation: UUID) {
         guard !cupEnabled || time - lastPublished >= 1.0 / 20 else { return }
         lastPublished = time
+        #if DEBUG
+        // TEMPORARY DIAGNOSTIC (remove after investigating low frame rate on Mac Catalyst).
+        let perfStart = ProcessInfo.processInfo.systemUptime
+        defer {
+            perfFrames += 1
+            perfVisionTotal += ProcessInfo.processInfo.systemUptime - perfStart
+            if perfFrames % 15 == 0 {
+                NSLog("ITERA-PERF frames=%d avgVision=%.0fms size=%dx%d", perfFrames, perfVisionTotal / 15 * 1000, CVPixelBufferGetWidth(image), CVPixelBufferGetHeight(image))
+                perfVisionTotal = 0
+            }
+        }
+        #endif
         do {
             try VNImageRequestHandler(cvPixelBuffer: image, orientation: .up).perform([request])
             let people = request.results ?? []
@@ -380,7 +399,16 @@ final class BodyTrackingService: NSObject, AVCaptureVideoDataOutputSampleBufferD
             self.pending = nil
             self.deliveryScheduled = false
             self.deliveryLock.unlock()
+            #if DEBUG
+            // TEMPORARY DIAGNOSTIC
+            let mainStart = ProcessInfo.processInfo.systemUptime
+            #endif
             if let frame { self.frames.send(frame) }
+            #if DEBUG
+            let mainNow = ProcessInfo.processInfo.systemUptime
+            NSLog("ITERA-PERF main sinceLastFrame=%.0fms consumeCost=%.0fms frameAge=%.0fms", (mainStart - self.perfLastMain) * 1000, (mainNow - mainStart) * 1000, (mainStart - (frame?.timestamp ?? mainStart)) * 1000)
+            self.perfLastMain = mainStart
+            #endif
         }
     }
 
@@ -421,9 +449,12 @@ final class BodyTrackingService: NSObject, AVCaptureVideoDataOutputSampleBufferD
     }
 
     private static let jointMap: [(BodyJoint, VNHumanBodyPoseObservation.JointName)] = [
-        (.nose, .nose), (.leftShoulder, .leftShoulder), (.rightShoulder, .rightShoulder),
+        (.nose, .nose), (.neck, .neck), (.root, .root),
+        (.leftShoulder, .leftShoulder), (.rightShoulder, .rightShoulder),
         (.leftElbow, .leftElbow), (.rightElbow, .rightElbow), (.leftWrist, .leftWrist),
         (.rightWrist, .rightWrist), (.leftHip, .leftHip), (.rightHip, .rightHip),
+        (.leftKnee, .leftKnee), (.rightKnee, .rightKnee),
+        (.leftAnkle, .leftAnkle), (.rightAnkle, .rightAnkle),
     ]
     private enum TrackingError: Error { case cameraUnavailable }
 }

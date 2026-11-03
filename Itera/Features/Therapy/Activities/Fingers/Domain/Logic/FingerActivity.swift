@@ -4,11 +4,10 @@
 //
 //  Created by Amelia Putri Aftiana on 29/10/2026.
 //
-
 import Foundation
 
 enum FingerPhase: Equatable {
-    case baseline, target, demonstration, countdown, active, feedback, rest, finished
+    case baseline, target, range, rangeResult, demonstration, countdown, active, feedback, rest, finished
 }
 
 struct FingerActivity {
@@ -30,7 +29,10 @@ struct FingerActivity {
     private(set) var baselines = [Double](repeating: 0, count: 4)
     private(set) var targets = [Double](repeating: 0, count: 4)
     private(set) var best = [Double](repeating: 0, count: 4)
-    private var holdStart: Double?
+    private(set) var holdElapsed = 0.0
+    private(set) var holdCompletionID: UUID?
+    private var holdCompletionWasPresented = false
+    private var lastHoldTimestamp: Double?
     private var holdValue = 0.0
     private var holdSum = 0.0
     private var holdCount = 0
@@ -43,18 +45,48 @@ struct FingerActivity {
     private var peakSum = 0.0
     private var peakCount = 0
     private var initialized = [Bool](repeating: false, count: 4)
+    private(set) var rangeElapsed = 0.0
+    private(set) var rangeTooSmall = false
+    /// The patient held the start position through the ready countdown, so sweeping can begin.
+    private(set) var rangeReady = false
+    private var rangeLow: Double?
+    private var rangeHigh: Double?
+    private var rangeCandidate: Double?
+    private var rangeCandidateStart = 0.0
+    private var rangeCandidateSum = 0.0
+    private var rangeCandidateCount = 0
 
     init(kind: FingerExercise, routine: FingerRoutine, restAfterFinalSet: Bool = true) {
         self.kind = kind
         self.routine = routine
         self.restAfterFinalSet = restAfterFinalSet
+        phase = kind.calibratesRange ? .range : .baseline
     }
 
 
 
 
 
+    static let demonstrationDuration = 10.0
+    /// Usable seconds the patient sweeps the movement while the range is measured.
+    static let rangeDuration = 10.0
+    /// How long the start position is held, as a visible countdown, before the sweep is measured.
+    static let readyCountdown = 3.0
+    /// Narrowest sweep, in metric units, that still gives the repetitions a usable target.
+    static let minimumRange = 0.15
+    /// A stable pose must stay this close for this long to count toward the range.
+    private static let rangeTolerance = 0.05
+    private static let rangeStableSeconds = 0.3
+
+    var rangeProgress: Double { min(1, rangeElapsed / Self.rangeDuration) }
+
     var needsStart: Bool { awaitingStart }
+    var holdDuration: Double { phase == .range ? Self.readyCountdown : 2 }
+    var isHolding: Bool { lastHoldTimestamp != nil || holdCompletionID != nil }
+    var holdRemaining: Double { max(0, holdDuration - holdElapsed) }
+    var demonstrationRemaining: Double {
+        max(0, Self.demonstrationDuration - demonstrationSeconds)
+    }
     var calibrationCount: Int { kind.isSequential ? 4 : 1 }
     var observedGain: Double? {
         let changes = (0..<calibrationCount).filter { initialized[$0] }.map {
@@ -73,16 +105,19 @@ struct FingerActivity {
 
     // Evidence loss resets holds/cycles, independently of the preview-driven stage clock.
     mutating func suspendEvidence() {
-        // Retain the accepted outward leg briefly, but credit no missing time or pending dwell.
-        holdStart = nil
+        // An earned endpoint may finish its visual acknowledgment during a brief occlusion.
+        // Partial holds still reset immediately and no missing time receives credit.
+        if holdCompletionID == nil {
+            resetHold()
+        }
         peakStart = nil
         lastTimestamp = nil
-        progress = 0
     }
 
     mutating func breakEvidence() {
-        holdStart = nil
+        resetHold()
         peakStart = nil
+        rangeCandidate = nil
         awaitingStart = true
         lastTimestamp = nil
         progress = 0
@@ -95,11 +130,34 @@ struct FingerActivity {
 
     mutating func recalibrate() {
         suspendClock()
-        phase = .baseline
+        phase = kind.calibratesRange ? .range : .baseline
         finger = 0
         initialized = [Bool](repeating: false, count: 4)
         demonstrationSeconds = 0
+        resetRange()
+        rangeTooSmall = false
         breakEvidence()
+    }
+
+    /// Accepts the measured range and moves on to the demonstration.
+    mutating func confirmRange() {
+        guard phase == .rangeResult else {
+            return
+        }
+        phase = .demonstration
+        demonstrationSeconds = 0
+        remaining = Self.demonstrationDuration
+        narrationFinished = false
+    }
+
+    mutating func remeasureRange() {
+        guard phase == .rangeResult else {
+            return
+        }
+        initialized[0] = false
+        rangeTooSmall = false
+        resetRange()
+        phase = .range
     }
 
     mutating func guidanceStarted() {
@@ -116,16 +174,25 @@ struct FingerActivity {
             return
         }
         defer { lastTick = now }
+        if holdCompletionID != nil {
+            if holdCompletionWasPresented && narrationFinished {
+                commitCompletedHold()
+            }
+            return
+        }
         let delta = min(0.2, max(0, now - (lastTick ?? now)))
         switch phase {
         case .demonstration, .feedback:
             if phase == .demonstration {
-                demonstrationSeconds += delta
+                demonstrationSeconds = min(Self.demonstrationDuration, demonstrationSeconds + delta)
+                remaining = demonstrationRemaining
             }
             guard narrationFinished else {
                 return
             }
-            remaining -= delta
+            if phase == .feedback {
+                remaining -= delta
+            }
             if remaining <= 0 {
                 if phase == .demonstration {
                     phase = .countdown
@@ -169,9 +236,14 @@ struct FingerActivity {
             breakEvidence()
             return
         }
+        // A completed hold remains the current instruction until its full ring is presented.
+        if holdCompletionID != nil {
+            lastTimestamp = evidence.timestamp
+            return
+        }
         let delta = evidence.timestamp - (lastTimestamp ?? evidence.timestamp)
-        if delta > 0.15 {
-            holdStart = nil
+        if delta > 0.3 {
+            resetHold()
             peakStart = nil
             if delta > 0.5 {
                 returning = false
@@ -179,9 +251,15 @@ struct FingerActivity {
             }
         }
         lastTimestamp = evidence.timestamp
+        if !narrationFinished, [.baseline, .target, .active, .range].contains(phase) {
+            resetHold()
+            return
+        }
         switch phase {
         case .baseline, .target:
             capture(value, time: evidence.timestamp)
+        case .range:
+            captureRange(value, time: evidence.timestamp, delta: delta)
         case .active:
             activeSeconds += delta <= 0.3 ? min(0.2, delta) : 0
             // Only stable observations contribute a peak; single-frame extremes do not.
@@ -193,46 +271,29 @@ struct FingerActivity {
             movementFraction = min(1, max(0, normalized))
             capturePeak(value, time: evidence.timestamp, tolerance: range * 0.12)
             if awaitingStart {
-                guard normalized <= 0.25 else {
-                    holdStart = nil
+                guard normalized <= (lastHoldTimestamp == nil ? 0.25 : 0.35) else {
+                    resetHold()
                     return
                 }
-                if stable(value, time: evidence.timestamp, tolerance: range * 0.20, duration: 0.25) {
-                    awaitingStart = false
-                    holdStart = nil
+                if stable(value, time: evidence.timestamp, tolerance: range * 0.20, duration: holdDuration) {
+                    markHoldComplete()
                 }
                 return
             }
             progress = min(1, max(0, returning ? 1 - normalized : normalized))
-            let arrived = returning ? normalized <= 0.25 : normalized >= 0.80
+            // Separate entry/exit bands prevent tiny boundary noise from restarting a valid hold.
+            let holding = lastHoldTimestamp != nil
+            let arrived = returning
+                ? normalized <= (holding ? 0.35 : 0.25)
+                : normalized >= (holding ? 0.70 : 0.80)
             guard arrived else {
-                holdStart = nil
+                resetHold()
                 return
             }
-            guard stable(value, time: evidence.timestamp, tolerance: range * 0.20, duration: 0.25) else {
+            guard stable(value, time: evidence.timestamp, tolerance: range * 0.20, duration: holdDuration) else {
                 return
             }
-            if !returning {
-                best[finger] = max(best[finger], holdSum / Double(holdCount))
-                returning = true
-            } else {
-                returning = false
-                peakStart = nil
-                if kind.isSequential && finger < 3 {
-                    finger += 1
-                } else {
-                    finger = 0
-                    repetitions += 1
-                    totalRepetitions += 1
-                    if repetitions >= routine.repetitions {
-                        completedSets += 1
-                        phase = .feedback
-                        remaining = 3
-                        narrationFinished = false
-                    }
-                }
-            }
-            holdStart = nil
+            markHoldComplete()
         default:
             break
         }
@@ -252,20 +313,103 @@ struct FingerActivity {
         }
     }
 
+    /// Records the farthest stable poses reached while the patient sweeps the movement; a pose
+    /// that is not held briefly cannot become an endpoint, so single-frame extremes are ignored.
+    private mutating func captureRange(_ value: Double, time: Double, delta: Double) {
+        // A countdown starts once the hand is held steady in the start position.
+        guard rangeReady else {
+            guard stable(value, time: time, tolerance: 0.10, duration: holdDuration) else {
+                return
+            }
+            rangeReady = true
+            resetHold()
+            return
+        }
+        rangeElapsed += delta > 0 && delta <= 0.3 ? min(0.2, delta) : 0
+        if let candidate = rangeCandidate, abs(value - candidate) <= Self.rangeTolerance {
+            rangeCandidateSum += value
+            rangeCandidateCount += 1
+        } else {
+            rangeCandidate = value
+            rangeCandidateStart = time
+            rangeCandidateSum = value
+            rangeCandidateCount = 1
+        }
+        if time - rangeCandidateStart >= Self.rangeStableSeconds {
+            let mean = rangeCandidateSum / Double(rangeCandidateCount)
+            rangeLow = min(rangeLow ?? mean, mean)
+            rangeHigh = max(rangeHigh ?? mean, mean)
+        }
+        progress = rangeProgress
+        guard rangeElapsed >= Self.rangeDuration else {
+            return
+        }
+        guard let low = rangeLow, let high = rangeHigh, high - low >= Self.minimumRange else {
+            rangeTooSmall = true
+            // A narrow sweep is retried straight away; the countdown is not repeated.
+            resetRange(keepReady: true)
+            return
+        }
+        baselines[0] = low
+        targets[0] = high
+        best[0] = high
+        initialized[0] = true
+        rangeTooSmall = false
+        progress = 0
+        phase = .rangeResult
+    }
+
+    private mutating func resetRange(keepReady: Bool = false) {
+        rangeReady = keepReady && rangeReady
+        rangeElapsed = 0
+        rangeLow = nil
+        rangeHigh = nil
+        rangeCandidate = nil
+        rangeCandidateSum = 0
+        rangeCandidateCount = 0
+        progress = 0
+    }
+
     private mutating func capture(_ value: Double, time: Double) {
-        guard stable(value, time: time, tolerance: 0.10, duration: 2) else {
+        // A stationary hand outside the requested target must never run its hold clock.
+        if phase == .target, value - baselines[finger] <= 0.08 {
+            resetHold()
+            progress = 0
+            return
+        }
+        guard stable(value, time: time, tolerance: 0.10, duration: holdDuration) else {
+            return
+        }
+        markHoldComplete()
+    }
+
+    mutating func holdCompletionPresented(_ id: UUID) {
+        guard id == holdCompletionID, holdElapsed >= holdDuration else {
+            return
+        }
+        holdCompletionWasPresented = true
+    }
+
+    private mutating func markHoldComplete() {
+        guard holdCompletionID == nil else {
+            return
+        }
+        holdElapsed = holdDuration
+        progress = 1
+        holdCompletionID = UUID()
+        holdCompletionWasPresented = false
+    }
+
+    private mutating func commitCompletedHold() {
+        guard holdCompletionID != nil, holdCompletionWasPresented, holdCount > 0 else {
             return
         }
         let mean = holdSum / Double(holdCount)
-        if phase == .baseline {
+        switch phase {
+        case .baseline:
             baselines[finger] = mean
             phase = .target
-        } else {
-            guard mean - baselines[finger] > 0.08 else {
-                holdStart = nil
-                progress = 0
-                return
-            }
+        case .target:
             targets[finger] = mean
             best[finger] = mean
             initialized[finger] = true
@@ -275,24 +419,60 @@ struct FingerActivity {
             } else {
                 finger = 0
                 phase = .demonstration
-                remaining = kind.isSequential ? 16 : 8
+                remaining = Self.demonstrationDuration
                 narrationFinished = false
             }
+        case .active:
+            if awaitingStart {
+                awaitingStart = false
+            } else if !returning {
+                best[finger] = max(best[finger], mean)
+                returning = true
+            } else {
+                returning = false
+                peakStart = nil
+                if kind.isSequential && finger < 3 {
+                    finger += 1
+                } else {
+                    finger = 0
+                    repetitions += 1
+                    totalRepetitions += 1
+                    if repetitions >= routine.repetitions {
+                        completedSets += 1
+                        phase = .feedback
+                        remaining = 3
+                        narrationFinished = false
+                    }
+                }
+            }
+        default:
+            break
         }
-        holdStart = nil
+        resetHold()
+    }
+
+    private mutating func resetHold() {
+        lastHoldTimestamp = nil
+        holdElapsed = 0
+        holdSum = 0
+        holdCount = 0
+        holdCompletionID = nil
+        holdCompletionWasPresented = false
         progress = 0
     }
 
     private mutating func stable(_ value: Double, time: Double, tolerance: Double, duration: Double) -> Bool {
-        if holdStart == nil || abs(value - holdValue) > tolerance {
-            holdStart = time
+        if lastHoldTimestamp == nil || abs(value - holdValue) > tolerance {
+            resetHold()
             holdValue = value
-            holdSum = 0
-            holdCount = 0
         }
+        let interval = max(0, time - (lastHoldTimestamp ?? time))
+        lastHoldTimestamp = time
         holdSum += value
         holdCount += 1
-        progress = min(1, (time - (holdStart ?? time)) / duration)
-        return progress >= 1
+        // Accumulate only fresh observed intervals, with bounded per-frame credit.
+        holdElapsed = min(duration, holdElapsed + min(0.3, interval))
+        progress = holdElapsed / duration
+        return holdElapsed >= duration
     }
 }

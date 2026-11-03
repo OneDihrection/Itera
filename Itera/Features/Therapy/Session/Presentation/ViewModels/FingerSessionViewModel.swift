@@ -12,6 +12,9 @@ import UIKit
 @MainActor
 @Observable
 final class FingerSessionViewModel {
+    private(set) var sessionElapsedSeconds = 0.0
+    @ObservationIgnored private var durationClock = SessionDurationClock()
+    @ObservationIgnored private var overlaySmoother = HandOverlaySmoother()
     private(set) var engine: FingerSessionEngine
     private(set) var evidence: HandEvidence?
     private(set) var trackingReady = false
@@ -37,6 +40,7 @@ final class FingerSessionViewModel {
     @ObservationIgnored private var generation: UUID?
     @ObservationIgnored private var lastFrame = 0.0
     @ObservationIgnored private var lastHandFrame = 0.0
+    private var lastGuideEvidence: HandEvidence?
     @ObservationIgnored private var speechID: UUID?
     @ObservationIgnored private var speechDeadline: Double?
     @ObservationIgnored private var previousInstruction = ""
@@ -62,11 +66,40 @@ final class FingerSessionViewModel {
     var activity: FingerActivity { engine.activity }
     var paused: Bool { engine.paused }
     var routine: FingerRoutine { engine.summary.routine }
+    /// Completed cues may use their last accepted anchor briefly; it is never scored again.
+    var guideEvidence: HandEvidence? {
+        if trackingReady {
+            return lastGuideEvidence
+        }
+        guard activity.holdCompletionID != nil, previewAttached, !waitingForCamera,
+              ProcessInfo.processInfo.systemUptime - lastHandFrame <= 0.5 else {
+            return nil
+        }
+        return lastGuideEvidence
+    }
+
+    var showsGuideTimer: Bool {
+        guard !paused, guideEvidence != nil else {
+            return false
+        }
+        switch activity.phase {
+        case .baseline, .target, .active:
+            return true
+        case .range:
+            // The ready countdown shows its timer; the sweep that follows does not.
+            return !activity.rangeReady
+        case .rangeResult, .demonstration, .countdown, .feedback, .rest, .finished:
+            return false
+        }
+    }
+
     var fingerKey: String { "finger." + String(activity.finger) }
     var instructionKey: String {
         switch activity.phase {
         case .baseline: return "baseline." + activity.kind.rawValue
         case .target: return "move." + activity.kind.rawValue
+        case .range: return activity.rangeReady ? "range.instruction" : "range.ready"
+        case .rangeResult: return "range.resultSpoken"
         case .demonstration: return "demo." + activity.kind.rawValue
         case .active: return (activity.returning || activity.needsStart) ? "return." + activity.kind.rawValue : "move." + activity.kind.rawValue
         case .countdown: return "session.ready"
@@ -77,7 +110,8 @@ final class FingerSessionViewModel {
     }
     var stageKey: String {
         switch activity.phase {
-        case .baseline, .target: return "stage.calibration"
+        case .baseline, .target, .range: return "stage.calibration"
+        case .rangeResult: return "stage.calibrationResult"
         case .demonstration: return "stage.demonstration"
         case .countdown: return "stage.countdown"
         case .active: return "stage.exercise"
@@ -87,11 +121,11 @@ final class FingerSessionViewModel {
         }
     }
     var timeText: String {
-        let value = Int(activity.activeSeconds)
+        let value = Int(sessionElapsedSeconds)
         return String(format: "%02d:%02d", value / 60, value % 60)
     }
     var demonstrationTimeText: String {
-        let seconds = Int(activity.demonstrationSeconds)
+        let seconds = max(0, Int(ceil(activity.demonstrationRemaining)))
         return String(format: "%02d:%02d", seconds / 60, seconds % 60)
     }
     var countdown: Int { max(0, Int(ceil(activity.remaining))) }
@@ -101,6 +135,12 @@ final class FingerSessionViewModel {
         }
         if activity.phase == .baseline || activity.phase == .target {
             return activity.progress > 0.05 ? "feedback.hold" : "feedback.comfortable"
+        }
+        if activity.phase == .range {
+            guard activity.rangeReady else {
+                return activity.holdElapsed > 0.05 ? "feedback.hold" : "feedback.comfortable"
+            }
+            return activity.rangeTooSmall ? "feedback.rangeTooSmall" : "feedback.rangeMeasuring"
         }
         if activity.phase == .active {
             return activity.progress > 0.75 ? "feedback.almost" : "feedback.slow"
@@ -170,6 +210,9 @@ final class FingerSessionViewModel {
             return
         }
         camera.start()
+        if !paused {
+            durationClock.resume(at: ProcessInfo.processInfo.systemUptime)
+        }
         startTimer()
         await saveCheckpoint()
     }
@@ -219,6 +262,13 @@ final class FingerSessionViewModel {
         }.store(in: &subscriptions)
     }
 
+    func holdCompletionPresented(_ id: UUID) {
+        guard guideEvidence != nil, !paused, !waitingForCamera else {
+            return
+        }
+        engine.holdCompletionPresented(id)
+    }
+
     func previewReady(_ ready: Bool) { previewAttached = ready }
 
     private func receive(_ event: HandCameraEvent) {
@@ -229,6 +279,8 @@ final class FingerSessionViewModel {
         case .failure(let key):
             trackingReady = false
             evidence = nil
+            lastGuideEvidence = nil
+            overlaySmoother.reset()
             cameraMessage = key
             errorKey = key
             engine.recalibrate()
@@ -240,19 +292,28 @@ final class FingerSessionViewModel {
             }
             if generation != sample.generation {
                 generation = sample.generation
+                lastGuideEvidence = nil
+                overlaySmoother.reset()
                 engine.recalibrate()
                 previousInstruction = ""
             }
             lastFrame = sample.timestamp
-            evidence = sample.evidence
-            guard let hand = sample.evidence, hand.side == routine.side,
+            let detected = attributedToExercisedHand(sample.evidence)
+            evidence = detected
+            guard let hand = detected, hand.side == routine.side,
                   hand.metric(for: activity.kind, finger: activity.finger) != nil else {
                 trackingReady = false
-                cameraMessage = sample.evidence?.side == routine.side ? "camera.showFingers" : "camera.selectedHand"
+                overlaySmoother.reset()
+                if let hand = detected {
+                    cameraMessage = hand.side == routine.side ? "camera.showFingers" : "camera.selectedHand"
+                } else {
+                    cameraMessage = "camera.position"
+                }
                 handleMissingHand(now: now)
                 return
             }
             lastHandFrame = sample.timestamp
+            lastGuideEvidence = overlaySmoother.consume(hand)
             trackingReady = previewAttached
             cameraMessage = "camera.tracking"
             if errorKey?.hasPrefix("camera.") == true {
@@ -264,6 +325,16 @@ final class FingerSessionViewModel {
             updateRewards()
             updateGuidance()
         }
+    }
+
+    /// Forearm rotation turns the palm toward and away from the camera, which makes a hand's
+    /// reported chirality unreliable. Capture accepts a single hand, so credit it to the
+    /// exercised side instead of rejecting the end of the movement.
+    private func attributedToExercisedHand(_ hand: HandEvidence?) -> HandEvidence? {
+        guard activity.kind == .forearmRotation, let hand else {
+            return hand
+        }
+        return hand.assigning(side: routine.side)
     }
 
     private func handleMissingHand(now: Double) {
@@ -279,6 +350,7 @@ final class FingerSessionViewModel {
             return
         }
         let now = ProcessInfo.processInfo.systemUptime
+        sessionElapsedSeconds = durationClock.elapsed(at: now)
         if let deadline = speechDeadline, now >= deadline, !paused {
             speechDeadline = nil
             speechID = nil
@@ -289,6 +361,7 @@ final class FingerSessionViewModel {
         if now - lastFrame > 0.3 {
             trackingReady = false
             evidence = nil
+            overlaySmoother.reset()
             handleMissingHand(now: now)
             cameraMessage = "camera.position"
         }
@@ -333,6 +406,11 @@ final class FingerSessionViewModel {
         if activity.kind.isSequential && [.baseline, .target, .active].contains(activity.phase) {
             text += ". " + String(localized: String.LocalizationValue(fingerKey))
         }
+        if activity.phase == .target || activity.phase == .active {
+            text += ". " + String.localizedStringWithFormat(
+                String(localized: "guide.holdDuration %lld"), Int64(activity.holdDuration)
+            )
+        }
         engine.guidanceStarted()
         speechDeadline = ProcessInfo.processInfo.systemUptime + max(15, Double(text.count) * 0.25)
         speechID = audio.speak(text)
@@ -357,6 +435,9 @@ final class FingerSessionViewModel {
             return
         }
         engine.pause()
+        let now = ProcessInfo.processInfo.systemUptime
+        durationClock.pause(at: now)
+        sessionElapsedSeconds = durationClock.elapsed(at: now)
         speechID = nil
         speechDeadline = nil
         audio.cancelSpeech()
@@ -368,6 +449,7 @@ final class FingerSessionViewModel {
             return
         }
         engine.resume()
+        durationClock.resume(at: ProcessInfo.processInfo.systemUptime)
         camera.start()
         audio.resumeAmbient()
         previousInstruction = ""
@@ -377,7 +459,10 @@ final class FingerSessionViewModel {
     func retryCamera() async {
         if await permissions.request(.camera) == .authorized {
             errorKey = nil
-        camera.start()
+            camera.start()
+            if !paused {
+                durationClock.resume(at: ProcessInfo.processInfo.systemUptime)
+            }
             startTimer()
         }
     }
@@ -392,6 +477,18 @@ final class FingerSessionViewModel {
             finish(completed: true)
         }
         else { Task { await saveCheckpoint() } }
+    }
+
+    func confirmRange() {
+        engine.confirmRange()
+        previousInstruction = ""
+        updateGuidance()
+    }
+
+    func remeasureRange() {
+        engine.remeasureRange()
+        previousInstruction = ""
+        updateGuidance()
     }
 
     func retryCalibration() {
@@ -517,6 +614,13 @@ final class FingerSessionViewModel {
     }
 
     func cleanup() {
+        let now = ProcessInfo.processInfo.systemUptime
+        durationClock.pause(at: now)
+        sessionElapsedSeconds = durationClock.elapsed(at: now)
+        overlaySmoother.reset()
+        lastGuideEvidence = nil
+        evidence = nil
+        trackingReady = false
         timer?.cancel()
         timer = nil
         subscriptions.removeAll()

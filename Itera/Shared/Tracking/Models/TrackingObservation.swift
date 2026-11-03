@@ -8,8 +8,9 @@
 import Foundation
 
 enum BodyJoint: String, CaseIterable {
-    case nose, leftShoulder, rightShoulder, leftElbow, rightElbow
+    case nose, neck, root, leftShoulder, rightShoulder, leftElbow, rightElbow
     case leftWrist, rightWrist, leftHip, rightHip
+    case leftKnee, rightKnee, leftAnkle, rightAnkle
 }
 
 struct TherapyPoint: Equatable {
@@ -59,11 +60,11 @@ struct TrackingObservation {
 
     var aspect: Double { Double(width) / Double(max(1, height)) }
 
-    func point(_ joint: BodyJoint) -> TherapyPoint? {
+    func point(_ joint: BodyJoint, minimumConfidence: Float = 0.5) -> TherapyPoint? {
         guard personCount == 1,
             let landmark = joints[joint],
             landmark.confidence.isFinite,
-            landmark.confidence >= 0.5,
+            landmark.confidence >= minimumConfidence,
             landmark.position.x.isFinite,
             landmark.position.y.isFinite,
             (0...1).contains(landmark.position.x),

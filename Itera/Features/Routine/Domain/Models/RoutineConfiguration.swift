@@ -20,7 +20,12 @@ struct RoutineExercise: Identifiable, Codable, Equatable {
     var rightGoal = 5
     var rounds = 1
 
+    /// Repetition goals are per side for arm movements; sit-to-stand has no side and uses `leftGoal`
+    /// as its one repetition goal so previously saved routines still decode.
     var activities: [SessionActivity] {
+        if kind == .sitToStand {
+            return [SessionActivity(kind: kind, side: .left, goal: leftGoal)]
+        }
         let selected: [TherapySide]
         switch sides {
         case .left: selected = [.left]

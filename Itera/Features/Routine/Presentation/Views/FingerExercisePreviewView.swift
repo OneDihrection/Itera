@@ -13,13 +13,15 @@ struct FingerExercisePreviewView: View {
     @Environment(NavigationRouter.self) private var router
     @State private var playing = false
 
+    private var home: FingerHomeViewModel { dependencies.homeModel(for: exercise.category) }
+
     var body: some View {
         ScrollView {
             VStack(spacing: 24) {
-                FingerDemonstrationView(
+                FingerExampleView(
                     exercise: exercise, phase: .demonstration,
                     returning: false, finger: 0,
-                    side: dependencies.home.routine.side, paused: !playing
+                    side: home.routine.side, paused: !playing
                 )
                 .frame(height: 360)
                 .frame(maxWidth: 360)
@@ -30,7 +32,7 @@ struct FingerExercisePreviewView: View {
                     title: playing ? "action.pause" : "exercise.playExample",
                     symbol: playing ? "pause.fill" : "play.fill"
                 ) { playing.toggle() }
-                Text(LocalizedStringKey(dependencies.home.routine.side.title))
+                Text(LocalizedStringKey(home.routine.side.title))
                     .typography(.body).foregroundStyle(TherapyPalette.muted)
             }
             .padding(28)

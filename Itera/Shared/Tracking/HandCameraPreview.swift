@@ -23,7 +23,6 @@ struct HandCameraPreview: UIViewRepresentable {
 
     func updateUIView(_ view: CameraPreviewView, context: Context) {
         view.ready = ready
-        view.setNeedsLayout()
     }
 
     static func dismantleUIView(_ view: CameraPreviewView, coordinator: ()) {
@@ -38,16 +37,31 @@ final class CameraPreviewView: UIView {
     weak var camera: HandCameraService?
     var ready: ((Bool) -> Void)?
     private var reportedReady = false
+    private var appliedOrientation: AVCaptureVideoOrientation?
     private var previewObservation: NSKeyValueObservation?
 
     override init(frame: CGRect) {
         super.init(frame: frame)
+        preview.actions = ["bounds": NSNull(), "position": NSNull(), "transform": NSNull()]
         previewObservation = preview.observe(\.isPreviewing, options: [.new]) { [weak self] _, _ in
-            Task { @MainActor in self?.reportReadiness() }
+            Task { @MainActor in
+                self?.appliedOrientation = nil
+                self?.setNeedsLayout()
+                self?.reportReadiness()
+            }
         }
     }
 
     required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
+
+    override func didMoveToWindow() {
+        super.didMoveToWindow()
+        if window == nil {
+            appliedOrientation = nil
+        }
+        setNeedsLayout()
+        reportReadiness()
+    }
 
     override func layoutSubviews() {
         super.layoutSubviews()
@@ -55,24 +69,51 @@ final class CameraPreviewView: UIView {
             return
         }
         let orientation: AVCaptureVideoOrientation
+        #if targetEnvironment(macCatalyst)
+        // Mac windows have no interface orientation, and Mac cameras already deliver landscape frames.
+        orientation = .landscapeLeft
+        #else
         switch scene.interfaceOrientation {
         case .landscapeLeft: orientation = .landscapeLeft
         case .landscapeRight: orientation = .landscapeRight
         default:
-            ready?(false)
+            reportReadiness()
             return
         }
-        camera?.orient(orientation)
-        if let connection = preview.connection {
-            connection.videoOrientation = orientation
-            connection.automaticallyAdjustsVideoMirroring = false
-            connection.isVideoMirrored = true
+        #endif
+        if appliedOrientation != orientation {
+            appliedOrientation = orientation
+            camera?.orient(orientation)
         }
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
+        if let connection = preview.connection {
+            #if !targetEnvironment(macCatalyst)
+            if connection.isVideoOrientationSupported, connection.videoOrientation != orientation {
+                connection.videoOrientation = orientation
+            }
+            #endif
+            if connection.isVideoMirroringSupported {
+                if connection.automaticallyAdjustsVideoMirroring {
+                    connection.automaticallyAdjustsVideoMirroring = false
+                }
+                if !connection.isVideoMirrored {
+                    connection.isVideoMirrored = true
+                }
+            }
+        }
+        CATransaction.commit()
         reportReadiness()
     }
 
     private func reportReadiness() {
-        let attached = window != nil && preview.isPreviewing
+        #if targetEnvironment(macCatalyst)
+        let landscape = true
+        #else
+        let orientation = window?.windowScene?.interfaceOrientation
+        let landscape = orientation == .landscapeLeft || orientation == .landscapeRight
+        #endif
+        let attached = window != nil && preview.isPreviewing && landscape
         if attached != reportedReady {
             reportedReady = attached
             DispatchQueue.main.async { [weak self] in self?.ready?(attached) }
