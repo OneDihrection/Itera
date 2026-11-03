@@ -96,7 +96,7 @@ final class HomeViewModel {
         if history.recoveryFailure != nil || history.recovering {
             await history.recoverHistory()
         } else if starting {
-            let result = audio.startListening()
+            let result = await audio.startListening()
             audio.stop()
             busy = false
             guard result == .started else {

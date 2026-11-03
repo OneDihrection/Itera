@@ -22,7 +22,7 @@ struct BodyCameraPreview: UIViewRepresentable {
         view.onOrientation = onOrientation
         view.observation = view.previewLayer.observe(\.isPreviewing, options: [.initial, .new]) {
             [weak view] layer, _ in
-            DispatchQueue.main.async { [weak view] in view?.onReady?(layer.isPreviewing) }
+            DispatchQueue.main.async { [weak view] in view?.reportReadiness() }
         }
         return view
     }
@@ -33,6 +33,7 @@ struct BodyCameraPreview: UIViewRepresentable {
     }
 
     static func dismantleUIView(_ view: PreviewView, coordinator: ()) {
+        view.onReady?(false)
         view.observation = nil
         view.onReady = nil
         view.onOrientation = nil
@@ -45,11 +46,31 @@ struct BodyCameraPreview: UIViewRepresentable {
         var onOrientation: ((Bool) -> Void)?
         var front = true
         private var lastOrientation: UIInterfaceOrientation?
+        private var reportedReady = false
         override class var layerClass: AnyClass { AVCaptureVideoPreviewLayer.self }
         var previewLayer: AVCaptureVideoPreviewLayer { layer as! AVCaptureVideoPreviewLayer }
 
+        override func didMoveToWindow() {
+            super.didMoveToWindow()
+            reportReadiness()
+        }
+
+        func reportReadiness() {
+            let ready = window != nil
+                && !isHidden
+                && bounds.width > 0
+                && bounds.height > 0
+                && previewLayer.session != nil
+                && previewLayer.isPreviewing
+            guard ready != reportedReady else { return }
+            reportedReady = ready
+            NSLog("Body preview rendering=%@ attached=%@", ready.description, (window != nil).description)
+            onReady?(ready)
+        }
+
         override func layoutSubviews() {
             super.layoutSubviews()
+            reportReadiness()
             let orientation = window?.windowScene?.interfaceOrientation ?? .landscapeLeft
             let right = orientation == .landscapeRight
             if let connection = previewLayer.connection {
