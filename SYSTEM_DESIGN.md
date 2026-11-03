@@ -107,7 +107,7 @@ Require one person and usable required joints (confidence at least 0.5). Correct
 | Rule | Requirement |
 | --- | --- |
 | Geometry | Arm raise uses hip–shoulder–elbow; elbow bend uses shoulder–elbow–wrist. Store offsets relative to the middle joint and normalize by its reference segment. |
-| Start capture | Five contiguous steady seconds. |
+| Start capture | Three contiguous steady seconds. |
 | Target capture | Three contiguous steady seconds. |
 | Valid geometry | Reference segment and tracked displacement exceed 0.03 aspect-correct image-height units. |
 | Stability | Reset hold if displacement from its first sample exceeds 10% of current normalized limb length. Nonincreasing time or a gap over 150 ms clears hold. |
@@ -480,3 +480,16 @@ Resources/Localization/Localizable.xcstrings owns app text; InfoPlist.xcstrings 
 Each exercise and side presents one concise opening instruction card. Movement activities then show a separate demonstration and five-second preparation. Target capture retains five-second preparation with live cues; return-to-start and practice use live cues without additional instruction cards. Positioning guidance appears on the first opening card only. Identified narration, measured reading, VoiceOver acknowledgment, and recovery gates remain required. This replaces the reference multi-card boundaries.
 
 Patient guidance uses a short immediate action with one optional smaller supporting sentence. English and Indonesian retain relevant side, comfort, positioning, and cup safety details. The 1–2 second glance target applies to the main cue, not advancement timing. Narration and measured reading include both lines.
+
+
+## Therapy audio scheduling
+
+Body-therapy preparation and exercise countdowns start after identified introductory speech finishes or fails through bounded recovery. Emit countdown numbers once from all engine transitions, including camera observations; use bundled localized count clips with speech fallback. Preparation remains five seconds, exercise countdowns three seconds, and movement calibration holds three seconds.
+
+SessionAudioService remains the sole audio-session owner. Foreground speech retains only the latest pending live prompt; accepted repetition counts are serialized ahead of pending prompts in a bounded queue (32 entries, reporting feedback unavailable on overflow). Stage replacement, pause, stop, and interruption cancel obsolete work. Intentional cancellation is reported separately and never advances guidance; unexpected synthesis cancellation reports failure. Speech has a bounded watchdog.
+
+Target success effects use a separate prepared player, at 40% volume when foreground audio is active and normal volume otherwise. No effect backlog is retained. Finger-therapy audio is unchanged. Physical verification of both languages, pause/stop recognition during playback, route/interruption recovery, missing clips, and narration self-trigger rejection remains pending.
+
+## Mac Catalyst compatibility
+
+Mac Catalyst support is retained from main as an explicit exception to the original iPad-only platform scope. Physical M1-iPad acceptance remains required. Voice commands remain exact English phrases with en-US on-device recognition in both interface languages. Catalyst camera and audio acceptance remains pending.

@@ -204,6 +204,9 @@ struct TherapySessionView: View {
                     VStack(spacing: 16) {
                         Text("session.paused").typography(.therapyPause)
                         Text("session.resumeHelp")
+                        if let failure = model.failure {
+                            Text(verbatim: failure).typography(.caption).foregroundStyle(.orange)
+                        }
                         if let assistanceKey = model.snapshot.assistanceKey {
                             Text(LocalizedStringKey(assistanceKey))
                                 .multilineTextAlignment(.leading)
@@ -268,6 +271,8 @@ struct TherapySessionView: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
                 }
                 if model.snapshot.summary == nil {
+                    Button("session.camera") { model.switchCamera() }
+                        .buttonStyle(SessionButtonStyle(compact: true))
                     Button("session.help") { model.command(.help) }
                         .buttonStyle(SessionButtonStyle(compact: true))
                     Button("session.pause") { model.command(.pause) }
@@ -699,6 +704,8 @@ struct TherapySessionView: View {
                     Button("session.retryCamera") {
                         Task { await model.retryCamera(permissions: permissions) }
                     }.buttonStyle(SessionButtonStyle())
+                    Button("session.camera") { model.switchCamera() }
+                        .buttonStyle(SessionButtonStyle())
                     recoveryControls
                 }
             }

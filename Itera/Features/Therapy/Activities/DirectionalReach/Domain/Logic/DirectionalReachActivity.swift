@@ -49,6 +49,11 @@ struct DirectionalReachActivity: TherapyActivity {
 
     mutating func handle(_ event: ActivityEvent) -> ActivityTransition {
         switch event {
+        case .countdownReady(let time):
+            if phase == .countdown {
+                deadline = time + 3
+                snapshot.seconds = 3
+            }
         case .command(let command, let time):
             receive(command, at: time)
         case .guidanceCompleted(let time):

@@ -221,10 +221,14 @@ final class BalanceSessionViewModel {
 
     private func startVoiceListening() {
         voiceAvailable = audio.capability() != .unsupported
-        let result = audio.startListening()
-        voiceListening = result == .started
-        if result != .started {
-            voiceAvailable = false
+        Task { @MainActor [weak self] in
+            guard let self else { return }
+            let result = await audio.startListening()
+            guard started else { return }
+            voiceListening = result == .started
+            if result != .started {
+                voiceAvailable = false
+            }
         }
     }
 
@@ -247,7 +251,7 @@ final class BalanceSessionViewModel {
             voiceListening = false
         case .interrupted:
             pause()
-        case .completed, .feedbackUnavailable, .command:
+        case .completed, .cancelled, .feedbackUnavailable, .command:
             break
         }
     }

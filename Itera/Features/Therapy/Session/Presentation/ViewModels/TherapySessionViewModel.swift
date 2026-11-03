@@ -89,12 +89,13 @@ final class TherapySessionViewModel {
         guard !exited else { return }
         permissions.refresh()
         audio.prepare()
-        guard allPermissionsGranted, audio.startListening() == .started else {
+        guard allPermissionsGranted, await audio.startListening() == .started else {
             audio.stop()
             entryMessage = "home.entryBlocked"
             entryFailure = true
             return
         }
+        guard !exited, !isBackgrounded, !Task.isCancelled else { return }
         entryFailure = false
         voiceReady = true
         listening = true
@@ -128,6 +129,12 @@ final class TherapySessionViewModel {
         timer = Timer.publish(every: 0.05, on: .main, in: .common).autoconnect().sink {
             [weak self] _ in self?.send(.tick(ProcessInfo.processInfo.systemUptime))
         }
+        let orientation = UIApplication.shared.connectedScenes
+            .compactMap { ($0 as? UIWindowScene)?.interfaceOrientation }
+            .first { $0 == .landscapeLeft || $0 == .landscapeRight }
+        landscapeRight = orientation == .landscapeRight
+        frontCamera = true
+        tracking.configure(front: true, landscapeRight: landscapeRight)
         tracking.start()
         send(.command(.resume))
     }
@@ -158,7 +165,8 @@ final class TherapySessionViewModel {
             blockReadiness()
             return
         }
-        voiceReady = audio.startListening() == .started
+        voiceReady = await audio.startListening() == .started
+        guard live, !exited, !isBackgrounded else { return }
         if voiceReady {
             cameraDenied = false
             failure = nil
@@ -221,7 +229,11 @@ final class TherapySessionViewModel {
         tracking.configure(front: frontCamera, landscapeRight: landscapeRight)
     }
 
+    private var isBackgrounded = false
+
     func background() {
+        isBackgrounded = true
+        audio.stop()
         guard live else {
             return
         }
@@ -233,13 +245,19 @@ final class TherapySessionViewModel {
     }
 
     func foreground() {
+        isBackgrounded = false
+        Task { await restoreForeground() }
+    }
+
+    private func restoreForeground() async {
         guard live else { return }
         permissions?.refresh()
         guard allPermissionsGranted else {
             blockReadiness()
             return
         }
-        voiceReady = audio.startListening() == .started
+        voiceReady = await audio.startListening() == .started
+        guard live, !exited, !isBackgrounded else { return }
         if voiceReady { tracking.start() }
     }
 
@@ -265,6 +283,8 @@ final class TherapySessionViewModel {
             return
         }
         switch event {
+        case .cancelled:
+            break
         case .feedbackUnavailable:
             failure = String(localized: "parity.audioUnavailable", bundle: sessionLanguage.resourceBundle, locale: sessionLocale)
         case .completed(let id, let available): send(.guidanceCompleted(id, available))

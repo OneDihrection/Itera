@@ -109,7 +109,7 @@ struct SitToStandActivity: TherapyActivity {
 
     mutating func handle(_ event: ActivityEvent) -> ActivityTransition {
         switch event {
-        case .guidanceCompleted, .viewport:
+        case .guidanceCompleted, .viewport, .countdownReady:
             break
         case .suspend:
             suspended = true

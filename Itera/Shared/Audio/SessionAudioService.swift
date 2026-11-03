@@ -13,6 +13,7 @@ import OSLog
 // Audio events are scoped by utterance identity; recognition callbacks have their own generation.
 enum AudioEvent {
     case completed(UUID, Bool)
+    case cancelled(UUID)
     case command(AudioCommand)
     case interrupted
     case voiceUnavailable
@@ -38,7 +39,7 @@ enum VoiceStartupResult: Equatable {
 protocol VoiceReadinessProviding: AnyObject {
     func prepare()
     func capability() -> VoiceCapability
-    func startListening() -> VoiceStartupResult
+    func startListening() async -> VoiceStartupResult
     func stop()
 }
 
@@ -48,24 +49,31 @@ final class SessionAudioService: NSObject, VoiceReadinessProviding, AVSpeechSynt
     private let logger = Logger(subsystem: Bundle.main.bundleIdentifier ?? "Itera", category: "SessionAudio")
     private var routeObserver: NSObjectProtocol?
     private let synthesizer = AVSpeechSynthesizer()
-    private let engine = AVAudioEngine()
+    private let inputWorker = AudioInputWorker()
+    private var starting: Task<VoiceStartupResult, Never>?
+    private var listeningActive = false
     private var recognizer: SFSpeechRecognizer?
     private var recognition: SFSpeechRecognitionTask?
     private var request: SFSpeechAudioBufferRecognitionRequest?
     private var recognitionGeneration = UUID()
-    private var recognitionRestartTask: Task<Void, Never>?
     private var utteranceIDs: [ObjectIdentifier: UUID] = [:]
     private var interruption: NSObjectProtocol?
     private var consumed = false
     private var language = AppLanguage.selected
+    // Command recognition stays English independently of narration language.
+    private let recognitionLocale = Locale(identifier: "en-US")
     private var synthesisLocale = "en-US"
     private var voice: AVSpeechSynthesisVoice?
-    private var tapInstalled = false
     private var clips: [String: PreparedAudioClip] = [:]
+    private var targetEffect: PreparedAudioClip?
     private var activeClip: PreparedAudioClip?
     private var clipID: UUID?
     private var clipWatchdog: Task<Void, Never>?
     private var afterClip: (() -> Void)?
+    private var failedClip: (() -> Void)?
+    private var pendingSpeech: (id: UUID, text: String)?
+    private var pendingCounts: [(id: UUID, number: Int)] = []
+    private var speechWatchdog: Task<Void, Never>?
     private var closingWatchdog: Task<Void, Never>?
 
     override init() {
@@ -98,18 +106,24 @@ final class SessionAudioService: NSObject, VoiceReadinessProviding, AVSpeechSynt
         synthesisLocale = language.speechIdentifier
         voice = AVSpeechSynthesisVoice(language: synthesisLocale)
         clips = [:]
-        let language = synthesisLocale.hasPrefix("id") ? "id" : "en"
-        for number in 1...100 {
-            prepareClip("count-\(language)-\(number)")
+        if let url = Bundle.main.url(forResource: "target-reached", withExtension: "wav") {
+            targetEffect = try? PreparedAudioClip(url: url)
         }
-        prepareClip("target-reached")
-        prepareClip("closing-chime")
     }
 
     func speak(id: UUID, text: String) {
-        cancelSpeech()
+        if !utteranceIDs.isEmpty || clipID != nil {
+            if let previous = pendingSpeech { events.send(.cancelled(previous.id)) }
+            pendingSpeech = (id, text)
+            return
+        }
         guard let voice else {
-            events.send(.completed(id, false))
+            // Defer failure so callers finish applying the transition before recovery.
+            Task { @MainActor [weak self] in
+                self?.events.send(.feedbackUnavailable)
+                self?.events.send(.completed(id, false))
+                self?.drainPendingAudio()
+            }
             return
         }
         let utterance = AVSpeechUtterance(string: text)
@@ -118,19 +132,38 @@ final class SessionAudioService: NSObject, VoiceReadinessProviding, AVSpeechSynt
         utterance.rate = AVSpeechUtteranceDefaultSpeechRate * 0.8
         utteranceIDs[ObjectIdentifier(utterance)] = id
         synthesizer.speak(utterance)
+        speechWatchdog?.cancel()
+        speechWatchdog = Task { [weak self] in
+            do { try await Task.sleep(for: .seconds(45)) } catch { return }
+            guard let self, self.utteranceIDs.values.contains(id) else { return }
+            self.utteranceIDs.removeAll()
+            self.synthesizer.stopSpeaking(at: .immediate)
+            self.events.send(.feedbackUnavailable)
+            self.events.send(.completed(id, false))
+            self.drainPendingAudio()
+        }
     }
 
     func cancelSpeech() {
+        let cancelled = Array(utteranceIDs.values) + [clipID, pendingSpeech?.id].compactMap { $0 }
+            + pendingCounts.map(\.id)
+        pendingSpeech = nil
+        pendingCounts.removeAll(keepingCapacity: true)
+        speechWatchdog?.cancel()
+        speechWatchdog = nil
+        targetEffect?.stop()
         clipID = nil
         clipWatchdog?.cancel()
         clipWatchdog = nil
         afterClip = nil
+        failedClip = nil
         activeClip?.stop()
         activeClip = nil
         closingWatchdog?.cancel()
         closingWatchdog = nil
         utteranceIDs.removeAll()
         synthesizer.stopSpeaking(at: .immediate)
+        for id in cancelled { events.send(.cancelled(id)) }
     }
 
     private func prepareClip(_ name: String) {
@@ -141,15 +174,44 @@ final class SessionAudioService: NSObject, VoiceReadinessProviding, AVSpeechSynt
     func play(id: UUID, cue: SessionAudioCue) {
         switch cue {
         case .target:
-            // Ordinary target feedback never interrupts guidance or an accepted count.
-            guard utteranceIDs.isEmpty, clipID == nil else { return }
-            playClip("target-reached", id: id, timeout: 1)
+            let volume: Float = utteranceIDs.isEmpty && clipID == nil ? 1 : 0.4
+            guard let targetEffect,
+                  targetEffect.play(id: id, volume: volume, completion: { [weak self] _, success in
+                      if !success { self?.events.send(.feedbackUnavailable) }
+                  }) else {
+                events.send(.feedbackUnavailable)
+                return
+            }
         case .count(let number):
+            if !utteranceIDs.isEmpty || clipID != nil {
+                guard pendingCounts.count < 32 else {
+                    events.send(.feedbackUnavailable)
+                    return
+                }
+                pendingCounts.append((id, number))
+                return
+            }
+            let language = synthesisLocale.hasPrefix("id") ? "id" : "en"
+            let name = "count-\(language)-\(number)"
+            if Bundle.main.url(forResource: name, withExtension: "wav") != nil {
+                playClip(name, id: id, timeout: 20, failure: { [weak self] in
+                    self?.speak(id: id, text: String(number))
+                })
+            } else {
+                speak(id: id, text: String(number))
+            }
+        case .countdown(let number):
+            // Countdown time is authoritative; never queue an expired number.
             cancelSpeech()
             let language = synthesisLocale.hasPrefix("id") ? "id" : "en"
-            playClip("count-\(language)-\(number)", id: id, timeout: 20)
-        case .countdown(let number):
-            speak(id: id, text: String(number))
+            let name = "count-\(language)-\(number)"
+            if Bundle.main.url(forResource: name, withExtension: "wav") != nil {
+                playClip(name, id: id, timeout: 1, failure: { [weak self] in
+                    self?.speak(id: id, text: String(number))
+                })
+            } else {
+                speak(id: id, text: String(number))
+            }
         case .guidance(let prefix, let key):
             cancelSpeech()
             let name: String
@@ -166,9 +228,9 @@ final class SessionAudioService: NSObject, VoiceReadinessProviding, AVSpeechSynt
                 speak(id: id, text: String(localized: String.LocalizationValue(key), bundle: language.resourceBundle, locale: language.locale))
                 return
             }
-            playClip(name, id: id, timeout: timeout) { [weak self] in
+            playClip(name, id: id, timeout: timeout, completion: { [weak self] in
                 self?.speak(id: id, text: String(localized: String.LocalizationValue(key), bundle: self?.language.resourceBundle ?? AppLanguage.selected.resourceBundle, locale: self?.language.locale ?? AppLanguage.selected.locale))
-            }
+            })
         case .closing(let completed):
             cancelSpeech()
             let key = completed ? "parity.closingComplete" : "parity.closingPartial"
@@ -188,15 +250,20 @@ final class SessionAudioService: NSObject, VoiceReadinessProviding, AVSpeechSynt
         }
     }
 
-    private func playClip(_ name: String, id: UUID, timeout: Double, completion: (() -> Void)? = nil) {
+    private func playClip(_ name: String, id: UUID, timeout: Double, failure: (() -> Void)? = nil, completion: (() -> Void)? = nil) {
+        clips.removeAll()
+        prepareClip(name)
         guard let clip = clips[name] else {
             events.send(.feedbackUnavailable)
+            failure?()
             completion?()
+            drainPendingAudio()
             return
         }
         activeClip = clip
         clipID = id
         afterClip = completion
+        failedClip = failure
         guard clip.play(id: id, completion: { [weak self] id, success in
             self?.finishClip(id, success: success)
         }) else {
@@ -212,14 +279,31 @@ final class SessionAudioService: NSObject, VoiceReadinessProviding, AVSpeechSynt
     private func finishClip(_ id: UUID, success: Bool) {
         guard clipID == id else { return }
         let completion = afterClip
+        let failure = failedClip
+        failedClip = nil
         clipID = nil
         afterClip = nil
         clipWatchdog?.cancel()
         clipWatchdog = nil
         activeClip?.stop()
         activeClip = nil
-        if !success { events.send(.feedbackUnavailable) }
+        if !success {
+            events.send(.feedbackUnavailable)
+            failure?()
+        }
         completion?()
+        drainPendingAudio()
+    }
+
+    private func drainPendingAudio() {
+        guard utteranceIDs.isEmpty, clipID == nil else { return }
+        if !pendingCounts.isEmpty {
+            let next = pendingCounts.removeFirst()
+            play(id: next.id, cue: .count(next.number))
+        } else if let next = pendingSpeech {
+            pendingSpeech = nil
+            speak(id: next.id, text: next.text)
+        }
     }
 
     nonisolated func speechSynthesizer(
@@ -231,27 +315,52 @@ final class SessionAudioService: NSObject, VoiceReadinessProviding, AVSpeechSynt
             else {
                 return
             }
+            self.speechWatchdog?.cancel()
+            self.speechWatchdog = nil
             self.events.send(.completed(id, true))
+            self.drainPendingAudio()
+        }
+    }
+
+    nonisolated func speechSynthesizer(
+        _ synthesizer: AVSpeechSynthesizer, didCancel utterance: AVSpeechUtterance
+    ) {
+        Task { @MainActor [weak self] in
+            guard let self,
+                  let id = self.utteranceIDs.removeValue(forKey: ObjectIdentifier(utterance)) else { return }
+            self.speechWatchdog?.cancel()
+            self.speechWatchdog = nil
+            self.events.send(.feedbackUnavailable)
+            self.events.send(.completed(id, false))
+            self.drainPendingAudio()
         }
     }
 
     func capability() -> VoiceCapability {
-        let recognizers = recognitionLocaleIdentifiers.compactMap {
-            SFSpeechRecognizer(locale: Locale(identifier: $0))
-        }
-        guard recognizers.contains(where: \.supportsOnDeviceRecognition) else {
+        guard let recognizer = SFSpeechRecognizer(locale: recognitionLocale),
+            recognizer.supportsOnDeviceRecognition
+        else {
             return .unsupported
         }
-        return recognizers.contains {
-            $0.supportsOnDeviceRecognition && $0.isAvailable
-        } ? .ready : .unavailable
+        return recognizer.isAvailable ? .ready : .unavailable
     }
 
     @discardableResult
-    func startListening() -> VoiceStartupResult {
-        recognitionRestartTask?.cancel()
-        recognitionRestartTask = nil
-        tearDownListening(notify: false)
+    func startListening() async -> VoiceStartupResult {
+        if listeningActive { return .started }
+        if let starting { return await starting.value }
+        let generation = UUID()
+        recognitionGeneration = generation
+        let task = Task { await self.activateListening(generation: generation) }
+        starting = task
+        return await task.value
+    }
+
+    private func activateListening(generation: UUID) async -> VoiceStartupResult {
+        guard recognitionGeneration == generation, !Task.isCancelled else { return .unavailable }
+        defer {
+            if recognitionGeneration == generation || listeningActive { starting = nil }
+        }
         guard AVAudioApplication.shared.recordPermission == .granted,
             SFSpeechRecognizer.authorizationStatus() == .authorized
         else {
@@ -259,73 +368,70 @@ final class SessionAudioService: NSObject, VoiceReadinessProviding, AVSpeechSynt
             return .permissionDenied
         }
         let readiness = capability()
-        guard readiness == .ready, let recognizer = preferredRecognizer() else {
+        guard readiness == .ready,
+            let recognizer = SFSpeechRecognizer(locale: recognitionLocale)
+        else {
             events.send(.voiceUnavailable)
             return readiness == .unsupported ? .unsupported : .unavailable
         }
         self.recognizer = recognizer
         recognizer.delegate = self
-        let generation = UUID()
-        recognitionGeneration = generation
         consumed = false
-        do {
-            let session = AVAudioSession.sharedInstance()
-            // Compare on hardware before changing the production mode: command interruption
-            // and narration self-trigger rejection must remain reliable.
-            var mode: AVAudioSession.Mode = .voiceChat
-            #if DEBUG
-            if ProcessInfo.processInfo.arguments.contains("-IteraCompareDefaultAudioMode") {
-                mode = .default
-            }
-            #endif
-            try session.setCategory(.playAndRecord, mode: mode, options: [.defaultToSpeaker])
-            try session.setActive(true)
-            let request = SFSpeechAudioBufferRecognitionRequest()
-            request.requiresOnDeviceRecognition = true
-            request.shouldReportPartialResults = true
-            request.contextualStrings = commandPhrases
-            request.taskHint = .confirmation
-            self.request = request
-            let input = engine.inputNode
-            let format = input.outputFormat(forBus: 0)
-            guard format.sampleRate > 0, format.channelCount > 0 else { throw AudioFailure.inputUnavailable }
-            input.installTap(onBus: 0, bufferSize: 1024, format: format) { buffer, _ in
-                request.append(buffer)
-            }
-            tapInstalled = true
-            engine.prepare()
-            try engine.start()
-            logAudioConfiguration("listening started")
-            recognition = recognizer.recognitionTask(with: request) { [weak self] result, error in
-                Task { @MainActor in
-                    guard let self, self.recognitionGeneration == generation else {
-                        return
-                    }
-                    if let result, !self.consumed {
-                        let words = result.bestTranscription.formattedString
-                        if let command = self.command(words) {
-                            self.consumed = true
-                            self.events.send(.command(command))
-                            if self.recognitionGeneration == generation {
-                                self.scheduleListeningRestart(after: 0.12)
-                            }
-                            return
-                        }
-                    }
-                    if result?.isFinal == true || error != nil {
-                        if self.recognitionGeneration == generation {
-                            self.scheduleListeningRestart(after: error == nil ? 0.08 : 0.30)
-                        }
-                    }
-                }
-            }
-            events.send(.listening(true))
-            return .started
-        } catch {
-            logger.error("Audio startup failed: \(String(describing: error), privacy: .public)")
+        let success = await inputWorker.start()
+        guard recognitionGeneration == generation else { return .unavailable }
+        starting = nil
+        guard success, !Task.isCancelled else {
             stopListening()
             events.send(.voiceUnavailable)
             return .inputFailure
+        }
+        listeningActive = true
+        beginUtterance(recognizer)
+        logAudioConfiguration("listening started")
+        events.send(.listening(true))
+        return .started
+    }
+
+    private func beginUtterance(_ recognizer: SFSpeechRecognizer) {
+        let generation = UUID()
+        recognitionGeneration = generation
+        inputWorker.replaceRequest(nil)
+        recognition?.cancel()
+        request?.endAudio()
+        let request = SFSpeechAudioBufferRecognitionRequest()
+        request.requiresOnDeviceRecognition = true
+        request.shouldReportPartialResults = true
+        self.request = request
+        consumed = false
+        inputWorker.replaceRequest(request)
+        recognition = recognizer.recognitionTask(with: request) { [weak self] result, error in
+            Task { @MainActor in
+                guard let self, self.recognitionGeneration == generation else {
+                    return
+                }
+                if let result, !self.consumed {
+                    let words = result.bestTranscription.formattedString.lowercased()
+                        .trimmingCharacters(in: .whitespacesAndNewlines)
+                    // Exact short utterances avoid substring triggers from app narration.
+                    if let command = self.command(words) {
+                        self.consumed = true
+                        self.events.send(.command(command))
+                        // Begin a fresh utterance after a command so the next command can interrupt it.
+                        if self.recognitionGeneration == generation {
+                            self.beginUtterance(recognizer)
+                        }
+                        return
+                    }
+                }
+                if result?.isFinal == true || error != nil {
+                    if error != nil {
+                        self.stopListening()
+                        self.events.send(.voiceUnavailable)
+                    } else {
+                        self.beginUtterance(recognizer)
+                    }
+                }
+            }
         }
     }
 
@@ -344,91 +450,24 @@ final class SessionAudioService: NSObject, VoiceReadinessProviding, AVSpeechSynt
         }
     }
 
-    private func command(_ words: String) -> AudioCommand? {
-        let normalizedWords = normalizeCommand(words)
-        let heardTokens = normalizedWords.split(separator: " ")
-        guard heardTokens.count <= 3 else { return nil }
-        return commandKeys.first { key, _ in
-            commandBundles.contains { bundle in
-                let phrase = normalizeCommand(String(
-                    localized: String.LocalizationValue(key),
-                    bundle: bundle
-                ))
-                return normalizedWords == phrase
-                    || heardTokens.contains(Substring(phrase))
-            }
-        }?.1
+    private var commandBundle: Bundle {
+        guard let path = Bundle.main.path(forResource: "en", ofType: "lproj"),
+            let bundle = Bundle(path: path)
+        else { return .main }
+        return bundle
     }
 
-    private var commandKeys: [(String, AudioCommand)] {
-        [
-            ("command.stop", .stop), ("command.end", .stop), ("command.pause", .pause),
-            ("command.start", .resume), ("command.resume", .resume),
+    private func command(_ words: String) -> AudioCommand? {
+        let keys: [(String, AudioCommand)] = [
+            ("command.stop", .stop), ("command.pause", .pause), ("command.resume", .resume),
             ("command.skip", .skip), ("command.repeat", .repeatInstruction), ("command.recalibrate", .retryCalibration),
             ("command.help", .help), ("command.redo", .redo),
             ("command.adjustTarget", .adjustTarget), ("command.retryStep", .retryStep),
             ("command.skipStep", .skipStep), ("command.timedPractice", .timedPractice),
         ]
-    }
-
-    private var commandBundles: [Bundle] {
-        ["en", "id"].compactMap { language in
-            guard let path = Bundle.main.path(forResource: language, ofType: "lproj") else {
-                return nil
-            }
-            return Bundle(path: path)
-        }
-    }
-
-    private var commandPhrases: [String] {
-        Array(Set(commandKeys.flatMap { key, _ in
-            commandBundles.map {
-                String(localized: String.LocalizationValue(key), bundle: $0)
-            }
-        })).sorted()
-    }
-
-    private var recognitionLocaleIdentifiers: [String] {
-        language == .indonesian ? ["id-ID", "en-US"] : ["en-US", "id-ID"]
-    }
-
-    private func preferredRecognizer() -> SFSpeechRecognizer? {
-        recognitionLocaleIdentifiers.lazy.compactMap {
-            SFSpeechRecognizer(locale: Locale(identifier: $0))
-        }.first {
-            $0.supportsOnDeviceRecognition && $0.isAvailable
-        }
-    }
-
-    private func normalizeCommand(_ words: String) -> String {
-        let folded = words.lowercased()
-            .folding(options: [.diacriticInsensitive], locale: language.locale)
-        let cleaned = folded.unicodeScalars.map { scalar -> Character in
-            CharacterSet.alphanumerics.contains(scalar) || CharacterSet.whitespaces.contains(scalar)
-                ? Character(String(scalar))
-                : " "
-        }
-        var tokens = String(cleaned).split(whereSeparator: \.isWhitespace).map(String.init)
-        let fillers: Set<String> = ["please", "tolong", "hey", "itera"]
-        while let first = tokens.first, fillers.contains(first) {
-            tokens.removeFirst()
-        }
-        return tokens.joined(separator: " ")
-    }
-
-    private func scheduleListeningRestart(after delay: Double) {
-        tearDownListening(notify: false)
-        recognitionRestartTask?.cancel()
-        recognitionRestartTask = Task { [weak self] in
-            do {
-                try await Task.sleep(for: .seconds(delay))
-            } catch {
-                return
-            }
-            guard let self else { return }
-            self.recognitionRestartTask = nil
-            _ = self.startListening()
-        }
+        return keys.first {
+            String(localized: String.LocalizationValue($0.0), bundle: commandBundle).lowercased() == words
+        }?.1
     }
 
     /// Logs configuration only; never logs recognized words or microphone samples.
@@ -439,12 +478,7 @@ final class SessionAudioService: NSObject, VoiceReadinessProviding, AVSpeechSynt
     }
 
     func stopListening() {
-        recognitionRestartTask?.cancel()
-        recognitionRestartTask = nil
-        tearDownListening(notify: true)
-    }
-
-    private func tearDownListening(notify: Bool) {
+        inputWorker.replaceRequest(nil)
         recognitionGeneration = UUID()
         recognizer?.delegate = nil
         recognizer = nil
@@ -452,20 +486,17 @@ final class SessionAudioService: NSObject, VoiceReadinessProviding, AVSpeechSynt
         recognition = nil
         request?.endAudio()
         request = nil
-        engine.stop()
-        if tapInstalled {
-            engine.inputNode.removeTap(onBus: 0)
-            tapInstalled = false
-        }
-        if notify {
-            events.send(.listening(false))
-        }
+        listeningActive = false
+        starting?.cancel()
+        starting = nil
+        inputWorker.stop()
+        events.send(.listening(false))
     }
 
     func stop() {
         cancelSpeech()
         stopListening()
-        try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
+        inputWorker.stop(deactivate: true)
     }
 
     private enum AudioFailure: Error { case inputUnavailable }

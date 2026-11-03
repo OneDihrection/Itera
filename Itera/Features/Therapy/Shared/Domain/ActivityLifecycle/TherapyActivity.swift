@@ -49,7 +49,7 @@ struct MovementSnapshot {
     var guide: TargetGuide?
     var pose: ExamplePose = .start
     var countingDown = false
-    var seconds = 5
+    var seconds = 3
     var trackingMessage: String?
 }
 
@@ -149,6 +149,7 @@ enum ActivityEvent {
     case resume
     case recalibrate
     case viewport(TherapyViewport)
+    case countdownReady(Double)
     case guidanceCompleted(Double)
     case command(ActivityCommand, at: Double)
 }
