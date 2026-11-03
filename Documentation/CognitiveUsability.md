@@ -96,3 +96,9 @@ Earned badge details and the sequential award celebration expose a large localiz
 A value-driven design system component renders an opaque, light appearance badge card at 2× scale in memory, with title, earned date and encouragement. Only this card and a localized caption are passed to the system; no patient history or camera data is attached. Rendering failure retains a text caption fallback. No file or Photos authorization is required. The user selects the destination and confirms delivery in the system UI.
 
 Verification: the Simulator displayed the native share sheet and produced a visually inspected 1200-pixel-wide Indonesian badge image. The temporary sample route/export fixture did not save an award or send anything and was removed before the final build. Third-party destination delivery remains a device check.
+
+## Sequential extension timer detection (3 November 2026)
+
+An actual geometry/activity replay reproduced a stationary zero timer when a bent distal joint straightened while the middle joint was already straight. Extension previously measured only the middle-joint angle. It now averages middle and distal extension angles for the selected finger, matching the required visible fingertip. Palm validity uses that finger's own base; an unrelated middle-finger MCP landmark no longer blocks another finger. Existing confidence, freshness, calibration separation, hold duration and visible-completion acknowledgment requirements remain intact.
+
+The original replay changed from holdElapsed 0.0 to 2.0/full completion. An expanded replay covered all four calibration pairs and one full sequential repetition, wrong/unchanged finger rejection, unrelated middle-joint occlusion and missing selected joints. The temporary replay was removed after validation. Physical camera detection remains a device check.

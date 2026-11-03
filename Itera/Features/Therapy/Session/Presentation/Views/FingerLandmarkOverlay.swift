@@ -126,10 +126,14 @@ struct FingerLandmarkOverlay: View {
     }
 
     private func showsBubble(_ number: Int) -> Bool {
-        guard exercise == .opposition else {
+        switch exercise {
+        case .opposition:
+            return number == 1 || number == finger + 2
+        case .extensionSequence:
+            return number == finger + 2
+        default:
             return true
         }
-        return number == 1 || number == finger + 2
     }
 
     private func isActive(_ number: Int) -> Bool {
