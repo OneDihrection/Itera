@@ -3,6 +3,99 @@
 
 Follow these steps in order. Steps 1–10 are one-time setup; repeat steps 11–12 for releases. Commands run in Terminal on your Mac, from the Itera repository root unless stated otherwise. Replace uppercase placeholders with your own values.
 
+## Why this setup is needed
+
+A TestFlight release has two separate responsibilities: **sign an app that Apple can verify**, then **authenticate permission to upload it to your Apple account**. Your GitHub login alone cannot do either Apple operation. Likewise, logging in to Apple does not give a GitHub runner access to your private signing repository.
+
+GitHub creates a fresh hosted Mac for the job. It does not inherit Xcode settings, Keychain identities, Git credentials, or environment variables from your Mac. We therefore supply the tools and credentials explicitly. Fastlane coordinates the process; match is the Fastlane tool that synchronizes signing assets; Xcode builds and signs the app.
+
+The long part is establishing this reusable setup. Once the assets and secrets are configured, ordinary releases require a reviewed production commit and a version tag. Repeat local signing work when assets expire or change, and update credentials when they expire or are revoked. Coworkers do not need the full release setup merely to contribute code or install TestFlight builds.
+
+### What each credential or identifier does
+
+| Item | Used by / destination | Purpose |
+| --- | --- | --- |
+| GITHUB_TOKEN | Runner → Itera repository | Automatic job credential for checking out app source; its access does not extend to ios-signing |
+| GitHub PAT / MATCH_GIT_BASIC_AUTHORIZATION | match → ios-signing over HTTPS | Reads encrypted signing files; local bootstrap uses separate write access to commit them |
+| MATCH_PASSWORD | match on your Mac or runner | Decrypts/encrypts signing files locally; not a GitHub or Apple login password |
+| Distribution .cer and matching private key in .p12 | Runner Keychain → Xcode signing | Certificate identifies the signing identity; its private key creates the app signature |
+| App Store provisioning profile | Xcode → signed app | Apple-issued authorization connecting the team, app identifier, permitted signing certificate, and capabilities |
+| ASC_KEY_ID, ASC_ISSUER_ID, ASC_KEY_BASE64 | Fastlane → Apple services | API authentication for signing-resource checks, querying builds, and TestFlight upload; the .p8 key does not sign the app binary |
+| APPLE_TEAM_ID | match and Xcode | Identifies your Apple Developer team; not a password |
+| APP_IDENTIFIER | match, Xcode, and App Store Connect | Identifies the app: com.OneDihrection.Itera; not a password |
+| Certificate ID | match signing storage and profile creation | Identifies an individual certificate, such as RH2PVS66X5; distinct from the Team ID |
+
+MATCH_GIT_BASIC_AUTHORIZATION and ASC_KEY_BASE64 are encoded for transport, not encrypted by base64. Store them as secrets. The signing repository's files are separately encrypted by match using MATCH_PASSWORD.
+
+### Communication during initial setup
+
+```mermaid
+sequenceDiagram
+    participant M as Maintainer Mac
+    participant A as Apple Developer services
+    participant S as Private ios-signing repository
+    M->>A: Authenticate with authorized Apple account
+    M->>M: Choose existing certificate and private key
+    M->>A: Validate imported certificate or request a new one
+    A-->>M: Certificate validation or issuance
+    M->>A: Request app profile using chosen certificate
+    A-->>M: App Store provisioning profile
+    M->>M: Encrypt assets with MATCH_PASSWORD
+    M->>S: Push encrypted assets using write-access PAT
+```
+
+1. The maintainer confirms a valid certificate and matching private key. Existing assets are imported when available; creating a new certificate requires Apple's permission and capacity.
+2. Apple supplies the app-specific profile. The certificate can be reused across apps in the team, but the profile must authorize this app and certificate.
+3. Match encrypts and pushes the assets. Import and profile synchronization may make separate commits; the diagram summarizes the overall setup.
+4. The maintainer configures Actions secrets and variables in Itera. CI subsequently reads the signing repository without creating certificates or profiles.
+
+### Communication during each release
+
+```mermaid
+sequenceDiagram
+    participant D as Release maintainer
+    participant G as GitHub Actions
+    participant R as Hosted Mac runner
+    participant S as Private ios-signing repository
+    participant X as Xcode on runner
+    participant A as Apple services and TestFlight
+    D->>G: Push version tag
+    G->>R: Start job and provide configured credentials
+    R->>G: Checkout source and validate production ancestry
+    R->>R: Install tools and generate Xcode project
+    R->>S: Read encrypted assets using read-only PAT
+    S-->>R: Encrypted certificate, private key, and profile
+    R->>R: Decrypt assets and install into temporary Keychain
+    R->>A: Validate signing resources and query latest build number
+    A-->>R: Resource status and latest build number
+    R->>X: Archive Release with chosen version and signing assets
+    X-->>R: Signed IPA
+    R->>A: Authenticate and upload IPA
+    A->>A: Validate and process build for TestFlight
+```
+
+1. The tag triggers the job. GitHub may first queue it until a hosted Mac is available.
+2. The workflow checks that the tag has the required version format and its commit belongs to production history. It then installs dependencies and generates the ignored Xcode project.
+3. Fastlane's read-only match operation retrieves the existing signing assets. GitHub authentication allows fetching the files; MATCH_PASSWORD allows decrypting them. Neither replaces the other.
+4. Fastlane uses Apple API authentication to check signing resources and obtain the latest TestFlight build number. Xcode signs locally using the distribution private key and compatible profile.
+5. Fastlane uploads the IPA. Apple validates and processes it afterward. A successful job does not mean it is immediately available to testers; compliance prompts or processing errors can still need attention. Internal groups are configured in App Store Connect; this workflow does not perform external distribution.
+
+The App Store Connect API key and distribution signing private key have different jobs. A valid upload login cannot repair a mismatched profile, and a correctly signed app does not grant permission to upload to an Apple account.
+
+### Where common failures occur
+
+| Error | Stage | Meaning / next check |
+| --- | --- | --- |
+| Could not locate Gemfile | Local dependency startup | Run from the Itera root containing Gemfile |
+| Unable to locate Xcode | Tool selection | Select the full Xcode installation, not only Command Line Tools |
+| Waiting for a hosted runner | GitHub scheduling | Build steps have not started; this is before Fastlane |
+| Could not read Username; terminal prompts disabled | Signing-repository download | Provide an approved PAT through the local environment or Actions secret |
+| Could not create another Distribution certificate | Local signing bootstrap | Inspect existing identities and prefer import; see step 6d |
+| Profile doesn't include signing certificate | Xcode archive/signing | Verify the .cer/.p12 pair and profile authorization; see step 6b |
+| Upload succeeds but build is unavailable | Apple processing and distribution | Check TestFlight processing, compliance, and group assignment |
+
+Passing one stage only establishes that stage succeeded. For example, Apple login can work while certificate creation is rejected, and match can download a profile that does not authorize the identity Xcode uses.
+
 ## 1. Understand the two repositories
 
 You need your existing **Itera app repository** and a separate **private signing repository**, for example `OneDihrection/ios-signing`.
@@ -45,7 +138,7 @@ You need an active paid Apple Developer membership and access to manage distribu
 3. In App Store Connect → My Apps, create the app record using that same bundle ID, or open its existing record.
 4. Confirm required agreements and app information are complete.
 5. Confirm project.yml uses the same PRODUCT_BUNDLE_IDENTIFIER and DEVELOPMENT_TEAM. Its current values are `com.OneDihrection.Itera` and `A2WQZ32XVK`; verify ownership before using them.
-6. Add a valid distribution app-icon asset catalog and set ASSETCATALOG_COMPILER_APPICON_NAME in project.yml to its asset name. The current setting is empty. Regenerate with `xcodegen generate` after changing project settings.
+6. The bundled AppIcon asset set uses the existing hand-hero artwork on an opaque sage background. project.yml selects it through ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon. Regenerate with `xcodegen generate` after changing project settings. Xcode compiles the assets and supplies the primary icon metadata; do not patch Generated/Info.plist manually.
 
 Expected: one consistent bundle ID across Apple, project.yml, and the GitHub variable you will set later. Persistent project changes belong in project.yml, not only the generated Xcode project.
 
@@ -110,7 +203,26 @@ A valid distribution certificate can sign multiple apps on the same team. The pr
 3. Right-click the certificate and choose Export. Select Personal Information Exchange (`.p12`) so the export includes its private key. Save outside both repositories.
 4. The current match key-import path expects an empty `.p12` password. Leave the export password empty if permitted. Your Mac login password may separately be requested to authorize the export. If a password is mandatory or your existing `.p12` is password-protected, stop here and resolve export/import compatibility before proceeding; changing MATCH_PASSWORD does not unlock that file.
 5. In Apple Developer → Certificates, download the **same certificate** as `.cer`. Match its serial number against Keychain Access, not just its display name.
-6. From the Itera root, run:
+6. **Verify the certificate fingerprints before importing.** Run these commands on your original local exports, not the encrypted files downloaded from the match repository. Replace the quoted paths with the actual paths to your files:
+
+```sh
+openssl x509 -inform DER -in "/path/to/certificate.cer" \
+  -noout -fingerprint -sha256
+```
+
+```sh
+openssl pkcs12 -in "/path/to/exported.p12" -clcerts -nokeys |
+  openssl x509 -noout -fingerprint -sha256
+```
+
+Enter the `.p12` export password when prompted, or press Enter if it is empty. Neither command prints private keys. If either command fails, resolve that error before comparing results; absent output is not a successful match.
+
+Compare the two SHA256 fingerprints:
+
+- **Identical:** the `.cer` matches the certificate contained in the `.p12`. Also confirm the `.p12` export includes that certificate's private key as described above; the fingerprint comparison alone does not validate private-key contents.
+- **Different:** stop. Re-export the identity as `.p12` and the same certificate as DER `.cer` from the same Keychain entry, then repeat the check. Shared display names or matching Team IDs do not establish that they are the same certificate.
+
+7. Once the check passes, run from the Itera root:
 
 ```sh
 bundle exec fastlane match import \
@@ -126,6 +238,23 @@ Follow Apple ID/2FA prompts with an account allowed to manage signing. Apple ID 
 When asked for the repository encryption password, use the existing match password or choose and securely save one for initial setup. This is **MATCH_PASSWORD**, separate from any `.p12` export password. Match's encryption protects its Git-stored assets; the empty-password local `.p12` remains sensitive. Keep it in secure storage and remove temporary local exports when no longer needed. Never commit the exports manually.
 
 Expected: encrypted `.cer` and `.p12` files appear under `certs/distribution` on the signing repository's `master` branch. Continue to step 6c to obtain the app's provisioning profile.
+
+#### If a mismatched pair was already imported
+
+Import the corrected, fingerprint-verified pair using the command above. When using the same `.cer`, match replaces the incorrectly paired `.p12` under that certificate ID. Matching filenames in the repository alone do not prove a matching pair: import names the files using the supplied certificate's ID.
+
+Then regenerate the provisioning profile with the corrected identity. Find its ID from the imported filename under `certs/distribution`, without `.cer` or `.p12`. This is the **certificate ID**, not the Team ID:
+
+```sh
+bundle exec fastlane match appstore \
+  --git_url https://github.com/OneDihrection/ios-signing.git \
+  --app_identifier com.OneDihrection.Itera \
+  --team_id A2WQZ32XVK \
+  --certificate_id YOUR_CORRECT_CERTIFICATE_ID \
+  --force
+```
+
+Replace the placeholder with the corrected certificate ID. Keep the local write-access PAT available until this completes. `--force` regenerates the provisioning profile using the selected stored certificate. Confirm match pushes the corrected assets, then rerun the failed GitHub Actions job. No certificate revocation is needed to repair a mismatched export.
 
 ### 6c. Synchronize signing and create the app profile
 
@@ -295,9 +424,11 @@ Expected: the correct version/build appears in TestFlight and becomes available 
 | Release guard fails | Confirm exact numeric tag format, remote production existence, and that the commit is in its history |
 | Signing repository authentication fails | Verify token expiry, organization approval, repository access, and encoded username:token format |
 | Decryption fails | Confirm MATCH_PASSWORD matches the password used during bootstrap |
+| Profile “doesn’t include signing certificate” | Run the fingerprint check in step 6b. If mismatched, import the corrected pair and regenerate the profile with its certificate ID and --force. If fingerprints already match, inspect the profile and CI-selected signing identity before changing assets |
 | Certificate creation reports a maximum reached | Follow step 6d; prefer importing a reusable certificate/private-key pair through step 6b |
 | Missing/expired profile or certificate | Run writable match locally with appropriate Apple/GitHub permissions, then retry CI; CI cannot create missing assets |
 | Apple authentication fails | Check API key ID, issuer ID, encoded .p8 contents, key role, and revocation status |
+| Missing CFBundleIconName (90713) | Confirm the AppIcon asset set and project.yml setting are included in the tagged commit. Merge the fix into production and push a new version tag; rerunning an old tag rebuilds the old configuration |
 | Archive or upload fails | Check selected Xcode, bundle/team consistency, app icon, Apple agreements, version restrictions, and export compliance |
 | Upload job fails after sending the IPA | Inspect TestFlight first; Apple may already have received it. Wait for processing before retrying |
 | Duplicate build number | Wait for Apple's previous upload to become visible. A rerun allocates another number once visible; delayed visibility can cause rejection |
@@ -324,3 +455,5 @@ Also build for Simulator with signing disabled before release. No automated test
 - [GitHub workflow syntax and tag filters](https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax)
 
 - [GitHub personal access token creation and limitations](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens)
+
+The initial AppIcon PNGs were derived on 4 November 2026 from the existing `Itera/Assets.xcassets/hand-hero.imageset/hand-hero.png`, using an opaque sage background. The supplied artwork retains its existing provenance; no new artwork authorship is asserted.
