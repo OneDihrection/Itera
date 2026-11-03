@@ -329,6 +329,11 @@ Ordinary branch pushes do not upload. Release one tag at a time: GitHub serializ
 
 ### 2. Confirm the build in TestFlight
 
+The generated app declares `ITSAppUsesNonExemptEncryption` as Boolean `false` through project.yml. This declares that the app uses no encryption or only encryption exempt from export-compliance documentation requirements. The current source inspection found no custom encryption or third-party encryption dependencies. Review this declaration if encryption features or dependencies change; encryption used by match to store signing files is separate from encryption in the shipped app.
+
+Merge a change to this declaration into production and push a new release tag to include it in future uploads. An already uploaded build is unchanged: complete its pending encryption questionnaire in App Store Connect using accurate answers for that build.
+
+
 After the upload succeeds, open App Store Connect → Itera → TestFlight. Apple processing continues after the GitHub job ends. Wait for the build to finish processing and answer any export-compliance questions accurately.
 
 Create or select an internal testing group and add the processed build as needed. This workflow uploads only; it does not submit to the App Store or distribute to external testers. External testing requires its own review and distribution setup.
@@ -479,6 +484,8 @@ sequenceDiagram
 The App Store Connect API key and distribution signing private key have different jobs. A valid upload login cannot repair a mismatched profile, and a correctly signed app does not grant permission to upload to an Apple account.
 
 ## References
+
+- [Apple encryption declaration guidance](https://developer.apple.com/documentation/bundleresources/information-property-list/itsappusesnonexemptencryption)
 
 - [Fastlane GitHub Actions setup](https://docs.fastlane.tools/best-practices/continuous-integration/github/)
 - [Import existing signing assets](https://docs.fastlane.tools/actions/match/#import)
