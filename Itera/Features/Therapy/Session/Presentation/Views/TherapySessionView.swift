@@ -11,7 +11,8 @@ struct TherapySessionView: View {
     @Environment(\.locale) private var locale
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @Environment(\.accessibilityVoiceOverEnabled) private var voiceOver
+    /// Read from UIAccessibility instead of the environment key, which traps on Mac Catalyst.
+    @State private var voiceOver = UIAccessibility.isVoiceOverRunning
     @ScaledMetric(relativeTo: .largeTitle) private var instructionSize = 96.0
     @Environment(PermissionManager.self) private var permissions
     @Environment(NavigationRouter.self) private var router
@@ -32,6 +33,15 @@ struct TherapySessionView: View {
     #endif
 
     var body: some View {
+        sessionContent
+            .onReceive(
+                NotificationCenter.default.publisher(for: UIAccessibility.voiceOverStatusDidChangeNotification)
+            ) { _ in
+                voiceOver = UIAccessibility.isVoiceOverRunning
+            }
+    }
+
+    private var sessionContent: some View {
         GeometryReader { geometry in
             if model.entryFailure {
                 VStack(spacing: 24) {
@@ -157,7 +167,9 @@ struct TherapySessionView: View {
             if let activity = model.snapshot.activity {
                 HStack(spacing: 16) {
                     Text(kindKey(activity.kind))
-                    Text(LocalizedStringKey("side." + activity.side.rawValue))
+                    if activity.hasSide {
+                        Text(LocalizedStringKey("side." + activity.side.rawValue))
+                    }
                 }
                 .typography(.title2)
             }
@@ -248,7 +260,9 @@ struct TherapySessionView: View {
                 if let activity = model.snapshot.activity {
                     HStack(spacing: 8) {
                         Text(kindKey(activity.kind))
-                        Text(activity.side == .left ? "session.left" : "session.right")
+                        if activity.hasSide {
+                            Text(activity.side == .left ? "session.left" : "session.right")
+                        }
                     }
                     .typography(.title2)
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -300,6 +314,9 @@ struct TherapySessionView: View {
             case .cup(let value):
                 return value.phase == .practice ? "session.practice" : "session.rehearsal"
             case .timed: return "session.timedPractice"
+            case .sitToStand(let value):
+                return value.phase == .practice || value.phase == .returnToSeat || value.phase == .countdown
+                    ? "session.practice" : "session.calibration"
             case nil: return "session.cameraWait"
             }
         }
@@ -324,6 +341,13 @@ struct TherapySessionView: View {
                     let guide = model.snapshot.presentation?.guide
                 {
                     targetOverlay(guide, size: geometry.size)
+                }
+                if !model.snapshot.paused, !model.snapshot.cameraWaiting,
+                    model.snapshot.stage == .activity,
+                    case .sitToStand(let value)? = model.snapshot.presentation,
+                    let joints = value.joints
+                {
+                    sitToStandOverlay(value, joints: joints)
                 }
                 if !hasFullScreenPresentation, model.snapshot.stage == .activity,
                     let active = cornerExampleActive
@@ -376,6 +400,11 @@ struct TherapySessionView: View {
             case .cup(let value):
                 return value.phase == .practice || value.phase == .countdown ? .green : .blue
             case .timed: return .green
+            case .sitToStand(let value):
+                switch value.phase {
+                case .seatedCapture, .trial: return .yellow
+                case .returnToSeat, .countdown, .practice: return .green
+                }
             case nil: return .gray
             }
         }
@@ -477,6 +506,7 @@ struct TherapySessionView: View {
         case .movement(let value): return value.trackingMessage ?? model.snapshot.instruction
         case .reach(let value): return value.trackingMessage ?? model.snapshot.instruction
         case .cup(let value): return value.evidenceMessage ?? model.snapshot.instruction
+        case .sitToStand(let value): return value.trackingMessage ?? value.cue ?? model.snapshot.instruction
         default: return model.snapshot.instruction
         }
     }
@@ -518,6 +548,8 @@ struct TherapySessionView: View {
                 }
             case .timed(let practice):
                 Text("session.practiceSeconds \(Int(practice.seconds)) \(Int(practice.goal))")
+            case .sitToStand(let value):
+                sitToStandStatus(value)
             case nil: EmptyView()
             }
             if let failure = model.failure {
@@ -527,6 +559,63 @@ struct TherapySessionView: View {
         .typography(.title2)
         .padding(8)
         .background(.black, in: RoundedRectangle(cornerRadius: 12))
+    }
+
+    @ViewBuilder
+    private func sitToStandStatus(_ value: SitToStandSnapshot) -> some View {
+        switch value.phase {
+        case .seatedCapture:
+            HStack(spacing: 16) {
+                Text("session.remaining \(value.seconds)").monospacedDigit()
+                ProgressView(value: value.progress)
+                    .tint(.yellow)
+                    .accessibilityLabel(Text("session.holdProgress"))
+            }
+        case .practice:
+            VStack(spacing: 10) {
+                HStack(spacing: 24) {
+                    stageChip("sts.stage.lean", done: value.leanReached)
+                    stageChip("sts.stage.stand", done: value.stage == .standing || value.stage == .lowering)
+                    stageChip("sts.stage.sit", done: false)
+                }
+                ProgressView(value: value.rise)
+                    .tint(.green)
+                    .accessibilityLabel(Text("sts.riseProgress"))
+            }
+        case .trial, .returnToSeat, .countdown:
+            EmptyView()
+        }
+    }
+
+    private func stageChip(_ key: LocalizedStringKey, done: Bool) -> some View {
+        Label(key, systemImage: done ? "checkmark.circle.fill" : "circle")
+            .foregroundStyle(done ? .green : .white)
+    }
+
+    /// Joint chain with the knee angle and trunk lean read from it, in the session's language.
+    private func sitToStandOverlay(_ value: SitToStandSnapshot, joints: SitToStandJoints) -> some View {
+        func normalized(_ point: TherapyPoint) -> CGPoint {
+            CGPoint(x: point.x / value.aspect, y: point.y)
+        }
+        func caption(_ key: String, _ degrees: Double) -> String {
+            let format = String(
+                localized: String.LocalizationValue(key),
+                bundle: model.sessionLanguage.resourceBundle, locale: model.sessionLocale
+            )
+            return String(format: format, Int(degrees.rounded()))
+        }
+        let capturing = value.phase == .seatedCapture || value.phase == .trial
+        return SessionJointChainOverlay(
+            imageSize: CGSize(width: value.aspect, height: 1),
+            joints: [
+                .init(point: normalized(joints.shoulder)),
+                .init(point: normalized(joints.hip), caption: caption("sts.leanLabel %lld", value.trunkLean)),
+                .init(point: normalized(joints.knee), caption: caption("sts.kneeLabel %lld", value.kneeAngle), highlighted: true),
+                .init(point: normalized(joints.ankle)),
+            ],
+            color: value.cue != nil ? .orange : (capturing ? .yellow : .green),
+            mirrored: model.frontCamera
+        )
     }
 
     private func cupSupportCue(_ step: CupStep) -> String {
@@ -562,6 +651,7 @@ struct TherapySessionView: View {
                     Button("session.redo") { model.command(.redo) }
                         .buttonStyle(SessionButtonStyle())
                     let reachActivity = model.snapshot.activity?.kind == .directionalReach
+                        || model.snapshot.activity?.kind == .sitToStand
                     let cupRehearsal: Bool = {
                         guard case .cup(let cup) = model.snapshot.presentation else { return false }
                         return cup.phase == .rehearsal
@@ -578,6 +668,10 @@ struct TherapySessionView: View {
                         Button("session.skipStep") { model.command(.skipStep) }
                             .buttonStyle(SessionButtonStyle())
                     }
+                }
+                if model.snapshot.activity?.kind == .sitToStand {
+                    Button("session.retryStep") { model.command(.retryStep) }
+                        .buttonStyle(SessionButtonStyle())
                 }
                 if model.snapshot.activity?.kind == .armRaise || model.snapshot.activity?.kind == .elbowBend {
                     HStack {
@@ -664,7 +758,9 @@ struct TherapySessionView: View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
                 Text(kindKey(result.activity.kind))
-                Text(result.activity.side == .left ? "session.left" : "session.right")
+                if result.activity.hasSide {
+                    Text(result.activity.side == .left ? "session.left" : "session.right")
+                }
                 Spacer()
                 Text(LocalizedStringKey("session.outcome." + result.outcome.rawValue))
                 if result.practiceSeconds > 0, result.completedWork == 0 {
@@ -717,6 +813,7 @@ struct TherapySessionView: View {
         case .elbowBend: return "session.elbowBend"
         case .directionalReach: return "session.directionalReach"
         case .cup: return "session.cup"
+        case .sitToStand: return "session.sitToStand"
         }
     }
 

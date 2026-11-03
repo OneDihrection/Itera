@@ -10,6 +10,7 @@ import Foundation
 enum BodyJoint: String, CaseIterable {
     case nose, neck, root, leftShoulder, rightShoulder, leftElbow, rightElbow
     case leftWrist, rightWrist, leftHip, rightHip
+    case leftKnee, rightKnee, leftAnkle, rightAnkle
 }
 
 struct TherapyPoint: Equatable {

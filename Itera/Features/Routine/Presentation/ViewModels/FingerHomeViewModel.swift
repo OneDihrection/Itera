@@ -11,7 +11,7 @@ import Foundation
 @MainActor
 @Observable
 final class FingerHomeViewModel {
-    var routine = FingerRoutine()
+    var routine: FingerRoutine
     private(set) var history: [FingerSessionSummary] = []
     private(set) var checkpoint: FingerSessionSummary?
     private(set) var errorKey: String?
@@ -20,7 +20,12 @@ final class FingerHomeViewModel {
     @ObservationIgnored private let routineRepository: any FingerRoutineRepository
     @ObservationIgnored private var loadedRoutine = false
 
-    init(repository: any FingerSessionRepository, routineRepository: any FingerRoutineRepository) {
+    init(
+        category: ExerciseCategory = .fingers,
+        repository: any FingerSessionRepository,
+        routineRepository: any FingerRoutineRepository
+    ) {
+        routine = FingerRoutine(category: category)
         self.repository = repository
         self.routineRepository = routineRepository
     }

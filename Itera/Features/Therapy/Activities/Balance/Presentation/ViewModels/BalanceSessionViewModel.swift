@@ -22,10 +22,11 @@ final class BalanceSessionViewModel {
     private(set) var voiceAvailable = true
     private(set) var requestedExit = false
     let holdSeconds: Int
+    let exercise: BalanceExercise
 
     @ObservationIgnored let tracking: BodyTrackingService
     @ObservationIgnored private let audio: SessionAudioService
-    @ObservationIgnored private var engine: CrossMidlineBalanceEngine
+    @ObservationIgnored private var engine: any BalanceMovementEngine
     @ObservationIgnored private var subscriptions = Set<AnyCancellable>()
     @ObservationIgnored private var started = false
     @ObservationIgnored private var landscapeRight = false
@@ -37,16 +38,29 @@ final class BalanceSessionViewModel {
         audio: SessionAudioService,
         repetitions: Int,
         holdSeconds: Int,
-        armSelection: BalanceArmSelection
+        armSelection: BalanceArmSelection,
+        exercise: BalanceExercise = .crossMidline
     ) {
         self.tracking = tracking
         self.audio = audio
         self.holdSeconds = min(20, max(3, holdSeconds))
-        engine = CrossMidlineBalanceEngine(
-            goal: repetitions,
-            holdDuration: Double(holdSeconds),
-            armSelection: armSelection
-        )
+        self.exercise = exercise
+        switch exercise {
+        case .crossMidline:
+            engine = CrossMidlineBalanceEngine(
+                goal: repetitions,
+                holdDuration: Double(holdSeconds),
+                armSelection: armSelection
+            )
+        case .externalRotation, .internalRotation:
+            engine = ExternalRotationEngine(
+                goal: repetitions,
+                holdDuration: Double(holdSeconds),
+                armSelection: armSelection,
+                direction: exercise.rotationDirection
+            )
+        }
+        snapshot = engine.snapshot
     }
 
     func start(permissions: any PermissionManaging) async {
@@ -251,16 +265,18 @@ final class BalanceSessionViewModel {
         {
             lastSpokenCountdown = nil
             let key = current.activeArm == .right
-                ? "balance.voice.rightTarget"
-                : "balance.voice.leftTarget"
+                ? exercise.key("voice.rightTarget")
+                : exercise.key("voice.leftTarget")
             audio.play(id: UUID(), cue: .guidance(prefix: .target, key: key))
             return
         }
 
-        if previous.phase == .calibrating, current.phase == .reaching {
+        if previous.phase == .calibrating || previous.phase == .calibratingRange,
+            current.phase == .reaching
+        {
             let key = current.activeArm == .right
-                ? "balance.voice.rightTarget"
-                : "balance.voice.leftTarget"
+                ? exercise.key("voice.rightTarget")
+                : exercise.key("voice.leftTarget")
             audio.play(id: UUID(), cue: .guidance(prefix: .target, key: key))
             return
         }
@@ -279,10 +295,10 @@ final class BalanceSessionViewModel {
 
     private func completionGuidanceKey(for snapshot: BalanceSnapshot) -> String {
         if snapshot.phase == .complete {
-            return "balance.voice.complete"
+            return exercise.key("voice.complete")
         }
         return snapshot.armSelection == .both
-            ? "balance.voice.returnAndSwitch"
-            : "balance.voice.returnSameSide"
+            ? exercise.key("voice.returnAndSwitch")
+            : exercise.key("voice.returnSameSide")
     }
 }

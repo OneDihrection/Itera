@@ -84,7 +84,7 @@ struct FingerLandmarkOverlay: View {
     }
 
     private var usesWholeHandCircle: Bool {
-        exercise == .fullFist || exercise == .hookFist
+        exercise == .fullFist || exercise == .hookFist || exercise == .forearmRotation
     }
 
     /// A padded enclosing circle, in the same mirrored aspect-fit space as the preview.

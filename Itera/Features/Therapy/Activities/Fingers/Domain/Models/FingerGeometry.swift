@@ -22,7 +22,34 @@ extension HandEvidence {
             let base = bases[finger]
             // The selected fingertip must also be visible to present its completion ring.
             return [0, 9, base, base + 1, base + 2, base + 3]
+        case .forearmRotation:
+            // The wrist, palm axis, and both outer knuckles define how far the palm faces the camera.
+            return [0, 5, 9, 17]
         }
+    }
+
+    /// Signed apparent palm width relative to palm length: positive when the palm faces the
+    /// camera, near zero with the thumb side toward the camera, and negative when the back
+    /// of the hand faces it. Needs the hand's side, because a palm and the back of the
+    /// opposite hand look alike in a 2D silhouette.
+    private func palmFacing() -> Double? {
+        guard let side else {
+            return nil
+        }
+        let aspect = width / height
+        let axisX = (points[9].x - points[0].x) * aspect
+        let axisY = points[9].y - points[0].y
+        let palmLength = hypot(axisX, axisY)
+        guard palmLength > 0.04 else {
+            return nil
+        }
+        let knuckleX = (points[5].x - points[17].x) * aspect
+        let knuckleY = points[5].y - points[17].y
+        // Component of the index-to-little knuckle line across the palm axis. For a right hand
+        // with the palm toward an unmirrored camera, the index knuckle lies on the right.
+        let across = (knuckleX * axisY - knuckleY * axisX) / palmLength
+        let sign: Double = side == .right ? 1 : -1
+        return sign * across / palmLength
     }
 
     /// Dimensionless visible-motion metrics; these are not grip force or clinical joint angles.
@@ -65,6 +92,8 @@ extension HandEvidence {
         case .extensionSequence:
             let base = bases[finger]
             return angle(base, base + 1, base + 2) / 180
+        case .forearmRotation:
+            return palmFacing()
         }
     }
 }

@@ -1,38 +1,6 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
-    "achievement.shareCaption" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "I earned “%@” in Itera. Every small step counts!"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Saya meraih “%@” di Itera. Setiap langkah kecil berarti!"
-          }
-        }
-      }
-    },
-    "achievement.share" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Share badge"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Bagikan lencana"
-          }
-        }
-      }
-    },
     "" : {
 
     },
@@ -262,6 +230,38 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Semua lencana"
+          }
+        }
+      }
+    },
+    "achievement.share" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Share badge"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bagikan lencana"
+          }
+        }
+      }
+    },
+    "achievement.shareCaption" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "I earned “%@” in Itera. Every small step counts!"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Saya meraih “%@” di Itera. Setiap langkah kecil berarti!"
           }
         }
       }
@@ -709,6 +709,7 @@
       }
     },
     "balance.animationHint" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -853,6 +854,7 @@
       }
     },
     "balance.begin" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -902,6 +904,7 @@
       }
     },
     "balance.cameraAccessibility" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1047,6 +1050,7 @@
       }
     },
     "balance.completion.subtitle" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1274,6 +1278,7 @@
       }
     },
     "balance.metric.touches" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1306,6 +1311,7 @@
       }
     },
     "balance.overview" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1389,6 +1395,7 @@
       }
     },
     "balance.repetitions" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1405,6 +1412,7 @@
       }
     },
     "balance.repetitionsHint" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1487,6 +1495,7 @@
       }
     },
     "balance.step.balance" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1503,6 +1512,7 @@
       }
     },
     "balance.step.balance.detail" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1519,6 +1529,7 @@
       }
     },
     "balance.step.posture" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1535,6 +1546,7 @@
       }
     },
     "balance.step.posture.detail" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1551,6 +1563,7 @@
       }
     },
     "balance.step.touch" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1567,6 +1580,7 @@
       }
     },
     "balance.step.touch.detail" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1583,6 +1597,7 @@
       }
     },
     "balance.subtitle" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1827,6 +1842,7 @@
       }
     },
     "balance.touchUnit" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -2005,6 +2021,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Tekuk sedikit jari ini. Tahan 2 detik."
+          }
+        }
+      }
+    },
+    "baseline.forearmRotation" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bend your elbow to 90° with your thumb up. Hold for 2 seconds."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tekuk siku 90° dengan ibu jari menghadap atas. Tahan 2 detik."
           }
         }
       }
@@ -3004,6 +3037,23 @@
         }
       }
     },
+    "demo.forearmRotation" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Watch: turn your palm toward the camera, then back."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lihat: putar telapak tangan menghadap kamera, lalu kembali."
+          }
+        }
+      }
+    },
     "demo.fullFist" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -3105,6 +3155,23 @@
         }
       }
     },
+    "detail.forearmRotation" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Keep your elbow bent at 90°, then turn your palm toward the camera as far as is comfortable."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tekuk siku 90°, lalu putar telapak tangan menghadap kamera sejauh yang nyaman."
+          }
+        }
+      }
+    },
     "detail.fullFist" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -3186,6 +3253,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Luruskan bergantian"
+          }
+        }
+      }
+    },
+    "exercise.forearmRotation" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Forearm rotation"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rotasi lengan bawah"
           }
         }
       }
@@ -3337,6 +3421,40 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Tahan dengan nyaman…"
+          }
+        }
+      }
+    },
+    "feedback.rangeMeasuring" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Measuring your range…"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mengukur rentang Anda…"
+          }
+        }
+      }
+    },
+    "feedback.rangeTooSmall" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Turn a little further so your range can be measured."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Putar sedikit lebih jauh agar rentang Anda dapat diukur."
           }
         }
       }
@@ -4272,6 +4390,23 @@
         }
       }
     },
+    "home.trunkPractice" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Trunk Control"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kontrol Trunk"
+          }
+        }
+      }
+    },
     "home.unknown" : {
       "localizations" : {
         "en" : {
@@ -4402,6 +4537,193 @@
         }
       }
     },
+    "internalRotation.animationAccessibility" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Animated internal rotation demonstration"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Demonstrasi animasi rotasi internal"
+          }
+        }
+      }
+    },
+    "internalRotation.animationHint" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Watch the forearm turn toward the belly while the elbow stays at the side."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lihat lengan bawah berputar ke arah perut sementara siku tetap di sisi badan."
+          }
+        }
+      }
+    },
+    "internalRotation.begin" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Start internal rotation"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mulai rotasi internal"
+          }
+        }
+      }
+    },
+    "internalRotation.overview" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Keep your elbow at your side, bent about 90°, and slowly turn your forearm inward toward your belly. First show how far you can comfortably turn; that becomes your target. Itera pauses scoring when your elbow lifts away or your trunk leans or turns."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Jaga siku tetap menempel di sisi badan, tertekuk sekitar 90°, lalu putar lengan bawah ke dalam ke arah perut secara perlahan. Tunjukkan dulu seberapa jauh Anda nyaman berputar; itu menjadi target Anda. Itera menghentikan penilaian bila siku menjauh atau badan miring atau berputar."
+          }
+        }
+      }
+    },
+    "internalRotation.rotateLeft" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Turn your left forearm toward your belly"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Putar lengan bawah kiri ke arah perut"
+          }
+        }
+      }
+    },
+    "internalRotation.rotateRight" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Turn your right forearm toward your belly"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Putar lengan bawah kanan ke arah perut"
+          }
+        }
+      }
+    },
+    "internalRotation.step.touch" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Turn inward"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Putar ke dalam"
+          }
+        }
+      }
+    },
+    "internalRotation.step.touch.detail" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Keep the elbow at your side and turn the forearm in toward your belly, to your own orange target."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Jaga siku di sisi badan dan putar lengan bawah ke arah perut, ke target oranye milik Anda."
+          }
+        }
+      }
+    },
+    "internalRotation.title" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Shoulder internal rotation"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rotasi internal bahu"
+          }
+        }
+      }
+    },
+    "internalRotation.voice.leftTarget" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Turn your left forearm toward your belly, elbow at your side."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Putar lengan bawah kiri ke arah perut, siku di sisi badan."
+          }
+        }
+      }
+    },
+    "internalRotation.voice.rightTarget" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Turn your right forearm toward your belly, elbow at your side."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Putar lengan bawah kanan ke arah perut, siku di sisi badan."
+          }
+        }
+      }
+    },
     "Itera" : {
       "comment" : "The name of the app.",
       "isCommentAutoGenerated" : true
@@ -4467,6 +4789,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Luruskan jari ini."
+          }
+        }
+      }
+    },
+    "move.forearmRotation" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Turn your palm toward the camera as far as is comfortable."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Putar telapak tangan menghadap kamera sejauh yang nyaman."
           }
         }
       }
@@ -5698,6 +6037,168 @@
         }
       }
     },
+    "range.disclaimer" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Estimated from the camera. It is an exercise aid, not a clinical measurement."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Perkiraan dari kamera. Ini alat bantu latihan, bukan pengukuran klinis."
+          }
+        }
+      }
+    },
+    "range.farEnd" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Palm toward camera"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Telapak ke kamera"
+          }
+        }
+      }
+    },
+    "range.instruction" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Slowly turn your forearm back and forth as far as is comfortable. Pause briefly at each end."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Putar lengan bawah Anda perlahan bolak-balik sejauh yang nyaman. Berhenti sebentar di tiap ujung."
+          }
+        }
+      }
+    },
+    "range.remeasure" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Measure again"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ukur ulang"
+          }
+        }
+      }
+    },
+    "range.repExplainer" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "One repetition = from the start position to the green zone, then back to the orange zone."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Satu repetisi = dari posisi awal sampai zona hijau, lalu kembali ke zona oranye."
+          }
+        }
+      }
+    },
+    "range.resultSpoken" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Calibration complete. Review your range, then choose Start exercise."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kalibrasi selesai. Lihat rentang Anda, lalu pilih Mulai latihan."
+          }
+        }
+      }
+    },
+    "range.resultTitle" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Your calibrated range"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rentang hasil kalibrasi Anda"
+          }
+        }
+      }
+    },
+    "range.start" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Start exercise"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mulai latihan"
+          }
+        }
+      }
+    },
+    "range.startEnd" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Start position"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Posisi awal"
+          }
+        }
+      }
+    },
+    "range.target" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Movement target: 80% of your range"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Target gerakan: 80% dari rentang Anda"
+          }
+        }
+      }
+    },
     "reflection.note" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -6184,6 +6685,23 @@
         }
       }
     },
+    "return.forearmRotation" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Turn back slowly until your thumb points up."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Putar kembali perlahan sampai ibu jari menghadap atas."
+          }
+        }
+      }
+    },
     "return.fullFist" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -6248,6 +6766,663 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Rapatkan kembali jari."
+          }
+        }
+      }
+    },
+    "rotation.animationAccessibility" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Animated external rotation demonstration"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Demonstrasi animasi rotasi eksternal"
+          }
+        }
+      }
+    },
+    "rotation.animationHint" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Watch the forearm turn outward while the elbow stays at the side."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lihat lengan bawah berputar ke luar sementara siku tetap di sisi badan."
+          }
+        }
+      }
+    },
+    "rotation.begin" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Start arm rotation"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mulai rotasi lengan"
+          }
+        }
+      }
+    },
+    "rotation.calibrateRange" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Turn as far as is comfortable, then hold still"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Putar sejauh yang nyaman, lalu tahan posisi"
+          }
+        }
+      }
+    },
+    "rotation.calibrating" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sit tall and hold still"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Duduk tegak dan tahan posisi"
+          }
+        }
+      }
+    },
+    "rotation.cameraAccessibility" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Live camera with arm and target guidance"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kamera langsung dengan panduan lengan dan target"
+          }
+        }
+      }
+    },
+    "rotation.category" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Arm Rotation"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rotasi Lengan"
+          }
+        }
+      }
+    },
+    "rotation.compensation.elbow" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Keep your elbow against your side."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Jaga siku tetap menempel di sisi badan."
+          }
+        }
+      }
+    },
+    "rotation.compensationWarning" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Keep your elbow at your side and sit tall"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Jaga siku di sisi badan dan duduk tegak"
+          }
+        }
+      }
+    },
+    "rotation.complete" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Arm rotation practice complete"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Latihan rotasi lengan selesai"
+          }
+        }
+      }
+    },
+    "rotation.completion.subtitle" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Review this session, then repeat it or return to Arm Rotation."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tinjau sesi ini, lalu ulangi atau kembali ke Rotasi Lengan."
+          }
+        }
+      }
+    },
+    "rotation.elbowAtSide" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bring your elbow to your side, bent about 90°"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Letakkan siku di sisi badan, tertekuk sekitar 90°"
+          }
+        }
+      }
+    },
+    "rotation.hubDetail" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Choose a rotation to practice. Both start with the elbow at your side, bent about 90°."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pilih rotasi yang ingin dilatih. Keduanya dimulai dengan siku di sisi badan, tertekuk sekitar 90°."
+          }
+        }
+      }
+    },
+    "rotation.metric.angle" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Estimated rotation"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Perkiraan rotasi"
+          }
+        }
+      }
+    },
+    "rotation.metric.touches" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rotations"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rotasi"
+          }
+        }
+      }
+    },
+    "rotation.overview" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Keep your elbow at your side, bent about 90°, and slowly turn your forearm outward. First show how far you can comfortably turn; that becomes your target. Itera pauses scoring when your elbow lifts away or your trunk leans or turns."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Jaga siku tetap menempel di sisi badan, tertekuk sekitar 90°, lalu putar lengan bawah ke luar secara perlahan. Tunjukkan dulu seberapa jauh Anda nyaman berputar; itu menjadi target Anda. Itera menghentikan penilaian bila siku menjauh atau badan miring atau berputar."
+          }
+        }
+      }
+    },
+    "rotation.repetitions" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rotations"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rotasi"
+          }
+        }
+      }
+    },
+    "rotation.repetitionsHint" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Each successful held rotation counts toward this total."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Setiap rotasi yang berhasil ditahan dihitung ke total ini."
+          }
+        }
+      }
+    },
+    "rotation.return" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bring your hand back to the blue circle"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kembalikan tangan ke lingkaran biru"
+          }
+        }
+      }
+    },
+    "rotation.returnHold" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hold in the blue circle for 3 seconds"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tahan di lingkaran biru selama 3 detik"
+          }
+        }
+      }
+    },
+    "rotation.rotateLeft" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Turn your left forearm outward"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Putar lengan bawah kiri ke luar"
+          }
+        }
+      }
+    },
+    "rotation.rotateRight" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Turn your right forearm outward"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Putar lengan bawah kanan ke luar"
+          }
+        }
+      }
+    },
+    "rotation.step.balance" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Keep your form"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Jaga bentuk gerakan"
+          }
+        }
+      }
+    },
+    "rotation.step.balance.detail" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Scoring pauses if your elbow lifts away or your trunk leans or twists."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Penilaian berhenti jika siku menjauh atau badan miring atau berputar."
+          }
+        }
+      }
+    },
+    "rotation.step.posture" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Set your posture"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Atur postur"
+          }
+        }
+      }
+    },
+    "rotation.step.posture.detail" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sit facing the camera with both shoulders, the working elbow, and wrist visible."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Duduk menghadap kamera dengan kedua bahu, siku, dan pergelangan tangan yang dilatih terlihat."
+          }
+        }
+      }
+    },
+    "rotation.step.touch" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Turn outward"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Putar ke luar"
+          }
+        }
+      }
+    },
+    "rotation.step.touch.detail" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Keep the elbow at your side and turn the forearm out to your own orange target."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Jaga siku di sisi badan dan putar lengan bawah ke target oranye milik Anda."
+          }
+        }
+      }
+    },
+    "rotation.subtitle" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Arm rotation practice"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Latihan rotasi lengan"
+          }
+        }
+      }
+    },
+    "rotation.summary.peak" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Peak estimated rotation"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rotasi puncak (perkiraan)"
+          }
+        }
+      }
+    },
+    "rotation.targetCalibrated" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Your target is set during calibration, from how far you comfortably turn."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Target Anda ditentukan saat kalibrasi, dari seberapa jauh Anda nyaman berputar."
+          }
+        }
+      }
+    },
+    "rotation.title" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Shoulder external rotation"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rotasi eksternal bahu"
+          }
+        }
+      }
+    },
+    "rotation.touchUnit" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "rotations"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "rotasi"
+          }
+        }
+      }
+    },
+    "rotation.tracking" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Keep your shoulders and working arm visible"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pastikan bahu dan lengan yang dilatih terlihat"
+          }
+        }
+      }
+    },
+    "rotation.voice.complete" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Great work. All rotations are complete."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kerja bagus. Semua rotasi selesai."
+          }
+        }
+      }
+    },
+    "rotation.voice.leftTarget" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Turn your left forearm outward, elbow at your side."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Putar lengan bawah kiri ke luar, siku di sisi badan."
+          }
+        }
+      }
+    },
+    "rotation.voice.returnAndSwitch" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Done. Return to the blue circle and hold for 3 seconds, then switch arms."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Selesai. Kembali ke lingkaran biru dan tahan 3 detik, lalu ganti lengan."
+          }
+        }
+      }
+    },
+    "rotation.voice.returnSameSide" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Done. Return to the blue circle and hold for 3 seconds, then use the same arm again."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Selesai. Kembali ke lingkaran biru dan tahan 3 detik, lalu gunakan lengan yang sama lagi."
+          }
+        }
+      }
+    },
+    "rotation.voice.rightTarget" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Turn your right forearm outward, elbow at your side."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Putar lengan bawah kanan ke luar, siku di sisi badan."
           }
         }
       }
@@ -6573,6 +7748,22 @@
         }
       }
     },
+    "routine.repetitions %lld" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld repetitions"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld kali"
+          }
+        }
+      }
+    },
     "routine.rest %lld" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -6637,6 +7828,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Sisi"
+          }
+        }
+      }
+    },
+    "routine.sitToStandDetail" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sit sideways to the camera with your whole body in view. No precise pose is needed: you do one sit-to-stand your own way, and your repetitions follow how far you lean and rise. A repetition counts when you lean a little, stand, and sit back down without dropping."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Duduk menyamping ke kamera dengan seluruh tubuh terlihat. Tidak perlu pose yang presisi: Anda melakukan satu kali duduk ke berdiri dengan cara sendiri, dan repetisi mengikuti seberapa jauh Anda condong dan bangkit. Repetisi terhitung bila Anda condong sedikit, berdiri, dan duduk kembali tanpa menjatuhkan diri."
           }
         }
       }
@@ -7007,6 +8214,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Pastikan wajah, kedua bahu, dan lengan yang dilatih terlihat. Jangkau sejauh yang nyaman, lalu kembali ke posisi awal di antara arah."
+          }
+        }
+      }
+    },
+    "session.assistance.sitToStand" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sit sideways to the camera with your whole body in view, head to feet. Move at your own pace: lean forward a little, stand up, then sit back down without dropping. Use Recalibrate if you moved the chair or camera."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Duduk menyamping ke kamera dengan seluruh tubuh terlihat, dari kepala sampai kaki. Bergeraklah sesuai kemampuan: condong sedikit ke depan, berdiri, lalu duduk kembali tanpa menjatuhkan diri. Gunakan Kalibrasi ulang jika kursi atau kamera bergeser."
           }
         }
       }
@@ -7890,6 +9114,22 @@
         }
       }
     },
+    "session.rangeProgress" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Calibration progress"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kemajuan kalibrasi"
+          }
+        }
+      }
+    },
     "session.reachAssessment" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -8541,6 +9781,22 @@
         }
       }
     },
+    "session.sitToStand" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sit-to-stand with trunk control"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Duduk ke berdiri dengan kontrol trunk"
+          }
+        }
+      }
+    },
     "session.skip" : {
       "localizations" : {
         "en" : {
@@ -8757,6 +10013,23 @@
         }
       }
     },
+    "stage.calibrationResult" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Calibration complete"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kalibrasi selesai"
+          }
+        }
+      }
+    },
     "stage.countdown" : {
       "localizations" : {
         "en" : {
@@ -8870,6 +10143,257 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Kemajuan belum dapat dibaca atau disimpan. Coba lagi. Data yang ada tetap disimpan."
+          }
+        }
+      }
+    },
+    "sts.holdSeated" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sit comfortably and hold still\nAny comfortable seat works, side to the camera."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Duduk dengan nyaman dan tahan posisi\nPosisi duduk apa pun yang nyaman, menyamping ke kamera."
+          }
+        }
+      }
+    },
+    "sts.kneeLabel %lld" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Knee %lld°"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lutut %lld°"
+          }
+        }
+      }
+    },
+    "sts.leanFirst" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lean forward before you stand\nThis repetition did not count."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Condong ke depan sebelum berdiri\nRepetisi ini tidak dihitung."
+          }
+        }
+      }
+    },
+    "sts.leanForward" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lean forward a little\nOnly as far as comfortable."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Condong sedikit ke depan\nSebatas yang nyaman."
+          }
+        }
+      }
+    },
+    "sts.leanLabel %lld" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lean %lld°"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Condong %lld°"
+          }
+        }
+      }
+    },
+    "sts.opening" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sit sideways to the camera\nShow your whole body from head to feet. Feet flat on the floor."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Duduk menyamping ke kamera\nTampilkan seluruh tubuh dari kepala sampai kaki. Telapak kaki rata di lantai."
+          }
+        }
+      }
+    },
+    "sts.riseProgress" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rising progress"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kemajuan berdiri"
+          }
+        }
+      }
+    },
+    "sts.sitDown" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sit down slowly\nControl your lowering."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Duduk perlahan\nKendalikan saat turun."
+          }
+        }
+      }
+    },
+    "sts.slowDown" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sit down a bit more slowly\nThis repetition did not count."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Duduk sedikit lebih perlahan\nRepetisi ini tidak dihitung."
+          }
+        }
+      }
+    },
+    "sts.stage.lean" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lean"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Condong"
+          }
+        }
+      }
+    },
+    "sts.stage.sit" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sit"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Duduk"
+          }
+        }
+      }
+    },
+    "sts.stage.stand" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Stand"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Berdiri"
+          }
+        }
+      }
+    },
+    "sts.standUp" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Stand up at your own pace\nKeep leaning forward as you rise."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Berdiri sesuai kemampuan Anda\nTetap condong ke depan saat bangkit."
+          }
+        }
+      }
+    },
+    "sts.trackingLost" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Keep your shoulder, hip, knee, and ankle in view"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pastikan bahu, pinggul, lutut, dan pergelangan kaki terlihat"
+          }
+        }
+      }
+    },
+    "sts.trial" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Do one sit-to-stand your own way\nLean forward, stand up, then sit back down at a comfortable pace."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lakukan satu kali duduk ke berdiri dengan cara Anda\nCondong ke depan, berdiri, lalu duduk kembali sesuai kenyamanan Anda."
           }
         }
       }
@@ -9118,6 +10642,40 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Sesi terapi"
+          }
+        }
+      }
+    },
+    "trunk.overview.title" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Trunk control practice"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Latihan kontrol trunk"
+          }
+        }
+      }
+    },
+    "trunk.positioning" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sit sideways to the camera on a stable chair, about 2 to 3 meters away, so your whole body from head to feet is visible from the side. A side view lets the camera follow your shoulder, hip, knee, and ankle accurately."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Duduk menyamping ke kamera di kursi yang stabil, sekitar 2 sampai 3 meter dari kamera, agar seluruh tubuh dari kepala sampai kaki terlihat dari samping. Tampak samping membuat kamera dapat mengikuti bahu, pinggul, lutut, dan pergelangan kaki dengan akurat."
           }
         }
       }

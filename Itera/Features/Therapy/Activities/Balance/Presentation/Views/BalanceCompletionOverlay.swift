@@ -8,6 +8,7 @@
 import SwiftUI
 
 struct BalanceCompletionOverlay: View {
+    let exercise: BalanceExercise
     let metrics: BalanceMetrics
     let goal: Int
     let holdDuration: Double
@@ -32,13 +33,14 @@ struct BalanceCompletionOverlay: View {
                                 .typography(.largeTitle)
                                 .multilineTextAlignment(.center)
                                 .accessibilityAddTraits(.isHeader)
-                            Text("balance.completion.subtitle")
+                            Text(exercise.localized("completion.subtitle"))
                                 .typography(.body)
                                 .foregroundStyle(TherapyPalette.muted)
                                 .multilineTextAlignment(.center)
                         }
 
                         BalanceSessionSummary(
+                            exercise: exercise,
                             metrics: metrics,
                             goal: goal,
                             holdDuration: holdDuration
