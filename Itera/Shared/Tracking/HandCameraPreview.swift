@@ -69,6 +69,10 @@ final class CameraPreviewView: UIView {
             return
         }
         let orientation: AVCaptureVideoOrientation
+        #if targetEnvironment(macCatalyst)
+        // Mac windows have no interface orientation, and Mac cameras already deliver landscape frames.
+        orientation = .landscapeLeft
+        #else
         switch scene.interfaceOrientation {
         case .landscapeLeft: orientation = .landscapeLeft
         case .landscapeRight: orientation = .landscapeRight
@@ -76,6 +80,7 @@ final class CameraPreviewView: UIView {
             reportReadiness()
             return
         }
+        #endif
         if appliedOrientation != orientation {
             appliedOrientation = orientation
             camera?.orient(orientation)
@@ -83,14 +88,18 @@ final class CameraPreviewView: UIView {
         CATransaction.begin()
         CATransaction.setDisableActions(true)
         if let connection = preview.connection {
-            if connection.videoOrientation != orientation {
+            #if !targetEnvironment(macCatalyst)
+            if connection.isVideoOrientationSupported, connection.videoOrientation != orientation {
                 connection.videoOrientation = orientation
             }
-            if connection.automaticallyAdjustsVideoMirroring {
-                connection.automaticallyAdjustsVideoMirroring = false
-            }
-            if !connection.isVideoMirrored {
-                connection.isVideoMirrored = true
+            #endif
+            if connection.isVideoMirroringSupported {
+                if connection.automaticallyAdjustsVideoMirroring {
+                    connection.automaticallyAdjustsVideoMirroring = false
+                }
+                if !connection.isVideoMirrored {
+                    connection.isVideoMirrored = true
+                }
             }
         }
         CATransaction.commit()
@@ -98,8 +107,12 @@ final class CameraPreviewView: UIView {
     }
 
     private func reportReadiness() {
+        #if targetEnvironment(macCatalyst)
+        let landscape = true
+        #else
         let orientation = window?.windowScene?.interfaceOrientation
         let landscape = orientation == .landscapeLeft || orientation == .landscapeRight
+        #endif
         let attached = window != nil && preview.isPreviewing && landscape
         if attached != reportedReady {
             reportedReady = attached

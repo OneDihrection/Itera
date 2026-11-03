@@ -51,6 +51,21 @@ struct FingerSessionEngine {
     }
 
     mutating func recalibrate() { activity.recalibrate() }
+
+    mutating func confirmRange() {
+        guard !paused, !finished else {
+            return
+        }
+        activity.confirmRange()
+    }
+
+    mutating func remeasureRange() {
+        guard !paused, !finished else {
+            return
+        }
+        activity.remeasureRange()
+    }
+
     mutating func holdCompletionPresented(_ id: UUID) {
         guard !paused, !finished else {
             return

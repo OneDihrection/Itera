@@ -8,11 +8,12 @@
 import SwiftUI
 
 struct FingerRoutineSettingsView: View {
+    let category: ExerciseCategory
     @Environment(AppDependencies.self) private var dependencies
     @Environment(NavigationRouter.self) private var router
 
     var body: some View {
-        @Bindable var home = dependencies.home
+        @Bindable var home = dependencies.homeModel(for: category)
         Form {
             Section("plan.side") {
                 Picker("plan.side", selection: $home.routine.side) {

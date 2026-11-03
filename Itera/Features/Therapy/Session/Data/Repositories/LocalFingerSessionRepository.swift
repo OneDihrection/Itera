@@ -9,10 +9,13 @@ import Foundation
 
 actor LocalFingerSessionRepository: FingerSessionRepository {
     private let folder: URL
-    private var checkpointURL: URL { folder.appendingPathComponent("active.json") }
+    private let checkpointName: String
+    private var checkpointURL: URL { folder.appendingPathComponent(checkpointName) }
 
-    init() {
+    /// Every category shares one history folder; each keeps its own saved-for-later checkpoint.
+    init(category: ExerciseCategory = .fingers) {
         folder = URL.applicationSupportDirectory.appendingPathComponent("FingerSessions", isDirectory: true)
+        checkpointName = category == .fingers ? "active.json" : "active-\(category.rawValue).json"
     }
 
     func checkpoint(_ summary: FingerSessionSummary) throws {
@@ -68,7 +71,7 @@ actor LocalFingerSessionRepository: FingerSessionRepository {
             return []
         }
         return try FileManager.default.contentsOfDirectory(at: folder, includingPropertiesForKeys: nil)
-            .filter { $0.pathExtension == "json" && $0.lastPathComponent != "active.json" }
+            .filter { $0.pathExtension == "json" && !$0.lastPathComponent.hasPrefix("active") }
             .map(read).sorted { $0.started > $1.started }
     }
 

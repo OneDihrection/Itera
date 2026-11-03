@@ -8,19 +8,28 @@
 import SwiftUI
 
 struct BalanceOverviewView: View {
+    let exercise: BalanceExercise
     @Environment(NavigationRouter.self) private var router
-    @AppStorage("balance.repetitions") private var repetitions = 6
-    @AppStorage("balance.holdSeconds") private var holdSeconds = 10
-    @AppStorage("balance.armSelection") private var armSelectionRaw = BalanceArmSelection.both.rawValue
+    @AppStorage private var repetitions: Int
+    @AppStorage private var holdSeconds: Int
+    @AppStorage private var armSelectionRaw: String
     @State private var animationPaused = false
+
+    init(exercise: BalanceExercise = .crossMidline) {
+        self.exercise = exercise
+        // Each exercise remembers its own settings; Balancing keeps its original keys.
+        _repetitions = AppStorage(wrappedValue: 6, exercise.storageKey("repetitions"))
+        _holdSeconds = AppStorage(wrappedValue: 10, exercise.storageKey("holdSeconds"))
+        _armSelectionRaw = AppStorage(wrappedValue: BalanceArmSelection.both.rawValue, exercise.storageKey("armSelection"))
+    }
 
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 28) {
-                Text("balance.title")
+                Text(exercise.localized("title"))
                     .typography(.largeTitle)
                     .accessibilityAddTraits(.isHeader)
-                Text("balance.subtitle")
+                Text(exercise.localized("subtitle"))
                     .typography(.title2)
                     .foregroundStyle(TherapyPalette.muted)
 
@@ -30,19 +39,19 @@ struct BalanceOverviewView: View {
                             Label("balance.animation", systemImage: "sparkles")
                                 .typography(.headline)
                                 .foregroundStyle(TherapyPalette.green)
-                            Text("balance.overview")
+                            Text(exercise.localized("overview"))
                                 .typography(.body)
                             Label("balance.noEquipment", systemImage: "checkmark.circle.fill")
                                 .typography(.headline)
                                 .foregroundStyle(TherapyPalette.green)
-                            Text("balance.animationHint")
+                            Text(exercise.localized("animationHint"))
                                 .typography(.footnote)
                                 .foregroundStyle(TherapyPalette.muted)
                         }
                         .frame(maxWidth: .infinity, alignment: .leading)
 
                         ZStack(alignment: .bottomTrailing) {
-                            BalanceDemonstrationView(paused: animationPaused)
+                            BalanceExerciseDemonstrationView(exercise: exercise, paused: animationPaused)
                                 .frame(width: 360, height: 260)
                             TherapyIconButton(
                                 title: animationPaused ? "action.resume" : "action.pause",
@@ -80,10 +89,10 @@ struct BalanceOverviewView: View {
                         .padding(18)
                         .background(TherapyPalette.cream, in: RoundedRectangle(cornerRadius: 22))
                         TherapyAdjustmentControl(
-                            title: "balance.repetitions",
+                            title: exercise.localized("repetitions"),
                             value: $repetitions,
                             range: 2...20,
-                            suffix: "balance.touchUnit"
+                            suffix: exercise.localized("touchUnit")
                         )
                         TherapyAdjustmentControl(
                             title: "balance.holdDuration",
@@ -91,10 +100,15 @@ struct BalanceOverviewView: View {
                             range: 3...20,
                             suffix: "balance.secondsUnit"
                         )
+                        if exercise.isRotation {
+                            Label("rotation.targetCalibrated", systemImage: "scope")
+                                .typography(.footnote)
+                                .foregroundStyle(TherapyPalette.green)
+                        }
                         Text("balance.holdDurationHint")
                             .typography(.footnote)
                             .foregroundStyle(TherapyPalette.muted)
-                        Text("balance.repetitionsHint")
+                        Text(exercise.localized("repetitionsHint"))
                             .typography(.footnote)
                             .foregroundStyle(TherapyPalette.muted)
                     }
@@ -103,23 +117,24 @@ struct BalanceOverviewView: View {
                 HStack(spacing: 20) {
                     instructionCard(
                         symbol: "person.crop.rectangle",
-                        title: "balance.step.posture",
-                        detail: "balance.step.posture.detail"
+                        title: exercise.localized("step.posture"),
+                        detail: exercise.localized("step.posture.detail")
                     )
                     instructionCard(
                         symbol: "hand.raised.fingers.spread",
-                        title: "balance.step.touch",
-                        detail: "balance.step.touch.detail"
+                        title: exercise.localized("step.touch"),
+                        detail: exercise.localized("step.touch.detail")
                     )
                     instructionCard(
                         symbol: "figure.mind.and.body",
-                        title: "balance.step.balance",
-                        detail: "balance.step.balance.detail"
+                        title: exercise.localized("step.balance"),
+                        detail: exercise.localized("step.balance.detail")
                     )
                 }
 
-                TherapyButton(title: "balance.begin", symbol: "camera.fill") {
+                TherapyButton(title: exercise.localized("begin"), symbol: "camera.fill") {
                     router.push(.balanceSession(
+                        exercise: exercise,
                         repetitions: repetitions,
                         holdSeconds: holdSeconds,
                         armSelection: BalanceArmSelection(rawValue: armSelectionRaw) ?? .both
@@ -129,7 +144,7 @@ struct BalanceOverviewView: View {
             .padding(28)
         }
         .background(TherapyPalette.cream)
-        .navigationTitle("balance.title")
+        .navigationTitle(exercise.localized("title"))
     }
 
     private func instructionCard(
@@ -148,4 +163,8 @@ struct BalanceOverviewView: View {
             }
         }
     }
+}
+
+extension BalanceExercise {
+    func localized(_ name: String) -> LocalizedStringKey { LocalizedStringKey(key(name)) }
 }

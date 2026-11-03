@@ -9,7 +9,7 @@ import Foundation
 
 /// Body-relative cross-midline scoring. Coordinates use image-height units, so X is
 /// aspect-corrected before any distance or angle calculation.
-struct CrossMidlineBalanceEngine {
+struct CrossMidlineBalanceEngine: BalanceMovementEngine {
     private struct Geometry {
         let neck: TherapyPoint
         let root: TherapyPoint
@@ -175,6 +175,7 @@ struct CrossMidlineBalanceEngine {
         let delta = lastTimestamp.map { frame.timestamp - $0 } ?? 0
         lastTimestamp = frame.timestamp
         if delta > 0.3 {
+            NSLog("ITERA-HOLD frame gap delta=%.3f", delta)
             clearTransientEvidence()
         }
 
@@ -332,6 +333,9 @@ struct CrossMidlineBalanceEngine {
         snapshot.compensation = compensation
 
         if compensation.isCompensating {
+            if targetHoldStartedAt != nil {
+                NSLog("ITERA-HOLD reset by compensation reasons=%@ index=%.2f", String(describing: compensation.reasons), compensation.index)
+            }
             if !compensationLatched {
                 snapshot.metrics.compensationEventsCount += 1
                 compensationLatched = true
@@ -352,6 +356,9 @@ struct CrossMidlineBalanceEngine {
             {
                 processTarget(geometry, frame: frame, delta: delta)
             } else {
+                if targetHoldStartedAt != nil {
+                    NSLog("ITERA-HOLD reset: neck/nose or root/hips not fresh")
+                }
                 targetHoldStartedAt = nil
                 returnHoldStartedAt = nil
                 targetOutsideSince = nil
@@ -645,6 +652,7 @@ struct CrossMidlineBalanceEngine {
             snapshot.instructionKey = "balance.hold"
             return
         }
+        NSLog("ITERA-HOLD reset: wrist outside target or lost beyond grace")
         targetHoldStartedAt = nil
         targetOutsideSince = nil
         snapshot.phase = .reaching
@@ -669,7 +677,11 @@ struct CrossMidlineBalanceEngine {
         snapshot.instructionKey = "balance.return"
     }
 
-    private mutating func clearTransientEvidence() {
+    private mutating func clearTransientEvidence(line: Int = #line) {
+        // TEMPORARY DIAGNOSTIC (remove after investigating hold resets on Mac Catalyst).
+        if targetHoldStartedAt != nil {
+            NSLog("ITERA-HOLD reset via clearTransientEvidence line=%d lastTimestamp=%@", line, String(describing: lastTimestamp))
+        }
         targetHoldStartedAt = nil
         returnHoldStartedAt = nil
         targetOutsideSince = nil
@@ -881,7 +893,8 @@ struct CrossMidlineBalanceEngine {
         let range: ClosedRange<Double> = switch joint {
         case .nose, .neck, .root, .leftShoulder, .rightShoulder, .leftHip, .rightHip:
             0.18...0.72
-        case .leftElbow, .rightElbow, .leftWrist, .rightWrist:
+        case .leftElbow, .rightElbow, .leftWrist, .rightWrist,
+            .leftKnee, .rightKnee, .leftAnkle, .rightAnkle:
             0.30...0.88
         }
         let motionWeight = range.lowerBound
@@ -894,7 +907,8 @@ struct CrossMidlineBalanceEngine {
         switch joint {
         case .nose, .neck, .root, .leftShoulder, .rightShoulder, .leftHip, .rightHip:
             return 0.70
-        case .leftElbow, .rightElbow, .leftWrist, .rightWrist:
+        case .leftElbow, .rightElbow, .leftWrist, .rightWrist,
+            .leftKnee, .rightKnee, .leftAnkle, .rightAnkle:
             return 1.30
         }
     }

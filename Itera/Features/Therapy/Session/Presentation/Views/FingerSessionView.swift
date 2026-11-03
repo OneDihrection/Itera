@@ -144,10 +144,36 @@ struct FingerSessionView: View {
                     .background(TherapyPalette.cream)
                 } else if model.activity.phase == .rest {
                     rest(model)
+                } else if model.activity.phase == .rangeResult {
+                    rangeResult(model)
                 }
             }
             .clipShape(RoundedRectangle(cornerRadius: 30))
             .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    /// Shows the calibrated range, then lets the patient or caregiver start or measure again.
+    private func rangeResult(_ model: FingerSessionViewModel) -> some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 24) {
+                Text("range.resultTitle").typography(.title)
+                    .accessibilityAddTraits(.isHeader)
+                TherapyRangeGauge(startLabel: "range.startEnd", endLabel: "range.farEnd")
+                Text("range.target").typography(.headline)
+                Text("range.repExplainer").typography(.body)
+                    .foregroundStyle(TherapyPalette.muted)
+                Text("range.disclaimer").typography(.footnote)
+                    .foregroundStyle(TherapyPalette.muted)
+                HStack(spacing: 16) {
+                    TherapyButton(title: "range.start", symbol: "play.fill", action: model.confirmRange)
+                    TherapyButton(title: "range.remeasure", symbol: "arrow.clockwise", secondary: true, action: model.remeasureRange)
+                }
+            }
+            .frame(maxWidth: 640, alignment: .leading)
+            .padding(28)
+            .frame(maxWidth: .infinity)
+        }
+        .background(TherapyPalette.cream)
     }
 
     private func rest(_ model: FingerSessionViewModel) -> some View {
@@ -200,7 +226,7 @@ struct FingerSessionView: View {
                     Text(LocalizedStringKey(model.routine.side.title)).typography(.headline)
                         .padding(14).background(TherapyPalette.surface, in: Capsule())
                     Spacer(minLength: 16)
-                    if [.baseline, .target, .active].contains(model.activity.phase) {
+                    if [.baseline, .target, .range, .active].contains(model.activity.phase) {
                         example(model)
                             .frame(
                                 width: min(250, geometry.size.width * 0.3),
@@ -215,7 +241,7 @@ struct FingerSessionView: View {
     }
 
     private func example(_ model: FingerSessionViewModel) -> some View {
-        FingerDemonstrationView(
+        FingerExampleView(
             exercise: model.activity.kind, phase: model.activity.phase,
             returning: model.activity.returning || model.activity.needsStart,
             finger: model.activity.finger, side: model.routine.side, paused: model.paused || model.waitingForCamera
@@ -287,7 +313,7 @@ struct FingerSessionView: View {
                             if model.activity.kind.isSequential && [.baseline, .target, .active].contains(model.activity.phase) {
                                 Text(LocalizedStringKey(model.fingerKey)).typography(.headline)
                             }
-                            if [.baseline, .target, .active].contains(model.activity.phase) && model.trackingReady {
+                            if [.baseline, .target, .range, .active].contains(model.activity.phase) && model.trackingReady {
                                 Text(LocalizedStringKey(model.liveFeedbackKey)).typography(.callout)
                                     .foregroundStyle(TherapyPalette.primary)
                             }
@@ -313,6 +339,9 @@ struct FingerSessionView: View {
                 if [.baseline, .target, .active].contains(model.activity.phase) {
                     ProgressView(value: model.activity.holdElapsed / model.activity.holdDuration).tint(TherapyPalette.primary)
                         .accessibilityLabel("session.holdProgress")
+                } else if model.activity.phase == .range {
+                    ProgressView(value: model.activity.rangeProgress).tint(TherapyPalette.primary)
+                        .accessibilityLabel("session.rangeProgress")
                 }
                 if let key = model.errorKey {
                     HStack {

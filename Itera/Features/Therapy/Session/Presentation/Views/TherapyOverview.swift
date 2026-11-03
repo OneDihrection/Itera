@@ -8,11 +8,12 @@
 import SwiftUI
 
 struct TherapyOverview: View {
+    let category: TherapyCategory
     @Environment(AppDependencies.self) private var dependencies
     @Environment(PermissionManager.self) private var permissions
 
     var body: some View {
-        HomeContent(model: HomeViewModel(
+        HomeContent(category: category, model: HomeViewModel(
             permissions: permissions,
             audio: dependencies.audio,
             history: dependencies
@@ -21,6 +22,7 @@ struct TherapyOverview: View {
 }
 
 private struct HomeContent: View {
+    let category: TherapyCategory
     @Environment(NavigationRouter.self) private var router
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
@@ -32,12 +34,12 @@ private struct HomeContent: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 28) {
-                Text("therapy.overview.title")
+                Text(LocalizedStringKey(category == .arm ? "therapy.overview.title" : "trunk.overview.title"))
                     .typography(.largeTitle)
                     .accessibilityAddTraits(.isHeader)
                 LanguageSelector(language: $language)
                     .disabled(model.busy)
-                Text("home.positioning").typography(.body)
+                Text(LocalizedStringKey(category.positioningKey)).typography(.body)
                 exercises
                 Label(
                     LocalizedStringKey(model.message),
@@ -48,7 +50,7 @@ private struct HomeContent: View {
                 Button {
                     Task {
                         if await model.performAction() {
-                            router.push(.routineConfiguration)
+                            router.push(.routineConfiguration(category))
                         }
                     }
                 } label: {
@@ -88,22 +90,22 @@ private struct HomeContent: View {
     private var exercises: some View {
         VStack(spacing: 12) {
             TherapyArtworkPanel(
-                title: "home.armPractice",
+                title: LocalizedStringKey(category.title),
                 subtitle: "",
-                artwork: "symbol:figure.arms.open"
+                artwork: category.artwork
             )
             .clipShape(RoundedRectangle(cornerRadius: 30))
             TherapyButton(title: "home.viewShort", symbol: "slider.horizontal.3") {
-                router.push(.routineConfiguration)
+                router.push(.routineConfiguration(category))
             }
-            ForEach(Array(TherapyKind.allCases.enumerated()), id: \.element) { index, kind in
+            ForEach(Array(category.kinds.enumerated()), id: \.element) { index, kind in
                 TherapyExerciseRow(
                     title: LocalizedStringKey("session." + kind.rawValue),
                     subtitle: "",
                     artwork: "symbol:" + symbol(for: kind),
                     color: TherapyPalette.illustrationBackground(at: index)
                 ) {
-                    router.push(.routineConfiguration)
+                    router.push(.routineConfiguration(category))
                 }
                 .accessibilityHint("routine.configureHint")
             }
@@ -116,6 +118,7 @@ private struct HomeContent: View {
         case .elbowBend: return "figure.strengthtraining.traditional"
         case .directionalReach: return "hand.point.up.left"
         case .cup: return "cup.and.saucer.fill"
+        case .sitToStand: return "figure.stand"
         }
     }
 

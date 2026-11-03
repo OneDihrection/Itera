@@ -8,9 +8,12 @@
 import SwiftUI
 
 struct FingerPlanView: View {
+    let category: ExerciseCategory
     @Environment(AppDependencies.self) private var dependencies
     @Environment(NavigationRouter.self) private var router
     @Environment(\.dynamicTypeSize) private var typeSize
+
+    private var home: FingerHomeViewModel { dependencies.homeModel(for: category) }
 
     var body: some View {
         ScrollView {
@@ -36,27 +39,27 @@ struct FingerPlanView: View {
     private var overview: some View {
         VStack(alignment: .leading, spacing: 24) {
             TherapyArtworkPanel(
-                title: "plan.fingerTitle", subtitle: dependencies.home.movementSummary,
-                artwork: "hand-hero", mirrored: dependencies.home.routine.side == .left
+                title: LocalizedStringKey(category.title), subtitle: home.movementSummary,
+                artwork: category.artwork, mirrored: home.routine.side == .left
             )
             .clipShape(RoundedRectangle(cornerRadius: 28))
             HStack(spacing: 20) {
-                TherapyMetric(title: "plan.setsShort", value: String(dependencies.home.routine.sets))
-                TherapyMetric(title: "plan.repsShort", value: String(dependencies.home.routine.repetitions))
-                TherapyMetric(title: "plan.restShort", value: String(dependencies.home.routine.restSeconds) + " s")
+                TherapyMetric(title: "plan.setsShort", value: String(home.routine.sets))
+                TherapyMetric(title: "plan.repsShort", value: String(home.routine.repetitions))
+                TherapyMetric(title: "plan.restShort", value: String(home.routine.restSeconds) + " s")
             }
             .padding(.horizontal, 8)
             HStack(spacing: 24) {
-                Label(LocalizedStringKey(dependencies.home.routine.side.title), systemImage: "hand.raised")
+                Label(LocalizedStringKey(home.routine.side.title), systemImage: "hand.raised")
                     .typography(.headline).foregroundStyle(TherapyPalette.green)
                 Spacer()
                 TherapyButton(title: "plan.editShort", symbol: "slider.horizontal.3", secondary: true) {
-                    router.presentSheet(.routineSettings)
+                    router.presentSheet(.routineSettings(category))
                 }
                 .frame(width: 170)
                 .accessibilityLabel("plan.edit")
             }
-            if let error = dependencies.home.errorKey {
+            if let error = home.errorKey {
                 TherapyError(key: error)
             }
         }
@@ -66,13 +69,13 @@ struct FingerPlanView: View {
         VStack(alignment: .leading, spacing: 12) {
             Text("plan.sequenceShort").typography(.title2)
                 .foregroundStyle(TherapyPalette.ink).padding(.bottom, 4)
-            ForEach(Array(FingerExercise.allCases.enumerated()), id: \.element) { index, exercise in
+            ForEach(Array(category.exercises.enumerated()), id: \.element) { index, exercise in
                 TherapyExerciseRow(
                     title: LocalizedStringKey(exercise.title),
-                    subtitle: dependencies.home.repetitionSummary,
-                    artwork: "hand-" + exercise.rawValue,
+                    subtitle: home.repetitionSummary,
+                    artwork: exercise.artwork,
                     color: TherapyPalette.illustrationBackground(at: index),
-                    mirrored: dependencies.home.routine.side == .left, number: index + 1
+                    mirrored: home.routine.side == .left, number: index + 1
                 ) {
                     router.presentSheet(.exercisePreview(exercise))
                 }
@@ -86,8 +89,8 @@ struct FingerPlanView: View {
                 .fixedSize(horizontal: false, vertical: true)
             TherapyButton(title: "plan.startShort", symbol: "play.fill") {
                 Task {
-                    if await dependencies.home.saveRoutine() {
-                        dependencies.prepareSession()
+                    if await home.saveRoutine() {
+                        dependencies.prepareSession(category: category)
                         router.presentFullScreenCover(.fingerSession)
                     }
                 }

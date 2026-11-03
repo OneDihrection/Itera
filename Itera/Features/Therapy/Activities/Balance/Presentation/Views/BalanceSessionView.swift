@@ -29,6 +29,7 @@ struct BalanceSessionView: View {
 
             if model.snapshot.phase == .complete {
                 BalanceCompletionOverlay(
+                    exercise: model.exercise,
                     metrics: model.snapshot.metrics,
                     goal: model.snapshot.goal,
                     holdDuration: model.snapshot.holdDuration,
@@ -107,7 +108,7 @@ struct BalanceSessionView: View {
                 RoundedRectangle(cornerRadius: 32)
                     .strokeBorder(borderColor, lineWidth: 6)
             }
-            .accessibilityLabel("balance.cameraAccessibility")
+            .accessibilityLabel(model.exercise.localized("cameraAccessibility"))
         }
     }
 
@@ -131,7 +132,7 @@ struct BalanceSessionView: View {
                     }
                 }
 
-                BalanceDemonstrationView(paused: model.paused || model.cameraWaiting)
+                BalanceExerciseDemonstrationView(exercise: model.exercise, paused: model.paused || model.cameraWaiting)
                     .frame(height: 205)
 
                 HStack(spacing: 12) {
@@ -187,7 +188,7 @@ struct BalanceSessionView: View {
                         .accessibilityAddTraits(.isHeader)
                 }
 
-                if model.snapshot.phase == .calibrating {
+                if model.snapshot.phase == .calibrating || model.snapshot.phase == .calibratingRange {
                     ProgressView(value: model.snapshot.calibrationProgress)
                         .tint(TherapyPalette.green)
                         .scaleEffect(y: 2)
@@ -222,13 +223,22 @@ struct BalanceSessionView: View {
 
                 HStack(spacing: 12) {
                     TherapyMetric(
-                        title: "balance.metric.touches",
+                        title: model.exercise.localized("metric.touches"),
                         value: "\(model.snapshot.metrics.completedTouches) / \(model.snapshot.goal)"
                     )
-                    TherapyMetric(
-                        title: "balance.metric.dwell",
-                        value: model.snapshot.metrics.midlineDwellTime.formatted(.number.precision(.fractionLength(1))) + "s"
-                    )
+                    if model.exercise.isRotation {
+                        TherapyMetric(
+                            title: "rotation.metric.angle",
+                            value: model.snapshot.targetAngle > 0
+                                ? "\(Int(model.snapshot.rotationDegrees.rounded()))° / \(model.snapshot.targetAngle)°"
+                                : "\(Int(model.snapshot.rotationDegrees.rounded()))°"
+                        )
+                    } else {
+                        TherapyMetric(
+                            title: "balance.metric.dwell",
+                            value: model.snapshot.metrics.midlineDwellTime.formatted(.number.precision(.fractionLength(1))) + "s"
+                        )
+                    }
                 }
 
                 HStack(spacing: 12) {
@@ -266,6 +276,10 @@ struct BalanceSessionView: View {
                 )
             )
             .typography(.footnote)
+            if model.snapshot.compensation.reasons.contains(.elbowAway) {
+                Text("rotation.compensation.elbow")
+                    .typography(.footnote)
+            }
         }
         .foregroundStyle(TherapyPalette.warning)
         .padding(18)
@@ -332,14 +346,29 @@ private struct BalancePoseOverlay: View {
             context.fill(torso, with: .color(torsoColor.opacity(0.10)))
             context.stroke(torso, with: .color(torsoColor.opacity(0.75)), lineWidth: 3)
 
-            var midline = Path()
-            midline.move(to: point(state.midlineBase))
-            midline.addLine(to: point(state.midlineTop))
-            context.stroke(
-                midline,
-                with: .color(torsoColor),
-                style: StrokeStyle(lineWidth: 5, lineCap: .round, dash: [12, 8])
-            )
+            if state.showsMidline {
+                var midline = Path()
+                midline.move(to: point(state.midlineBase))
+                midline.addLine(to: point(state.midlineTop))
+                context.stroke(
+                    midline,
+                    with: .color(torsoColor),
+                    style: StrokeStyle(lineWidth: 5, lineCap: .round, dash: [12, 8])
+                )
+            }
+
+            if state.armChain.count > 1 {
+                var arm = Path()
+                arm.move(to: point(state.armChain[0]))
+                state.armChain.dropFirst().forEach { arm.addLine(to: point($0)) }
+                context.stroke(arm, with: .color(.black), style: StrokeStyle(lineWidth: 11, lineCap: .round, lineJoin: .round))
+                context.stroke(arm, with: .color(.cyan), style: StrokeStyle(lineWidth: 6, lineCap: .round, lineJoin: .round))
+                for joint in state.armChain {
+                    let center = point(joint)
+                    let rect = CGRect(x: center.x - 9, y: center.y - 9, width: 18, height: 18)
+                    context.fill(Path(ellipseIn: rect), with: .color(.white))
+                }
+            }
 
             if let target = state.target {
                 let radius = state.targetRadius * scale

@@ -161,6 +161,7 @@ struct SessionEngine {
         case .elbowBend: activity = ElbowBendActivity(configuration: configuration)
         case .directionalReach: activity = DirectionalReachActivity(configuration: configuration)
         case .cup: activity = CupActivity(configuration: configuration)
+        case .sitToStand: activity = SitToStandActivity(configuration: configuration)
         }
         if let viewport { _ = activity?.handle(.viewport(viewport)) }
         evidenceBoundary = now
@@ -223,6 +224,12 @@ struct SessionEngine {
             }
         } else if case .movement = result.presentation, old?.count != result.presentation.count {
             effects.append(.audio(UUID(), .count(result.presentation.count)))
+        } else if case .sitToStand(let after) = result.presentation,
+            old?.count != after.count {
+            effects.append(.audio(UUID(), .count(after.count)))
+        } else if case .sitToStand(let before) = old, case .sitToStand(let after) = result.presentation,
+            before.stage != after.stage, after.stage == .standing {
+            effects.append(.audio(UUID(), .target))
         } else if case .movement = result.presentation,
             let previous = old?.guide, let next = result.presentation.guide,
             previous.targetActive, !next.targetActive {
@@ -448,7 +455,12 @@ struct SessionEngine {
         effects.append(.checkpoint(checkpoint))
         snapshot.stage = .feedback
         feedbackEnteredAt = now
-        if outcome == .completed, case .movement = presentation, let count = presentation?.count, count > 0 {
+        var countsRepetitions = false
+        switch presentation {
+        case .movement, .sitToStand: countsRepetitions = true
+        default: break
+        }
+        if outcome == .completed, countsRepetitions, let count = presentation?.count, count > 0 {
             pendingPrefix = .count(count)
         }
         snapshot.instruction = outcome == .skipped ? "session.skipped" : "session.feedback"
@@ -537,6 +549,7 @@ struct SessionEngine {
         case .elbowBend: return "session.assistance.elbowBend"
         case .directionalReach: return "session.assistance.reach"
         case .cup: return "session.assistance.cup"
+        case .sitToStand: return "session.assistance.sitToStand"
         case nil: return nil
         }
     }

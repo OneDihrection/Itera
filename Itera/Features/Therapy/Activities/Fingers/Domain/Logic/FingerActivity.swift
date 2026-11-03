@@ -8,7 +8,7 @@
 import Foundation
 
 enum FingerPhase: Equatable {
-    case baseline, target, demonstration, countdown, active, feedback, rest, finished
+    case baseline, target, range, rangeResult, demonstration, countdown, active, feedback, rest, finished
 }
 
 struct FingerActivity {
@@ -46,11 +46,20 @@ struct FingerActivity {
     private var peakSum = 0.0
     private var peakCount = 0
     private var initialized = [Bool](repeating: false, count: 4)
+    private(set) var rangeElapsed = 0.0
+    private(set) var rangeTooSmall = false
+    private var rangeLow: Double?
+    private var rangeHigh: Double?
+    private var rangeCandidate: Double?
+    private var rangeCandidateStart = 0.0
+    private var rangeCandidateSum = 0.0
+    private var rangeCandidateCount = 0
 
     init(kind: FingerExercise, routine: FingerRoutine, restAfterFinalSet: Bool = true) {
         self.kind = kind
         self.routine = routine
         self.restAfterFinalSet = restAfterFinalSet
+        phase = kind.calibratesRange ? .range : .baseline
     }
 
 
@@ -58,6 +67,15 @@ struct FingerActivity {
 
 
     static let demonstrationDuration = 10.0
+    /// Usable seconds the patient sweeps the movement while the range is measured.
+    static let rangeDuration = 10.0
+    /// Narrowest sweep, in metric units, that still gives the repetitions a usable target.
+    static let minimumRange = 0.15
+    /// A stable pose must stay this close for this long to count toward the range.
+    private static let rangeTolerance = 0.05
+    private static let rangeStableSeconds = 0.3
+
+    var rangeProgress: Double { min(1, rangeElapsed / Self.rangeDuration) }
 
     var needsStart: Bool { awaitingStart }
     var holdDuration: Double { 2 }
@@ -96,6 +114,7 @@ struct FingerActivity {
     mutating func breakEvidence() {
         resetHold()
         peakStart = nil
+        rangeCandidate = nil
         awaitingStart = true
         lastTimestamp = nil
         progress = 0
@@ -108,11 +127,34 @@ struct FingerActivity {
 
     mutating func recalibrate() {
         suspendClock()
-        phase = .baseline
+        phase = kind.calibratesRange ? .range : .baseline
         finger = 0
         initialized = [Bool](repeating: false, count: 4)
         demonstrationSeconds = 0
+        resetRange()
+        rangeTooSmall = false
         breakEvidence()
+    }
+
+    /// Accepts the measured range and moves on to the demonstration.
+    mutating func confirmRange() {
+        guard phase == .rangeResult else {
+            return
+        }
+        phase = .demonstration
+        demonstrationSeconds = 0
+        remaining = Self.demonstrationDuration
+        narrationFinished = false
+    }
+
+    mutating func remeasureRange() {
+        guard phase == .rangeResult else {
+            return
+        }
+        initialized[0] = false
+        rangeTooSmall = false
+        resetRange()
+        phase = .range
     }
 
     mutating func guidanceStarted() {
@@ -206,13 +248,15 @@ struct FingerActivity {
             }
         }
         lastTimestamp = evidence.timestamp
-        if !narrationFinished, [.baseline, .target, .active].contains(phase) {
+        if !narrationFinished, [.baseline, .target, .active, .range].contains(phase) {
             resetHold()
             return
         }
         switch phase {
         case .baseline, .target:
             capture(value, time: evidence.timestamp)
+        case .range:
+            captureRange(value, time: evidence.timestamp, delta: delta)
         case .active:
             activeSeconds += delta <= 0.3 ? min(0.2, delta) : 0
             // Only stable observations contribute a peak; single-frame extremes do not.
@@ -264,6 +308,52 @@ struct FingerActivity {
         if time - (peakStart ?? time) >= 0.5 {
             best[finger] = max(best[finger], peakSum / Double(peakCount))
         }
+    }
+
+    /// Records the farthest stable poses reached while the patient sweeps the movement; a pose
+    /// that is not held briefly cannot become an endpoint, so single-frame extremes are ignored.
+    private mutating func captureRange(_ value: Double, time: Double, delta: Double) {
+        rangeElapsed += delta > 0 && delta <= 0.3 ? min(0.2, delta) : 0
+        if let candidate = rangeCandidate, abs(value - candidate) <= Self.rangeTolerance {
+            rangeCandidateSum += value
+            rangeCandidateCount += 1
+        } else {
+            rangeCandidate = value
+            rangeCandidateStart = time
+            rangeCandidateSum = value
+            rangeCandidateCount = 1
+        }
+        if time - rangeCandidateStart >= Self.rangeStableSeconds {
+            let mean = rangeCandidateSum / Double(rangeCandidateCount)
+            rangeLow = min(rangeLow ?? mean, mean)
+            rangeHigh = max(rangeHigh ?? mean, mean)
+        }
+        progress = rangeProgress
+        guard rangeElapsed >= Self.rangeDuration else {
+            return
+        }
+        guard let low = rangeLow, let high = rangeHigh, high - low >= Self.minimumRange else {
+            rangeTooSmall = true
+            resetRange()
+            return
+        }
+        baselines[0] = low
+        targets[0] = high
+        best[0] = high
+        initialized[0] = true
+        rangeTooSmall = false
+        progress = 0
+        phase = .rangeResult
+    }
+
+    private mutating func resetRange() {
+        rangeElapsed = 0
+        rangeLow = nil
+        rangeHigh = nil
+        rangeCandidate = nil
+        rangeCandidateSum = 0
+        rangeCandidateCount = 0
+        progress = 0
     }
 
     private mutating func capture(_ value: Double, time: Double) {

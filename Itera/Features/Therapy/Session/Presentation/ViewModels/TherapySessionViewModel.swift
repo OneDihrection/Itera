@@ -321,10 +321,12 @@ final class TherapySessionViewModel {
                     case .elbowBend: kindKey = "session.elbowBend"
                     case .directionalReach: kindKey = "session.directionalReach"
                     case .cup: kindKey = "session.cup"
+                    case .sitToStand: kindKey = "session.sitToStand"
                     }
                     let sideKey = activity.side == .left ? "session.left" : "session.right"
-                    text = String(localized: String.LocalizationValue(kindKey), bundle: sessionLanguage.resourceBundle, locale: sessionLocale) + ". "
-                        + String(localized: String.LocalizationValue(sideKey), bundle: sessionLanguage.resourceBundle, locale: sessionLocale) + ". " + text
+                    let kindText = String(localized: String.LocalizationValue(kindKey), bundle: sessionLanguage.resourceBundle, locale: sessionLocale)
+                    let sideText = String(localized: String.LocalizationValue(sideKey), bundle: sessionLanguage.resourceBundle, locale: sessionLocale)
+                    text = activity.hasSide ? kindText + ". " + sideText + ". " + text : kindText + ". " + text
                 }
                 audio.speak(id: id, text: text)
             case .audio(let id, let cue): audio.play(id: id, cue: cue)

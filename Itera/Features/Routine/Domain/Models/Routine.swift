@@ -17,6 +17,19 @@ enum TherapyKind: String, Codable, CaseIterable {
     case elbowBend
     case directionalReach
     case cup
+    case sitToStand
+
+    var category: TherapyCategory { self == .sitToStand ? .trunk : .arm }
+}
+
+/// A group of therapy kinds that share the guided-session flow and have their own routine.
+enum TherapyCategory: String, CaseIterable, Identifiable, Hashable {
+    case arm, trunk
+    var id: String { rawValue }
+    var title: String { self == .arm ? "home.armPractice" : "home.trunkPractice" }
+    var artwork: String { self == .arm ? "symbol:figure.arms.open" : "symbol:figure.stand" }
+    var positioningKey: String { self == .arm ? "home.positioning" : "trunk.positioning" }
+    var kinds: [TherapyKind] { TherapyKind.allCases.filter { $0.category == self } }
 }
 
 struct SessionActivity: Identifiable, Codable, Equatable {
@@ -24,6 +37,9 @@ struct SessionActivity: Identifiable, Codable, Equatable {
     let kind: TherapyKind
     let side: TherapySide
     let goal: Int
+
+    /// Sit-to-stand has no trained side: the camera follows whichever leg it sees best.
+    var hasSide: Bool { kind != .sitToStand }
 
     init(kind: TherapyKind, side: TherapySide, goal: Int) {
         id = UUID()

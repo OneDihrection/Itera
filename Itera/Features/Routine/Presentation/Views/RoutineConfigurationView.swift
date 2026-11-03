@@ -8,13 +8,15 @@
 import SwiftUI
 
 struct RoutineConfigurationView: View {
+    let category: TherapyCategory
     @Environment(AppDependencies.self) private var dependencies
     @Environment(PermissionManager.self) private var permissions
     @Environment(NavigationRouter.self) private var router
 
     var body: some View {
         RoutineEditor(
-            model: dependencies.routine,
+            category: category,
+            model: dependencies.routineModel(for: category),
             readiness: HomeViewModel(permissions: permissions, audio: dependencies.audio, history: dependencies)
         )
     }
@@ -23,6 +25,7 @@ struct RoutineConfigurationView: View {
 private struct RoutineEditor: View {
     @Environment(NavigationRouter.self) private var router
     @Environment(AppDependencies.self) private var dependencies
+    let category: TherapyCategory
     @Bindable var model: RoutineViewModel
     @State var readiness: HomeViewModel
 
@@ -32,7 +35,7 @@ private struct RoutineEditor: View {
                 Text("routine.heading").typography(.largeTitle)
                 Text("routine.detail")
                 Text("routine.phases")
-                Text("home.positioning")
+                Text(LocalizedStringKey(category.positioningKey))
             }
             Section("routine.exercises") {
                 ForEach($model.configuration.exercises) { $exercise in
@@ -42,7 +45,7 @@ private struct RoutineEditor: View {
                 .onMove { model.configuration.exercises.move(fromOffsets: $0, toOffset: $1) }
                 .onDelete { model.configuration.exercises.remove(atOffsets: $0) }
                 Button("routine.add", systemImage: "plus.circle") {
-                    router.presentSheet(.exercisePicker)
+                    router.presentSheet(.exercisePicker(category))
                 }
             }
             Section {
@@ -114,22 +117,29 @@ private struct RoutineExerciseRow: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text(LocalizedStringKey("session." + exercise.kind.rawValue)).typography(.headline)
-            Picker("routine.side", selection: $exercise.sides) {
-                Text("session.left").tag(RoutineSides.left)
-                Text("session.right").tag(RoutineSides.right)
-                if exercise.kind == .armRaise || exercise.kind == .elbowBend {
-                    Text("routine.both").tag(RoutineSides.both)
-                }
-            }
-            .pickerStyle(.segmented)
-            if exercise.sides == .both {
-                Picker("routine.first", selection: $exercise.firstSide) {
-                    Text("session.left").tag(TherapySide.left)
-                    Text("session.right").tag(TherapySide.right)
+            if exercise.kind != .sitToStand {
+                Picker("routine.side", selection: $exercise.sides) {
+                    Text("session.left").tag(RoutineSides.left)
+                    Text("session.right").tag(RoutineSides.right)
+                    if exercise.kind == .armRaise || exercise.kind == .elbowBend {
+                        Text("routine.both").tag(RoutineSides.both)
+                    }
                 }
                 .pickerStyle(.segmented)
+                if exercise.sides == .both {
+                    Picker("routine.first", selection: $exercise.firstSide) {
+                        Text("session.left").tag(TherapySide.left)
+                        Text("session.right").tag(TherapySide.right)
+                    }
+                    .pickerStyle(.segmented)
+                }
             }
-            if exercise.kind == .armRaise || exercise.kind == .elbowBend {
+            if exercise.kind == .sitToStand {
+                Stepper(value: $exercise.leftGoal, in: 1...100) {
+                    Text("routine.repetitions \(exercise.leftGoal)")
+                }
+                Text("routine.sitToStandDetail")
+            } else if exercise.kind == .armRaise || exercise.kind == .elbowBend {
                 if exercise.sides != .right {
                     Stepper(value: $exercise.leftGoal, in: 1...100) {
                         Text("routine.leftGoal \(exercise.leftGoal)")
@@ -152,6 +162,7 @@ private struct RoutineExerciseRow: View {
 }
 
 struct RoutineExercisePicker: View {
+    let category: TherapyCategory
     @Environment(AppDependencies.self) private var dependencies
     @Environment(NavigationRouter.self) private var router
 
@@ -163,10 +174,10 @@ struct RoutineExercisePicker: View {
                 Button("routine.close") { router.dismissSheet() }
             }
             .padding()
-            List(TherapyKind.allCases, id: \.self) { kind in
-                let added = dependencies.routine.configuration.exercises.contains { $0.kind == kind }
+            List(category.kinds, id: \.self) { kind in
+                let added = dependencies.routineModel(for: category).configuration.exercises.contains { $0.kind == kind }
                 Button {
-                    dependencies.routine.add(kind)
+                    dependencies.routineModel(for: category).add(kind)
                     router.dismissSheet()
                 } label: {
                     HStack {

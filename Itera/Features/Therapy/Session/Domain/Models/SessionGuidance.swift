@@ -29,6 +29,10 @@ struct SessionGuidance {
         if activity.kind == .cup {
             return Self(cards: [Card(key: "parity.cupOpening")], destination: .activity, quietDelay: 1)
         }
+        if activity.kind == .sitToStand {
+            // The side-view placement advice is part of every opening, not only the first.
+            return Self(cards: [Card(key: "sts.opening")], destination: .capture, quietDelay: 3)
+        }
         if activity.kind == .directionalReach {
             return Self(cards: [Card(key: "parity.reachOpening")], destination: .activity, quietDelay: 1, watchdog: 12)
         }
