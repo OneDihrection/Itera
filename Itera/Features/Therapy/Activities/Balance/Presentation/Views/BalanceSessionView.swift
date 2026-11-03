@@ -228,7 +228,7 @@ struct BalanceSessionView: View {
                     )
                     if model.exercise.isRotation {
                         TherapyMetric(
-                            title: "rotation.metric.angle",
+                            title: model.exercise.localized("metric.angle"),
                             value: model.snapshot.targetAngle > 0
                                 ? "\(Int(model.snapshot.rotationDegrees.rounded()))° / \(model.snapshot.targetAngle)°"
                                 : "\(Int(model.snapshot.rotationDegrees.rounded()))°"

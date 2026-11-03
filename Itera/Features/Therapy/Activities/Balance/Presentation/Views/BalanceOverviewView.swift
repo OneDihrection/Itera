@@ -101,7 +101,7 @@ struct BalanceOverviewView: View {
                             suffix: "balance.secondsUnit"
                         )
                         if exercise.isRotation {
-                            Label("rotation.targetCalibrated", systemImage: "scope")
+                            Label(exercise.localized("targetCalibrated"), systemImage: "scope")
                                 .typography(.footnote)
                                 .foregroundStyle(TherapyPalette.green)
                         }

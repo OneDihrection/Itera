@@ -85,7 +85,10 @@ final class FingerSessionViewModel {
         switch activity.phase {
         case .baseline, .target, .active:
             return true
-        case .range, .rangeResult, .demonstration, .countdown, .feedback, .rest, .finished:
+        case .range:
+            // The ready countdown shows its timer; the sweep that follows does not.
+            return !activity.rangeReady
+        case .rangeResult, .demonstration, .countdown, .feedback, .rest, .finished:
             return false
         }
     }
@@ -95,7 +98,7 @@ final class FingerSessionViewModel {
         switch activity.phase {
         case .baseline: return "baseline." + activity.kind.rawValue
         case .target: return "move." + activity.kind.rawValue
-        case .range: return "range.instruction"
+        case .range: return activity.rangeReady ? "range.instruction" : "range.ready"
         case .rangeResult: return "range.resultSpoken"
         case .demonstration: return "demo." + activity.kind.rawValue
         case .active: return (activity.returning || activity.needsStart) ? "return." + activity.kind.rawValue : "move." + activity.kind.rawValue
@@ -134,6 +137,9 @@ final class FingerSessionViewModel {
             return activity.progress > 0.05 ? "feedback.hold" : "feedback.comfortable"
         }
         if activity.phase == .range {
+            guard activity.rangeReady else {
+                return activity.holdElapsed > 0.05 ? "feedback.hold" : "feedback.comfortable"
+            }
             return activity.rangeTooSmall ? "feedback.rangeTooSmall" : "feedback.rangeMeasuring"
         }
         if activity.phase == .active {

@@ -1,5 +1,5 @@
 //
-//  ExternalRotationEngine.swift
+//  ArmMovementEngine.swift
 //  Itera
 //
 //  Created by Fauzan Azima on 03/11/2026.
@@ -7,8 +7,10 @@
 
 import Foundation
 
-/// Shoulder external or internal rotation with the elbow at the side, seen from the front.
+/// Shoulder external or internal rotation with the elbow at the side, or shoulder flexion with the
+/// arm raised forward, seen from the front.
 ///
+/// **Rotation.**
 /// With the elbow bent about 90° beside the body, the forearm points toward the camera. External
 /// rotation turns it outward, swinging the wrist away from the body in the image; internal rotation
 /// turns it inward toward the belly. The sideways distance of the wrist from the elbow, along the
@@ -30,7 +32,21 @@ import Foundation
 ///
 /// Posture checks flag the usual compensations: the elbow drifting away from the body, and the same
 /// trunk lean, shift, and shoulder turn used by Balancing.
-struct ExternalRotationEngine: BalanceMovementEngine {
+///
+/// **Shoulder flexion.** The hanging arm is calibrated, then the patient raises it forward as far
+/// as is comfortable. From the front the raised arm is foreshortened, so only its height is
+/// reliable. The estimated lift angle comes from how far the wrist rose along the spine, against the
+/// arm length measured at rest:
+///
+/// ```text
+/// rise  = dot(wrist − shoulder, spineUnit)
+/// angle = acos(clamp(−rise / armLength₀, −1, 1))   // 0° hanging, 90° at shoulder height
+/// ```
+///
+/// Offsets are measured from the shoulder instead of the elbow, and start/target circles work as for
+/// rotation. Turning the palm up with the arm rotated outward is guided in the instructions and the
+/// demonstration only: body pose tracking cannot see the palm, so it is not scored.
+struct ArmMovementEngine: BalanceMovementEngine {
     private struct Geometry {
         let neck: TherapyPoint
         let root: TherapyPoint
@@ -40,6 +56,8 @@ struct ExternalRotationEngine: BalanceMovementEngine {
         let elbow: TherapyPoint
         let wrist: TherapyPoint
         let otherShoulder: TherapyPoint
+        /// The joint wrist offsets are measured from: the elbow for rotation, the shoulder for flexion.
+        let reference: TherapyPoint
 
         var spine: TherapyPoint { neck - root }
         var spineUnit: TherapyPoint { spine.scaled(1 / spine.length) }
@@ -74,6 +92,8 @@ struct ExternalRotationEngine: BalanceMovementEngine {
     /// sits from the shoulder line, both measured at calibration.
     private struct Neutral {
         let upperArm: Double
+        /// Shoulder to elbow plus elbow to wrist, used to scale shoulder flexion.
+        let armLength: Double
         /// Wrist offset from the elbow, in the outward/across axes.
         let wrist: TherapyPoint
         let elbowOut: Double
@@ -92,6 +112,7 @@ struct ExternalRotationEngine: BalanceMovementEngine {
         var localWrist = TherapyPoint(x: 0, y: 0)
         var elbowOut = 0.0
         var upperArm = 0.0
+        var armLength = 0.0
 
         mutating func append(_ geometry: Geometry) {
             count += 1
@@ -101,9 +122,10 @@ struct ExternalRotationEngine: BalanceMovementEngine {
             rightShoulder = rightShoulder + geometry.rightShoulder
             elbow = elbow + geometry.elbow
             wrist = wrist + geometry.wrist
-            localWrist = localWrist + geometry.local(geometry.wrist - geometry.elbow)
+            localWrist = localWrist + geometry.local(geometry.wrist - geometry.reference)
             elbowOut += (geometry.elbow - geometry.shoulder).dotProduct(geometry.outward)
             upperArm += geometry.upperArm
+            armLength += geometry.upperArm + (geometry.wrist - geometry.elbow).length
         }
 
         func remainsStable(_ geometry: Geometry) -> Bool {
@@ -141,6 +163,7 @@ struct ExternalRotationEngine: BalanceMovementEngine {
             guard upperArm > 0.04 else { return nil }
             return Neutral(
                 upperArm: upperArm,
+                armLength: armLength / count,
                 wrist: localWrist.scaled(1 / count),
                 elbowOut: elbowOut / count
             )
@@ -186,15 +209,17 @@ struct ExternalRotationEngine: BalanceMovementEngine {
     private let calibrationDuration = 1.0
     private let targetHoldDuration: Double
     private let returnHoldDuration = 3.0
-    private let direction: RotationDirection
+    private let exercise: BalanceExercise
+    private var direction: RotationDirection { exercise.rotationDirection }
+    private var isFlexion: Bool { exercise == .shoulderFlexion }
     private let forearmRatio = 0.9
     /// A turn smaller than this is treated as not turning yet.
-    private let minimumTargetAngle = 12.0
-    private let maximumTargetAngle = 90.0
+    private var minimumTargetAngle: Double { isFlexion ? 30 : 12 }
+    private var maximumTargetAngle: Double { isFlexion ? 170 : 90 }
     private let rangeHoldDuration = 2.0
-    private let rangeTolerance = 6.0
+    private var rangeTolerance: Double { isFlexion ? 8 : 6 }
     private let trackingGracePeriod = 0.40
-    private let targetRadiusRatio = 0.28
+    private var targetRadiusRatio: Double { isFlexion ? 0.15 : 0.28 }
     private let exitRadiusScale = 1.25
     private let elbowAwayThreshold = 0.35
     private let leanThresholdDegrees = 18.0
@@ -208,15 +233,15 @@ struct ExternalRotationEngine: BalanceMovementEngine {
         goal: Int = 6,
         holdDuration: Double = 10,
         armSelection: BalanceArmSelection = .both,
-        direction: RotationDirection = .outward
+        exercise: BalanceExercise = .externalRotation
     ) {
-        self.direction = direction
+        self.exercise = exercise
         snapshot.goal = max(2, goal)
         targetHoldDuration = min(20, max(3, holdDuration))
         snapshot.holdDuration = targetHoldDuration
         snapshot.armSelection = armSelection
         snapshot.activeArm = armSelection.initialArm
-        snapshot.instructionKey = "rotation.tracking"
+        snapshot.instructionKey = exercise.key("tracking")
     }
 
     // MARK: - Frames
@@ -238,7 +263,7 @@ struct ExternalRotationEngine: BalanceMovementEngine {
         let filtered = smoother.consume(frame)
         guard let geometry = geometry(from: filtered) else {
             snapshot.phase = torso == nil ? .findingBody : snapshot.phase
-            snapshot.instructionKey = "rotation.tracking"
+            snapshot.instructionKey = exercise.key("tracking")
             if frame.timestamp - (lastOverlayTimestamp ?? frame.timestamp) > 1.25 {
                 snapshot.overlay = nil
             }
@@ -270,7 +295,7 @@ struct ExternalRotationEngine: BalanceMovementEngine {
         resetRange()
         smoother.reset()
         snapshot.phase = .findingBody
-        snapshot.instructionKey = "rotation.tracking"
+        snapshot.instructionKey = exercise.key("tracking")
         snapshot.calibrationProgress = 0
         snapshot.overlay = nil
         lastOverlayTimestamp = nil
@@ -278,11 +303,11 @@ struct ExternalRotationEngine: BalanceMovementEngine {
     }
 
     mutating func restart() {
-        self = ExternalRotationEngine(
+        self = ArmMovementEngine(
             goal: snapshot.goal,
             holdDuration: snapshot.holdDuration,
             armSelection: snapshot.armSelection,
-            direction: direction
+            exercise: exercise
         )
     }
 
@@ -294,14 +319,16 @@ struct ExternalRotationEngine: BalanceMovementEngine {
         // The upper arm should hang beside the body, roughly along the spine, for a valid rest pose.
         let hang = (geometry.elbow - geometry.shoulder).scaled(1 / max(geometry.upperArm, 0.0001))
         let alongBody = -hang.dotProduct(geometry.spineUnit)
-        guard alongBody > 0.65 else {
+        let armHang = (geometry.wrist - geometry.shoulder).scaled(1 / max((geometry.wrist - geometry.shoulder).length, 0.0001))
+        let wholeArmAlongBody = -armHang.dotProduct(geometry.spineUnit)
+        guard alongBody > 0.65, !isFlexion || wholeArmAlongBody > 0.8 else {
             capture = nil
             snapshot.calibrationProgress = 0
-            snapshot.instructionKey = "rotation.elbowAtSide"
+            snapshot.instructionKey = exercise.key("elbowAtSide")
             publishOverlay(geometry, frame: frame)
             return
         }
-        snapshot.instructionKey = "rotation.calibrating"
+        snapshot.instructionKey = exercise.key("calibrating")
         publishOverlay(geometry, frame: frame)
         if capture?.remainsStable(geometry) != true {
             capture = Capture(startedAt: frame.timestamp, anchor: geometry)
@@ -329,7 +356,7 @@ struct ExternalRotationEngine: BalanceMovementEngine {
     private mutating func beginRangeCalibration() {
         resetRange()
         snapshot.phase = .calibratingRange
-        snapshot.instructionKey = "rotation.calibrateRange"
+        snapshot.instructionKey = exercise.key("calibrateRange")
         snapshot.calibrationProgress = 0
         snapshot.targetAngle = 0
     }
@@ -346,9 +373,9 @@ struct ExternalRotationEngine: BalanceMovementEngine {
     private mutating func calibrateRange(_ geometry: Geometry, frame: TrackingObservation, neutral: Neutral) {
         snapshot.phase = .calibratingRange
         snapshot.compensation = TrunkCompensation()
-        snapshot.instructionKey = "rotation.calibrateRange"
+        snapshot.instructionKey = exercise.key("calibrateRange")
         let angle = rotationAngle(geometry, neutral: neutral)
-        let offset = geometry.local(geometry.wrist - geometry.elbow)
+        let offset = geometry.local(geometry.wrist - geometry.reference)
         snapshot.rotationDegrees = max(0, angle)
         publishOverlay(geometry, frame: frame, neutral: neutral)
         guard angle >= minimumTargetAngle else {
@@ -380,11 +407,15 @@ struct ExternalRotationEngine: BalanceMovementEngine {
         resetRange()
         // The patient is still at the target; they return to the start before the first rotation.
         snapshot.phase = .returning
-        snapshot.instructionKey = "rotation.return"
+        snapshot.instructionKey = exercise.key("return")
     }
 
-    /// Estimated forearm rotation in degrees, positive in this exercise's direction.
+    /// Estimated forearm rotation, or shoulder lift for flexion, in degrees, positive in this exercise's direction.
     private func rotationAngle(_ geometry: Geometry, neutral: Neutral) -> Double {
+        if isFlexion {
+            let rise = (geometry.wrist - geometry.shoulder).dotProduct(geometry.spineUnit)
+            return acos(max(-1, min(1, -rise / neutral.armLength))) * 180 / .pi
+        }
         let lateral = sign * (geometry.local(geometry.wrist - geometry.elbow).x - neutral.wrist.x)
         let reference = neutral.upperArm * forearmRatio
         return asin(max(-1, min(1, lateral / reference))) * 180 / .pi
@@ -425,7 +456,7 @@ struct ExternalRotationEngine: BalanceMovementEngine {
             if snapshot.phase != .returning {
                 snapshot.phase = .reaching
             }
-            snapshot.instructionKey = "rotation.compensationWarning"
+            snapshot.instructionKey = exercise.key("compensationWarning")
         } else {
             compensationLatched = false
             process(geometry, frame: frame, neutral: neutral, delta: delta)
@@ -438,17 +469,17 @@ struct ExternalRotationEngine: BalanceMovementEngine {
 
     /// Where the wrist was held at the patient's own comfortable end.
     private func targetCenter(_ geometry: Geometry, neutral: Neutral) -> TherapyPoint {
-        geometry.elbow + geometry.world(ends[snapshot.activeArm] ?? neutral.wrist)
+        geometry.reference + geometry.world(ends[snapshot.activeArm] ?? neutral.wrist)
     }
 
     /// Where the wrist rested at calibration.
     private func homeCenter(_ geometry: Geometry, neutral: Neutral) -> TherapyPoint {
-        geometry.elbow + geometry.world(neutral.wrist)
+        geometry.reference + geometry.world(neutral.wrist)
     }
 
     /// Wide enough to forgive jitter, but never so wide that the start and target circles merge.
     private func circleRadius(_ neutral: Neutral) -> Double {
-        let base = max(0.05, neutral.upperArm * targetRadiusRatio)
+        let base = max(0.05, (isFlexion ? neutral.armLength : neutral.upperArm) * targetRadiusRatio)
         guard let end = ends[snapshot.activeArm] else { return base }
         let separation = (end - neutral.wrist).length
         return max(0.03, min(base, separation * 0.42))
@@ -461,7 +492,7 @@ struct ExternalRotationEngine: BalanceMovementEngine {
         delta: Double
     ) {
         let time = frame.timestamp
-        updatePath(geometry.wrist, time: time, scale: geometry.upperArm)
+        updatePath(geometry.wrist, time: time, scale: isFlexion ? neutral.armLength : geometry.upperArm)
         let radius = circleRadius(neutral)
 
         if snapshot.phase == .returning {
@@ -473,7 +504,7 @@ struct ExternalRotationEngine: BalanceMovementEngine {
             }
             returnOutsideSince = nil
             if returnHoldStartedAt == nil { returnHoldStartedAt = time }
-            snapshot.instructionKey = "rotation.returnHold"
+            snapshot.instructionKey = exercise.key("returnHold")
             guard returnProgress(at: time) >= 1 else { return }
             returnHoldStartedAt = nil
             advanceArm()
@@ -497,10 +528,10 @@ struct ExternalRotationEngine: BalanceMovementEngine {
         kinematics = nil
         if snapshot.metrics.completedTouches >= snapshot.goal {
             snapshot.phase = .complete
-            snapshot.instructionKey = "rotation.complete"
+            snapshot.instructionKey = exercise.key("complete")
         } else {
             snapshot.phase = .returning
-            snapshot.instructionKey = "rotation.return"
+            snapshot.instructionKey = exercise.key("return")
         }
     }
 
@@ -512,7 +543,7 @@ struct ExternalRotationEngine: BalanceMovementEngine {
             capture = nil
             snapshot.phase = .calibrating
             snapshot.calibrationProgress = 0
-            snapshot.instructionKey = "rotation.elbowAtSide"
+            snapshot.instructionKey = exercise.key("elbowAtSide")
         } else if targets[snapshot.activeArm] == nil {
             beginRangeCalibration()
         } else {
@@ -523,8 +554,7 @@ struct ExternalRotationEngine: BalanceMovementEngine {
     }
 
     private func reachKey(for arm: CrossingArm) -> String {
-        let prefix = direction == .outward ? "rotation" : "internalRotation"
-        return prefix + (arm == .right ? ".rotateRight" : ".rotateLeft")
+        exercise.key(arm == .right ? "rotateRight" : "rotateLeft")
     }
 
     private mutating func maintainOrResetTarget(at time: Double) {
@@ -549,17 +579,17 @@ struct ExternalRotationEngine: BalanceMovementEngine {
     private mutating func maintainOrResetReturn(at time: Double) {
         guard returnHoldStartedAt != nil else {
             returnOutsideSince = nil
-            snapshot.instructionKey = "rotation.return"
+            snapshot.instructionKey = exercise.key("return")
             return
         }
         if returnOutsideSince == nil { returnOutsideSince = time }
         guard time - (returnOutsideSince ?? time) > trackingGracePeriod else {
-            snapshot.instructionKey = "rotation.returnHold"
+            snapshot.instructionKey = exercise.key("returnHold")
             return
         }
         returnHoldStartedAt = nil
         returnOutsideSince = nil
-        snapshot.instructionKey = "rotation.return"
+        snapshot.instructionKey = exercise.key("return")
     }
 
     private func targetProgress(at time: Double) -> Double {
@@ -601,7 +631,8 @@ struct ExternalRotationEngine: BalanceMovementEngine {
             / torso.shoulderWidth
         let turn = max(0, 1 - geometry.normalizedShoulderWidth / torso.normalizedShoulderWidth)
         let elbowOut = (geometry.elbow - geometry.shoulder).dotProduct(geometry.outward)
-        let elbowAway = (elbowOut - neutral.elbowOut) / neutral.upperArm
+        // Raising the arm forward legitimately moves the elbow, so only rotation checks it.
+        let elbowAway = isFlexion ? 0 : (elbowOut - neutral.elbowOut) / neutral.upperArm
 
         var reasons: Set<TrunkCompensation.Reason> = []
         if abs(lean) > leanThresholdDegrees { reasons.insert(.lateralLean) }
@@ -720,9 +751,11 @@ struct ExternalRotationEngine: BalanceMovementEngine {
             ?? TherapyPoint(x: center.x, y: center.y - width * 1.05)
         let geometry = Geometry(
             neck: neck, root: root, leftShoulder: leftShoulder, rightShoulder: rightShoulder,
-            shoulder: shoulder, elbow: elbow, wrist: wrist, otherShoulder: otherShoulder
+            shoulder: shoulder, elbow: elbow, wrist: wrist, otherShoulder: otherShoulder,
+            reference: isFlexion ? shoulder : elbow
         )
-        guard geometry.spine.length > 0.08, geometry.upperArm > 0.04 else { return nil }
+        // A raised arm points at the camera, so its upper arm legitimately shrinks to almost nothing.
+        guard geometry.spine.length > 0.08, isFlexion || geometry.upperArm > 0.04 else { return nil }
         if let torso {
             let ratio = geometry.shoulderWidth / torso.shoulderWidth
             let axis = (rightShoulder - leftShoulder).scaled(1 / width)

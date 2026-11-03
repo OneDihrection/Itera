@@ -11,7 +11,7 @@ import SwiftUI
 struct ArmRotationHomeView: View {
     @Environment(NavigationRouter.self) private var router
 
-    private let exercises: [BalanceExercise] = [.internalRotation, .externalRotation]
+    private let exercises: [BalanceExercise] = [.internalRotation, .externalRotation, .shoulderFlexion]
 
     var body: some View {
         ScrollView {

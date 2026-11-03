@@ -6086,6 +6086,23 @@
         }
       }
     },
+    "range.ready" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hold your hand still in the start position. A 3-second countdown begins, then you turn as far as is comfortable."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tahan tangan Anda di posisi awal. Hitung mundur 3 detik dimulai, lalu putar sejauh yang nyaman."
+          }
+        }
+      }
+    },
     "range.remeasure" : {
       "localizations" : {
         "en" : {
@@ -6977,18 +6994,19 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Choose a rotation to practice. Both start with the elbow at your side, bent about 90°."
+            "value" : "Choose an arm movement to practice. The rotations start with the elbow at your side, bent about 90°; shoulder flexion starts with the arm hanging."
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Pilih rotasi yang ingin dilatih. Keduanya dimulai dengan siku di sisi badan, tertekuk sekitar 90°."
+            "value" : "Pilih gerakan lengan yang ingin dilatih. Rotasi dimulai dengan siku di sisi badan, tertekuk sekitar 90°; fleksi bahu dimulai dengan lengan menggantung."
           }
         }
       }
     },
     "rotation.metric.angle" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -7260,6 +7278,7 @@
       }
     },
     "rotation.summary.peak" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -7276,6 +7295,7 @@
       }
     },
     "rotation.targetCalibrated" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -9958,6 +9978,549 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Latihan waktu · hanya waktu gerakan yang terbaca"
+          }
+        }
+      }
+    },
+    "shoulderFlexion.animationAccessibility" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Animated shoulder flexion demonstration"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Demonstrasi animasi fleksi bahu"
+          }
+        }
+      }
+    },
+    "shoulderFlexion.animationHint" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Watch the arm swing from your side all the way overhead with the palm up, then lower slowly."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Perhatikan lengan berayun dari sisi badan hingga ke atas kepala dengan telapak menghadap atas, lalu turun perlahan."
+          }
+        }
+      }
+    },
+    "shoulderFlexion.begin" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Start shoulder flexion"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mulai fleksi bahu"
+          }
+        }
+      }
+    },
+    "shoulderFlexion.calibrateRange" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Raise your arm as high as is comfortable, then hold still"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Angkat lengan Anda setinggi yang nyaman, lalu tahan"
+          }
+        }
+      }
+    },
+    "shoulderFlexion.cameraAccessibility" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Live camera with arm and target guidance"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kamera langsung dengan panduan lengan dan target"
+          }
+        }
+      }
+    },
+    "shoulderFlexion.compensationWarning" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sit tall and keep your trunk still"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Duduk tegak dan jaga badan tetap diam"
+          }
+        }
+      }
+    },
+    "shoulderFlexion.complete" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Shoulder flexion practice complete"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Latihan fleksi bahu selesai"
+          }
+        }
+      }
+    },
+    "shoulderFlexion.completion.subtitle" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Review this session, then repeat it or return to Arm Rotation."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tinjau sesi ini, lalu ulangi atau kembali ke Arm Rotation."
+          }
+        }
+      }
+    },
+    "shoulderFlexion.elbowAtSide" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Let your arm hang at your side"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Biarkan lengan menggantung di sisi badan"
+          }
+        }
+      }
+    },
+    "shoulderFlexion.metric.angle" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Estimated lift"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Perkiraan angkatan"
+          }
+        }
+      }
+    },
+    "shoulderFlexion.metric.touches" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lifts"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Angkatan"
+          }
+        }
+      }
+    },
+    "shoulderFlexion.overview" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Let your arm hang at your side, then slowly raise it forward with your palm turned up and the arm rotated outward. First show how high you can comfortably lift; that becomes your target. Itera tracks how high your wrist rises and pauses scoring when your trunk leans or turns."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Biarkan lengan menggantung di sisi badan, lalu angkat perlahan ke depan dengan telapak tangan menghadap atas dan lengan diputar keluar. Pertama tunjukkan setinggi apa Anda nyaman mengangkat; itu menjadi target Anda. Itera melacak setinggi apa pergelangan tangan naik dan menjeda penilaian saat badan Anda condong atau berputar."
+          }
+        }
+      }
+    },
+    "shoulderFlexion.repetitions" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lifts"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Angkatan"
+          }
+        }
+      }
+    },
+    "shoulderFlexion.repetitionsHint" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Each successful held lift counts toward this total."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Setiap angkatan yang berhasil ditahan dihitung dalam total ini."
+          }
+        }
+      }
+    },
+    "shoulderFlexion.return" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lower your hand back to the blue circle"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Turunkan tangan Anda kembali ke lingkaran biru"
+          }
+        }
+      }
+    },
+    "shoulderFlexion.rotateLeft" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Raise your left arm, palm up"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Angkat lengan kiri, telapak menghadap atas"
+          }
+        }
+      }
+    },
+    "shoulderFlexion.rotateRight" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Raise your right arm, palm up"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Angkat lengan kanan, telapak menghadap atas"
+          }
+        }
+      }
+    },
+    "shoulderFlexion.step.balance.detail" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Scoring pauses if your trunk leans or twists."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Penilaian dijeda jika badan Anda condong atau berputar."
+          }
+        }
+      }
+    },
+    "shoulderFlexion.step.posture" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Set your posture"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Atur postur Anda"
+          }
+        }
+      }
+    },
+    "shoulderFlexion.step.posture.detail" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sit tall facing the camera with both shoulders, your arm, and your hand visible."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Duduk tegak menghadap kamera dengan kedua bahu, lengan, dan tangan terlihat."
+          }
+        }
+      }
+    },
+    "shoulderFlexion.step.touch" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Raise your arm"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Angkat lengan Anda"
+          }
+        }
+      }
+    },
+    "shoulderFlexion.step.touch.detail" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lift the arm forward, palm up and turned outward, until your wrist reaches your own orange target."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Angkat lengan ke depan, telapak menghadap atas dan diputar keluar, hingga pergelangan tangan mencapai target oranye Anda."
+          }
+        }
+      }
+    },
+    "shoulderFlexion.subtitle" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Shoulder flexion practice"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Latihan fleksi bahu"
+          }
+        }
+      }
+    },
+    "shoulderFlexion.summary.peak" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Peak estimated lift"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Puncak perkiraan angkatan"
+          }
+        }
+      }
+    },
+    "shoulderFlexion.targetCalibrated" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Your target is set during calibration, from how high you comfortably lift."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Target Anda ditentukan saat kalibrasi, dari setinggi apa Anda nyaman mengangkat."
+          }
+        }
+      }
+    },
+    "shoulderFlexion.title" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Shoulder flexion with rotation"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fleksi bahu dengan rotasi"
+          }
+        }
+      }
+    },
+    "shoulderFlexion.touchUnit" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "lifts"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "angkatan"
+          }
+        }
+      }
+    },
+    "shoulderFlexion.voice.complete" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Great work. All lifts are complete."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kerja bagus. Semua angkatan selesai."
+          }
+        }
+      }
+    },
+    "shoulderFlexion.voice.leftTarget" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Raise your left arm forward, palm up."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Angkat lengan kiri ke depan, telapak menghadap atas."
+          }
+        }
+      }
+    },
+    "shoulderFlexion.voice.returnAndSwitch" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Done. Lower your hand to the blue circle and hold for 3 seconds, then switch arms."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Selesai. Turunkan tangan ke lingkaran biru dan tahan 3 detik, lalu ganti lengan."
+          }
+        }
+      }
+    },
+    "shoulderFlexion.voice.returnSameSide" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Done. Lower your hand to the blue circle and hold for 3 seconds, then use the same arm again."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Selesai. Turunkan tangan ke lingkaran biru dan tahan 3 detik, lalu gunakan lengan yang sama lagi."
+          }
+        }
+      }
+    },
+    "shoulderFlexion.voice.rightTarget" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Raise your right arm forward, palm up."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Angkat lengan kanan ke depan, telapak menghadap atas."
           }
         }
       }
