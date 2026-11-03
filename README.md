@@ -121,3 +121,7 @@ The arm-raise, elbow-bend, and directional-reaching workflow from main remains a
 ## Mac Catalyst compatibility
 
 Mac Catalyst support is retained from main as an explicit exception to the original iPad-only platform scope. Physical M1-iPad acceptance remains required. Voice commands remain exact English phrases with en-US on-device recognition in both interface languages. Catalyst camera and audio acceptance remains pending.
+
+## TestFlight automation
+
+See [TestFlight setup](Documentation/TestFlightSetup.md) for signing, GitHub secrets, and production version-tag releases.

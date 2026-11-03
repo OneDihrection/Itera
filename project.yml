@@ -18,7 +18,7 @@ targets:
           - "**/*.md"
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: devplaceholder.SXTZ4HVL.Itera
+        PRODUCT_BUNDLE_IDENTIFIER: com.OneDihrection.Itera
         DEVELOPMENT_TEAM: A2WQZ32XVK
         CODE_SIGN_STYLE: Automatic
         TARGETED_DEVICE_FAMILY: "2"

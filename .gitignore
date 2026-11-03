@@ -12,3 +12,18 @@ xcuserdata/
 
 # macOS metadata
 .DS_Store
+
+# Fastlane and local signing credentials
+.bundle/
+vendor/bundle/
+fastlane/report.xml
+fastlane/README.md
+fastlane/Preview.html
+fastlane/screenshots/
+fastlane/test_output/
+*.ipa
+*.dSYM.zip
+*.p8
+*.p12
+*.mobileprovision
+.env
