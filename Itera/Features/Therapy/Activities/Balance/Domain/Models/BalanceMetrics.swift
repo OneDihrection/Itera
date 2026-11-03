@@ -12,7 +12,10 @@ enum BalanceExercise: String, Hashable {
     case crossMidline
     case externalRotation
     case internalRotation
+    /// Arm raised forward with the palm turned up and the arm rotated outward (Arm Rotation).
+    case shoulderFlexion
 
+    /// True for the arm movements measured as an estimated angle rather than a midline crossing.
     var isRotation: Bool { self != .crossMidline }
 
     /// The direction the forearm travels from the resting pose.
@@ -27,10 +30,21 @@ enum BalanceExercise: String, Hashable {
 
     /// String-catalog key. Balancing keeps its original `balance.` keys; both rotations share the
     /// `rotation.` strings except the ones that describe the direction.
+    private static let flexionSpecific: Set<String> = [
+        "title", "subtitle", "overview", "animationHint", "animationAccessibility", "cameraAccessibility",
+        "step.posture", "step.posture.detail", "step.touch", "step.touch.detail", "step.balance.detail",
+        "begin", "rotateRight", "rotateLeft", "elbowAtSide", "calibrateRange", "compensationWarning",
+        "return", "complete", "completion.subtitle", "metric.angle", "summary.peak", "repetitions",
+        "repetitionsHint", "touchUnit", "metric.touches", "targetCalibrated", "voice.rightTarget",
+        "voice.leftTarget", "voice.complete", "voice.returnAndSwitch", "voice.returnSameSide",
+    ]
+
     func key(_ name: String) -> String {
         switch self {
         case .crossMidline: return "balance." + name
         case .externalRotation: return "rotation." + name
+        case .shoulderFlexion:
+            return (Self.flexionSpecific.contains(name) ? "shoulderFlexion." : "rotation.") + name
         case .internalRotation:
             return (Self.internalSpecific.contains(name) ? "internalRotation." : "rotation.") + name
         }

@@ -68,7 +68,7 @@ struct BalanceSessionSummary: View {
             HStack(spacing: 12) {
                 if exercise.isRotation {
                     TherapyMetric(
-                        title: "rotation.summary.peak",
+                        title: exercise.localized("summary.peak"),
                         value: "\(Int(metrics.peakRotation.rounded()))°"
                     )
                 } else {

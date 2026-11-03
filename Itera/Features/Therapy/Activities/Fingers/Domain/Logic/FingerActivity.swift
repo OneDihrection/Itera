@@ -4,7 +4,6 @@
 //
 //  Created by Amelia Putri Aftiana on 29/10/2026.
 //
-
 import Foundation
 
 enum FingerPhase: Equatable {
@@ -48,6 +47,8 @@ struct FingerActivity {
     private var initialized = [Bool](repeating: false, count: 4)
     private(set) var rangeElapsed = 0.0
     private(set) var rangeTooSmall = false
+    /// The patient held the start position through the ready countdown, so sweeping can begin.
+    private(set) var rangeReady = false
     private var rangeLow: Double?
     private var rangeHigh: Double?
     private var rangeCandidate: Double?
@@ -69,6 +70,8 @@ struct FingerActivity {
     static let demonstrationDuration = 10.0
     /// Usable seconds the patient sweeps the movement while the range is measured.
     static let rangeDuration = 10.0
+    /// How long the start position is held, as a visible countdown, before the sweep is measured.
+    static let readyCountdown = 3.0
     /// Narrowest sweep, in metric units, that still gives the repetitions a usable target.
     static let minimumRange = 0.15
     /// A stable pose must stay this close for this long to count toward the range.
@@ -78,7 +81,7 @@ struct FingerActivity {
     var rangeProgress: Double { min(1, rangeElapsed / Self.rangeDuration) }
 
     var needsStart: Bool { awaitingStart }
-    var holdDuration: Double { 2 }
+    var holdDuration: Double { phase == .range ? Self.readyCountdown : 2 }
     var isHolding: Bool { lastHoldTimestamp != nil || holdCompletionID != nil }
     var holdRemaining: Double { max(0, holdDuration - holdElapsed) }
     var demonstrationRemaining: Double {
@@ -313,6 +316,15 @@ struct FingerActivity {
     /// Records the farthest stable poses reached while the patient sweeps the movement; a pose
     /// that is not held briefly cannot become an endpoint, so single-frame extremes are ignored.
     private mutating func captureRange(_ value: Double, time: Double, delta: Double) {
+        // A countdown starts once the hand is held steady in the start position.
+        guard rangeReady else {
+            guard stable(value, time: time, tolerance: 0.10, duration: holdDuration) else {
+                return
+            }
+            rangeReady = true
+            resetHold()
+            return
+        }
         rangeElapsed += delta > 0 && delta <= 0.3 ? min(0.2, delta) : 0
         if let candidate = rangeCandidate, abs(value - candidate) <= Self.rangeTolerance {
             rangeCandidateSum += value
@@ -334,7 +346,8 @@ struct FingerActivity {
         }
         guard let low = rangeLow, let high = rangeHigh, high - low >= Self.minimumRange else {
             rangeTooSmall = true
-            resetRange()
+            // A narrow sweep is retried straight away; the countdown is not repeated.
+            resetRange(keepReady: true)
             return
         }
         baselines[0] = low
@@ -346,7 +359,8 @@ struct FingerActivity {
         phase = .rangeResult
     }
 
-    private mutating func resetRange() {
+    private mutating func resetRange(keepReady: Bool = false) {
+        rangeReady = keepReady && rangeReady
         rangeElapsed = 0
         rangeLow = nil
         rangeHigh = nil

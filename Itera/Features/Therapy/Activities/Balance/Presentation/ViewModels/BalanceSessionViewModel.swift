@@ -52,12 +52,12 @@ final class BalanceSessionViewModel {
                 holdDuration: Double(holdSeconds),
                 armSelection: armSelection
             )
-        case .externalRotation, .internalRotation:
-            engine = ExternalRotationEngine(
+        case .externalRotation, .internalRotation, .shoulderFlexion:
+            engine = ArmMovementEngine(
                 goal: repetitions,
                 holdDuration: Double(holdSeconds),
                 armSelection: armSelection,
-                direction: exercise.rotationDirection
+                exercise: exercise
             )
         }
         snapshot = engine.snapshot

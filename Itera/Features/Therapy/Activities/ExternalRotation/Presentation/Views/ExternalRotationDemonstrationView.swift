@@ -19,6 +19,8 @@ struct BalanceExerciseDemonstrationView: View {
             BalanceDemonstrationView(paused: paused)
         case .externalRotation, .internalRotation:
             ExternalRotationDemonstrationView(direction: exercise.rotationDirection, paused: paused)
+        case .shoulderFlexion:
+            ShoulderFlexionDemonstrationView(paused: paused)
         }
     }
 }

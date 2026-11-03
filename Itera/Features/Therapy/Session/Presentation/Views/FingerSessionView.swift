@@ -340,7 +340,12 @@ struct FingerSessionView: View {
                     ProgressView(value: model.activity.holdElapsed / model.activity.holdDuration).tint(TherapyPalette.primary)
                         .accessibilityLabel("session.holdProgress")
                 } else if model.activity.phase == .range {
-                    ProgressView(value: model.activity.rangeProgress).tint(TherapyPalette.primary)
+                    ProgressView(
+                        value: model.activity.rangeReady
+                            ? model.activity.rangeProgress
+                            : model.activity.holdElapsed / model.activity.holdDuration
+                    )
+                    .tint(TherapyPalette.primary)
                         .accessibilityLabel("session.rangeProgress")
                 }
                 if let key = model.errorKey {
