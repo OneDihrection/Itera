@@ -16,7 +16,7 @@ struct TherapyAchievementShareSheet: UIViewControllerRepresentable {
     let earnedDate: Date
     let caption: String
     let locale: Locale
-    let onComplete: () -> Void
+    let onComplete: (Bool) -> Void
 
     func makeUIViewController(context: Context) -> UIActivityViewController {
         let card = TherapyAchievementShareCard(
@@ -39,9 +39,9 @@ struct TherapyAchievementShareSheet: UIViewControllerRepresentable {
         }
 
         let controller = UIActivityViewController(activityItems: items, applicationActivities: nil)
-        controller.completionWithItemsHandler = { _, _, _, _ in
+        controller.completionWithItemsHandler = { _, _, _, error in
             Task { @MainActor in
-                onComplete()
+                onComplete(error != nil)
             }
         }
         if let popover = controller.popoverPresentationController {

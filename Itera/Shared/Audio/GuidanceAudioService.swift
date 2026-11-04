@@ -10,7 +10,7 @@ import Combine
 import Speech
 
 // Service vocabulary is independent of exercise progression.
-enum GuidanceSound { case countdown, setCompleted }
+enum GuidanceSound { case countdown, setCompleted, gardenStep }
 
 enum GuidanceAudioEvent {
     case completed(UUID)
@@ -137,7 +137,16 @@ final class GuidanceAudioService: NSObject, AVSpeechSynthesizerDelegate {
     }
 
     func playCue(_ cue: GuidanceSound) {
-        let name = cue == .setCompleted ? "set-complete" : "countdown"
+        let name: String
+        switch cue {
+        case .countdown: name = "countdown"
+        case .setCompleted: name = "set-complete"
+        case .gardenStep: name = "target-reached"
+        }
+        if cue == .gardenStep,
+           !(UserDefaults.standard.object(forKey: PracticePreferences.celebrationSounds) as? Bool ?? true) {
+            return
+        }
         guard let url = Bundle.main.url(forResource: name, withExtension: "wav") else {
             return
         }
@@ -162,7 +171,7 @@ final class GuidanceAudioService: NSObject, AVSpeechSynthesizerDelegate {
     func enableVoice() throws -> Bool {
         guard SFSpeechRecognizer.authorizationStatus() == .authorized,
               AVAudioApplication.shared.recordPermission == .granted,
-              let candidate = SFSpeechRecognizer(locale: Locale(identifier: locale)),
+              let candidate = SFSpeechRecognizer(locale: Locale(identifier: "en-US")),
               candidate.isAvailable, candidate.supportsOnDeviceRecognition else { return false }
         recognizer = candidate
         voiceEnabled = true

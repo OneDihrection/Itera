@@ -16,6 +16,7 @@ struct FingerReportsView: View {
             VStack(alignment: .leading, spacing: 26) {
                 Text("reports.title").typography(.largeTitle)
                 PracticeProgressSection()
+                PracticeGardenSection()
                 Text("reports.history").typography(.title)
                 if let error = dependencies.home.errorKey {
                     TherapyError(key: error)
@@ -108,6 +109,7 @@ struct FingerReflectionView: View {
         }
         .foregroundStyle(TherapyPalette.ink)
         .frame(maxHeight: .infinity).background(TherapyPalette.cream)
+        .environment(\.locale, dependencies.session?.sessionLanguage.locale ?? AppLanguage.selected.locale)
         .interactiveDismissDisabled()
     }
 
@@ -182,6 +184,17 @@ struct FingerReportDetailView: View {
                 }
             }
             sessionAchievements(summary)
+            if summary.totalSets > 0 {
+                TherapyCard(color: TherapyPalette.secondary) {
+                    HStack(spacing: 24) {
+                        TherapyGardenFlower().frame(width: 110, height: 130)
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("garden.sessionGrowth \(summary.totalSets)").typography(.title2)
+                            Text("garden.growthSaved").typography(.body)
+                        }
+                    }
+                }
+            }
             Text("report.movement").typography(.title2)
             ForEach(summary.results) { result in
                 TherapyCard {

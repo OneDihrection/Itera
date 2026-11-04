@@ -6,15 +6,18 @@
 //
 
 import SwiftUI
+import UIKit
 
 struct FingerPauseView: View {
     @Environment(AppDependencies.self) private var dependencies
     @Environment(NavigationRouter.self) private var router
+    @Environment(\.openURL) private var openURL
 
     var body: some View {
         Group {
             if let model = dependencies.session {
                 pausePanel(model)
+                    .environment(\.locale, model.sessionLanguage.locale)
                     .onChange(of: model.paused) { _, paused in
                         if !paused, router.presentedSheets.last?.route == .fingerPause {
                             router.dismissSheet()
@@ -42,16 +45,23 @@ struct FingerPauseView: View {
                         if model.voiceEnabled {
                             TherapyStatus(title: "voice.pauseListening", symbol: "mic.fill")
                         }
-                        if model.voiceNeedsAcknowledgment {
-                            TherapyError(key: "voice.unavailable")
-                            TherapyButton(title: "voice.useTouch", secondary: true) { model.acknowledgeTouch() }
-                        }
-                        if let key = model.errorKey {
+                        if model.trackingRecoveryPaused && model.canResume {
+                            TherapyStatus(title: "recovery.ready", symbol: "checkmark.circle.fill")
+                        } else if let key = model.recoveryPanelKey {
                             TherapyError(key: key)
-                            if key == "storage.error" {
-                                TherapyButton(title: "action.retry", secondary: true) {
-                                    Task { await model.saveCheckpoint() }
+                            if model.needsPermissionSettings {
+                                TherapyButton(title: "recovery.openSettings", symbol: "gearshape") {
+                                    if let url = URL(string: UIApplication.openSettingsURLString) {
+                                        openURL(url)
+                                    }
                                 }
+                            }
+                            TherapyButton(
+                                title: model.needsPermissionSettings ? "recovery.checkAgain" : "action.retry",
+                                symbol: "arrow.clockwise", secondary: true,
+                                disabled: model.saving || model.recovering
+                            ) {
+                                Task { await model.retryRecovery() }
                             }
                         }
                         TherapyButton(title: "action.resume", symbol: "play.fill",

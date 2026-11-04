@@ -22,7 +22,10 @@ struct BodyCameraPreview: UIViewRepresentable {
         view.onOrientation = onOrientation
         view.observation = view.previewLayer.observe(\.isPreviewing, options: [.initial, .new]) {
             [weak view] layer, _ in
-            DispatchQueue.main.async { [weak view] in view?.onReady?(layer.isPreviewing) }
+            DispatchQueue.main.async { [weak view] in
+                view?.setNeedsLayout()
+                view?.onReady?(layer.isPreviewing)
+            }
         }
         return view
     }
@@ -48,20 +51,35 @@ struct BodyCameraPreview: UIViewRepresentable {
         override class var layerClass: AnyClass { AVCaptureVideoPreviewLayer.self }
         var previewLayer: AVCaptureVideoPreviewLayer { layer as! AVCaptureVideoPreviewLayer }
 
+        override func didMoveToWindow() {
+            super.didMoveToWindow()
+            if window == nil {
+                lastOrientation = nil
+            }
+            setNeedsLayout()
+        }
+
         override func layoutSubviews() {
             super.layoutSubviews()
-            let orientation = window?.windowScene?.interfaceOrientation ?? .landscapeLeft
+            guard let orientation = window?.windowScene?.interfaceOrientation,
+                  orientation == .landscapeLeft || orientation == .landscapeRight else {
+                return
+            }
             let right = orientation == .landscapeRight
+            let videoOrientation: AVCaptureVideoOrientation = right ? .landscapeRight : .landscapeLeft
+            CATransaction.begin()
+            CATransaction.setDisableActions(true)
             if let connection = previewLayer.connection {
-                let angle: CGFloat = right ? 0 : 180
-                if connection.isVideoRotationAngleSupported(angle) {
-                    connection.videoRotationAngle = angle
+                if connection.isVideoOrientationSupported,
+                   connection.videoOrientation != videoOrientation {
+                    connection.videoOrientation = videoOrientation
                 }
                 if connection.isVideoMirroringSupported {
                     connection.automaticallyAdjustsVideoMirroring = false
                     connection.isVideoMirrored = front
                 }
             }
+            CATransaction.commit()
             if orientation != lastOrientation {
                 lastOrientation = orientation
                 DispatchQueue.main.async { [weak self] in self?.onOrientation?(right) }

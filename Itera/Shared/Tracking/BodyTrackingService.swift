@@ -24,7 +24,7 @@ final class BodyTrackingService: NSObject, AVCaptureVideoDataOutputSampleBufferD
     private var deliveryScheduled = false
     private var generation = UUID()
     private var position: AVCaptureDevice.Position = .front
-    private var angle: CGFloat = 180
+    private var orientation: AVCaptureVideoOrientation = .landscapeLeft
     private var previousCenterStage: (mode: AVCaptureDevice.CenterStageControlMode, enabled: Bool)?
     private var configured = false
     private var hasInitialOrientation = false
@@ -149,10 +149,10 @@ final class BodyTrackingService: NSObject, AVCaptureVideoDataOutputSampleBufferD
                 return
             }
             let position: AVCaptureDevice.Position = front ? .front : .back
-            let angle: CGFloat = landscapeRight ? 0 : 180
+            let orientation: AVCaptureVideoOrientation = landscapeRight ? .landscapeRight : .landscapeLeft
             let initialConfiguration = !self.hasInitialOrientation
             self.hasInitialOrientation = true
-            guard initialConfiguration || self.position != position || self.angle != angle else {
+            guard initialConfiguration || self.position != position || self.orientation != orientation else {
                 return
             }
             // Establishing preview orientation is setup, not lost capture evidence.
@@ -166,7 +166,7 @@ final class BodyTrackingService: NSObject, AVCaptureVideoDataOutputSampleBufferD
             self.session.commitConfiguration()
             self.configured = false
             self.position = position
-            self.angle = angle
+            self.orientation = orientation
             self.start()
         }
     }
@@ -206,8 +206,10 @@ final class BodyTrackingService: NSObject, AVCaptureVideoDataOutputSampleBufferD
         session.addInput(input)
         session.addOutput(output)
         if let connection = output.connection(with: .video) {
-            if connection.isVideoRotationAngleSupported(angle) {
-                connection.videoRotationAngle = angle
+            // Semantic orientation accounts for the selected camera's sensor mounting.
+            // A fixed raw angle can invert front-camera frames by 180 degrees.
+            if connection.isVideoOrientationSupported {
+                connection.videoOrientation = orientation
             }
             if connection.isVideoMirroringSupported {
                 connection.automaticallyAdjustsVideoMirroring = false

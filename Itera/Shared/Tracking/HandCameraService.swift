@@ -9,10 +9,13 @@ import AVFoundation
 import Combine
 import Vision
 
+enum HandDetectionIssue: Equatable { case missingHand, multipleHands, unreadable }
+
 struct CameraSample {
     let evidence: HandEvidence?
     let timestamp: Double
     let generation: UUID
+    var issue: HandDetectionIssue? = nil
 }
 
 enum HandCameraEvent {
@@ -141,7 +144,9 @@ final class HandCameraService: NSObject, AVCaptureVideoDataOutputSampleBufferDel
 
     func captureOutput(_ output: AVCaptureOutput, didOutput buffer: CMSampleBuffer, from connection: AVCaptureConnection) {
         let timestamp = CMSampleBufferGetPresentationTimeStamp(buffer).seconds
-        guard timestamp - lastInference >= 1.0 / 15,
+        // Frame timestamps have rounding jitter: accept the nominal second 30-FPS frame.
+        // Without this tolerance a 15-Hz budget repeatedly slips to every third frame.
+        guard timestamp - lastInference >= 1.0 / 15 - 0.001,
               let pixelBuffer = CMSampleBufferGetImageBuffer(buffer) else { return }
         lastInference = timestamp
         do {
@@ -149,7 +154,10 @@ final class HandCameraService: NSObject, AVCaptureVideoDataOutputSampleBufferDel
             let hands = request.results ?? []
             // Multiple hands are ambiguous: do not choose a patient by screen position.
             guard hands.count == 1, let hand = hands.first else {
-                events.send(.sample(CameraSample(evidence: nil, timestamp: timestamp, generation: generation)))
+                events.send(.sample(CameraSample(
+                    evidence: nil, timestamp: timestamp, generation: generation,
+                    issue: hands.count > 1 ? .multipleHands : .missingHand
+                )))
                 return
             }
             let names: [VNHumanHandPoseObservation.JointName] = [
@@ -176,7 +184,7 @@ final class HandCameraService: NSObject, AVCaptureVideoDataOutputSampleBufferDel
             )
             events.send(.sample(CameraSample(evidence: evidence, timestamp: timestamp, generation: generation)))
         } catch {
-            events.send(.sample(CameraSample(evidence: nil, timestamp: timestamp, generation: generation)))
+            events.send(.sample(CameraSample(evidence: nil, timestamp: timestamp, generation: generation, issue: .unreadable)))
         }
     }
 

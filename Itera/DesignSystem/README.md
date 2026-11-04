@@ -47,4 +47,14 @@ TherapyIconButton in Components/TherapyControls.swift provides a large icon acti
 
 `TherapyMetric` supports compact label spacing for horizontal session headers, retaining its large numeric value and combined accessibility label.
 
-`TherapyAchievementShareSheet` renders a value-driven badge card in memory and exposes the native iPad sharing controller. The shared router owns presentation and completion; the component has no achievement eligibility or persistence logic.
+`TherapyAchievementShareSheet` renders a value-driven badge card in memory and exposes the native iPad sharing controller. The shared router owns presentation and completion; the component has no achievement eligibility or persistence logic. Its completion reports actual sharing errors separately from ordinary cancellation.
+
+`TherapyHoldTimer` provides a detached, accessible countdown in the instruction panel. `TherapyGuideBubble.showsTimerText` can hide its central timer and hold caption while preserving progress and visible-completion acknowledgment; outline-only fingertip rings keep the hand visible.
+
+`TherapyCameraGardenObject` renders transparent orb, revealing leaf/flower, seed, translucent petals and firefly artwork at supplied camera coordinates. It accepts pose, secured state, waiting state and an identified accepted deposit. Bounded deposit flights cancel on pause/background and respect Reduce Motion/calm mode; no view callback scores or advances exercise state. `TherapyGardenFlower` and `TherapyGardenBed` render value-driven history artwork. The camera overlay, anchoring and exercise mapping belong to session presentation; the former separate game panel has been removed.
+
+
+`TherapyFruitHarvest` presents a supplied apple position, ripeness, carrying/waiting state and accepted collection count. It uses the bundled CC0-derived apple render and native basket artwork. Deposit flight is cancellable on pause/background and respects Reduce Motion and the caller's animation preference. It owns no balance geometry, exercise timing, rewards or navigation. Source/license provenance is recorded in ArtSource/KenneyFoodKit.
+
+
+The hook camera style is now `butterfly`: an attributed Twemoji leaf folds with supplied pose, reveals the butterfly only after the target is secured, and releases it on the accepted deposit identity. Opposition uses one isolated Twemoji bean as a seed between two supplied active-finger anchors. `secondTether` is optional and has no anatomical knowledge. Both styles display a pot; seed flight ends at its soil opening. Asset originals/license and derivative details are in ArtSource/TwemojiGarden, with user-visible credits in presentation settings. The component still cannot count or accept movement.

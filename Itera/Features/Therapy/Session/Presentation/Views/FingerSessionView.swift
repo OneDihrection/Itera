@@ -9,6 +9,7 @@ import SwiftUI
 
 struct FingerSessionView: View {
     @ScaledMetric(relativeTo: .body) private var guidanceHeight = 156.0
+    @AppStorage(PracticePreferences.gardenActivities) private var gardenActivities = true
     @AppStorage(PracticePreferences.calmMode) private var calmMode = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(AppDependencies.self) private var dependencies
@@ -20,6 +21,7 @@ struct FingerSessionView: View {
         Group {
             if let model = dependencies.session {
                 session(model)
+                    .environment(\.locale, model.sessionLanguage.locale)
                     .task { await model.start() }
                     .onChange(of: scenePhase) { _, phase in
                         if phase == .active {
@@ -56,13 +58,6 @@ struct FingerSessionView: View {
             VStack(spacing: 14) {
                 header(model)
                 stage(model)
-                    .overlay(alignment: .top) {
-                        if model.waitingForCamera && !model.paused {
-                            TherapyStatus(title: "camera.waiting", symbol: "video.slash")
-                                .background(TherapyPalette.surface, in: Capsule())
-                                .padding(16)
-                        }
-                    }
                 ScrollView {
                     instruction(model)
                 }
@@ -134,14 +129,29 @@ struct FingerSessionView: View {
                 if model.activity.phase == .demonstration {
                     demonstration(model)
                 } else if model.activity.phase == .feedback {
-                    VStack(spacing: 20) {
-                        if !calmMode && !reduceMotion {
-                            TherapyCelebration().id(model.celebrationID).frame(height: 250)
+                    if gardenActivities {
+                        VStack {
+                            Label("garden.setBloom", systemImage: "leaf.fill")
+                                .typography(.headline)
+                                .padding(16)
+                                .background(TherapyPalette.surface, in: Capsule())
+                            if !calmMode && !reduceMotion {
+                                TherapyCelebration().id(model.celebrationID).frame(height: 120)
+                            }
+                            Spacer()
                         }
-                        Text("session.setComplete").typography(.largeTitle)
+                        .padding(20)
+                        .allowsHitTesting(false)
+                    } else {
+                        VStack(spacing: 20) {
+                            if !calmMode && !reduceMotion {
+                                TherapyCelebration().id(model.celebrationID).frame(height: 250)
+                            }
+                            Text("session.setComplete").typography(.largeTitle)
+                        }
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        .background(TherapyPalette.cream)
                     }
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .background(TherapyPalette.cream)
                 } else if model.activity.phase == .rest {
                     rest(model)
                 }
@@ -178,39 +188,44 @@ struct FingerSessionView: View {
 
     private func camera(_ model: FingerSessionViewModel) -> some View {
         GeometryReader { geometry in
-            ZStack(alignment: .topTrailing) {
-                TherapyPalette.cameraBackground
-                HandCameraPreview(camera: model.camera, ready: model.previewReady)
-                    .accessibilityLabel("camera.preview")
-                if let evidence = model.guideEvidence {
-                    FingerLandmarkOverlay(
-                        evidence: evidence,
-                        progress: model.activity.holdElapsed / model.activity.holdDuration,
-                        remaining: model.activity.holdRemaining,
-                        exercise: model.activity.kind,
-                        finger: model.activity.finger,
-                        returning: model.activity.returning,
-                        showsTimer: model.showsGuideTimer,
-                        guiding: model.showsGuideTimer,
-                        completionID: model.activity.holdCompletionID,
-                        onCompletionPresented: model.holdCompletionPresented
-                    )
-                }
-                HStack(alignment: .top) {
-                    Text(LocalizedStringKey(model.routine.side.title)).typography(.headline)
-                        .padding(14).background(TherapyPalette.surface, in: Capsule())
-                    Spacer(minLength: 16)
+            cameraPreview(model)
+                .overlay(alignment: .topTrailing) {
                     if [.baseline, .target, .active].contains(model.activity.phase) {
                         example(model)
-                            .frame(
-                                width: min(250, geometry.size.width * 0.3),
-                                height: min(265, geometry.size.height * 0.8)
-                            )
+                            .frame(width: min(220, geometry.size.width * 0.2),
+                                   height: min(170, geometry.size.height * 0.26))
                             .clipShape(RoundedRectangle(cornerRadius: 24))
+                            .padding(16)
                     }
                 }
-                .padding(20)
+        }
+    }
+
+    private func cameraPreview(_ model: FingerSessionViewModel) -> some View {
+        ZStack(alignment: .topLeading) {
+            TherapyPalette.cameraBackground
+            HandCameraPreview(camera: model.camera, ready: model.previewReady)
+                .accessibilityLabel("camera.preview")
+            if let evidence = model.guideEvidence {
+                FingerLandmarkOverlay(
+                    evidence: evidence,
+                    progress: model.activity.holdElapsed / model.activity.holdDuration,
+                    remaining: model.activity.holdRemaining,
+                    exercise: model.activity.kind,
+                    finger: model.activity.finger,
+                    returning: model.activity.returning,
+                    showsTimer: model.showsGuideTimer,
+                    guiding: model.showsGuideIndicators,
+                    completionID: model.activity.holdCompletionID,
+                    onCompletionPresented: model.holdCompletionPresented
+                )
             }
+            if gardenActivities && [.active, .feedback].contains(model.activity.phase) {
+                FingerCameraGardenOverlay(model: model, animated: !calmMode)
+            }
+            Text(LocalizedStringKey(model.routine.side.title)).typography(.headline)
+                .padding(14).background(TherapyPalette.surface, in: Capsule())
+                .padding(20)
         }
     }
 
@@ -276,24 +291,29 @@ struct FingerSessionView: View {
             VStack(spacing: 14) {
                 HStack(spacing: 20) {
                     VStack(alignment: .leading, spacing: 8) {
-                        Text(LocalizedStringKey(model.instructionKey))
+                        Text(LocalizedStringKey(model.recoveryGuidanceKey ?? model.instructionKey))
                             .typography(size: 36, weight: .bold, relativeTo: .title)
                             .fixedSize(horizontal: false, vertical: true)
-                        if model.activity.phase == .target || model.activity.phase == .active {
+                        if model.recoveryGuidanceKey == nil && (model.activity.phase == .target || model.activity.phase == .active) {
                             Text("guide.holdDuration \(Int(model.activity.holdDuration))")
                                 .typography(.callout)
                         }
                         HStack(spacing: 14) {
-                            if model.activity.kind.isSequential && [.baseline, .target, .active].contains(model.activity.phase) {
+                            if model.recoveryGuidanceKey != nil {
+                                Text("garden.waitingHand").typography(.callout)
+                            } else if model.activity.kind.isSequential && [.baseline, .target, .active].contains(model.activity.phase) {
                                 Text(LocalizedStringKey(model.fingerKey)).typography(.headline)
                             }
-                            if [.baseline, .target, .active].contains(model.activity.phase) && model.trackingReady {
-                                Text(LocalizedStringKey(model.liveFeedbackKey)).typography(.callout)
+                            if model.recoveryGuidanceKey == nil && [.baseline, .target, .active].contains(model.activity.phase) && model.trackingReady {
+                                Text(LocalizedStringKey(gardenActivities ? model.gardenFeedbackKey : model.liveFeedbackKey)).typography(.callout)
                                     .foregroundStyle(TherapyPalette.primary)
                             }
                         }
                     }
                     Spacer(minLength: 12)
+                    TherapyHoldTimer(remaining: model.activity.holdRemaining)
+                        .opacity(model.showsGuideTimer ? 1 : 0)
+                        .accessibilityHidden(!model.showsGuideTimer)
                     Button(action: model.narrate) {
                         Image(systemName: "speaker.wave.2.fill").typography(.title2)
                             .frame(width: 68, height: 68)
@@ -314,11 +334,15 @@ struct FingerSessionView: View {
                     ProgressView(value: model.activity.holdElapsed / model.activity.holdDuration).tint(TherapyPalette.primary)
                         .accessibilityLabel("session.holdProgress")
                 }
-                if let key = model.errorKey {
+                if model.calibrationNeedsHelp {
+                    TherapyButton(title: "action.recalibrate", secondary: true) {
+                        model.retryCalibration()
+                    }
+                } else if let key = model.errorKey {
                     HStack {
                         TherapyError(key: key)
                         TherapyButton(title: "action.retry", secondary: true) {
-                            Task { await model.retryCamera() }
+                            Task { await model.retryRecovery() }
                         }.frame(width: 160)
                     }
                 }

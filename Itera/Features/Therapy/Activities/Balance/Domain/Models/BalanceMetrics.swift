@@ -94,6 +94,8 @@ struct BalanceSnapshot: Equatable {
     var metrics = BalanceMetrics()
     var compensation = TrunkCompensation()
     var overlay: BalanceOverlay?
+    /// Accepted returns, distinct from shoulder-target touches.
+    var deliveredFruit = 0
     var goal = 6
     var holdDuration = 10.0
 }

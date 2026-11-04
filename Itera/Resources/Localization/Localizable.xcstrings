@@ -1,38 +1,6 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
-    "achievement.shareCaption" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "I earned “%@” in Itera. Every small step counts!"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Saya meraih “%@” di Itera. Setiap langkah kecil berarti!"
-          }
-        }
-      }
-    },
-    "achievement.share" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Share badge"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Bagikan lencana"
-          }
-        }
-      }
-    },
     "" : {
 
     },
@@ -262,6 +230,38 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Semua lencana"
+          }
+        }
+      }
+    },
+    "achievement.share" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Share badge"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bagikan lencana"
+          }
+        }
+      }
+    },
+    "achievement.shareCaption" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "I earned “%@” in Itera. Every small step counts!"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Saya meraih “%@” di Itera. Setiap langkah kecil berarti!"
           }
         }
       }
@@ -1123,6 +1123,124 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Selesai"
+          }
+        }
+      }
+    },
+    "balance.fruit.complete" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Your harvest is ready!"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Panenmu sudah terkumpul!"
+          }
+        }
+      }
+    },
+    "balance.fruit.count %lld" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Apples collected: %lld"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Apel terkumpul: %lld"
+          }
+        }
+      }
+    },
+    "balance.fruit.prepare" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Get ready to pick fruit."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bersiap memetik buah."
+          }
+        }
+      }
+    },
+    "balance.fruit.reach" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Reach for the apple."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Raih apelnya."
+          }
+        }
+      }
+    },
+    "balance.fruit.return" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bring the apple to the basket."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bawa apel ke keranjang."
+          }
+        }
+      }
+    },
+    "balance.fruit.ripen" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hold while it ripens."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tahan hingga apel matang."
+          }
+        }
+      }
+    },
+    "balance.fruit.wait" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The apple can wait."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Apelnya menunggu."
           }
         }
       }
@@ -2230,6 +2348,7 @@
       }
     },
     "camera.waiting" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -3524,6 +3643,636 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Jari kelingking"
+          }
+        }
+      }
+    },
+    "garden.activity.extensionSequence" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wake a firefly"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bangunkan kunang-kunang"
+          }
+        }
+      }
+    },
+    "garden.activity.fullFist" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gather light"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kumpulkan cahaya"
+          }
+        }
+      }
+    },
+    "garden.activity.hookFist" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Help a butterfly emerge"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bantu kupu-kupu keluar"
+          }
+        }
+      }
+    },
+    "garden.activity.opposition" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Plant a seed"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tanam benih"
+          }
+        }
+      }
+    },
+    "garden.activity.spreading" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Open the petals"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mekarkan bunga"
+          }
+        }
+      }
+    },
+    "garden.assetAttribution" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Butterfly, leaf and seed artwork: Twemoji by Twitter, Inc. and other contributors, CC BY 4.0. The leaf has been simplified and one bean isolated as a seed."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ilustrasi kupu-kupu, daun, dan biji: Twemoji oleh Twitter, Inc. dan kontributor lainnya, CC BY 4.0. Daun disederhanakan dan satu kacang dipisahkan sebagai biji."
+          }
+        }
+      }
+    },
+    "garden.assetCredits" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Artwork credits"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kredit ilustrasi"
+          }
+        }
+      }
+    },
+    "garden.assetLicense" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "CC BY 4.0 license"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lisensi CC BY 4.0"
+          }
+        }
+      }
+    },
+    "garden.assetSource" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Twemoji source"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sumber Twemoji"
+          }
+        }
+      }
+    },
+    "garden.butterfly.curl" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Curl the leaf into a shelter."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tekuk daun menjadi pelindung."
+          }
+        }
+      }
+    },
+    "garden.butterfly.open" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Open slowly to free the butterfly."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Buka perlahan agar kupu-kupu keluar."
+          }
+        }
+      }
+    },
+    "garden.collected %lld" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Collected: %lld"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Terkumpul: %lld"
+          }
+        }
+      }
+    },
+    "garden.decorations" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Your achievement decorations"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hiasan dari pencapaianmu"
+          }
+        }
+      }
+    },
+    "garden.description" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Each completed set grows a flower. Your saved finger practice grows this garden."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Setiap set selesai menumbuhkan bunga. Kebun ini tumbuh dari latihan jari yang tersimpan."
+          }
+        }
+      }
+    },
+    "garden.empty" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Your first flower starts with one completed set. Take your time."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bunga pertamamu tumbuh setelah satu set selesai. Lakukan sesuai kemampuanmu."
+          }
+        }
+      }
+    },
+    "garden.enabled" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Garden activities"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aktivitas kebun"
+          }
+        }
+      }
+    },
+    "garden.flowerCount %lld" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Flowers: %lld"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bunga: %lld"
+          }
+        }
+      }
+    },
+    "garden.growthSaved" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Your saved practice has grown your garden."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Latihanmu yang tersimpan menambah bunga di kebun."
+          }
+        }
+      }
+    },
+    "garden.move.extensionSequence" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Straighten the named finger to wake the firefly."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Luruskan jari yang disebut untuk membangunkan kunang-kunang."
+          }
+        }
+      }
+    },
+    "garden.move.fullFist" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gather the light as you close your hand."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kumpulkan cahaya saat menggenggam."
+          }
+        }
+      }
+    },
+    "garden.move.hookFist" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Curl a leaf into a shelter."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tekuk daun menjadi pelindung."
+          }
+        }
+      }
+    },
+    "garden.move.opposition" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pick up the seed with the named finger."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ambil benih dengan jari yang disebut."
+          }
+        }
+      }
+    },
+    "garden.move.spreading" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Open the petals as you spread your fingers."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mekarkan bunga saat merenggangkan jari."
+          }
+        }
+      }
+    },
+    "garden.prepare" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Start in your comfortable position."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mulai dari posisi yang nyaman."
+          }
+        }
+      }
+    },
+    "garden.return.extensionSequence" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Relax your finger to release the firefly."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rilekskan jari untuk melepas kunang-kunang."
+          }
+        }
+      }
+    },
+    "garden.return.fullFist" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Release the light as you open your hand."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lepaskan cahaya saat membuka tangan."
+          }
+        }
+      }
+    },
+    "garden.return.hookFist" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Open the leaf to free a butterfly."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Buka daun agar kupu-kupu keluar."
+          }
+        }
+      }
+    },
+    "garden.return.opposition" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Relax your fingers to plant the seed."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rilekskan jari untuk menanam benih."
+          }
+        }
+      }
+    },
+    "garden.return.spreading" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Close the petals as your fingers relax."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tutup bunga saat merapatkan jari."
+          }
+        }
+      }
+    },
+    "garden.secured" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hold complete. Return slowly."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tahan selesai. Kembali perlahan."
+          }
+        }
+      }
+    },
+    "garden.seed.pick" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pick up the seed."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ambil bijinya."
+          }
+        }
+      }
+    },
+    "garden.seed.release" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Open slowly to plant the seed."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Buka perlahan untuk menanam biji."
+          }
+        }
+      }
+    },
+    "garden.sessionGrowth %lld" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "New flowers: %lld"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bunga baru: %lld"
+          }
+        }
+      }
+    },
+    "garden.setBloom" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A flower for your garden!"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bunga baru untuk kebunmu!"
+          }
+        }
+      }
+    },
+    "garden.settingsHelp" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Follow the same exercises with garden activities. Turn off to compare with the simpler view."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ikuti latihan yang sama dengan aktivitas kebun. Matikan untuk mencoba tampilan sederhana."
+          }
+        }
+      }
+    },
+    "garden.title" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "My garden"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kebunku"
+          }
+        }
+      }
+    },
+    "garden.waiting" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Follow the movement guide below."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ikuti panduan gerakan di bawah."
+          }
+        }
+      }
+    },
+    "garden.waitingHand" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Let’s try again slowly."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mari coba lagi perlahan."
           }
         }
       }
@@ -5694,6 +6443,275 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Progres mingguan"
+          }
+        }
+      }
+    },
+    "recovery.calibration" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Let’s measure again with a comfortable movement."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mari ukur ulang dengan gerakan yang nyaman."
+          }
+        }
+      }
+    },
+    "recovery.camera" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The camera is unavailable. Practice is paused. Try again."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kamera belum tersedia. Latihan dijeda. Coba lagi."
+          }
+        }
+      }
+    },
+    "recovery.cameraPermission" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Allow camera access in Settings, then try again."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Izinkan kamera di Pengaturan, lalu coba lagi."
+          }
+        }
+      }
+    },
+    "recovery.checkAgain" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Check again"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Periksa lagi"
+          }
+        }
+      }
+    },
+    "recovery.fingers" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Face your palm toward the camera so the fingertips are visible."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hadapkan telapak ke kamera agar ujung jari terlihat."
+          }
+        }
+      }
+    },
+    "recovery.interrupted" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Practice was interrupted and is paused. Continue when you are ready."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Latihan terhenti dan sudah dijeda. Lanjutkan saat siap."
+          }
+        }
+      }
+    },
+    "recovery.left" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Use your left hand."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gunakan tangan kiri."
+          }
+        }
+      }
+    },
+    "recovery.oneHand" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Show only the hand you are training."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tampilkan satu tangan yang dilatih saja."
+          }
+        }
+      }
+    },
+    "recovery.openSettings" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Open Settings"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Buka Pengaturan"
+          }
+        }
+      }
+    },
+    "recovery.position" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Place your hand inside the camera view."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Posisikan tangan di dalam bingkai kamera."
+          }
+        }
+      }
+    },
+    "recovery.ready" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ready again. Continue when you are ready."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sudah siap kembali. Tekan Lanjutkan saat siap."
+          }
+        }
+      }
+    },
+    "recovery.right" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Use your right hand."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gunakan tangan kanan."
+          }
+        }
+      }
+    },
+    "recovery.sharing" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The badge could not be shared. Try again."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lencana belum berhasil dibagikan. Coba lagi."
+          }
+        }
+      }
+    },
+    "recovery.storage" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Progress has not been saved. Try saving again."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Progres belum tersimpan. Coba simpan lagi."
+          }
+        }
+      }
+    },
+    "recovery.voice" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Voice commands are unavailable. Practice is paused. Try again."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Perintah suara belum tersedia. Latihan dijeda. Coba lagi."
+          }
+        }
+      }
+    },
+    "recovery.voicePermission" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Allow microphone and speech recognition in Settings, then check again."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Izinkan mikrofon dan pengenalan suara di Pengaturan, lalu periksa lagi."
           }
         }
       }
@@ -9269,6 +10287,7 @@
       }
     },
     "voice.useTouch" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {

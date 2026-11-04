@@ -16,6 +16,7 @@ final class PracticeProgressViewModel {
     private(set) var week: [PracticeDay] = []
     private(set) var weekOffset = 0
     private(set) var errorKey: String?
+    private(set) var shareErrorKey: String?
     private(set) var loading = false
     private(set) var acknowledging = false
     @ObservationIgnored private let history: any FingerHistoryReading
@@ -73,6 +74,12 @@ final class PracticeProgressViewModel {
             errorKey = "achievement.storageError"
             return false
         }
+    }
+
+    func clearShareError() { shareErrorKey = nil }
+
+    func sharingCompleted(failed: Bool) {
+        shareErrorKey = failed ? "recovery.sharing" : nil
     }
 
     func award(for badge: PracticeAchievement) -> AchievementAward? {

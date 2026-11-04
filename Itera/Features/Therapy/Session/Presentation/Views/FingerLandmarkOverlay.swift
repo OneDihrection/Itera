@@ -61,7 +61,7 @@ struct FingerLandmarkOverlay: View {
                         label: "", remaining: remaining, progress: progress,
                         active: guiding, reached: completionID != nil,
                         completionID: completionID, onCompletionPresented: onCompletionPresented,
-                        showsTimer: showsTimer, diameter: circle.diameter, outlineOnly: true
+                        showsTimer: showsTimer, showsTimerText: false, diameter: circle.diameter, outlineOnly: true
                     )
                     .position(circle.center)
                 }
@@ -73,7 +73,10 @@ struct FingerLandmarkOverlay: View {
                             active: isActive(index + 1), reached: hasReached(index + 1),
                             completionID: isActive(index + 1) ? completionID : nil,
                             onCompletionPresented: onCompletionPresented,
-                            showsTimer: showsTimer && isActive(index + 1)
+                            showsTimer: showsTimer && isActive(index + 1),
+                            showsTimerText: false,
+                            diameter: isActive(index + 1) ? 108 : 72,
+                            outlineOnly: true
                         )
                         .position(fingertipCircleCenter(index + 1, joint: joint, width: width, height: height, origin: origin, viewport: geometry.size))
                     }

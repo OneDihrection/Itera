@@ -10,6 +10,7 @@ import SwiftUI
 struct BalanceCompletionOverlay: View {
     let metrics: BalanceMetrics
     let goal: Int
+    let collectedFruit: Int
     let holdDuration: Double
     let voiceListening: Bool
     let repeatPractice: () -> Void
@@ -37,6 +38,16 @@ struct BalanceCompletionOverlay: View {
                                 .foregroundStyle(TherapyPalette.muted)
                                 .multilineTextAlignment(.center)
                         }
+
+                        Label {
+                            Text("balance.fruit.count \(Int64(collectedFruit))")
+                        } icon: {
+                            Image("balance-apple")
+                                .resizable()
+                                .scaledToFit()
+                                .frame(width: 48, height: 48)
+                        }
+                        .typography(.headline)
 
                         BalanceSessionSummary(
                             metrics: metrics,

@@ -16,6 +16,7 @@ struct TherapyGuideBubble: View {
     var completionID: UUID? = nil
     var onCompletionPresented: (UUID) -> Void = { _ in }
     var showsTimer = false
+    var showsTimerText = true
     var diameter: CGFloat? = nil
     var outlineOnly = false
     @Environment(\.scenePhase) private var scenePhase
@@ -38,7 +39,7 @@ struct TherapyGuideBubble: View {
         }
         .frame(width: diameter ?? (active ? 108 : 72), height: diameter ?? (active ? 108 : 72))
         .overlay(alignment: .bottom) {
-            if showsTimer {
+            if showsTimer && showsTimerText {
                 Text("guide.hold").typography(.headline)
                     .padding(.horizontal, 8)
                     .background(TherapyPalette.surface, in: Capsule())
@@ -80,7 +81,7 @@ struct TherapyGuideBubble: View {
 
     @ViewBuilder
     private var content: some View {
-        if showsTimer {
+        if showsTimer && showsTimerText {
             VStack(spacing: 0) {
                 Text(displayedRemaining, format: .number.precision(.fractionLength(1)))
                     .typography(size: outlineOnly ? 52 : 32, weight: .bold, relativeTo: .title)
@@ -92,10 +93,35 @@ struct TherapyGuideBubble: View {
             }
             .padding(outlineOnly ? 12 : 0)
             .background(outlineOnly ? TherapyPalette.surface.opacity(0.9) : .clear, in: RoundedRectangle(cornerRadius: 12))
+        } else if showsTimer {
+            EmptyView()
         } else if reached {
             Image(systemName: "checkmark").typography(.title2)
         } else if !label.isEmpty {
             Text(verbatim: label).typography(.title2)
         }
+    }
+}
+
+
+/// A detached hold readout for guidance panels, leaving tracked anatomy unobscured.
+struct TherapyHoldTimer: View {
+    let remaining: Double
+
+    var body: some View {
+        VStack(spacing: 4) {
+            Text("guide.hold").typography(.headline)
+            HStack(alignment: .firstTextBaseline, spacing: 6) {
+                Text(max(0, ceil(remaining * 10) / 10), format: .number.precision(.fractionLength(1)))
+                    .typography(size: 40, weight: .bold, relativeTo: .title)
+                    .monospacedDigit()
+                Text("guide.secondsUnit").typography(.caption)
+            }
+        }
+        .foregroundStyle(TherapyPalette.primary)
+        .padding(14)
+        .background(TherapyPalette.surface, in: RoundedRectangle(cornerRadius: 20))
+        .fixedSize()
+        .accessibilityElement(children: .combine)
     }
 }
