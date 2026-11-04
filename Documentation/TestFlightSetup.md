@@ -307,15 +307,19 @@ Use this path after first-time setup is complete. You do not need to recreate ce
 
 ### 1. Push a release tag
 
-Choose a new version accepted by App Store Connect. For example:
+From a clean Itera checkout, choose a new version accepted by App Store Connect:
 
 ```sh
-git fetch origin
-git switch production
-git pull --ff-only origin production
-git tag -a v1.2.3 -m 'TestFlight 1.2.3'
-git push origin v1.2.3
+./release-testflight.sh v1.2.3
 ```
+
+Commit the script before using it. You need Git and permission to read production and push release tags to origin. No local Xcode, Ruby, or Apple credentials are required to trigger the workflow. Run `./release-testflight.sh --help` for usage.
+
+The script checks your working tree, active Git operations, Git identity, remote access, duplicate tags, production history, and required release files. It switches to production (creating a local tracking branch if necessary), fast-forwards to origin/production, creates an annotated tag, and pushes only that tag. It leaves your checkout on production. Ahead or diverged local production branches require resolution through your normal review process; the script does not merge feature work.
+
+If production is checked out in another worktree, use `git worktree list` to locate it and run the script there. If a tag push fails, the script retains the local tag and prints a recovery command. Check whether the tag already reached origin before retrying. If absent, repair credentials, network, or tag-rule permissions and push that existing tag using the printed command. Do not rerun with another version merely to bypass an uncertain push result, and do not overwrite existing tags.
+
+Success means the release tag was pushed, not that the build or upload finished. Use the printed Actions link to monitor progress.
 
 Open GitHub → Itera → Actions → TestFlight. The workflow:
 
