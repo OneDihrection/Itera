@@ -59,6 +59,7 @@ struct FingerSessionEngine {
     }
 
     mutating func guidanceStarted() { activity.guidanceStarted() }
+    mutating func skipRest() { activity.skipRest() }
     mutating func guidanceCompleted() { activity.guidanceCompleted() }
 
     mutating func observe(_ evidence: HandEvidence, now: Double) {

@@ -7,44 +7,121 @@
 
 import SwiftUI
 
+/// The page shown before starting: a looping demonstration, numbered steps and the targets.
 struct FingerExercisePreviewView: View {
     let exercise: FingerExercise
     @Environment(AppDependencies.self) private var dependencies
     @Environment(NavigationRouter.self) private var router
-    @State private var playing = false
+    @Environment(\.dynamicTypeSize) private var typeSize
+    @State private var starting = false
 
     var body: some View {
-        ScrollView {
-            VStack(spacing: 24) {
-                FingerDemonstrationView(
-                    exercise: exercise, phase: .demonstration,
-                    returning: false, finger: 0,
-                    side: dependencies.home.routine.side, paused: !playing
-                )
-                .frame(height: 360)
-                .frame(maxWidth: 360)
-                .clipShape(RoundedRectangle(cornerRadius: 28))
-                Text(LocalizedStringKey(exercise.detail)).typography(.title2)
-                    .multilineTextAlignment(.center).fixedSize(horizontal: false, vertical: true)
-                TherapyButton(
-                    title: playing ? "action.pause" : "exercise.playExample",
-                    symbol: playing ? "pause.fill" : "play.fill"
-                ) { playing.toggle() }
-                Text(LocalizedStringKey(dependencies.home.routine.side.title))
-                    .typography(.body).foregroundStyle(TherapyPalette.muted)
+        content
+            .scenePadding(.horizontal)
+            .padding(.vertical, 16)
+            .foregroundStyle(TherapyPalette.ink)
+            .background(TherapyPalette.canvas)
+            .navigationTitle(LocalizedStringKey(exercise.title))
+            .navigationBarTitleDisplayMode(.inline)
+    }
+
+    @ViewBuilder
+    private var content: some View {
+        if typeSize.isAccessibilitySize {
+            ScrollView {
+                VStack(spacing: 28) {
+                    demonstration.frame(height: 420)
+                    details
+                }
             }
-            .padding(28)
-        }
-        .background(TherapyPalette.cream)
-        .navigationTitle(LocalizedStringKey(exercise.title))
-        .navigationBarTitleDisplayMode(.inline)
-        .toolbar {
-            ToolbarItem(placement: .confirmationAction) {
-                Button("action.done") { router.dismissSheet() }
-                    .typography(.headline).frame(minHeight: 44)
+        } else {
+            HStack(alignment: .top, spacing: 44) {
+                demonstration
+                ScrollView {
+                    details
+                }
+                .frame(maxWidth: .infinity)
             }
         }
-        .presentationDetents([.large])
-        .presentationDragIndicator(.visible)
+    }
+
+    // MARK: - Sections
+
+    private var demonstration: some View {
+        TherapyMediaPanel {
+            FingerDemonstrationView(
+                exercise: exercise,
+                phase: .demonstration,
+                returning: false,
+                finger: 0,
+                side: dependencies.home.routine.side,
+                paused: false
+            )
+            .background(TherapyPalette.mediaBackground)
+            .clipShape(RoundedRectangle(cornerRadius: 20))
+            .accessibilityLabel("session.example")
+        }
+        .frame(maxWidth: .infinity)
+        .frame(minHeight: 420)
+    }
+
+    private var details: some View {
+        VStack(alignment: .leading, spacing: 18) {
+            Text("exercise.instructions")
+                .typography(size: 24, weight: .semiBold, relativeTo: .title2)
+                .accessibilityAddTraits(.isHeader)
+            TherapyNumberedSteps(steps: exercise.steps.map { LocalizedStringKey($0) })
+
+            Text("exercise.target")
+                .typography(size: 24, weight: .semiBold, relativeTo: .title2)
+                .accessibilityAddTraits(.isHeader)
+                .padding(.top, 12)
+            targets
+
+            if let error = dependencies.home.errorKey {
+                TherapyError(key: error)
+            }
+
+            TherapyButton(title: "exercise.start", disabled: starting, pill: true, action: start)
+                .padding(.top, 18)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private var targets: some View {
+        let layout = typeSize.isAccessibilitySize
+            ? AnyLayout(VStackLayout(spacing: 16))
+            : AnyLayout(HStackLayout(spacing: 16))
+
+        return layout {
+            TherapyTargetTile(value: dependencies.home.routine.sets, unit: "exercise.setsUnit")
+            TherapyTargetTile(
+                value: dependencies.home.routine.repetitions,
+                unit: "exercise.repetitionsUnit",
+                suffix: "x"
+            )
+        }
+    }
+
+    // MARK: - Actions
+
+    /// Starts today's routine. The routine always runs its exercises in their saved order.
+    private func start() {
+        guard !starting else {
+            return
+        }
+
+        starting = true
+
+        Task {
+            defer { starting = false }
+
+            guard await dependencies.home.saveRoutine() else {
+                return
+            }
+
+            dependencies.prepareSession()
+            router.presentFullScreenCover(.fingerSession)
+        }
     }
 }

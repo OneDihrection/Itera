@@ -326,7 +326,13 @@ final class TherapySessionViewModel {
                     text = String(localized: String.LocalizationValue(kindKey), bundle: sessionLanguage.resourceBundle, locale: sessionLocale) + ". "
                         + String(localized: String.LocalizationValue(sideKey), bundle: sessionLanguage.resourceBundle, locale: sessionLocale) + ". " + text
                 }
-                audio.speak(id: id, text: text)
+                // A single-key sentence can use its bundled recording; numbers and the
+                // combined exercise/side/guidance cue keep the system voice.
+                if Int(key) == nil && key != "session.guidance" {
+                    audio.speak(id: id, key: key)
+                } else {
+                    audio.speak(id: id, text: text)
+                }
             case .audio(let id, let cue): audio.play(id: id, cue: cue)
             case .cancelSpeech: audio.cancelSpeech()
             case .checkpoint, .finalize: pendingSaves.append(effect)

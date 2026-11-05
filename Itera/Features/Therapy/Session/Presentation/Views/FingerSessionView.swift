@@ -8,13 +8,9 @@
 import SwiftUI
 
 struct FingerSessionView: View {
-    @ScaledMetric(relativeTo: .body) private var guidanceHeight = 156.0
-    @AppStorage(PracticePreferences.calmMode) private var calmMode = false
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(AppDependencies.self) private var dependencies
     @Environment(NavigationRouter.self) private var router
     @Environment(\.scenePhase) private var scenePhase
-    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     var body: some View {
         Group {
@@ -52,20 +48,25 @@ struct FingerSessionView: View {
         .interactiveDismissDisabled()
     }
 
+    // MARK: - Exercise layout
+
+    /// Header, one large instruction, then the camera beside the animation and repetition panels.
     private func session(_ model: FingerSessionViewModel) -> some View {
-        GeometryReader { geometry in
-            VStack(spacing: 14) {
-                header(model)
-                stage(model)
-                ScrollView {
-                    instruction(model)
-                }
-                .frame(height: min(guidanceHeight, geometry.size.height * 0.25))
-            }
-            .padding(18)
-            .background(TherapyPalette.cream)
+        VStack(spacing: 14) {
+            header(model)
+            instructionTitle(model)
+            mainRow(model)
         }
-        .accessibilityHidden(model.activity.phase == .countdown || model.paused)
+        .padding(.horizontal, 32)
+        .padding(.top, 12)
+        .padding(.bottom, 32)
+        .foregroundStyle(TherapyPalette.ink)
+        .background(TherapyPalette.canvas)
+        .accessibilityHidden(coversSession(model) || model.activity.phase == .countdown || model.paused)
+        .overlay {
+            phasePage(model)
+                .ignoresSafeArea()
+        }
         .overlay {
             if model.activity.phase == .countdown {
                 TherapyCountdown(remaining: model.activity.remaining, total: 3,
@@ -76,117 +77,129 @@ struct FingerSessionView: View {
         .statusBarHidden(true)
     }
 
+    /// Close (pause) on the leading side; repeat-instruction and voice on the trailing side.
     private func header(_ model: FingerSessionViewModel) -> some View {
-        let layout = dynamicTypeSize.isAccessibilitySize
-            ? AnyLayout(VStackLayout(spacing: 8))
-            : AnyLayout(HStackLayout(spacing: 24))
+        FingerSessionCloseHeader(
+            model: model,
+            title: "session.setTitle \(model.activity.set) \(model.exerciseTitle)"
+        )
+        .overlay(alignment: .trailing) {
+            HStack(spacing: 4) {
+                TherapyIconButton(title: "action.repeat", symbol: "speaker.wave.2.fill", size: 44, circle: true) {
+                    model.narrate()
+                }
+                TherapyIconButton(
+                    title: model.voiceEnabled ? "voice.on" : "voice.off",
+                    symbol: model.voiceEnabled ? "mic.fill" : "mic.slash",
+                    size: 44,
+                    circle: true
+                ) {
+                    Task { await model.setVoice(!model.voiceEnabled) }
+                }
+            }
+        }
+    }
 
-        return layout {
-            sessionTitle(model)
-                .frame(maxWidth: .infinity, alignment: .leading)
-            HStack(spacing: 20) {
-                TherapyMetric(title: "session.duration", value: model.timeText, compact: true)
-                TherapyMetric(
-                    title: "session.set",
-                    value: "\(model.activity.set)/\(model.routine.sets)",
-                    compact: true
+    private func instructionTitle(_ model: FingerSessionViewModel) -> some View {
+        VStack(spacing: 6) {
+            Text(LocalizedStringKey(model.instructionKey))
+                .typography(size: 36, weight: .semiBold, relativeTo: .title)
+                .lineLimit(2)
+                .minimumScaleFactor(0.7)
+            if model.activity.kind.isSequential && isTracking(model) {
+                Text(LocalizedStringKey(model.fingerKey))
+                    .typography(size: 22, weight: .medium, relativeTo: .title3)
+                    .foregroundStyle(TherapyPalette.muted)
+            }
+        }
+        .multilineTextAlignment(.center)
+        .frame(maxWidth: .infinity)
+        .accessibilityElement(children: .combine)
+        .accessibilityAddTraits(.updatesFrequently)
+    }
+
+    private func mainRow(_ model: FingerSessionViewModel) -> some View {
+        HStack(spacing: 18) {
+            camera(model)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+
+            VStack(spacing: 18) {
+                TherapyMediaPanel(title: "session.animation", padding: 18) {
+                    example(model)
+                        .clipShape(RoundedRectangle(cornerRadius: 16))
+                }
+                TherapyRepetitionPanel(
+                    title: "session.repetitionsTitle",
+                    unit: "session.repetitionsUnit",
+                    completed: model.activity.repetitions,
+                    total: model.routine.repetitions
                 )
-                TherapyMetric(
-                    title: "session.repetitions",
-                    value: "\(model.activity.repetitions)/\(model.routine.repetitions)",
-                    compact: true
-                )
-                pauseButton(model)
             }
-            .frame(maxWidth: .infinity)
-        }
-        .foregroundStyle(TherapyPalette.ink)
-    }
-
-    private func sessionTitle(_ model: FingerSessionViewModel) -> some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text(LocalizedStringKey(model.stageKey))
-                .typography(.footnote)
-                .foregroundStyle(TherapyPalette.primary)
-            Text(LocalizedStringKey(model.activity.kind.title))
-                .typography(.title)
-                .lineLimit(2, reservesSpace: true)
+            .frame(width: 290)
         }
     }
 
-    private func pauseButton(_ model: FingerSessionViewModel) -> some View {
-        TherapyIconButton(title: "action.pause", symbol: "pause.fill", size: 92) {
-            model.handleCommand(.pause)
-        }
+    private func isTracking(_ model: FingerSessionViewModel) -> Bool {
+        [.baseline, .target, .active].contains(model.activity.phase)
     }
 
-    private func stage(_ model: FingerSessionViewModel) -> some View {
-        // Overlays must not impose a new minimum size on the persistent camera viewport.
-        camera(model)
-            .accessibilityHidden([.demonstration, .feedback, .rest].contains(model.activity.phase))
-            .overlay {
-                if model.activity.phase == .demonstration {
-                    demonstration(model)
-                } else if model.activity.phase == .feedback {
-                    VStack(spacing: 20) {
-                        if !calmMode && !reduceMotion {
-                            TherapyCelebration().id(model.celebrationID).frame(height: 250)
-                        }
-                        Text("session.setComplete").typography(.largeTitle)
-                    }
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .background(TherapyPalette.cream)
-                } else if model.activity.phase == .rest {
-                    rest(model)
-                }
+    // MARK: - Full-screen pages
+
+    /// Demonstration, set completion and rest cover the whole session; the camera keeps
+    /// running beneath, as the system design requires.
+    @ViewBuilder
+    private func phasePage(_ model: FingerSessionViewModel) -> some View {
+        switch model.activity.phase {
+        case .demonstration:
+            demonstration(model)
+        case .feedback:
+            FingerSetCompletePage(model: model)
+        case .rest:
+            if model.showsUpcomingPreview {
+                FingerUpcomingPage(model: model)
+            } else {
+                FingerRestPage(model: model)
             }
-            .clipShape(RoundedRectangle(cornerRadius: 30))
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-    }
-
-    private func rest(_ model: FingerSessionViewModel) -> some View {
-        GeometryReader { geometry in
-            ZStack {
-                TherapyPalette.cream
-                if !calmMode {
-                    TherapyRestBackdrop(paused: model.paused || model.waitingForCamera)
-                }
-                ScrollView {
-                    VStack(spacing: 20) {
-                        Text("stage.rest").typography(.title)
-                        ZStack {
-                            TherapyProgressRing(progress: model.activity.remaining / Double(model.routine.restSeconds))
-                            Text(verbatim: String(model.countdown)).typography(size: 100, weight: .bold)
-                                .monospacedDigit().contentTransition(.numericText(countsDown: true))
-                                .lineLimit(1).minimumScaleFactor(0.4)
-                        }
-                        .frame(width: min(250, geometry.size.height * 0.52), height: min(250, geometry.size.height * 0.52))
-                        Text("rest.reassurance").typography(.body).foregroundStyle(TherapyPalette.muted)
-                    }
-                    .padding(28)
-                    .frame(maxWidth: .infinity, minHeight: geometry.size.height)
-                }
-            }
+        default:
+            EmptyView()
         }
     }
 
+    private func coversSession(_ model: FingerSessionViewModel) -> Bool {
+        [.demonstration, .feedback, .rest].contains(model.activity.phase)
+    }
+
+    // MARK: - Camera
+
+    /// The live preview with the existing fingertip bubbles and their hold timer, a live cue
+    /// on top, and recovery actions at the bottom when needed.
     private func camera(_ model: FingerSessionViewModel) -> some View {
-        GeometryReader { geometry in
-            cameraPreview(model)
-                .overlay(alignment: .topTrailing) {
-                    if [.baseline, .target, .active].contains(model.activity.phase) {
-                        example(model)
-                            .frame(width: min(220, geometry.size.width * 0.2),
-                                   height: min(170, geometry.size.height * 0.26))
-                            .clipShape(RoundedRectangle(cornerRadius: 24))
-                            .padding(16)
-                    }
+        cameraPreview(model)
+            .clipShape(RoundedRectangle(cornerRadius: 34))
+            .overlay(alignment: .top) {
+                if let cue = liveCue(model) {
+                    TherapyFeedbackPill(text: LocalizedStringKey(cue))
+                        .padding(.top, 22)
+                        .padding(.horizontal, 22)
                 }
+            }
+            .overlay(alignment: .bottom) {
+                recovery(model)
+                    .padding(22)
+            }
+    }
+
+    /// Recovery guidance takes priority; otherwise the live hold/position feedback.
+    private func liveCue(_ model: FingerSessionViewModel) -> String? {
+        guard isTracking(model) else {
+            return nil
         }
+
+        return model.recoveryGuidanceKey ?? model.liveFeedbackKey
     }
 
     private func cameraPreview(_ model: FingerSessionViewModel) -> some View {
-        ZStack(alignment: .topLeading) {
+        ZStack(alignment: .bottomLeading) {
             TherapyPalette.cameraBackground
             HandCameraPreview(camera: model.camera, ready: model.previewReady)
                 .accessibilityLabel("camera.preview")
@@ -204,9 +217,24 @@ struct FingerSessionView: View {
                     onCompletionPresented: model.holdCompletionPresented
                 )
             }
-            Text(LocalizedStringKey(model.routine.side.title)).typography(.headline)
-                .padding(14).background(TherapyPalette.surface, in: Capsule())
-                .padding(20)
+        }
+    }
+
+    @ViewBuilder
+    private func recovery(_ model: FingerSessionViewModel) -> some View {
+        if model.calibrationNeedsHelp {
+            TherapyButton(title: "action.recalibrate", pill: true) {
+                model.retryCalibration()
+            }
+            .frame(maxWidth: 320)
+        } else if let key = model.errorKey {
+            HStack(spacing: 12) {
+                TherapyError(key: key)
+                TherapyButton(title: "action.retry", pill: true) {
+                    Task { await model.retryRecovery() }
+                }
+                .frame(width: 180)
+            }
         }
     }
 
@@ -220,43 +248,59 @@ struct FingerSessionView: View {
         .accessibilityLabel("session.example")
     }
 
+    // MARK: - Demonstration
+
     private func demonstration(_ model: FingerSessionViewModel) -> some View {
-        HStack(spacing: 30) {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 28) {
-                    Text(LocalizedStringKey(model.instructionKey))
-                        .typography(size: 42, weight: .bold, relativeTo: .title)
-                    Text("demo.followComfortably").typography(.body)
-                        .foregroundStyle(TherapyPalette.muted)
-                    sessionControls(model)
-                }.frame(maxWidth: .infinity, alignment: .leading)
-            }.frame(maxWidth: .infinity)
-            example(model).frame(maxWidth: .infinity, maxHeight: .infinity)
-                .overlay(alignment: .bottomLeading) {
-                    TherapyMetric(title: "session.demoTime", value: model.demonstrationTimeText)
-                        .frame(width: 160)
-                        .padding(18)
-                        .background(TherapyPalette.surface, in: RoundedRectangle(cornerRadius: 22))
-                        .padding(18)
+        VStack(spacing: 0) {
+            FingerSessionCloseHeader(model: model, title: LocalizedStringKey(model.activity.kind.title))
+
+            HStack(spacing: 40) {
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 24) {
+                        Text(LocalizedStringKey(model.instructionKey))
+                            .typography(size: 40, weight: .bold, relativeTo: .title)
+                        Text("demo.followComfortably")
+                            .typography(size: 22, weight: .regular, relativeTo: .body)
+                            .foregroundStyle(TherapyPalette.muted)
+                        sessionControls(model)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
                 }
-                .clipShape(RoundedRectangle(cornerRadius: 28))
+                .frame(maxWidth: .infinity)
+
+                TherapyMediaPanel(padding: 14) {
+                    example(model)
+                        .clipShape(RoundedRectangle(cornerRadius: 18))
+                        .overlay(alignment: .bottomLeading) {
+                            TherapyMetric(title: "session.demoTime", value: model.demonstrationTimeText)
+                                .frame(width: 160)
+                                .padding(16)
+                                .background(TherapyPalette.canvas, in: RoundedRectangle(cornerRadius: 20))
+                                .padding(16)
+                        }
+                }
+                .frame(maxWidth: .infinity)
+            }
+            .padding(.top, 16)
         }
-        .padding(28)
-        .background(TherapyPalette.cream)
+        .foregroundStyle(TherapyPalette.ink)
+        .padding(40)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(TherapyPalette.canvas)
     }
 
     private func sessionControls(_ model: FingerSessionViewModel) -> some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack(spacing: 16) {
-                TherapyButton(title: "action.repeat", symbol: "speaker.wave.2.fill", secondary: true, action: model.narrate)
+                TherapyButton(title: "action.repeat", symbol: "speaker.wave.2.fill", secondary: true, pill: true, action: model.narrate)
                 TherapyButton(title: model.voiceEnabled ? "voice.on" : "voice.off",
-                              symbol: model.voiceEnabled ? "mic.fill" : "mic.slash", secondary: true) {
+                              symbol: model.voiceEnabled ? "mic.fill" : "mic.slash", secondary: true, pill: true) {
                     Task { await model.setVoice(!model.voiceEnabled) }
                 }
             }
             if let key = model.errorKey {
                 TherapyError(key: key)
-                TherapyButton(title: "action.retry", secondary: true) {
+                TherapyButton(title: "action.retry", secondary: true, pill: true) {
                     Task {
                         await model.retryCamera()
                         await model.saveCheckpoint()
@@ -265,70 +309,4 @@ struct FingerSessionView: View {
             }
         }
     }
-
-    @ViewBuilder
-    private func instruction(_ model: FingerSessionViewModel) -> some View {
-        if model.activity.phase != .demonstration {
-            VStack(spacing: 14) {
-                HStack(spacing: 20) {
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text(LocalizedStringKey(model.recoveryGuidanceKey ?? model.instructionKey))
-                            .typography(size: 36, weight: .bold, relativeTo: .title)
-                            .fixedSize(horizontal: false, vertical: true)
-                        if model.recoveryGuidanceKey == nil && (model.activity.phase == .target || model.activity.phase == .active) {
-                            Text("guide.holdDuration \(Int(model.activity.holdDuration))")
-                                .typography(.callout)
-                        }
-                        HStack(spacing: 14) {
-                            if model.recoveryGuidanceKey != nil {
-                                Text("recovery.tryAgainSlowly").typography(.callout)
-                            } else if model.activity.kind.isSequential && [.baseline, .target, .active].contains(model.activity.phase) {
-                                Text(LocalizedStringKey(model.fingerKey)).typography(.headline)
-                            }
-                            if model.recoveryGuidanceKey == nil && [.baseline, .target, .active].contains(model.activity.phase) && model.trackingReady {
-                                Text(LocalizedStringKey(model.liveFeedbackKey)).typography(.callout)
-                                    .foregroundStyle(TherapyPalette.primary)
-                            }
-                        }
-                    }
-                    Spacer(minLength: 12)
-                    Button(action: model.narrate) {
-                        Image(systemName: "speaker.wave.2.fill").typography(.title2)
-                            .frame(width: 68, height: 68)
-                            .background(TherapyPalette.surface, in: Circle())
-                    }
-                    .buttonStyle(TherapySoundButtonStyle()).accessibilityLabel("action.repeat")
-                    Button {
-                        Task { await model.setVoice(!model.voiceEnabled) }
-                    } label: {
-                        Image(systemName: model.voiceEnabled ? "mic.fill" : "mic.slash")
-                            .typography(.title2).frame(width: 68, height: 68)
-                            .background(TherapyPalette.surface, in: Circle())
-                    }
-                    .buttonStyle(TherapySoundButtonStyle())
-                    .accessibilityLabel(model.voiceEnabled ? "voice.on" : "voice.off")
-                }
-                if [.baseline, .target, .active].contains(model.activity.phase) {
-                    ProgressView(value: model.activity.holdElapsed / model.activity.holdDuration).tint(TherapyPalette.primary)
-                        .accessibilityLabel("session.holdProgress")
-                }
-                if model.calibrationNeedsHelp {
-                    TherapyButton(title: "action.recalibrate", secondary: true) {
-                        model.retryCalibration()
-                    }
-                } else if let key = model.errorKey {
-                    HStack {
-                        TherapyError(key: key)
-                        TherapyButton(title: "action.retry", secondary: true) {
-                            Task { await model.retryRecovery() }
-                        }.frame(width: 160)
-                    }
-                }
-            }
-            .foregroundStyle(TherapyPalette.ink)
-            .padding(22).frame(maxWidth: .infinity, alignment: .leading)
-            .background(TherapyPalette.secondary, in: RoundedRectangle(cornerRadius: 28))
-        }
-    }
-
 }

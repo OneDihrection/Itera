@@ -41,7 +41,8 @@ private struct RouterViewModifier: ViewModifier {
             .tabItem { Label("tab.reports", systemImage: "chart.bar.xaxis") }
             .tag(AppTab.reports)
         }
-        .tint(TherapyPalette.green)
+        // The system tab bar sits at the top on iPadOS 18 and at the bottom on iPadOS 17.
+        .tint(TherapyPalette.action)
         .modifier(ModalStackModifier(index: 0, isCover: false))
         .modifier(ModalStackModifier(index: 0, isCover: true))
     }

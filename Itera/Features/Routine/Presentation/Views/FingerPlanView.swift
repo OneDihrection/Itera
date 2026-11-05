@@ -74,7 +74,7 @@ struct FingerPlanView: View {
                     color: TherapyPalette.illustrationBackground(at: index),
                     mirrored: dependencies.home.routine.side == .left, number: index + 1
                 ) {
-                    router.presentSheet(.exercisePreview(exercise))
+                    router.push(.exercisePreview(exercise))
                 }
             }
         }

@@ -18,6 +18,11 @@ enum FingerExercise: String, CaseIterable, Identifiable {
     var id: String { rawValue }
     var title: String { "exercise." + rawValue }
     var detail: String { "detail." + rawValue }
+    /// Localization keys for the numbered instructions shown before starting.
+    var steps: [String] {
+        (1...stepCount).map { "steps." + rawValue + "." + String($0) }
+    }
+    private var stepCount: Int { self == .opposition ? 5 : 4 }
     var symbol: String {
         switch self {
         case .fullFist: return "hand.raised.fill"

@@ -39,6 +39,23 @@ final class PracticeProgressViewModel {
         return PracticeAchievement.catalog.first { !ids.contains($0.id) }
     }
 
+    /// The next session goal still to earn, shown as the current challenge.
+    var sessionChallenge: PracticeAchievement? {
+        let earned = Set(awards.map(\.id))
+        return PracticeAchievement.catalog.first { $0.family == .sessions && !earned.contains($0.id) }
+    }
+
+    /// The most recently earned badge and its award.
+    var latestAward: (badge: PracticeAchievement, award: AchievementAward)? {
+        awards
+            .sorted { $0.earned > $1.earned }
+            .lazy
+            .compactMap { award in
+                PracticeAchievement.catalog.first { $0.id == award.id }.map { ($0, award) }
+            }
+            .first
+    }
+
     func refresh() async {
         guard !loading else {
             return
@@ -88,10 +105,10 @@ final class PracticeProgressViewModel {
 
     func title(for badge: PracticeAchievement) -> String {
         if let movement = badge.movement {
-            return String(localized: String.LocalizationValue(movement.title))
+            return String(localized: String.LocalizationValue(movement.title), bundle: AppLanguage.selected.resourceBundle)
         }
         return String.localizedStringWithFormat(
-            String(localized: String.LocalizationValue("achievement.title." + badge.family.rawValue)),
+            String(localized: String.LocalizationValue("achievement.title." + badge.family.rawValue), bundle: AppLanguage.selected.resourceBundle),
             Int64(badge.target)
         )
     }

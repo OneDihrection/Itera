@@ -122,6 +122,16 @@ struct FingerActivity {
         breakEvidence()
     }
 
+    /// Ends the rest early. The next set still begins with its countdown, and the next
+    /// exercise still begins with its own setup; only the waiting time is shortened.
+    mutating func skipRest() {
+        guard phase == .rest else {
+            return
+        }
+
+        remaining = 0
+    }
+
     mutating func guidanceStarted() {
         narrationFinished = false
     }

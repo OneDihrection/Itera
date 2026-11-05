@@ -30,6 +30,7 @@ enum AppRoute: Hashable {
     case fingerPause
     case fingerSession
     case reflection
+    case sessionComplete
     case practicePreferences
     case routineSettings
     case exercisePreview(FingerExercise)

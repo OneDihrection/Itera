@@ -103,7 +103,7 @@ struct FingerHomeView: View {
                     color: TherapyPalette.illustrationBackground(at: index),
                     mirrored: dependencies.home.routine.side == .left
                 ) {
-                    router.presentSheet(.exercisePreview(exercise))
+                    router.push(.exercisePreview(exercise))
                 }
             }
         }

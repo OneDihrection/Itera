@@ -26,7 +26,7 @@ Components/TherapyFeedback.swift owns value-driven progress rings, a timer-only 
 
 Components/TherapyProgressArtwork.swift supplies value-driven medallions and native Charts visuals without history/achievement logic. Components/TherapyButtonFeedback.swift supplies a primitive button style whose activation calls an injected environment feedback action, then the original action. The composition root injects the sole audio owner's click method. Controls retain native disabled/activation behavior.
 
-TherapyIconButton in Components/TherapyControls.swift provides a large icon action with an explicit localized accessibility label. Components/TherapyRestBackdrop.swift owns only decorative garden motion, taking a paused value and respecting Reduce Motion and scene activity; it never changes rest duration or session state.
+TherapyIconButton in Components/TherapyControls.swift provides a large icon action with an explicit localized accessibility label.
 
 ## Session guidance
 
@@ -47,4 +47,20 @@ TherapyIconButton in Components/TherapyControls.swift provides a large icon acti
 `TherapyMetric` supports compact label spacing for horizontal session headers, retaining its large numeric value and combined accessibility label.
 
 `TherapyAchievementShareSheet` renders a value-driven badge card in memory and exposes the native iPad sharing controller. The shared router owns presentation and completion; the component has no achievement eligibility or persistence logic. Its completion reports actual sharing errors separately from ordinary cancellation.
+
+## Monochrome pages
+
+The home, exercise start, session pages and progress page use a monochrome look: a white `canvas`, black `heroCard` surfaces with `onHero` text, grey `panel` fills, thin `outline` borders and dark `action` pills. `success`, `setDone`/`setDoneFill`, `restRing`/`restTrack` and `challengeFill`/`challengeInk` cover the few coloured states. All are light/dark adaptive tokens in `TherapyPalette`, mapped to system semantic colors (`label`, `systemBackground`, `secondarySystemBackground`, `separator`, `systemGray5`, `systemGreen`, `systemBlue`) wherever one fits.
+
+Existing controls gained compatible options instead of copies: `TherapyButton(pill:)` draws the dark pill (grey when `secondary`), `TherapyIconButton(circle:)` draws the black back/close circle with a 64-point touch target, `TherapyCard(outlined:padding:)` draws a bordered white card, and `TherapyProgressRing(tint:track:lineCap:)` recolours the ring. `TherapyTextButton` is a quiet text action for secondary choices beneath primary buttons.
+
+Components/TherapyPageLayout.swift owns `TherapyPageHeader` (centered title with a leading close circle, for full-screen session pages that have no navigation bar), `TherapyHeroCard`, `TherapyProgramCard` and `TherapyMediaPanel`.
+
+Components/TherapySessionStatus.swift owns `TherapyCompletionMark`, `TherapyTargetTile`, `TherapyNumberedSteps`, `TherapySetRow` (done, next or upcoming) and `TherapyRestCountdown`. They display supplied values only; set progress, rest timing and skipping stay in the session.
+
+Components/TherapyProgressSummary.swift owns `TherapyWeekSummary` (headline band plus seven day cells), `TherapyChallengeCard` (segmented up to ten steps, continuous beyond) and `TherapyAchievementRow`. Callers pass formatted text; no history or achievement rules live here.
+
+### Human Interface Guidelines choices
+
+Top-level navigation uses the system `TabView` (a top tab bar on iPadOS 18, a bottom bar on iPadOS 17), never a custom segmented control. Root and pushed pages use the system navigation bar, large titles and the system back button; Settings lives in the toolbar. Only full-screen session pages, which have no navigation bar, draw `TherapyPageHeader`'s close circle. Secondary pills use `ink` text on `actionMuted` for at least 4.5:1 contrast. Destructive pills (`TherapyButton(destructive:pill:)`) are system red and follow an explicit confirmation step. Custom text sizes scale with Dynamic Type through `relativeTo:`, and every control keeps at least a 44-point touch target.
 

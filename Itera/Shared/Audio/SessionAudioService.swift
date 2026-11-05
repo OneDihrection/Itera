@@ -62,6 +62,8 @@ final class SessionAudioService: NSObject, VoiceReadinessProviding, AVSpeechSynt
     private var voice: AVSpeechSynthesisVoice?
     private var tapInstalled = false
     private var clips: [String: PreparedAudioClip] = [:]
+    /// Recorded narration loaded on first use; see `NarrationClips`.
+    private var narrationClips: [String: PreparedAudioClip] = [:]
     private var activeClip: PreparedAudioClip?
     private var clipID: UUID?
     private var clipWatchdog: Task<Void, Never>?
@@ -96,7 +98,7 @@ final class SessionAudioService: NSObject, VoiceReadinessProviding, AVSpeechSynt
     func prepare() {
         language = AppLanguage.selected
         synthesisLocale = language.speechIdentifier
-        voice = AVSpeechSynthesisVoice(language: synthesisLocale)
+        voice = NarrationVoice.best(for: synthesisLocale)
         clips = [:]
         let language = synthesisLocale.hasPrefix("id") ? "id" : "en"
         for number in 1...100 {
@@ -112,10 +114,8 @@ final class SessionAudioService: NSObject, VoiceReadinessProviding, AVSpeechSynt
             events.send(.completed(id, false))
             return
         }
-        let utterance = AVSpeechUtterance(string: text)
-        utterance.voice = voice
+        let utterance = NarrationVoice.utterance(text, voice: voice)
         utterance.volume = 1
-        utterance.rate = AVSpeechUtteranceDefaultSpeechRate * 0.8
         utteranceIDs[ObjectIdentifier(utterance)] = id
         synthesizer.speak(utterance)
     }
@@ -163,18 +163,18 @@ final class SessionAudioService: NSObject, VoiceReadinessProviding, AVSpeechSynt
                 name = "count-\(language)-\(number)"
                 timeout = 20
             default:
-                speak(id: id, text: String(localized: String.LocalizationValue(key), bundle: language.resourceBundle, locale: language.locale))
+                speak(id: id, key: key)
                 return
             }
             playClip(name, id: id, timeout: timeout) { [weak self] in
-                self?.speak(id: id, text: String(localized: String.LocalizationValue(key), bundle: self?.language.resourceBundle ?? AppLanguage.selected.resourceBundle, locale: self?.language.locale ?? AppLanguage.selected.locale))
+                self?.speak(id: id, key: key)
             }
         case .closing(let completed):
             cancelSpeech()
             let key = completed ? "parity.closingComplete" : "parity.closingPartial"
             let speakClosing = { [weak self] in
                 guard let self else { return }
-                self.speak(id: id, text: String(localized: String.LocalizationValue(key), bundle: self.language.resourceBundle, locale: self.language.locale))
+                self.speak(id: id, key: key)
                 self.closingWatchdog = Task { [weak self] in
                     do { try await Task.sleep(for: .seconds(20)) } catch { return }
                     self?.cancelSpeech()
@@ -186,6 +186,71 @@ final class SessionAudioService: NSObject, VoiceReadinessProviding, AVSpeechSynt
                 speakClosing()
             }
         }
+    }
+
+    // MARK: - Recorded narration
+
+    /// Plays the bundled recording of a String Catalog key, or speaks its text when there is
+    /// none or it fails. Completion is reported once, like ordinary speech.
+    func speak(id: UUID, key: String) {
+        let text = String(localized: String.LocalizationValue(key), bundle: language.resourceBundle, locale: language.locale)
+
+        guard let clip = narrationClip(for: key) else {
+            speak(id: id, text: text)
+            return
+        }
+
+        cancelSpeech()
+        activeClip = clip
+        clipID = id
+
+        let started = clip.play(id: id) { [weak self] id, success in
+            guard let self, self.clipID == id else {
+                return
+            }
+
+            self.clipID = nil
+            self.activeClip = nil
+            self.clipWatchdog?.cancel()
+            self.clipWatchdog = nil
+
+            if success {
+                self.events.send(.completed(id, true))
+            } else {
+                self.speak(id: id, text: text)
+            }
+        }
+
+        guard started else {
+            clipID = nil
+            activeClip = nil
+            speak(id: id, text: text)
+            return
+        }
+
+        // Recordings are a few seconds long; a stalled player falls back to speech.
+        clipWatchdog = Task { [weak self] in
+            do { try await Task.sleep(for: .seconds(30)) } catch { return }
+            guard let self, self.clipID == id else { return }
+            self.speak(id: id, text: text)
+        }
+    }
+
+    private func narrationClip(for key: String) -> PreparedAudioClip? {
+        let line = NarrationLine(key: key)
+        let name = NarrationClips.resourceName(for: line)
+
+        if let cached = narrationClips[name] {
+            return cached
+        }
+
+        guard let url = NarrationClips.url(for: line, language: language),
+              let clip = try? PreparedAudioClip(url: url) else {
+            return nil
+        }
+
+        narrationClips[name] = clip
+        return clip
     }
 
     private func playClip(_ name: String, id: UUID, timeout: Double, completion: (() -> Void)? = nil) {
@@ -269,17 +334,9 @@ final class SessionAudioService: NSObject, VoiceReadinessProviding, AVSpeechSynt
         recognitionGeneration = generation
         consumed = false
         do {
-            let session = AVAudioSession.sharedInstance()
-            // Compare on hardware before changing the production mode: command interruption
-            // and narration self-trigger rejection must remain reliable.
-            var mode: AVAudioSession.Mode = .voiceChat
-            #if DEBUG
-            if ProcessInfo.processInfo.arguments.contains("-IteraCompareDefaultAudioMode") {
-                mode = .default
-            }
-            #endif
-            try session.setCategory(.playAndRecord, mode: mode, options: [.defaultToSpeaker])
-            try session.setActive(true)
+            // Full-volume narration while listening; see NarrationAudioSession for the
+            // trade-off and the launch argument that compares against `.voiceChat`.
+            try NarrationAudioSession.activate(listening: true)
             let request = SFSpeechAudioBufferRecognitionRequest()
             request.requiresOnDeviceRecognition = true
             request.shouldReportPartialResults = true

@@ -144,6 +144,54 @@ final class FingerSessionViewModel {
         return String(format: "%02d:%02d", seconds / 60, seconds % 60)
     }
     var countdown: Int { max(0, Int(ceil(activity.remaining))) }
+
+    // MARK: - Page presentation
+
+    /// The current exercise's name in the session language, for composed titles.
+    var exerciseTitle: String {
+        localized(activity.kind.title)
+    }
+
+    /// What follows the current rest: another set of this exercise, or the next exercise.
+    var upcoming: (exercise: FingerExercise, set: Int)? {
+        if activity.completedSets < routine.sets {
+            return (activity.kind, activity.completedSets + 1)
+        }
+
+        let next = engine.summary.exerciseIndex + 1
+
+        guard routine.exercises.indices.contains(next) else {
+            return nil
+        }
+
+        return (routine.exercises[next], 1)
+    }
+
+    /// The end of a rest previews what comes next, with its demonstration playing.
+    var showsUpcomingPreview: Bool {
+        guard activity.phase == .rest, upcoming != nil else {
+            return false
+        }
+
+        let window = min(Self.upcomingPreviewSeconds, Double(routine.restSeconds) / 2)
+        return activity.remaining <= window
+    }
+
+    /// Length of the "next up" preview at the end of each rest.
+    private static let upcomingPreviewSeconds = 5.0
+
+    /// Shortens the current rest; ignored while paused or outside a rest.
+    func skipRest() {
+        guard !paused, activity.phase == .rest else {
+            return
+        }
+
+        engine.skipRest()
+    }
+
+    private func localized(_ key: String) -> String {
+        String(localized: String.LocalizationValue(key), bundle: sessionLanguage.resourceBundle)
+    }
     var liveFeedbackKey: String {
         guard trackingReady else {
             return cameraMessage
@@ -160,7 +208,10 @@ final class FingerSessionViewModel {
     func readReflection() {
         do {
             try audio.configure(language: language, ambientSound: false)
-            audio.speak(String(localized: "reflection.title", bundle: sessionLanguage.resourceBundle))
+            audio.speak(
+            String(localized: "reflection.title", bundle: sessionLanguage.resourceBundle),
+            lines: [NarrationLine(key: "reflection.title")]
+        )
         } catch {
             errorKey = "audio.unavailable"
         }
@@ -487,7 +538,10 @@ final class FingerSessionViewModel {
         }
         lastRecoverySpoken = key
         // Recovery speech is not a progression effect; its completion cannot accept a hold.
-        audio.speak(String(localized: String.LocalizationValue(key), bundle: sessionLanguage.resourceBundle))
+        audio.speak(
+            String(localized: String.LocalizationValue(key), bundle: sessionLanguage.resourceBundle),
+            lines: [NarrationLine(key: key)]
+        )
         if trackingRecovery.problem != nil {
             previousInstruction = ""
         }
@@ -522,7 +576,23 @@ final class FingerSessionViewModel {
         }
         engine.guidanceStarted()
         speechDeadline = ProcessInfo.processInfo.systemUptime + max(15, Double(text.count) * 0.25)
-        speechID = audio.speak(text)
+        speechID = audio.speak(text, lines: narrationLines)
+    }
+
+    /// The String Catalog keys behind `narrate()`'s text, in the same order, so a bundled
+    /// recording of each line can be played instead of the system voice.
+    private var narrationLines: [NarrationLine] {
+        var lines = [NarrationLine(key: instructionKey)]
+
+        if activity.kind.isSequential && [.baseline, .target, .active].contains(activity.phase) {
+            lines.append(NarrationLine(key: fingerKey))
+        }
+
+        if activity.phase == .target || activity.phase == .active {
+            lines.append(NarrationLine(key: "guide.holdDuration %lld", argument: Int(activity.holdDuration)))
+        }
+
+        return lines
     }
 
     var needsPermissionSettings: Bool {

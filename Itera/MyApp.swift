@@ -12,9 +12,11 @@ struct MyApp: App {
     @Environment(\.scenePhase) private var scenePhase
     @State private var router = NavigationRouter()
     @State private var dependencies: AppDependencies
+    @AppStorage(AppLanguage.storageKey) private var language = AppLanguage.selected.rawValue
 
     init() {
         _dependencies = State(initialValue: AppDependencies(permissions: PermissionManager()))
+        AppFont.configureNavigationBars()
     }
 
     var body: some Scene {
@@ -22,6 +24,8 @@ struct MyApp: App {
             ContentView()
                 .typography(.body)
                 .withAppRouter()
+                // Applied outside the router so tab stacks, sheets and covers share the language.
+                .environment(\.locale, (AppLanguage(rawValue: language) ?? .indonesian).locale)
                 .environment(router)
                 .environment(dependencies)
                 .environment(dependencies.permissions)
