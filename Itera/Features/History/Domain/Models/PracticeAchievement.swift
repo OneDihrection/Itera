@@ -55,4 +55,5 @@ struct PracticeDay: Identifiable {
     let date: Date
     var repetitions = 0
     var seconds = 0.0
+    var sessions = 0
 }

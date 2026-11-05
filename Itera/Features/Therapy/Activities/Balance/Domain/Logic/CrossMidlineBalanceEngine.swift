@@ -116,10 +116,9 @@ struct CrossMidlineBalanceEngine: BalanceMovementEngine {
     private var baselineCapture: BaselineCapture?
     private var generation: UUID?
     private var lastTimestamp: Double?
-    private var targetHoldStartedAt: Double?
-    private var returnHoldStartedAt: Double?
-    private var targetOutsideSince: Double?
-    private var returnOutsideSince: Double?
+    /// Credited hold time at the opposite shoulder and back at the start position.
+    private var targetHold = InterruptibleHold()
+    private var returnHold = InterruptibleHold()
     private var homeWristPositions: [CrossingArm: TherapyPoint] = [:]
     private var compensationLatched = false
     private var compensationCandidateSince: Double?
@@ -134,7 +133,6 @@ struct CrossMidlineBalanceEngine: BalanceMovementEngine {
     private let baselineDuration = 1.0
     private let targetHoldDuration: Double
     private let returnHoldDuration = 5.0
-    private let targetTrackingGracePeriod = 0.40
     private let targetRadiusRatio = 0.34
     private let targetExitRadiusRatio = 0.40
     private let returnRadiusRatio = 0.38
@@ -174,9 +172,11 @@ struct CrossMidlineBalanceEngine: BalanceMovementEngine {
 
         let delta = lastTimestamp.map { frame.timestamp - $0 } ?? 0
         lastTimestamp = frame.timestamp
-        if delta > 0.3 {
-            NSLog("ITERA-HOLD frame gap delta=%.3f", delta)
+        // A gap earns no hold credit; only a gap beyond the tracking grace clears the holds.
+        if delta > InterruptibleHold.trackingGrace {
             clearTransientEvidence()
+        } else if delta > 0.3 {
+            clearMotionEvidence()
         }
 
         updateJointCache(from: frame)
@@ -190,7 +190,8 @@ struct CrossMidlineBalanceEngine: BalanceMovementEngine {
             } else {
                 snapshot.overlay = nil
             }
-            clearTransientEvidence()
+            // Often a bystander or brief occlusion: freeze the holds rather than clear them.
+            interruptHolds(at: frame.timestamp)
             return
         }
 
@@ -206,7 +207,7 @@ struct CrossMidlineBalanceEngine: BalanceMovementEngine {
                 isReturnTarget: false,
                 warning: false
             )
-            clearTransientEvidence()
+            interruptHolds(at: frame.timestamp)
             return
         }
 
@@ -230,8 +231,8 @@ struct CrossMidlineBalanceEngine: BalanceMovementEngine {
                 target: target,
                 crossed: crossed,
                 progress: snapshot.phase == .returning
-                    ? returnProgress(at: frame.timestamp)
-                    : targetProgress(at: frame.timestamp),
+                    ? returnProgress
+                    : targetProgress,
                 isReturnTarget: snapshot.phase == .returning,
                 warning: snapshot.compensation.isCompensating
             )
@@ -333,17 +334,13 @@ struct CrossMidlineBalanceEngine: BalanceMovementEngine {
         snapshot.compensation = compensation
 
         if compensation.isCompensating {
-            if targetHoldStartedAt != nil {
-                NSLog("ITERA-HOLD reset by compensation reasons=%@ index=%.2f", String(describing: compensation.reasons), compensation.index)
-            }
             if !compensationLatched {
                 snapshot.metrics.compensationEventsCount += 1
                 compensationLatched = true
             }
-            targetHoldStartedAt = nil
-            returnHoldStartedAt = nil
-            targetOutsideSince = nil
-            returnOutsideSince = nil
+            // Compensating is not the requested movement, so the hold restarts.
+            targetHold.reset()
+            returnHold.reset()
             kinematics = nil
             if snapshot.phase != .returning {
                 snapshot.phase = .reaching
@@ -356,14 +353,11 @@ struct CrossMidlineBalanceEngine: BalanceMovementEngine {
             {
                 processTarget(geometry, frame: frame, delta: delta)
             } else {
-                if targetHoldStartedAt != nil {
-                    NSLog("ITERA-HOLD reset: neck/nose or root/hips not fresh")
+                interruptHolds(at: frame.timestamp)
+
+                if !targetHold.isHolding && !returnHold.isHolding {
+                    snapshot.instructionKey = "balance.holdPosition"
                 }
-                targetHoldStartedAt = nil
-                returnHoldStartedAt = nil
-                targetOutsideSince = nil
-                returnOutsideSince = nil
-                snapshot.instructionKey = "balance.holdPosition"
             }
         }
 
@@ -382,8 +376,8 @@ struct CrossMidlineBalanceEngine: BalanceMovementEngine {
             target: target,
             crossed: crossed,
             progress: snapshot.phase == .returning
-                ? returnProgress(at: frame.timestamp)
-                : targetProgress(at: frame.timestamp),
+                ? returnProgress
+                : targetProgress,
             isReturnTarget: snapshot.phase == .returning,
             warning: compensation.isCompensating
         )
@@ -412,7 +406,7 @@ struct CrossMidlineBalanceEngine: BalanceMovementEngine {
             homeWristPositions[snapshot.activeArm] = home
             let returnRadius = max(
                 0.06,
-                geometry.shoulderWidth * (returnHoldStartedAt == nil
+                geometry.shoulderWidth * (!returnHold.isHolding
                     ? returnRadiusRatio
                     : returnExitRadiusRatio)
             )
@@ -428,14 +422,10 @@ struct CrossMidlineBalanceEngine: BalanceMovementEngine {
                 return
             }
 
-            returnOutsideSince = nil
-            if returnHoldStartedAt == nil {
-                returnHoldStartedAt = frame.timestamp
-            }
+            returnHold.credit(at: frame.timestamp)
             snapshot.instructionKey = "balance.returnHold"
-            if returnProgress(at: frame.timestamp) >= 1 {
-                returnHoldStartedAt = nil
-                returnOutsideSince = nil
+            if returnProgress >= 1 {
+                returnHold.reset()
                 snapshot.activeArm = snapshot.armSelection.arm(after: snapshot.activeArm)
                 snapshot.phase = .reaching
                 snapshot.instructionKey = instruction(for: snapshot.activeArm)
@@ -459,7 +449,7 @@ struct CrossMidlineBalanceEngine: BalanceMovementEngine {
         let proximity = (wrist - target).length
         let targetRadius = max(
             0.055,
-            geometry.shoulderWidth * (targetHoldStartedAt == nil
+            geometry.shoulderWidth * (!targetHold.isHolding
                 ? targetRadiusRatio
                 : targetExitRadiusRatio)
         )
@@ -471,15 +461,13 @@ struct CrossMidlineBalanceEngine: BalanceMovementEngine {
             return
         }
 
-        targetOutsideSince = nil
-        if targetHoldStartedAt == nil { targetHoldStartedAt = frame.timestamp }
+        targetHold.credit(at: frame.timestamp)
         snapshot.phase = .holding
         snapshot.instructionKey = "balance.hold"
-        guard targetProgress(at: frame.timestamp) >= 1 else { return }
+        guard targetProgress >= 1 else { return }
 
         snapshot.metrics.completedTouches += 1
-        targetHoldStartedAt = nil
-        targetOutsideSince = nil
+        targetHold.reset()
         resetPath()
         if snapshot.metrics.completedTouches >= snapshot.goal {
             snapshot.phase = .complete
@@ -626,66 +614,60 @@ struct CrossMidlineBalanceEngine: BalanceMovementEngine {
         kinematics = nil
     }
 
+    /// A lost wrist is a tracking problem, so it gets the longer tracking grace.
     private mutating func handleWristTrackingLoss(at time: Double) {
         if snapshot.phase == .returning {
-            maintainOrResetReturnHold(at: time)
+            maintainOrResetReturnHold(at: time, grace: InterruptibleHold.trackingGrace)
         } else {
-            maintainOrResetTargetHold(at: time)
+            maintainOrResetTargetHold(at: time, grace: InterruptibleHold.trackingGrace)
         }
-        if targetHoldStartedAt == nil, returnHoldStartedAt == nil {
+        if !targetHold.isHolding, !returnHold.isHolding {
             snapshot.instructionKey = "balance.activeWristMissing"
         }
     }
 
-    private mutating func maintainOrResetTargetHold(at time: Double) {
-        guard targetHoldStartedAt != nil else {
-            targetOutsideSince = nil
+    /// Keeps a hold frozen through a short interruption; clears it once `grace` is exceeded.
+    private mutating func maintainOrResetTargetHold(
+        at time: Double,
+        grace: Double = InterruptibleHold.zoneExitGrace
+    ) {
+        guard targetHold.interrupt(at: time, grace: grace) else {
             snapshot.phase = .reaching
             snapshot.instructionKey = instruction(for: snapshot.activeArm)
             return
         }
-        if targetOutsideSince == nil {
-            targetOutsideSince = time
-        }
-        guard time - (targetOutsideSince ?? time) > targetTrackingGracePeriod else {
-            snapshot.phase = .holding
-            snapshot.instructionKey = "balance.hold"
-            return
-        }
-        NSLog("ITERA-HOLD reset: wrist outside target or lost beyond grace")
-        targetHoldStartedAt = nil
-        targetOutsideSince = nil
-        snapshot.phase = .reaching
-        snapshot.instructionKey = instruction(for: snapshot.activeArm)
+        snapshot.phase = .holding
+        snapshot.instructionKey = "balance.hold"
     }
 
-    private mutating func maintainOrResetReturnHold(at time: Double) {
-        guard returnHoldStartedAt != nil else {
-            returnOutsideSince = nil
+    private mutating func maintainOrResetReturnHold(
+        at time: Double,
+        grace: Double = InterruptibleHold.zoneExitGrace
+    ) {
+        guard returnHold.interrupt(at: time, grace: grace) else {
             snapshot.instructionKey = "balance.return"
             return
         }
-        if returnOutsideSince == nil {
-            returnOutsideSince = time
-        }
-        guard time - (returnOutsideSince ?? time) > targetTrackingGracePeriod else {
-            snapshot.instructionKey = "balance.returnHold"
-            return
-        }
-        returnHoldStartedAt = nil
-        returnOutsideSince = nil
-        snapshot.instructionKey = "balance.return"
+        snapshot.instructionKey = "balance.returnHold"
     }
 
-    private mutating func clearTransientEvidence(line: Int = #line) {
-        // TEMPORARY DIAGNOSTIC (remove after investigating hold resets on Mac Catalyst).
-        if targetHoldStartedAt != nil {
-            NSLog("ITERA-HOLD reset via clearTransientEvidence line=%d lastTimestamp=%@", line, String(describing: lastTimestamp))
-        }
-        targetHoldStartedAt = nil
-        returnHoldStartedAt = nil
-        targetOutsideSince = nil
-        returnOutsideSince = nil
+    /// Body tracking dropped out (often a bystander or brief occlusion): freeze both holds.
+    private mutating func interruptHolds(at time: Double) {
+        targetHold.interrupt(at: time, grace: InterruptibleHold.trackingGrace)
+        returnHold.interrupt(at: time, grace: InterruptibleHold.trackingGrace)
+        clearMotionEvidence()
+    }
+
+    /// Velocity and compensation timers are meaningless across a gap; holds are judged separately.
+    private mutating func clearMotionEvidence() {
+        kinematics = nil
+        compensationCandidateSince = nil
+        compensationClearSince = nil
+    }
+
+    private mutating func clearTransientEvidence() {
+        targetHold.reset()
+        returnHold.reset()
         kinematics = nil
         compensationCandidateSince = nil
         compensationClearSince = nil
@@ -694,14 +676,12 @@ struct CrossMidlineBalanceEngine: BalanceMovementEngine {
         snapshot.compensation = TrunkCompensation()
     }
 
-    private func targetProgress(at time: Double) -> Double {
-        guard let targetHoldStartedAt else { return 0 }
-        return min(1, max(0, (time - targetHoldStartedAt) / targetHoldDuration))
+    private var targetProgress: Double {
+        targetHold.progress(duration: targetHoldDuration)
     }
 
-    private func returnProgress(at time: Double) -> Double {
-        guard let returnHoldStartedAt else { return 0 }
-        return min(1, max(0, (time - returnHoldStartedAt) / returnHoldDuration))
+    private var returnProgress: Double {
+        returnHold.progress(duration: returnHoldDuration)
     }
 
     private func fallbackHomePosition(
@@ -960,14 +940,11 @@ struct CrossMidlineBalanceEngine: BalanceMovementEngine {
         isReturnTarget: Bool
     ) -> Int? {
         guard targetVisible else { return nil }
-        if isReturnTarget {
-            guard let returnHoldStartedAt else { return nil }
-            let remaining = max(0, returnHoldDuration - (time - returnHoldStartedAt))
-            return max(1, Int(ceil(remaining)))
-        }
-        guard let targetHoldStartedAt else { return nil }
-        let remaining = max(0, targetHoldDuration - (time - targetHoldStartedAt))
-        return max(1, Int(ceil(remaining)))
+        let hold = isReturnTarget ? returnHold : targetHold
+        let duration = isReturnTarget ? returnHoldDuration : targetHoldDuration
+
+        guard hold.isHolding else { return nil }
+        return max(1, Int(ceil(hold.remaining(duration: duration))))
     }
 
     private static func dot(_ a: TherapyPoint, _ b: TherapyPoint) -> Double {

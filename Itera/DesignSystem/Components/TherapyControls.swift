@@ -44,6 +44,51 @@ enum TherapyPalette {
     static let lavender = peach
     static let rose = mint
 
+    // MARK: - Monochrome page palette
+    //
+    // System semantic colors wherever one fits, so these follow dark mode and
+    // Increase Contrast automatically, as the Human Interface Guidelines recommend.
+
+    /// Plain page background of the redesigned home, session and progress pages.
+    static let canvas = Color(uiColor: .systemBackground)
+    /// High-contrast hero and program cards: black in light mode, a raised grey in dark mode.
+    static let heroCard = Color(uiColor: UIColor { traits in
+        traits.userInterfaceStyle == .dark
+            ? UIColor.secondarySystemBackground.resolvedColor(with: traits)
+            : .black
+    })
+    static let onHero = Color.white
+    /// Soft grey panels for media, targets and upcoming sets.
+    static let panel = Color(uiColor: .secondarySystemBackground)
+    /// Thin outline for white cards on the progress page.
+    static let outline = Color(uiColor: .separator)
+    /// Primary pill buttons, such as "Mulai Latihan" and "Lanjutkan Latihan".
+    static let action = Color(uiColor: .label)
+    static let onAction = Color(uiColor: .systemBackground)
+    /// The alternative pill beside a primary action; its label uses `ink` for contrast.
+    static let actionMuted = Color(uiColor: .systemGray5)
+    /// Completion check for a finished session or set.
+    static let success = Color(uiColor: .systemGreen)
+    /// A completed set row. Darker than system teal so the check keeps 3:1 contrast.
+    static let setDone = adaptive(light: (0.0, 0.47, 0.43), dark: (0.36, 0.80, 0.74))
+    static let setDoneFill = adaptive(light: (0.89, 0.96, 0.95), dark: (0.10, 0.22, 0.21))
+    /// Countdown ring shown while resting.
+    static let restRing = Color(uiColor: .systemBlue)
+    static let restTrack = Color(uiColor: .systemGray5)
+    /// Challenge card fill and its bold green ink (custom pair, contrast above 7:1).
+    static let challengeFill = adaptive(light: (0.93, 0.96, 0.94), dark: (0.12, 0.18, 0.15))
+    static let challengeInk = adaptive(light: (0.10, 0.27, 0.20), dark: (0.66, 0.86, 0.75))
+
+    private static func adaptive(
+        light: (Double, Double, Double),
+        dark: (Double, Double, Double)
+    ) -> Color {
+        Color(uiColor: UIColor { traits in
+            let value = traits.userInterfaceStyle == .dark ? dark : light
+            return UIColor(red: value.0, green: value.1, blue: value.2, alpha: 1)
+        })
+    }
+
     static func illustrationBackground(at index: Int) -> Color {
         switch index {
         case 0: return hero
@@ -61,6 +106,8 @@ struct TherapyButton: View {
     var secondary = false
     var destructive = false
     var disabled = false
+    /// The monochrome pill appearance: dark when primary, grey when `secondary`.
+    var pill = false
     let action: () -> Void
 
     var body: some View {
@@ -72,19 +119,33 @@ struct TherapyButton: View {
                 Text(title)
             }
             .typography(.headline)
-            .frame(maxWidth: .infinity, minHeight: 68)
+            .frame(maxWidth: .infinity, minHeight: pill ? 60 : 68)
             .padding(.horizontal, 20)
-            .foregroundStyle(secondary ? TherapyPalette.ink : TherapyPalette.onAccent)
-            .background(background, in: RoundedRectangle(cornerRadius: 22))
+            .foregroundStyle(foreground)
+            .background(background, in: RoundedRectangle(cornerRadius: pill ? 30 : 22))
+            .contentShape(RoundedRectangle(cornerRadius: pill ? 30 : 22))
         }
         .buttonStyle(TherapySoundButtonStyle())
         .disabled(disabled)
         .opacity(disabled ? 0.5 : 1)
     }
 
+    private var foreground: Color {
+        if pill {
+            if destructive {
+                return .white
+            }
+            return secondary ? TherapyPalette.ink : TherapyPalette.onAction
+        }
+        return secondary ? TherapyPalette.ink : TherapyPalette.onAccent
+    }
+
     private var background: Color {
         if destructive {
-            return TherapyPalette.warning
+            return pill ? Color(uiColor: .systemRed) : TherapyPalette.warning
+        }
+        if pill {
+            return secondary ? TherapyPalette.actionMuted : TherapyPalette.action
         }
         return secondary ? TherapyPalette.mint : TherapyPalette.green
     }
@@ -92,12 +153,21 @@ struct TherapyButton: View {
 
 struct TherapyCard<Content: View>: View {
     var color: Color = TherapyPalette.surface
+    /// Draws a thin border, for white cards on a white page.
+    var outlined = false
+    var padding: CGFloat = 28
     @ViewBuilder let content: Content
 
     var body: some View {
-        content.padding(28)
+        content.padding(padding)
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(color, in: RoundedRectangle(cornerRadius: 30))
+            .overlay {
+                if outlined {
+                    RoundedRectangle(cornerRadius: 30)
+                        .strokeBorder(TherapyPalette.outline, lineWidth: 1.5)
+                }
+            }
     }
 }
 
@@ -186,18 +256,59 @@ struct TherapyIconButton: View {
     let title: LocalizedStringKey
     let symbol: String
     var size: CGFloat = 88
+    /// The page-level black circle used for back and close.
+    var circle = false
     let action: () -> Void
 
     var body: some View {
         Button(action: action) {
-            Image(systemName: symbol)
-                .typography(size: 36, weight: .bold)
-                .foregroundStyle(TherapyPalette.primary)
-                .frame(width: size, height: size)
-                .background(TherapyPalette.secondary, in: RoundedRectangle(cornerRadius: 26))
-                .contentShape(RoundedRectangle(cornerRadius: 26))
+            if circle {
+                Image(systemName: symbol)
+                    .typography(size: size * 0.4, weight: .semiBold)
+                    .foregroundStyle(TherapyPalette.onHero)
+                    .frame(width: size, height: size)
+                    .background(TherapyPalette.heroCard, in: Circle())
+                    .shadow(color: .black.opacity(0.12), radius: 8, y: 2)
+                    // Keep at least a 64-point touch target around the small visual circle.
+                    .frame(minWidth: 64, minHeight: 64)
+                    .contentShape(Rectangle())
+            } else {
+                Image(systemName: symbol)
+                    .typography(size: 36, weight: .bold)
+                    .foregroundStyle(TherapyPalette.primary)
+                    .frame(width: size, height: size)
+                    .background(TherapyPalette.secondary, in: RoundedRectangle(cornerRadius: 26))
+                    .contentShape(RoundedRectangle(cornerRadius: 26))
+            }
         }
         .buttonStyle(TherapySoundButtonStyle())
         .accessibilityLabel(title)
+    }
+}
+
+/// A quiet text action for secondary choices beneath primary buttons.
+struct TherapyTextButton: View {
+    let title: LocalizedStringKey
+    var symbol: String? = nil
+    var disabled = false
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 8) {
+                if let symbol {
+                    Image(systemName: symbol)
+                }
+                Text(title)
+            }
+            .typography(size: 18, weight: .semiBold, relativeTo: .subheadline)
+            .foregroundStyle(TherapyPalette.muted)
+            .padding(.horizontal, 14)
+            .frame(minHeight: 48)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(TherapySoundButtonStyle())
+        .disabled(disabled)
+        .opacity(disabled ? 0.5 : 1)
     }
 }

@@ -74,6 +74,7 @@ struct FingerSessionEngine {
     }
 
     mutating func guidanceStarted() { activity.guidanceStarted() }
+    mutating func skipRest() { activity.skipRest() }
     mutating func guidanceCompleted() { activity.guidanceCompleted() }
 
     mutating func observe(_ evidence: HandEvidence, now: Double) {
@@ -83,7 +84,7 @@ struct FingerSessionEngine {
         activity.observe(evidence, now: now)
     }
 
-    mutating func suspendEvidence() { activity.suspendEvidence() }
+    mutating func suspendEvidence(at now: Double) { activity.suspendEvidence(at: now) }
 
     mutating func loseEvidence() { activity.breakEvidence() }
 

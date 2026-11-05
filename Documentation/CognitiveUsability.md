@@ -96,3 +96,64 @@ Earned badge details and the sequential award celebration expose a large localiz
 A value-driven design system component renders an opaque, light appearance badge card at 2× scale in memory, with title, earned date and encouragement. Only this card and a localized caption are passed to the system; no patient history or camera data is attached. Rendering failure retains a text caption fallback. No file or Photos authorization is required. The user selects the destination and confirms delivery in the system UI.
 
 Verification: the Simulator displayed the native share sheet and produced a visually inspected 1200-pixel-wide Indonesian badge image. The temporary sample route/export fixture did not save an award or send anything and was removed before the final build. Third-party destination delivery remains a device check.
+
+## Sequential extension timer detection (3 November 2026)
+
+An actual geometry/activity replay reproduced a stationary zero timer when a bent distal joint straightened while the middle joint was already straight. Extension previously measured only the middle-joint angle. It now averages middle and distal extension angles for the selected finger, matching the required visible fingertip. Palm validity uses that finger's own base; an unrelated middle-finger MCP landmark no longer blocks another finger. Existing confidence, freshness, calibration separation, hold duration and visible-completion acknowledgment requirements remain intact.
+
+The original replay changed from holdElapsed 0.0 to 2.0/full completion. An expanded replay covered all four calibration pairs and one full sequential repetition, wrong/unchanged finger rejection, unrelated middle-joint occlusion and missing selected joints. The temporary replay was removed after validation. Physical camera detection remains a device check.
+
+## Tracking display continuity (3 November 2026)
+
+A synthetic replay reproduced a 0.345 normalized horizontal jump in the displayed hand from one spurious detection frame. The display filter now requires a second nearby observation before accepting a displacement above 0.18 aspect-correct image heights. Genuine sustained movement is followed after confirmation; raw evidence and confidence remain unchanged for the activity. Long gaps and capture changes still reset the filter.
+
+A brief missing/invalid observation no longer immediately destroys the smoothing history. The last accepted overlay may remain for 150 ms while tracking is unavailable; its partial hold timer and progress are hidden, and evidence credit suspends immediately. Earned completion cues retain their existing separate 500 ms acknowledgment policy. This supersedes the earlier immediate drawing-filter reset on every unusable sample.
+
+The capture inference gate allows 1 ms of timestamp rounding tolerance. A 30-FPS replay previously accepted only 21 observations in two seconds due to every-third-frame slips; it now accepts the intended 30 with every-second-frame spacing. Latest-value delivery is bounded at 60 ms rather than 70 ms so a normal 15-Hz result is not unnecessarily skipped. Late camera frames remain discarded instead of queued.
+
+Verification: actual-filter replay passes isolated-spike suppression/recovery, sustained movement, long-gap and generation resets, and raw-evidence preservation. The cadence replay passes 30 updates per two seconds. Simulator build passes. Temporary scripts are removed. Preview FPS, thermal load, real occlusion/tremor and camera smoothness still require the baseline physical-iPad run; no physical-device acceptance is inferred.
+
+## Smaller tracking spikes and indicator pulsing (3 November 2026)
+
+A second actual-filter replay exposed a smaller 0.08 normalized single-frame spike below the earlier large-jump threshold: the display still moved 0.0735. A three-sample coordinate median now precedes adaptive smoothing; speed adaptation uses the filtered trajectory rather than raw detector noise. The same replay now reports zero displacement for that isolated spike. This adds roughly one observation of presentation latency; scoring remains on fresh, original evidence.
+
+Low-confidence joints may retain their last drawn position and presentation confidence for at most 150 ms. This is a visual bridge only, never passed to the engine. Unrecovered or invalid joints are hidden; reacquisition within the grace blends from the previous position. This updates the earlier statement about preserving confidence in displayed evidence: original scoring confidence remains unchanged, while the drawing copy can briefly retain a prior valid confidence. Long gaps, new capture generations, side or image-size changes still reset history.
+
+Indicator selection/size now uses presentation availability separately from hold-clock availability. The currently selected ring no longer shrinks and grows when a short miss suspends hold timing. Partial progress still clears and no missing interval earns credit. The full-ring acknowledgment continues to require the existing active timer/completion gate.
+
+Verification: actual-filter replay passes moderate spike rejection, short confidence loss and expiry, sustained movement, long-gap reset and unchanged raw evidence. Simulator build passes. Temporary diagnostics are removed. Physical camera verification remains pending; these synthetic checks cannot establish that every real detector glitch is resolved.
+
+## Tracking recovery (3 November 2026)
+
+Brief tracking loss suspends scoring immediately. A delayed, stable hint avoids flickering messages: position the hand, use the selected side, show the required fingers, or leave only one hand visible. Sustained loss opens the shared pause sheet. Stable recovery never resumes automatically; the patient explicitly continues. Camera startup receives a longer grace period than an interrupted running camera. Permission failures offer Settings and Check again; camera/audio failures offer retry. Calibration with no accepted hold offers retry without relaxing acceptance thresholds.
+
+Save failures retain pending results and block unsafe continuation until retry succeeds, even if a camera error occurs simultaneously. Sharing cancellation returns normally; actual sharing errors offer retry. Session language stays fixed for text/narration, with English on-device voice commands independently of narration language. Backgrounding stops resources and requires explicit continuation after recovery.
+
+## Garden and kampung games removed (5 November 2026)
+
+My Garden (Home, finger Home and Reports), the garden settings toggle, the in-camera kampung finger games, the bamboo chimes and the balance mango harvest are removed. Sessions return to the plain guided layout, with the hold timer on the bubbles. Tracking recovery, display smoothing and the inference cadence fix above remain.
+
+
+## Selectable exercise music (5 November 2026)
+
+Floats (Swoop) and Homecoming (Tranquilium), supplied by the user, are bundled unchanged for offline playback. A shared device-local choice defaults to Floats and supports either track or No music. Settings and finger-routine audio settings expose the choice; finger, body-therapy and Balancing session screens offer a music-note selection button. Selecting a track updates the existing player without changing exercise state, recognition or narration. Changing music while paused prepares the selected track without playing it; explicit Resume starts it. The old routine ambient flag is retained in persisted data for compatibility but no longer controls music.
+
+Music loops at low volume and ducks during both recorded and synthesized guidance/counts. The existing audio service owns audio-session configuration, while ExerciseMusicPlayer only manages AVAudioPlayer playback. Pause/interruption suspends music, backgrounding stops resources, and completion/exit stops music. Returning from background never resumes Balancing automatically; Resume remains explicit. No music plays on idle Home or through the reflection/report flow.
+
+Verification: the production music helper was exercised with the real supplied MP3s and AVAudioPlayer on the development Mac. Checks passed idle silence, looping, automatic preference notification, replacement while paused, position-preserving resume, avoiding duplicate players, volume duck/recovery, No music and stop cleanup. Both files decode as 44.1-kHz stereo MP3s. Physical iPad sound balance, Bluetooth routing and voice recognition during music still need device checks. Final production Debug Simulator build passed; both bundled MP3s are byte-identical to the supplied files.
+
+
+## Music startup and audibility correction (5 November 2026)
+
+The supplied tracks have soft introductions. The previous narration gain reduced Floats' first-ten-second RMS to approximately -60 dBFS, making background playback difficult to hear. Music now uses 0.50 normal gain and 0.18 under narration (formerly 0.12/0.025). Finger start/resume explicitly activates the owning audio service before playback. A failed initial player/resource load is retried on subsequent start/resume instead of treating the selected but unloaded track as ready. No music selection is overridden.
+
+Verification: a temporary replay reproduced the failed-first-load/no-retry case and passed after correction. An iOS Simulator fixture using the actual GuidanceAudioService and bundled Floats MP3 passed playback start, normal gain, narration ducking, pause and resume. It requested no camera/microphone and restored the prior music preference. Fixture source was restored and the final production Debug build passed. Actual iPad speaker/Bluetooth loudness and voice-command coexistence remain physical checks.
+
+
+## Merge with main (5 November 2026)
+
+Integrated main into withoutgamification while retaining the monochrome layouts, music selection/audibility recovery, recorded narration and bystander/interruptible-hold behavior. Main's forearm range assessment, other exercise categories, task-oriented towel folding/history, cup-only tracking, set coordination and asynchronous audio input remain available. The retained Home layout exposes the additional categories; the shared finger screen includes the range-result confirmation and measurement progress. String Catalog entries were merged by key against the common ancestor, preserving main-only edits and local-only copy.
+
+The body audio scheduler retains its bounded counts/latest-prompt policy and intentional cancellation events. Recorded-key cues keep their key through the pending queue, with recorded playback or best-installed-voice fallback; music remains owned by the same service. Camera capture/preview use semantic landscape orientation on iPad and main's unrotated path on Catalyst. Main's three-second movement calibration holds retain interruptible evidence accounting.
+
+Verification: Debug Simulator and Mac Catalyst builds passed. A temporary production-domain replay passed no credit during an interrupted hold, expiry beyond grace, bystander continuity, hook target-return counting, and forearm range assessment/confirmation. No physical tracking, microphone recognition or device acceptance is inferred from these checks. Test harnesses are removed before delivery.

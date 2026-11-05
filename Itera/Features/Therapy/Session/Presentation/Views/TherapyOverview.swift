@@ -28,7 +28,7 @@ private struct HomeContent: View {
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @Environment(PermissionManager.self) private var permissions
     @Environment(\.openURL) private var openURL
-    @AppStorage("app.language") private var language = AppLanguage.selected.rawValue
+    @AppStorage(AppLanguage.storageKey) private var language = AppLanguage.selected.rawValue
     @State var model: HomeViewModel
 
     var body: some View {

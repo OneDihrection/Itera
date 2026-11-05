@@ -16,6 +16,9 @@ struct TherapyGuideBubble: View {
     var completionID: UUID? = nil
     var onCompletionPresented: (UUID) -> Void = { _ in }
     var showsTimer = false
+    /// Draws the number and "Tahan" inside the circle. Turn off when a separate readout
+    /// sits beside the hand; the ring and completion acknowledgment keep working.
+    var showsTimerText = true
     var diameter: CGFloat? = nil
     var outlineOnly = false
     @Environment(\.scenePhase) private var scenePhase
@@ -29,7 +32,7 @@ struct TherapyGuideBubble: View {
             if active || outlineOnly {
                 TherapyProgressRing(
                     progress: showsTimer ? progress : 0,
-                    lineWidth: outlineOnly ? 14 : 10,
+                    lineWidth: ringWidth,
                     animatesProgress: progress < 1,
                     animationDuration: 0.2
                 )
@@ -38,7 +41,7 @@ struct TherapyGuideBubble: View {
         }
         .frame(width: diameter ?? (active ? 108 : 72), height: diameter ?? (active ? 108 : 72))
         .overlay(alignment: .bottom) {
-            if showsTimer {
+            if showsTimer && showsTimerText {
                 Text("guide.hold").typography(.headline)
                     .padding(.horizontal, 8)
                     .background(TherapyPalette.surface, in: Capsule())
@@ -66,6 +69,17 @@ struct TherapyGuideBubble: View {
         }
     }
 
+    /// Thinner rings for the smaller circles of a hand far from the camera.
+    private var ringWidth: CGFloat {
+        let base: CGFloat = outlineOnly ? 14 : 10
+
+        guard let diameter else {
+            return base
+        }
+
+        return min(base, max(5, diameter * 0.11))
+    }
+
     // Zero belongs only to a completed ring, never a rounded partial hold.
     private var displayedRemaining: Double {
         max(0, ceil(remaining * 10) / 10)
@@ -80,7 +94,7 @@ struct TherapyGuideBubble: View {
 
     @ViewBuilder
     private var content: some View {
-        if showsTimer {
+        if showsTimer && showsTimerText {
             VStack(spacing: 0) {
                 Text(displayedRemaining, format: .number.precision(.fractionLength(1)))
                     .typography(size: outlineOnly ? 52 : 32, weight: .bold, relativeTo: .title)

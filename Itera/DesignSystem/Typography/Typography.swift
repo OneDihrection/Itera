@@ -190,6 +190,26 @@ enum AppFont {
         label.adjustsFontForContentSizeCategory = true
     }
 
+    /// Gives system navigation bar titles the app typeface, scaled for Dynamic Type.
+    ///
+    /// UIKit reads appearance proxies when a bar is created, so call this once at launch.
+    /// A text-size change while the app is running applies to newly created bars.
+    @MainActor
+    static func configureNavigationBars() {
+        let title = UIFontMetrics(forTextStyle: .headline).scaledFont(
+            for: UIFont(name: AppFontWeight.semiBold.postScriptName(), size: 20)
+                ?? .systemFont(ofSize: 20, weight: .semibold)
+        )
+        let largeTitle = UIFontMetrics(forTextStyle: .largeTitle).scaledFont(
+            for: UIFont(name: AppFontWeight.bold.postScriptName(), size: 40)
+                ?? .systemFont(ofSize: 40, weight: .bold)
+        )
+
+        let appearance = UINavigationBar.appearance()
+        appearance.titleTextAttributes = [.font: title]
+        appearance.largeTitleTextAttributes = [.font: largeTitle]
+    }
+
     static func uiFont(size: CGFloat) -> UIFont {
         UIFont(name: AppFontWeight.bold.postScriptName(), size: size)
             ?? UIFont.systemFont(ofSize: size, weight: .bold)

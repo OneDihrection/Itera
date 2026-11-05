@@ -12,6 +12,7 @@ import UIKit
 @MainActor
 @Observable
 final class FingerSessionViewModel {
+    let sessionLanguage = AppLanguage.selected
     private(set) var sessionElapsedSeconds = 0.0
     @ObservationIgnored private var durationClock = SessionDurationClock()
     @ObservationIgnored private var overlaySmoother = HandOverlaySmoother()
@@ -26,9 +27,15 @@ final class FingerSessionViewModel {
     private(set) var voiceNeedsAcknowledgment = false
     private(set) var needsReflection = false
     private(set) var saving = false
+    private(set) var recovering = false
+    private(set) var storageNeedsRetry = false
     private(set) var finalSummary: FingerSessionSummary?
     private(set) var hasStarted = false
     private(set) var celebrationID = 0
+    private(set) var trackingRecovery = FingerTrackingRecovery()
+    private(set) var trackingRecoveryPaused = false
+    private(set) var calibrationNeedsHelp = false
+    @ObservationIgnored private var instructionSince = 0.0
     @ObservationIgnored private var celebratedSets: [Int: Int] = [:]
     @ObservationIgnored private var lastCountdownCue = ""
     let camera: HandCameraService
@@ -39,11 +46,13 @@ final class FingerSessionViewModel {
     @ObservationIgnored private var timer: AnyCancellable?
     @ObservationIgnored private var generation: UUID?
     @ObservationIgnored private var lastFrame = 0.0
+    @ObservationIgnored private var hasPresentedCamera = false
     @ObservationIgnored private var lastHandFrame = 0.0
-    private var lastGuideEvidence: HandEvidence?
+    private(set) var lastGuideEvidence: HandEvidence?
     @ObservationIgnored private var speechID: UUID?
     @ObservationIgnored private var speechDeadline: Double?
     @ObservationIgnored private var previousInstruction = ""
+    @ObservationIgnored private var lastRecoverySpoken: String?
     @ObservationIgnored private var previousProgress = -1
     @ObservationIgnored private var previousExercise = 0
     @ObservationIgnored private var wasIdleTimerDisabled = false
@@ -66,20 +75,32 @@ final class FingerSessionViewModel {
     var activity: FingerActivity { engine.activity }
     var paused: Bool { engine.paused }
     var routine: FingerRoutine { engine.summary.routine }
-    /// Completed cues may use their last accepted anchor briefly; it is never scored again.
+    /// Brief misses retain a drawing anchor only; stale positions are never scored again.
     var guideEvidence: HandEvidence? {
         if trackingReady {
             return lastGuideEvidence
         }
-        guard activity.holdCompletionID != nil, previewAttached, !waitingForCamera,
-              ProcessInfo.processInfo.systemUptime - lastHandFrame <= 0.5 else {
+        // A frozen partial hold keeps its bubble at the last drawn position, so the timer
+        // visibly pauses instead of disappearing while a bystander passes.
+        let displayGrace = activity.holdCompletionID != nil ? 0.5 : InterruptibleHold.trackingGrace
+
+        guard activity.isHolding,
+              previewAttached,
+              !waitingForCamera,
+              ProcessInfo.processInfo.systemUptime - lastHandFrame <= displayGrace else {
             return nil
         }
+
         return lastGuideEvidence
     }
 
+    var showsGuideIndicators: Bool {
+        !paused && guideEvidence != nil && [.baseline, .target, .range, .active].contains(activity.phase)
+    }
+
     var showsGuideTimer: Bool {
-        guard !paused, guideEvidence != nil else {
+        guard !paused, guideEvidence != nil,
+              trackingReady || activity.holdCompletionID != nil else {
             return false
         }
         switch activity.phase {
@@ -129,6 +150,54 @@ final class FingerSessionViewModel {
         return String(format: "%02d:%02d", seconds / 60, seconds % 60)
     }
     var countdown: Int { max(0, Int(ceil(activity.remaining))) }
+
+    // MARK: - Page presentation
+
+    /// The current exercise's name in the session language, for composed titles.
+    var exerciseTitle: String {
+        localized(activity.kind.title)
+    }
+
+    /// What follows the current rest: another set of this exercise, or the next exercise.
+    var upcoming: (exercise: FingerExercise, set: Int)? {
+        if activity.completedSets < routine.sets {
+            return (activity.kind, activity.completedSets + 1)
+        }
+
+        let next = engine.summary.exerciseIndex + 1
+
+        guard routine.exercises.indices.contains(next) else {
+            return nil
+        }
+
+        return (routine.exercises[next], 1)
+    }
+
+    /// The end of a rest previews what comes next, with its demonstration playing.
+    var showsUpcomingPreview: Bool {
+        guard activity.phase == .rest, upcoming != nil else {
+            return false
+        }
+
+        let window = min(Self.upcomingPreviewSeconds, Double(routine.restSeconds) / 2)
+        return activity.remaining <= window
+    }
+
+    /// Length of the "next up" preview at the end of each rest.
+    private static let upcomingPreviewSeconds = 5.0
+
+    /// Shortens the current rest; ignored while paused or outside a rest.
+    func skipRest() {
+        guard !paused, activity.phase == .rest else {
+            return
+        }
+
+        engine.skipRest()
+    }
+
+    private func localized(_ key: String) -> String {
+        String(localized: String.LocalizationValue(key), bundle: sessionLanguage.resourceBundle)
+    }
     var liveFeedbackKey: String {
         guard trackingReady else {
             return cameraMessage
@@ -150,8 +219,11 @@ final class FingerSessionViewModel {
 
     func readReflection() {
         do {
-            try audio.configure(language: language, ambientSound: false)
-            audio.speak(String(localized: "reflection.title"))
+            try audio.configure(language: language)
+            audio.speak(
+            String(localized: "reflection.title", bundle: sessionLanguage.resourceBundle),
+            lines: [NarrationLine(key: "reflection.title")]
+        )
         } catch {
             errorKey = "audio.unavailable"
         }
@@ -188,7 +260,7 @@ final class FingerSessionViewModel {
             finish(completed: true)
             return
         }
-        language = Locale.current.language.languageCode?.identifier == "id" ? "id-ID" : "en-US"
+        language = sessionLanguage.speechIdentifier
         subscribe()
         let cameraStatus = await permissions.request(.camera)
         guard !needsReflection else {
@@ -196,10 +268,12 @@ final class FingerSessionViewModel {
         }
         guard cameraStatus == .authorized else {
             errorKey = "camera.permission"
+            trackingRecoveryPaused = true
+            pause()
             return
         }
         do {
-            try audio.configure(language: language, ambientSound: routine.ambientSound)
+            try audio.configure(language: language)
         } catch {
             errorKey = "audio.unavailable"
         }
@@ -209,8 +283,10 @@ final class FingerSessionViewModel {
         guard !needsReflection else {
             return
         }
+        camera.track(side: routine.side)
         camera.start()
         if !paused {
+            audio.startMusic()
             durationClock.resume(at: ProcessInfo.processInfo.systemUptime)
         }
         startTimer()
@@ -227,7 +303,8 @@ final class FingerSessionViewModel {
     }
 
     private func subscribe() {
-        camera.events.throttle(for: .milliseconds(70), scheduler: DispatchQueue.main, latest: true)
+        // Slightly under the 15 Hz inference interval, so throttling never drops a fresh sample.
+        camera.events.throttle(for: .milliseconds(60), scheduler: DispatchQueue.main, latest: true)
             .sink { [weak self] event in self?.receive(event) }.store(in: &subscriptions)
         audio.events.sink { [weak self] event in
             guard let self else {
@@ -254,9 +331,12 @@ final class FingerSessionViewModel {
             case .voiceUnavailable:
                 self.voiceEnabled = false
                 self.voiceNeedsAcknowledgment = true
+                self.errorKey = "voice.unavailable"
                 self.pause()
             case .interrupted:
+                self.voiceNeedsAcknowledgment = self.voiceEnabled || self.routine.voiceControl
                 self.voiceEnabled = false
+                self.errorKey = "recovery.interrupted"
                 self.pause()
             }
         }.store(in: &subscriptions)
@@ -283,6 +363,8 @@ final class FingerSessionViewModel {
             overlaySmoother.reset()
             cameraMessage = key
             errorKey = key
+            trackingRecoveryPaused = true
+            trackingRecovery.missing(.camera, at: ProcessInfo.processInfo.systemUptime)
             engine.recalibrate()
             pause()
         case .sample(let sample):
@@ -295,26 +377,57 @@ final class FingerSessionViewModel {
                 lastGuideEvidence = nil
                 overlaySmoother.reset()
                 engine.recalibrate()
+                trackingRecovery.reset()
+                trackingRecovery.missing(.position, at: now)
+                calibrationNeedsHelp = false
                 previousInstruction = ""
             }
             lastFrame = sample.timestamp
+            if previewAttached && errorKey?.hasPrefix("camera.") == true {
+                errorKey = nil
+            }
+            if !requiresHandTracking && previewAttached {
+                trackingRecovery.reset()
+            }
             let detected = attributedToExercisedHand(sample.evidence)
             evidence = detected
             guard let hand = detected, hand.side == routine.side,
                   hand.metric(for: activity.kind, finger: activity.finger) != nil else {
                 trackingReady = false
-                overlaySmoother.reset()
+                // Keep the drawing filter warm across a brief miss; scoring is suspended immediately.
                 if let hand = detected {
                     cameraMessage = hand.side == routine.side ? "camera.showFingers" : "camera.selectedHand"
                 } else {
                     cameraMessage = "camera.position"
+                }
+                let problem: FingerTrackingProblem
+                if sample.issue == .multipleHands {
+                    problem = .multipleHands
+                } else if let hand = sample.evidence {
+                    problem = hand.side == nil || hand.side == routine.side ? .fingers : .selectedHand
+                } else {
+                    problem = .position
+                }
+                if requiresHandTracking {
+                    trackingRecovery.missing(problem, at: now)
                 }
                 handleMissingHand(now: now)
                 return
             }
             lastHandFrame = sample.timestamp
             lastGuideEvidence = overlaySmoother.consume(hand)
-            trackingReady = previewAttached
+            let stable: Bool
+            if previewAttached {
+                stable = trackingRecovery.visible(at: sample.timestamp)
+            } else {
+                trackingRecovery.missing(.camera, at: now)
+                stable = false
+            }
+            trackingReady = previewAttached && stable
+            // Until the reacquired hand is steady, the hold stays frozen rather than reset.
+            if !stable {
+                engine.suspendEvidence(at: now)
+            }
             cameraMessage = "camera.tracking"
             if errorKey?.hasPrefix("camera.") == true {
                 errorKey = nil
@@ -337,9 +450,10 @@ final class FingerSessionViewModel {
         return hand.assigning(side: routine.side)
     }
 
+    /// A brief miss (a bystander, an occluded hand) freezes the hold; a long one restarts the cycle.
     private func handleMissingHand(now: Double) {
-        if now - lastHandFrame <= 0.5 {
-            engine.suspendEvidence()
+        if now - lastHandFrame <= InterruptibleHold.trackingGrace {
+            engine.suspendEvidence(at: now)
         } else {
             engine.loseEvidence()
         }
@@ -361,19 +475,23 @@ final class FingerSessionViewModel {
         if now - lastFrame > 0.3 {
             trackingReady = false
             evidence = nil
-            overlaySmoother.reset()
             handleMissingHand(now: now)
             cameraMessage = "camera.position"
         }
         // Demonstrations/countdown require a fresh frame, not a detected patient.
         let frameReady = previewAttached && now - lastFrame <= 0.3
         waitingForCamera = !frameReady
+        if frameReady {
+            hasPresentedCamera = true
+        }
         if !frameReady, speechID != nil {
             speechID = nil
             speechDeadline = nil
             audio.cancelSpeech()
             previousInstruction = ""
         }
+        updateRecovery(now: now, frameReady: frameReady)
+        speakRecoveryIfNeeded()
         engine.tick(now, ready: frameReady)
         updateRewards()
         updateGuidance()
@@ -387,14 +505,83 @@ final class FingerSessionViewModel {
         }
     }
 
+    private var requiresHandTracking: Bool {
+        [.baseline, .target, .active].contains(activity.phase)
+    }
+
+    private func updateRecovery(now: Double, frameReady: Bool) {
+        guard !paused else {
+            return
+        }
+        if !frameReady {
+            trackingRecovery.missing(.camera, at: now)
+        } else if !requiresHandTracking {
+            trackingRecovery.reset()
+        }
+        if trackingRecovery.requiresPause(at: now, cameraStartup: !hasPresentedCamera) {
+            trackingRecoveryPaused = true
+            if trackingRecovery.problem == .camera {
+                errorKey = "camera.interrupted"
+            }
+            pause()
+            return
+        }
+        if activity.phase == .target, trackingReady, instructionSince > 0,
+           now - instructionSince >= 15, activity.holdElapsed == 0 {
+            calibrationNeedsHelp = true
+            if now - instructionSince >= 30 {
+                pause()
+            }
+        }
+    }
+
+    var recoveryGuidanceKey: String? {
+        if trackingRecovery.showsGuidance(at: ProcessInfo.processInfo.systemUptime) {
+            switch trackingRecovery.problem {
+            case .position: return "recovery.position"
+            case .selectedHand: return routine.side == .left ? "recovery.left" : "recovery.right"
+            case .fingers: return "recovery.fingers"
+            case .multipleHands: return "recovery.oneHand"
+            case .camera: return "recovery.camera"
+            case nil: break
+            }
+        }
+        return calibrationNeedsHelp ? "recovery.calibration" : nil
+    }
+
+    private func speakRecoveryIfNeeded() {
+        guard !paused else {
+            return
+        }
+        guard let key = recoveryGuidanceKey else {
+            lastRecoverySpoken = nil
+            return
+        }
+        guard speechID == nil, key != lastRecoverySpoken else {
+            return
+        }
+        lastRecoverySpoken = key
+        // Recovery speech is not a progression effect; its completion cannot accept a hold.
+        audio.speak(
+            String(localized: String.LocalizationValue(key), bundle: sessionLanguage.resourceBundle),
+            lines: [NarrationLine(key: key)]
+        )
+        if trackingRecovery.problem != nil {
+            previousInstruction = ""
+        }
+    }
+
     private func updateGuidance() {
         guard !paused, previewAttached,
+              !trackingRecovery.showsGuidance(at: ProcessInfo.processInfo.systemUptime),
               ProcessInfo.processInfo.systemUptime - lastFrame <= 0.3 else { return }
         let key = instructionKey + (activity.kind.isSequential ? fingerKey : "") + String(engine.summary.exerciseIndex)
         guard key != previousInstruction else {
             return
         }
         previousInstruction = key
+        instructionSince = ProcessInfo.processInfo.systemUptime
+        calibrationNeedsHelp = false
         narrate()
     }
 
@@ -402,22 +589,64 @@ final class FingerSessionViewModel {
         guard !paused, !needsReflection else {
             return
         }
-        var text = String(localized: String.LocalizationValue(instructionKey))
+        var text = String(localized: String.LocalizationValue(instructionKey), bundle: sessionLanguage.resourceBundle)
         if activity.kind.isSequential && [.baseline, .target, .active].contains(activity.phase) {
-            text += ". " + String(localized: String.LocalizationValue(fingerKey))
+            text += ". " + String(localized: String.LocalizationValue(fingerKey), bundle: sessionLanguage.resourceBundle)
         }
         if activity.phase == .target || activity.phase == .active {
             text += ". " + String.localizedStringWithFormat(
-                String(localized: "guide.holdDuration %lld"), Int64(activity.holdDuration)
+                String(localized: "guide.holdDuration %lld", bundle: sessionLanguage.resourceBundle), Int64(activity.holdDuration)
             )
         }
         engine.guidanceStarted()
         speechDeadline = ProcessInfo.processInfo.systemUptime + max(15, Double(text.count) * 0.25)
-        speechID = audio.speak(text)
+        speechID = audio.speak(text, lines: narrationLines)
+    }
+
+    /// The String Catalog keys behind `narrate()`'s text, in the same order, so a bundled
+    /// recording of each line can be played instead of the system voice.
+    private var narrationLines: [NarrationLine] {
+        var lines = [NarrationLine(key: instructionKey)]
+
+        if activity.kind.isSequential && [.baseline, .target, .active].contains(activity.phase) {
+            lines.append(NarrationLine(key: fingerKey))
+        }
+
+        if activity.phase == .target || activity.phase == .active {
+            lines.append(NarrationLine(key: "guide.holdDuration %lld", argument: Int(activity.holdDuration)))
+        }
+
+        return lines
+    }
+
+    var needsPermissionSettings: Bool {
+        errorKey == "camera.permission" || (voiceNeedsAcknowledgment &&
+            (permissions.status(for: .microphone) != .authorized ||
+             permissions.status(for: .speechRecognition) != .authorized))
+    }
+
+    var recoveryPanelKey: String? {
+        if storageNeedsRetry || errorKey == "storage.error" {
+            return "recovery.storage"
+        }
+        if errorKey == "camera.permission" {
+            return "recovery.cameraPermission"
+        }
+        if errorKey?.hasPrefix("camera.") == true {
+            return "recovery.camera"
+        }
+        if voiceNeedsAcknowledgment {
+            return needsPermissionSettings ? "recovery.voicePermission" : "recovery.voice"
+        }
+        return errorKey ?? recoveryGuidanceKey
     }
 
     var canResume: Bool {
-        paused && !needsReflection && !voiceNeedsAcknowledgment && !saving && errorKey != "storage.error"
+        paused && !needsReflection && !voiceNeedsAcknowledgment && !saving && !recovering && !storageNeedsRetry
+            && errorKey != "storage.error"
+            && errorKey?.hasPrefix("camera.") != true
+            && (!trackingRecoveryPaused || (previewAttached && !waitingForCamera &&
+                (!requiresHandTracking || trackingReady)))
     }
 
     /// Touch and recognized speech enter the same actions and presentation state.
@@ -448,6 +677,16 @@ final class FingerSessionViewModel {
         guard canResume else {
             return
         }
+        trackingRecoveryPaused = false
+        calibrationNeedsHelp = false
+        lastRecoverySpoken = nil
+        if errorKey == "recovery.interrupted" {
+            errorKey = nil
+        }
+        trackingRecovery.reset()
+        if requiresHandTracking && !trackingReady {
+            trackingRecovery.missing(.position, at: ProcessInfo.processInfo.systemUptime)
+        }
         engine.resume()
         durationClock.resume(at: ProcessInfo.processInfo.systemUptime)
         camera.start()
@@ -457,13 +696,42 @@ final class FingerSessionViewModel {
     }
 
     func retryCamera() async {
-        if await permissions.request(.camera) == .authorized {
-            errorKey = nil
-            camera.start()
-            if !paused {
-                durationClock.resume(at: ProcessInfo.processInfo.systemUptime)
-            }
-            startTimer()
+        guard await permissions.request(.camera) == .authorized else {
+            errorKey = "camera.permission"
+            return
+        }
+        errorKey = nil
+        do {
+            try audio.configure(language: language)
+        } catch {
+            errorKey = "audio.unavailable"
+        }
+        if (routine.voiceControl || voiceNeedsAcknowledgment) && !voiceEnabled {
+            await setVoice(true)
+        }
+        camera.start()
+        if !paused {
+            durationClock.resume(at: ProcessInfo.processInfo.systemUptime)
+        }
+        startTimer()
+    }
+
+    func retryRecovery() async {
+        guard !recovering, !saving else {
+            return
+        }
+        recovering = true
+        defer { recovering = false }
+        if storageNeedsRetry || errorKey == "storage.error" {
+            await saveCheckpoint()
+        } else if errorKey?.hasPrefix("camera.") == true {
+            await retryCamera()
+        } else if voiceNeedsAcknowledgment || errorKey == "voice.unavailable" {
+            await setVoice(true)
+        } else if calibrationNeedsHelp {
+            retryCalibration()
+        } else {
+            await retryCamera()
         }
     }
 
@@ -472,6 +740,9 @@ final class FingerSessionViewModel {
             return
         }
         engine.skipCurrent()
+        calibrationNeedsHelp = false
+        trackingRecoveryPaused = false
+        trackingRecovery.reset()
         previousInstruction = ""
         if engine.finished {
             finish(completed: true)
@@ -492,6 +763,9 @@ final class FingerSessionViewModel {
     }
 
     func retryCalibration() {
+        calibrationNeedsHelp = false
+        trackingRecoveryPaused = false
+        trackingRecovery.reset()
         engine.recalibrate()
         previousInstruction = ""
         if !paused {
@@ -515,27 +789,37 @@ final class FingerSessionViewModel {
             return
         }
         guard microphone == .authorized, speech == .authorized else {
+            errorKey = "voice.unavailable"
             voiceNeedsAcknowledgment = true
             pause()
             return
         }
         do {
+            try audio.configure(language: language)
             voiceEnabled = try audio.enableVoice()
         } catch {
             voiceEnabled = false
         }
         if !voiceEnabled {
             voiceNeedsAcknowledgment = true
+            errorKey = "voice.unavailable"
             pause()
+        } else {
+            voiceNeedsAcknowledgment = false
+            if errorKey == "voice.unavailable" {
+                errorKey = nil
+            }
         }
     }
 
-    func acknowledgeTouch() { voiceNeedsAcknowledgment = false }
 
     func background() {
         guard hasStarted, !needsReflection else {
             return
         }
+        voiceNeedsAcknowledgment = voiceEnabled || routine.voiceControl
+        trackingRecoveryPaused = true
+        waitingForCamera = true
         pause()
         camera.stop()
         audio.suspend()
@@ -548,7 +832,13 @@ final class FingerSessionViewModel {
         guard hasStarted, !needsReflection else {
             return
         }
+        permissions.refresh()
+        guard permissions.status(for: .camera) == .authorized else {
+            errorKey = "camera.permission"
+            return
+        }
         camera.start()
+        startTimer()
     }
 
     func finish(completed: Bool = false) {
@@ -571,9 +861,11 @@ final class FingerSessionViewModel {
         let snapshot = engine.snapshot(outcome: .savedForLater)
         do {
             try await repository.checkpoint(snapshot)
+            storageNeedsRetry = false
             cleanup()
             return true
         } catch {
+            storageNeedsRetry = true
             errorKey = "storage.error"
             return false
         }
@@ -588,10 +880,12 @@ final class FingerSessionViewModel {
         summary.feeling = feeling
         do {
             try await repository.finalize(summary)
+            storageNeedsRetry = false
             finalSummary = summary
             audio.stop()
             return summary
         } catch {
+            storageNeedsRetry = true
             errorKey = "storage.error"
             return nil
         }
@@ -604,16 +898,19 @@ final class FingerSessionViewModel {
         let snapshot = engine.snapshot(outcome: .interrupted)
         do {
             try await repository.checkpoint(snapshot)
+            storageNeedsRetry = false
             if errorKey == "storage.error" {
                 errorKey = nil
             }
         } catch {
+            storageNeedsRetry = true
             errorKey = "storage.error"
             pause()
         }
     }
 
     func cleanup() {
+        hasStarted = false
         let now = ProcessInfo.processInfo.systemUptime
         durationClock.pause(at: now)
         sessionElapsedSeconds = durationClock.elapsed(at: now)
