@@ -96,14 +96,20 @@ struct MovementActivity: TherapyActivity {
             }
         case .tick(let time):
             if let last, time - last > 0.15 {
-                hold.clear()
                 dwell = nil
-                snapshot.progress = 0
+
+                if !captureHoldSurvivesLoss(at: time) {
+                    hold.clear()
+                    snapshot.progress = 0
+                }
             }
             if let lastValid, time - lastValid > 0.5 {
                 phase = 0
-                snapshot.guide = nil
                 snapshot.trackingMessage = "session.movementTrackingLost"
+
+                if !captureHoldSurvivesLoss(at: time) {
+                    snapshot.guide = nil
+                }
             }
         case .observation(let frame):
             if !suspended {
@@ -148,6 +154,35 @@ struct MovementActivity: TherapyActivity {
         cueSince = nil
     }
 
+    /// A capture hold freezes, rather than clears, while tracking is briefly lost.
+    ///
+    /// Its bubble and progress stay on screen; `StableHold` credits none of the missing time.
+    /// Repetition dwell keeps its stricter 150 ms gap rule.
+    private func captureHoldSurvivesLoss(at time: Double) -> Bool {
+        guard target == nil, hold.isActive, let lastValid else {
+            return false
+        }
+
+        return time - lastValid <= InterruptibleHold.trackingGrace
+    }
+
+    private mutating func loseTracking(at time: Double) {
+        dwell = nil
+        snapshot.trackingMessage = "session.movementTrackingLost"
+
+        if lastValid.map({ time - $0 > 0.5 }) == true {
+            phase = 0
+        }
+
+        guard !captureHoldSurvivesLoss(at: time) else {
+            return
+        }
+
+        hold.clear()
+        snapshot.progress = 0
+        snapshot.guide = nil
+    }
+
     private mutating func consume(_ frame: TrackingObservation) {
         let time = frame.timestamp
         guard time.isFinite, last.map({ time > $0 }) ?? true else {
@@ -156,7 +191,7 @@ struct MovementActivity: TherapyActivity {
         }
         let gap = last.map { time - $0 } ?? 0
         if gap > 0.15 {
-            hold.clear()
+            // The capture hold judges its own gaps; see `captureHoldSurvivesLoss`.
             dwell = nil
         }
         if gap > 0.5 { phase = 0 }
@@ -175,21 +210,12 @@ struct MovementActivity: TherapyActivity {
             let anchor = frame.point(anchorJoint),
             let tracked = frame.point(trackedJoint)
         else {
-            hold.clear()
-            dwell = nil
-            snapshot.progress = 0
-            snapshot.guide = nil
-            snapshot.trackingMessage = "session.movementTrackingLost"
-            if lastValid.map({ time - $0 > 0.5 }) == true { phase = 0 }
+            loseTracking(at: time)
             return
         }
         let scale = (reference - anchor).length
         guard scale > 0.03, (tracked - anchor).length > 0.03 else {
-            hold.clear()
-            dwell = nil
-            snapshot.guide = nil
-            snapshot.progress = 0
-            snapshot.trackingMessage = "session.movementTrackingLost"
+            loseTracking(at: time)
             return
         }
         snapshot.trackingMessage = nil
@@ -203,8 +229,16 @@ struct MovementActivity: TherapyActivity {
                 snapshot.instruction = "session.farther"
                 return
             }
+            // Brief tracking loss or a stray sample freezes the hold; neither earns credit.
             hold.consume(
-                offset, time: time, duration: start == nil ? 5 : 3, tolerance: offset.length * 0.1)
+                offset,
+                time: time,
+                duration: start == nil ? 5 : 3,
+                tolerance: offset.length * 0.1,
+                maximumGap: InterruptibleHold.trackingGrace,
+                creditedStep: 0.15,
+                wobbleGrace: InterruptibleHold.zoneExitGrace
+            )
             snapshot.progress = hold.progress
             let candidate = hold.progress > 0
             if cueCandidate != candidate || cueSince == nil {

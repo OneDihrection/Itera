@@ -30,6 +30,8 @@ final class BodyTrackingService: NSObject, AVCaptureVideoDataOutputSampleBufferD
     private var hasInitialOrientation = false
     private var timestampOffset: Double?
     private var lastPublished = 0.0
+    /// Keeps tracking the patient while bystanders are in view. Confined to `queue`.
+    private var subjects = BodySubjectSelector()
     private var cupRequest: VNCoreMLRequest?
     private var cupEnabled = false
 
@@ -241,9 +243,17 @@ final class BodyTrackingService: NSObject, AVCaptureVideoDataOutputSampleBufferD
         do {
             try VNImageRequestHandler(cvPixelBuffer: image, orientation: .up).perform([request])
             let people = request.results ?? []
+            let personPoints = people.map { (try? $0.recognizedPoints(.all)) ?? [:] }
+            let imageAspect = Double(CVPixelBufferGetWidth(image)) / Double(CVPixelBufferGetHeight(image))
+            let subject = subjects.select(
+                personPoints.map { Self.candidate(for: $0, aspect: imageAspect) },
+                at: time,
+                generation: generation
+            )
+
             var joints: [BodyJoint: TrackingObservation.Landmark] = [:]
-            if people.count == 1, let person = people.first {
-                let points = try person.recognizedPoints(.all)
+            if let subject {
+                let points = personPoints[subject]
                 for (joint, visionJoint) in Self.jointMap {
                     if let point = points[visionJoint] {
                         joints[joint] = .init(
@@ -278,7 +288,11 @@ final class BodyTrackingService: NSObject, AVCaptureVideoDataOutputSampleBufferD
             deliver(
                 TrackingObservation(
                     timestamp: time, generation: generation, width: CVPixelBufferGetWidth(image),
-                    height: CVPixelBufferGetHeight(image), personCount: people.count, joints: joints, cup: cup
+                    height: CVPixelBufferGetHeight(image),
+                    // Bystanders are excluded once the patient is selected; ambiguity reports everyone.
+                    personCount: subject == nil ? people.count : 1,
+                    joints: joints,
+                    cup: cup
                 ))
         } catch {
             failures.send(error.localizedDescription)
@@ -305,6 +319,38 @@ final class BodyTrackingService: NSObject, AVCaptureVideoDataOutputSampleBufferD
             self.deliveryLock.unlock()
             if let frame { self.frames.send(frame) }
         }
+    }
+
+    private static let torsoJoints: [VNHumanBodyPoseObservation.JointName] = [
+        .neck, .leftShoulder, .rightShoulder, .leftHip, .rightHip, .root,
+    ]
+
+    private static func candidate(
+        for points: [VNHumanBodyPoseObservation.JointName: VNRecognizedPoint],
+        aspect: Double
+    ) -> BodySubjectSelector.Candidate {
+        let confident = points.values
+            .filter { $0.confidence >= 0.3 }
+            .map { TherapyPoint(x: $0.location.x * aspect, y: $0.location.y) }
+        let torso = torsoJoints
+            .compactMap { points[$0] }
+            .filter { $0.confidence >= 0.3 }
+            .map { TherapyPoint(x: $0.location.x * aspect, y: $0.location.y) }
+
+        guard !torso.isEmpty, confident.count >= 2 else {
+            // Without a torso this person cannot be followed, so they can never win continuity.
+            return BodySubjectSelector.Candidate(torso: TherapyPoint(x: .infinity, y: .infinity), size: 0)
+        }
+
+        let xs = confident.map(\.x)
+        let ys = confident.map(\.y)
+        let diagonal = TherapyPoint(
+            x: (xs.max() ?? 0) - (xs.min() ?? 0),
+            y: (ys.max() ?? 0) - (ys.min() ?? 0)
+        )
+        let center = torso.reduce(TherapyPoint(x: 0, y: 0), +).scaled(1 / Double(torso.count))
+
+        return BodySubjectSelector.Candidate(torso: center, size: diagonal.length)
     }
 
     private static let jointMap: [(BodyJoint, VNHumanBodyPoseObservation.JointName)] = [

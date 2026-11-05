@@ -80,11 +80,17 @@ final class FingerSessionViewModel {
         if trackingReady {
             return lastGuideEvidence
         }
-        let displayGrace = activity.holdCompletionID != nil ? 0.5 : 0.15
-        guard previewAttached, !waitingForCamera,
+        // A frozen partial hold keeps its bubble at the last drawn position, so the timer
+        // visibly pauses instead of disappearing while a bystander passes.
+        let displayGrace = activity.holdCompletionID != nil ? 0.5 : InterruptibleHold.trackingGrace
+
+        guard activity.isHolding,
+              previewAttached,
+              !waitingForCamera,
               ProcessInfo.processInfo.systemUptime - lastHandFrame <= displayGrace else {
             return nil
         }
+
         return lastGuideEvidence
     }
 
@@ -214,6 +220,7 @@ final class FingerSessionViewModel {
         guard !needsReflection else {
             return
         }
+        camera.track(side: routine.side)
         camera.start()
         if !paused {
             durationClock.resume(at: ProcessInfo.processInfo.systemUptime)
@@ -232,6 +239,7 @@ final class FingerSessionViewModel {
     }
 
     private func subscribe() {
+        // Slightly under the 15 Hz inference interval, so throttling never drops a fresh sample.
         camera.events.throttle(for: .milliseconds(60), scheduler: DispatchQueue.main, latest: true)
             .sink { [weak self] event in self?.receive(event) }.store(in: &subscriptions)
         audio.events.sink { [weak self] event in
@@ -351,8 +359,9 @@ final class FingerSessionViewModel {
                 stable = false
             }
             trackingReady = previewAttached && stable
+            // Until the reacquired hand is steady, the hold stays frozen rather than reset.
             if !stable {
-                engine.suspendEvidence()
+                engine.suspendEvidence(at: now)
             }
             cameraMessage = "camera.tracking"
             if errorKey?.hasPrefix("camera.") == true {
@@ -366,9 +375,10 @@ final class FingerSessionViewModel {
         }
     }
 
+    /// A brief miss (a bystander, an occluded hand) freezes the hold; a long one restarts the cycle.
     private func handleMissingHand(now: Double) {
-        if now - lastHandFrame <= 0.5 {
-            engine.suspendEvidence()
+        if now - lastHandFrame <= InterruptibleHold.trackingGrace {
+            engine.suspendEvidence(at: now)
         } else {
             engine.loseEvidence()
         }
@@ -390,7 +400,6 @@ final class FingerSessionViewModel {
         if now - lastFrame > 0.3 {
             trackingReady = false
             evidence = nil
-            overlaySmoother.reset()
             handleMissingHand(now: now)
             cameraMessage = "camera.position"
         }

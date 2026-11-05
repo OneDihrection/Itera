@@ -159,34 +159,72 @@ protocol TherapyActivity {
 }
 
 /// Holds use a running mean rather than retaining a per-frame measurement stream.
+///
+/// Progress is credited time, not wall time: only intervals between consecutive accepted
+/// samples of at most `creditedStep` count. With the defaults (`creditedStep` equal to
+/// `maximumGap`, no wobble grace) this matches clearing the hold on any gap, as before.
+/// Callers that pass a longer `maximumGap` let a hold survive brief tracking loss while
+/// the missing interval still earns nothing.
 struct StableHold {
     private var first: TherapyPoint?
     private var sum = TherapyPoint(x: 0, y: 0)
     private var count = 0
-    private var since = 0.0
+    private var elapsed = 0.0
     private var last: Double?
+    private var outsideSince: Double?
     private(set) var progress = 0.0
 
     var mean: TherapyPoint? { count > 0 ? sum.scaled(1 / Double(count)) : nil }
 
+    /// True once a hold has started and has not been cleared.
+    var isActive: Bool { first != nil }
+
     mutating func clear() { self = StableHold() }
 
-    mutating func consume(_ point: TherapyPoint, time: Double, duration: Double, tolerance: Double, maximumGap: Double = 0.15)
-    {
+    /// - Parameters:
+    ///   - maximumGap: the longest gap between samples that keeps the hold alive.
+    ///   - creditedStep: the longest gap that earns hold time; defaults to `maximumGap`.
+    ///   - wobbleGrace: how long samples may stray beyond `tolerance` before the hold
+    ///     restarts. Strayed samples are ignored and earn nothing.
+    mutating func consume(
+        _ point: TherapyPoint,
+        time: Double,
+        duration: Double,
+        tolerance: Double,
+        maximumGap: Double = 0.15,
+        creditedStep: Double? = nil,
+        wobbleGrace: Double = 0
+    ) {
         if let last, time <= last || time - last > maximumGap {
             clear()
         }
+
         if let first, (point - first).length > tolerance {
+            let since = outsideSince ?? time
+
+            if time - since < wobbleGrace {
+                // A brief stray sample is ignored; the interval up to it is not credited.
+                outsideSince = since
+                last = time
+                return
+            }
+
+            // Sustained drift: this sample starts a new hold below.
             clear()
         }
+
+        outsideSince = nil
+
         if first == nil {
             first = point
-            since = time
+        } else if let last, time - last <= (creditedStep ?? maximumGap) {
+            elapsed += time - last
         }
+
         sum = sum + point
         count += 1
         last = time
-        progress = min(1, (time - since) / duration)
+        progress = min(1, elapsed / duration)
     }
 }
 

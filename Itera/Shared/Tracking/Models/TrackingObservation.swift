@@ -53,6 +53,8 @@ struct TrackingObservation {
     let generation: UUID
     let width: Int
     let height: Int
+    /// People whose landmarks are reported: 1 once the patient has been selected from
+    /// everyone in view, otherwise the number of people detected (0, or several when ambiguous).
     let personCount: Int
     let joints: [BodyJoint: Landmark]
     var cup: CupEvidence? = nil
