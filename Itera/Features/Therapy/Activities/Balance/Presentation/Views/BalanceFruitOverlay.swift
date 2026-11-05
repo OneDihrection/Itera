@@ -8,6 +8,9 @@
 import SwiftUI
 
 /// Uses the same aspect-fit and mirroring transform as the balance target overlay.
+///
+/// The woven bag hangs just outside the target (opposite) shoulder, so the target
+/// circle and its countdown stay visible. The mango rides above the moving hand.
 struct BalanceFruitOverlay: View {
     let snapshot: BalanceSnapshot
     let mirrored: Bool
@@ -17,21 +20,32 @@ struct BalanceFruitOverlay: View {
     var body: some View {
         GeometryReader { geometry in
             if let overlay = snapshot.overlay {
-                let carrying = snapshot.phase == .returning
-                let anchor = carrying ? overlay.wrist : overlay.target
-                let basket = CGPoint(x: geometry.size.width - 130, y: geometry.size.height - 75)
-                let position = anchor.map { source in
-                    fruitPoint(source, aspect: overlay.aspect, size: geometry.size)
-                } ?? CGPoint(x: geometry.size.width / 2, y: geometry.size.height / 2)
+                let size = geometry.size
+                let delivered = snapshot.phase == .returning
+                let targetShoulder = snapshot.activeArm == .left ? overlay.rightShoulder : overlay.leftShoulder
+                let ownShoulder = snapshot.activeArm == .left ? overlay.leftShoulder : overlay.rightShoulder
+                let shoulder = screenPoint(targetShoulder, aspect: overlay.aspect, size: size)
+                let other = screenPoint(ownShoulder, aspect: overlay.aspect, size: size)
+                let outward: CGFloat = shoulder.x >= other.x ? 1 : -1
+                let bag = clamp(
+                    CGPoint(x: shoulder.x + outward * 100, y: shoulder.y + 60),
+                    size: size,
+                    margin: 64
+                )
+                let hand = overlay.wrist.map { (wrist: TherapyPoint) -> CGPoint in
+                    let point = screenPoint(wrist, aspect: overlay.aspect, size: size)
+                    return clamp(CGPoint(x: point.x, y: point.y - 64), size: size, margin: 48)
+                } ?? CGPoint(x: size.width / 2, y: size.height / 2)
 
                 TherapyFruitHarvest(
-                    fruitPosition: position,
-                    basketPosition: basket,
-                    ripeness: carrying ? 1 : overlay.targetProgress,
-                    carrying: carrying,
+                    handPosition: hand,
+                    bagPosition: bag,
+                    holdProgress: snapshot.phase == .holding ? overlay.targetProgress : 0,
+                    delivered: delivered,
                     waiting: waiting,
                     collected: snapshot.deliveredFruit,
-                    showsFruit: anchor != nil && [.reaching, .holding, .returning].contains(snapshot.phase),
+                    showsMango: overlay.wrist != nil && [.reaching, .holding].contains(snapshot.phase),
+                    showsBag: [.reaching, .holding, .returning].contains(snapshot.phase),
                     animated: !calmMode
                 )
             }
@@ -40,16 +54,20 @@ struct BalanceFruitOverlay: View {
         .accessibilityHidden(true)
     }
 
-    private func fruitPoint(_ source: TherapyPoint, aspect: Double, size: CGSize) -> CGPoint {
+    private func screenPoint(_ source: TherapyPoint, aspect: Double, size: CGSize) -> CGPoint {
         let scale = min(size.width / aspect, size.height)
         let offsetX = (size.width - aspect * scale) / 2
         let offsetY = (size.height - scale) / 2
-        let x = offsetX + (mirrored ? aspect - source.x : source.x) * scale
-        let y = offsetY + (1 - source.y) * scale
-        // Keep the target/hand and its authoritative countdown unobstructed.
         return CGPoint(
-            x: min(max(52, size.width - 52), max(52, x + 62)),
-            y: min(max(52, size.height - 145), max(52, y - 65))
+            x: offsetX + (mirrored ? aspect - source.x : source.x) * scale,
+            y: offsetY + (1 - source.y) * scale
+        )
+    }
+
+    private func clamp(_ point: CGPoint, size: CGSize, margin: CGFloat) -> CGPoint {
+        CGPoint(
+            x: min(max(margin, size.width - margin), max(margin, point.x)),
+            y: min(max(margin, size.height - margin - 40), max(margin, point.y))
         )
     }
 }

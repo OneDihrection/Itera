@@ -11,11 +11,11 @@ import Foundation
 extension FingerSessionViewModel {
     var gardenStyle: GardenActivityStyle {
         switch activity.kind {
-        case .fullFist: return .light
-        case .hookFist: return .butterfly
-        case .opposition: return .seeds
-        case .spreading: return .petals
-        case .extensionSequence: return .firefly
+        case .fullFist: return .juice
+        case .hookFist: return .well
+        case .opposition: return .garland
+        case .spreading: return .bloom
+        case .extensionSequence: return .chimes
         }
     }
 
@@ -47,12 +47,16 @@ extension FingerSessionViewModel {
             return nil
         }
         switch activity.kind {
+        case .fullFist:
+            return activity.returning ? "kampung.juice.release" : "kampung.juice.squeeze"
         case .hookFist:
-            return activity.returning ? "garden.butterfly.open" : "garden.butterfly.curl"
+            return activity.returning ? "kampung.well.release" : "kampung.well.pull"
         case .opposition:
-            return activity.returning ? "garden.seed.release" : "garden.seed.pick"
-        case .fullFist, .spreading, .extensionSequence:
-            return nil
+            return activity.returning ? "kampung.garland.release" : "kampung.garland.pick"
+        case .spreading:
+            return activity.returning ? "kampung.bloom.close" : "kampung.bloom.open"
+        case .extensionSequence:
+            return activity.returning ? "kampung.chimes.relax" : "kampung.chimes.lift"
         }
     }
 

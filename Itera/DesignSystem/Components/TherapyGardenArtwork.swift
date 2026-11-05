@@ -7,9 +7,15 @@
 
 import SwiftUI
 
-/// Visual themes only; exercise mapping and earned work belong to the caller.
+/// Kampung game themes only; exercise mapping and earned work belong to the caller.
+///
+/// - juice: squeeze a jeruk into a glass.
+/// - well: draw a bucket from the sumur and water a plant.
+/// - garland: pick melati flowers into a garland.
+/// - bloom: open a kembang sepatu so a butterfly visits.
+/// - chimes: ring bamboo chimes, one tube per finger.
 enum GardenActivityStyle: Int, CaseIterable {
-    case light, butterfly, seeds, petals, firefly
+    case juice, well, garland, bloom, chimes
 }
 
 struct TherapyGardenFlower: View {

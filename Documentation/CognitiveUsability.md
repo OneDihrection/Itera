@@ -151,6 +151,22 @@ Verification: production-helper replays passed recovery debounce, stable reacqui
 
 Hook fist now folds a leaf as the fingers bend. After an accepted target hold, the required return opens the shelter to reveal a butterfly; accepted return triggers one bounded flight to the garden. An unaccepted bend may move the leaf but cannot reveal/collect a butterfly. Opposition uses one small seed at the screen-space midpoint of the thumb tip and only the active fingertip, with two light tethers identifying that pair. Contact compresses the seed; accepted target secures it, and accepted return plants it in the bottom-edge pot. Sequence advancement and scoring remain owned by the original activity. Pot counters for these styles represent accepted substeps of the current exercise rather than mixing seed/butterfly counts with other movements.
 
-Tracking loss keeps the existing parked artwork and removes uncertain tethers. Pause/background cancel decorative flight; Reduce Motion/calm mode suppress flight. The hold timer stays outside the hand and only the small seed occupies the active contact area. Primary exercise instructions remain intact, with short bilingual supporting cues. Twemoji graphics are bundled vectors under CC BY 4.0; upstream originals, license and derivative details are retained in ArtSource/TwemojiGarden and attribution/source/license links appear in presentation settings.
+Tracking loss keeps the existing parked artwork and removes uncertain tethers. Pause/background cancel decorative flight; Reduce Motion/calm mode suppress flight. The hold timer stays outside the hand and only the small seed occupies the active contact area. Primary exercise instructions remain intact, with short bilingual supporting cues. (The Twemoji artwork described here was replaced on 4 November 2026 by original kampung artwork; see below.)
 
 Verification: an actual-geometry activity replay passed hook target/return gating, absent-evidence noncredit, obsolete/full-ring acknowledgment and all four opposition finger cycles. A layout replay checks mirrored thumb/selected-tip midpoints and butterfly viewport bounds at two landscape sizes. A temporary Simulator artwork fixture confirmed the actual vector assets, folded/open leaf, revealed butterfly, single seed/tethers and pot rendering without camera/microphone or saved exercise data. Fixture startup was restored and the final production Debug Simulator build passed. Physical-iPad tracking, fingertip occlusion and visual comfort remain pending.
+
+## Kampung finger games (4 November 2026)
+
+The five finger movements now drive an Indonesian village theme with one natural mapping each, replacing light, leaf, seed, petals and firefly:
+
+| Movement | Game | Moving out | Returning |
+| --- | --- | --- | --- |
+| Full fist | Squeeze a jeruk | The orange flattens; juice drops appear | Juice flies to a glass (five oranges fill one glass) |
+| Hook fist | Draw water from the sumur | The bucket rises from the water | Water flies to a pot; the sprout grows |
+| Opposition | String a melati garland | A jasmine flower glows at the pinch | The flower joins the garland (12 per garland) |
+| Spreading | Open a kembang sepatu | The bud opens into a hibiscus; a butterfly lands when the target is secured | The butterfly flies to the garden |
+| Sequential extension | Ring bamboo chimes | The named finger's tube glows and leans | That tube rings with its own pentatonic note; a full sequence plays a short tune |
+
+Cognitive-load rules retained: one active object, one fixed mapping per movement, short bilingual supporting cues, no timers, scores or failure states, and no reading during movement. Solid artwork sits beside the hand (only the small melati is near the pinch, offset upward), so the patient's own fingers stay visible. The engine remains the only source of acceptance; artwork reads pose, secured state and accepted deposit identity. Chime sounds follow the celebration-sound preference and calm mode. Reduce Motion and calm mode suppress flights and swings.
+
+Verification status: source changes only. Simulator build, visual placement against live hand tracking and physical iPad comfort/audio checks are pending.

@@ -1133,13 +1133,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Your harvest is ready!"
+            "value" : "Your bag is full of mangoes!"
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Panenmu sudah terkumpul!"
+            "value" : "Tasmu penuh mangga!"
           }
         }
       }
@@ -1149,13 +1149,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Apples collected: %lld"
+            "value" : "Mangoes in the bag: %lld"
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Apel terkumpul: %lld"
+            "value" : "Mangga di tas: %lld"
           }
         }
       }
@@ -1166,13 +1166,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Get ready to pick fruit."
+            "value" : "Get ready to carry mangoes."
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Bersiap memetik buah."
+            "value" : "Bersiap membawa mangga."
           }
         }
       }
@@ -1183,13 +1183,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Reach for the apple."
+            "value" : "Bring the mango to the bag on your shoulder."
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Raih apelnya."
+            "value" : "Bawa mangga ke tas di bahu."
           }
         }
       }
@@ -1200,13 +1200,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Bring the apple to the basket."
+            "value" : "Bring your hand back for the next mango."
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Bawa apel ke keranjang."
+            "value" : "Kembalikan tangan untuk mengambil mangga berikutnya."
           }
         }
       }
@@ -1217,13 +1217,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Hold while it ripens."
+            "value" : "Hold while the mango goes into the bag."
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Tahan hingga apel matang."
+            "value" : "Tahan sampai mangga masuk ke tas."
           }
         }
       }
@@ -1234,13 +1234,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "The apple can wait."
+            "value" : "The mango can wait."
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Apelnya menunggu."
+            "value" : "Mangganya menunggu."
           }
         }
       }
@@ -3653,13 +3653,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Wake a firefly"
+            "value" : "Ring the bamboo chimes"
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Bangunkan kunang-kunang"
+            "value" : "Bunyikan lonceng bambu"
           }
         }
       }
@@ -3670,13 +3670,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Gather light"
+            "value" : "Squeeze oranges"
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Kumpulkan cahaya"
+            "value" : "Peras jeruk"
           }
         }
       }
@@ -3687,13 +3687,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Help a butterfly emerge"
+            "value" : "Draw water from the well"
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Bantu kupu-kupu keluar"
+            "value" : "Menimba air sumur"
           }
         }
       }
@@ -3704,13 +3704,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Plant a seed"
+            "value" : "String a jasmine garland"
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Tanam benih"
+            "value" : "Merangkai melati"
           }
         }
       }
@@ -3721,13 +3721,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Open the petals"
+            "value" : "Bloom the hibiscus"
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Mekarkan bunga"
+            "value" : "Mekarkan kembang sepatu"
           }
         }
       }
@@ -3737,13 +3737,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Butterfly, leaf and seed artwork: Twemoji by Twitter, Inc. and other contributors, CC BY 4.0. The leaf has been simplified and one bean isolated as a seed."
+            "value" : "All exercise game artwork (orange, well, jasmine, hibiscus, butterfly, bamboo chimes, mango and woven bag) is original artwork made for Itera."
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Ilustrasi kupu-kupu, daun, dan biji: Twemoji oleh Twitter, Inc. dan kontributor lainnya, CC BY 4.0. Daun disederhanakan dan satu kacang dipisahkan sebagai biji."
+            "value" : "Semua ilustrasi permainan latihan (jeruk, sumur, melati, kembang sepatu, kupu-kupu, lonceng bambu, mangga, dan tas anyaman) adalah karya asli yang dibuat untuk Itera."
           }
         }
       }
@@ -3765,6 +3765,7 @@
       }
     },
     "garden.assetLicense" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -3781,6 +3782,7 @@
       }
     },
     "garden.assetSource" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -3831,6 +3833,7 @@
       }
     },
     "garden.collected %lld" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -3948,13 +3951,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Straighten the named finger to wake the firefly."
+            "value" : "Straighten the named finger to ring its bamboo."
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Luruskan jari yang disebut untuk membangunkan kunang-kunang."
+            "value" : "Luruskan jari yang disebut untuk membunyikan bambu."
           }
         }
       }
@@ -3965,13 +3968,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Gather the light as you close your hand."
+            "value" : "Squeeze the orange as you close your hand."
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Kumpulkan cahaya saat menggenggam."
+            "value" : "Peras jeruk saat menggenggam."
           }
         }
       }
@@ -3982,13 +3985,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Curl a leaf into a shelter."
+            "value" : "Hook your fingers to pull up the bucket."
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Tekuk daun menjadi pelindung."
+            "value" : "Tekuk jari untuk menimba ember."
           }
         }
       }
@@ -3999,13 +4002,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Pick up the seed with the named finger."
+            "value" : "Pick a jasmine flower with the named finger."
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Ambil benih dengan jari yang disebut."
+            "value" : "Petik melati dengan jari yang disebut."
           }
         }
       }
@@ -4016,13 +4019,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Open the petals as you spread your fingers."
+            "value" : "Open the hibiscus as you spread your fingers."
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Mekarkan bunga saat merenggangkan jari."
+            "value" : "Mekarkan kembang sepatu saat merenggangkan jari."
           }
         }
       }
@@ -4050,13 +4053,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Relax your finger to release the firefly."
+            "value" : "Relax your finger to let the chime settle."
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Rilekskan jari untuk melepas kunang-kunang."
+            "value" : "Rilekskan jari, lonceng bambu tenang kembali."
           }
         }
       }
@@ -4067,13 +4070,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Release the light as you open your hand."
+            "value" : "Open your hand to pour the juice."
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Lepaskan cahaya saat membuka tangan."
+            "value" : "Buka tangan untuk menuang jus."
           }
         }
       }
@@ -4084,13 +4087,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Open the leaf to free a butterfly."
+            "value" : "Open slowly to water the plant."
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Buka daun agar kupu-kupu keluar."
+            "value" : "Buka perlahan untuk menyiram tanaman."
           }
         }
       }
@@ -4101,13 +4104,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Relax your fingers to plant the seed."
+            "value" : "Relax your fingers to add it to the garland."
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Rilekskan jari untuk menanam benih."
+            "value" : "Rilekskan jari untuk merangkai melati."
           }
         }
       }
@@ -4118,13 +4121,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Close the petals as your fingers relax."
+            "value" : "Close slowly and the butterfly flies off."
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Tutup bunga saat merapatkan jari."
+            "value" : "Rapatkan perlahan, kupu-kupu terbang."
           }
         }
       }
@@ -5154,6 +5157,256 @@
     "Itera" : {
       "comment" : "The name of the app.",
       "isCommentAutoGenerated" : true
+    },
+    "kampung.bloom.close" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Close slowly. The butterfly flies to the garden."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rapatkan perlahan. Kupu-kupu terbang ke kebun."
+          }
+        }
+      }
+    },
+    "kampung.bloom.count %lld" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Butterflies: %lld"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kupu-kupu: %lld"
+          }
+        }
+      }
+    },
+    "kampung.bloom.open" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Spread your fingers to open the flower."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Renggangkan jari agar kembang sepatu mekar."
+          }
+        }
+      }
+    },
+    "kampung.chimes.count %lld" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tunes played: %lld"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lagu dimainkan: %lld"
+          }
+        }
+      }
+    },
+    "kampung.chimes.lift" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Straighten the named finger to ring its bamboo."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Luruskan jari yang disebut untuk membunyikan bambu."
+          }
+        }
+      }
+    },
+    "kampung.chimes.relax" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Relax your finger slowly."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rilekskan jari perlahan."
+          }
+        }
+      }
+    },
+    "kampung.garland.count %lld" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Jasmine flowers: %lld"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bunga melati: %lld"
+          }
+        }
+      }
+    },
+    "kampung.garland.pick" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Touch your thumb to pick a jasmine flower."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sentuhkan ibu jari untuk memetik melati."
+          }
+        }
+      }
+    },
+    "kampung.garland.release" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Open slowly to add it to the garland."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Buka perlahan untuk merangkai melati."
+          }
+        }
+      }
+    },
+    "kampung.juice.count %lld" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Oranges squeezed: %lld"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Jeruk diperas: %lld"
+          }
+        }
+      }
+    },
+    "kampung.juice.release" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Open slowly to pour the juice."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Buka perlahan, jusnya mengalir."
+          }
+        }
+      }
+    },
+    "kampung.juice.squeeze" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Squeeze the orange."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Peras jeruknya."
+          }
+        }
+      }
+    },
+    "kampung.well.count %lld" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Plant watered: %lld"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tanaman disiram: %lld"
+          }
+        }
+      }
+    },
+    "kampung.well.pull" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hook your fingers to pull up the bucket."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tekuk jari untuk menimba ember."
+          }
+        }
+      }
+    },
+    "kampung.well.release" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Open slowly to water the plant."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Buka perlahan untuk menyiram tanaman."
+          }
+        }
+      }
     },
     "language.english" : {
       "localizations" : {

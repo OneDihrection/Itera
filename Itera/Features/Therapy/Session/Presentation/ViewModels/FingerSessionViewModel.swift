@@ -187,7 +187,11 @@ final class FingerSessionViewModel {
         if steps > previousSteps, activity.phase == .active,
            UserDefaults.standard.object(forKey: PracticePreferences.gardenActivities) as? Bool ?? true,
            !(UserDefaults.standard.object(forKey: PracticePreferences.calmMode) as? Bool ?? false) {
-            audio.playCue(.gardenStep)
+            // Each bamboo tube has its own note, so a full sequence plays a short tune.
+            let cue: GuidanceSound = activity.kind == .extensionSequence
+                ? .gardenChime(gardenDepositFinger)
+                : .gardenStep
+            audio.playCue(cue)
         }
         if sets > celebratedSets[index, default: 0] {
             celebratedSets[index] = sets

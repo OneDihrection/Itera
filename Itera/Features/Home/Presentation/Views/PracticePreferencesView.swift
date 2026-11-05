@@ -41,10 +41,6 @@ struct PracticePreferencesView: View {
                 DisclosureGroup("garden.assetCredits") {
                     Text("garden.assetAttribution")
                         .typography(.body)
-                    Link("garden.assetSource", destination: URL(string: "https://github.com/twitter/twemoji")!)
-                        .frame(minHeight: 64)
-                    Link("garden.assetLicense", destination: URL(string: "https://creativecommons.org/licenses/by/4.0/")!)
-                        .frame(minHeight: 64)
                 }
             }
         }

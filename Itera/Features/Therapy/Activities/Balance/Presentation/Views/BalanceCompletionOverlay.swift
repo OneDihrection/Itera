@@ -42,7 +42,7 @@ struct BalanceCompletionOverlay: View {
                         Label {
                             Text("balance.fruit.count \(Int64(collectedFruit))")
                         } icon: {
-                            Image("balance-apple")
+                            Image("kampung-mangga")
                                 .resizable()
                                 .scaledToFit()
                                 .frame(width: 48, height: 48)
