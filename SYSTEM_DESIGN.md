@@ -100,7 +100,7 @@ These rules were checked against the current therapy implementation. Do not subs
 
 ### Common geometry
 
-Require one person and usable required joints (confidence at least 0.5). Correct horizontal distances by image width/height. Draw and accept against the same geometry. Body-based radius is 20% of the reference limb length. With a valid viewport, clamp bubble diameter to 68–120 points, then cap it at 80% of center separation; close targets may therefore produce smaller bubbles. Without a viewport, retain body-relative radius.
+For body-based activities, require one person and usable required joints (confidence at least 0.5). Correct horizontal distances by image width/height. Draw and accept against the same geometry. Body-based radius is 20% of the reference limb length. With a valid viewport, clamp bubble diameter to 68–120 points, then cap it at 80% of center separation; close targets may therefore produce smaller bubbles. Without a viewport, retain body-relative radius.
 
 ### Arm raise and elbow bend
 
@@ -125,11 +125,17 @@ Use the full endpoint as target, not 75% of its distance. Require separation gre
 
 ### Cup practice
 
-Use one continuous uncounted rehearsal: start → near face → hand return → sideways transfer → cup return. Capture wrist and cup start together after one stable second. Near-face capture requires wrist within 1.5 forearm lengths of the nose and a distinct endpoint. Capture sideways in either direction with predominantly horizontal displacement and separation greater than two body radii. Stable capture tolerance is half the body radius. Return arrivals require one second.
+Cup practice is fully cup-only. Do not run body-pose inference or require a visible person, face, wrist, elbow, or shoulder for this activity. Other exercises retain their body evidence rules.
 
-Store wrist start relative to shoulder, near-face target relative to nose, and cup start/transfer in camera coordinates. Require exactly one fresh cup near the selected wrist for cup-evidence steps. Evidence must have a distinct capture timestamp, be later than the step boundary, and be no older than 300 ms. Wrist-only near-face/hand-return stages do not require continuous visible cup evidence. Missing evidence clears holds and can recover automatically without crediting the gap.
+Use one continuous uncounted rehearsal: cup start → raised cup target → return → sideways cup target → return. Capture all positions in camera coordinates after one stable second, with tolerance half the cup radius. Raised and sideways endpoints must be separated from start by more than two cup radii; the raised target must be above start and sideways movement predominantly horizontal. The app does not measure mouth proximity. Derive radius from half the smaller aspect-correct cup-box dimension (minimum 0.015), freeze it when start is captured, and apply the existing viewport clamp and separation cap. Draw and score using the same target geometry.
 
-After the final rehearsal return, count down three seconds. Count a round only after the complete ordered sequence returns the cup. Partial milestones never count as a round. Retry/capture discontinuity repeats rehearsal and discards partial current-round milestones while preserving completed rounds. Summaries describe observed wrist/cup target completion, never verified drinking or release.
+Acquire one unambiguous cup across three consistent detector results. Use the bundled detector at 200 ms intervals and Vision object tracking between detections, targeting at most 20 accepted updates/second. Associate detector boxes by overlap, center distance, and size consistency; multiple matches or no match invalidate the track. Detector confidence must be at least 0.45 and tracker confidence at least 0.5. Confirmation and capture evidence must be no older than 300 ms. These are initial tuning defaults requiring physical-device verification, not validated accuracy guarantees.
+
+Keep track identity, confidence, detector-confirmation timestamp, and box in memory. Reset tracking on camera generation changes, enable/disable, and capture gaps over 300 ms. Reacquire automatically only after three single-cup confirmations. Missing/ambiguous evidence clears holds and hides the marker; it cannot award work. In practice, discard partial round milestones and require a fresh return to start before resuming. Preserve completed rounds and sets.
+
+Use a timestamp-aware 60 ms exponential filter for the displayed center only. Calibration and one-second arrival holds use fresh unsmoothed evidence. Reset smoothing on loss or identity change. The marker's accepted-zone styling also uses unsmoothed evidence. Never interpolate across missing evidence.
+
+After the final rehearsal return, count down three seconds. Count a round only after the complete ordered sequence returns the cup. Retry/capture discontinuity repeats rehearsal and discards partial milestones while preserving completed rounds. Ordinary next sets reuse calibration. Keep historical milestone identifiers unchanged; current guidance describes cup positions and explicitly avoids claims of verified drinking, grasp, release, or mouth proximity. English and Indonesian cues cover acquisition, ambiguity, and tracking loss.
 
 Routine defaults: movement goals five per side, left first; reach/cup one round; rest 15 seconds; timed-practice duration 60 seconds. Permit positive configurable goals. Do not convert failed tracking into successful timed completion; caregiver-selected timed practice is an explicit alternative and must be labeled accordingly.
 
@@ -502,3 +508,8 @@ Arm raises, elbow bends, directional reaching, and cup practice configure 1–5 
 Session coordination owns set ordering and rest. Each completed set records and checkpoints one result with its set number; summaries retain per-set goals and work, so totals are the sum of results. Missing set configuration in older files means one set; missing result set number means set one. Interrupted recovery preserves saved sets and marks the next unfinished set interrupted without inventing work. Calibration is never persisted for reuse after termination.
 
 All body exercises prefer the selected side's ultra-wide camera, then its standard wide-angle camera, then the system-default video device. Hand/finger exercises retain their normal-lens preference. Validate lens selection and tracking geometry physically; a Simulator build does not establish device acceptance.
+
+
+## Cup-only verification status
+
+Implementation verification on 2026-11-05: the iPadOS 17 minimum Simulator build and diff checks passed. Debug builds emit aggregate cup-update/detection cadence, processing time and capture age every two seconds, without position streams. Physical M1-iPad acceptance remains pending: run with the body outside the frame; compare stationary jitter and motion lag before/after; test partial/full occlusion, two cups, target exits before one second, camera changes, both landscape orientations, both languages, rest/sets, pause/resume, and interrupted recovery. Record preview/inference cadence, capture age, stale/drop counts and thermal behavior during two-minute runs. No camera images or detailed position streams are persisted. Do not infer tracking accuracy from build success.

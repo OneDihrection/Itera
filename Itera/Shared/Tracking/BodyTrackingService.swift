@@ -34,13 +34,9 @@ final class BodyTrackingService: NSObject, AVCaptureVideoDataOutputSampleBufferD
     private var timestampOffset: Double?
     private var lastPublished = 0.0
     private var lastInferenceFailure = 0.0
-    #if DEBUG
-    private var perfFrames = 0
-    private var perfVisionTotal = 0.0
-    private var perfLastMain = 0.0
-    #endif
     private var cupRequest: VNCoreMLRequest?
     private var cupEnabled = false
+    private let cupTracker = CupObjectTracker()
     private var watchdogIdentity = UUID()
     private var frameWatchdog: DispatchWorkItem?
     private var awaitingFirstFrame = false
@@ -51,6 +47,7 @@ final class BodyTrackingService: NSObject, AVCaptureVideoDataOutputSampleBufferD
             guard let self, self.cupEnabled != enabled || (enabled && self.cupRequest == nil) else { return }
             self.cupEnabled = enabled
             self.cupRequest = nil
+            self.cupTracker.reset()
             guard enabled else { return }
             do {
                 guard let url = Bundle.main.url(forResource: "yolo11n", withExtension: "mlmodelc") else {
@@ -302,21 +299,11 @@ final class BodyTrackingService: NSObject, AVCaptureVideoDataOutputSampleBufferD
     private func process(_ image: CVPixelBuffer, time: Double, generation: UUID) {
         guard !cupEnabled || time - lastPublished >= 1.0 / 20 else { return }
         lastPublished = time
-        #if DEBUG
-        // TEMPORARY DIAGNOSTIC (remove after investigating low frame rate on Mac Catalyst).
-        let perfStart = ProcessInfo.processInfo.systemUptime
-        defer {
-            perfFrames += 1
-            perfVisionTotal += ProcessInfo.processInfo.systemUptime - perfStart
-            if perfFrames % 15 == 0 {
-                NSLog("ITERA-PERF frames=%d avgVision=%.0fms size=%dx%d", perfFrames, perfVisionTotal / 15 * 1000, CVPixelBufferGetWidth(image), CVPixelBufferGetHeight(image))
-                perfVisionTotal = 0
-            }
-        }
-        #endif
         do {
-            try VNImageRequestHandler(cvPixelBuffer: image, orientation: .up).perform([request])
-            let people = request.results ?? []
+            if !cupEnabled {
+                try VNImageRequestHandler(cvPixelBuffer: image, orientation: .up).perform([request])
+            }
+            let people = cupEnabled ? [] : (request.results ?? [])
             var joints: [BodyJoint: TrackingObservation.Landmark] = [:]
             if people.count == 1, let person = people.first {
                 let points = try person.recognizedPoints(.all)
@@ -331,26 +318,15 @@ final class BodyTrackingService: NSObject, AVCaptureVideoDataOutputSampleBufferD
             var cup: CupEvidence?
             if cupEnabled, let cupRequest {
                 do {
-                    try VNImageRequestHandler(cvPixelBuffer: image, orientation: .up).perform([cupRequest])
+                    cup = try cupTracker.process(
+                        image, timestamp: time, generation: generation, detector: cupRequest)
                 } catch {
+                    cupTracker.reset()
                     self.cupRequest = nil
                     cupFailures.send("cup.modelUnavailable")
                 }
-                let objects: [VNRecognizedObjectObservation] = self.cupRequest == nil
-                    ? [] : (cupRequest.results as? [VNRecognizedObjectObservation] ?? [])
-                let aspect = Double(CVPixelBufferGetWidth(image)) / Double(CVPixelBufferGetHeight(image))
-                let centers = objects.compactMap { object -> TherapyPoint? in
-                    guard let label = object.labels.first, label.identifier == "cup",
-                        label.confidence >= 0.45 else { return nil }
-                    return TherapyPoint(x: object.boundingBox.midX * aspect, y: object.boundingBox.midY)
-                }
-                let bounds = objects.compactMap { object -> TherapyRectangle? in
-                    guard object.labels.first?.identifier == "cup", (object.labels.first?.confidence ?? 0) >= 0.45 else { return nil }
-                    let box = object.boundingBox
-                    return TherapyRectangle(minX: box.minX * aspect, minY: box.minY, width: box.width * aspect, height: box.height)
-                }
-                cup = CupEvidence(timestamp: time, generation: generation, centers: centers, bounds: bounds)
             }
+
             deliver(
                 TrackingObservation(
                     timestamp: time, generation: generation, width: CVPixelBufferGetWidth(image),
@@ -396,16 +372,7 @@ final class BodyTrackingService: NSObject, AVCaptureVideoDataOutputSampleBufferD
             self.pending = nil
             self.deliveryScheduled = false
             self.deliveryLock.unlock()
-            #if DEBUG
-            // TEMPORARY DIAGNOSTIC
-            let mainStart = ProcessInfo.processInfo.systemUptime
-            #endif
             if let frame { self.frames.send(frame) }
-            #if DEBUG
-            let mainNow = ProcessInfo.processInfo.systemUptime
-            NSLog("ITERA-PERF main sinceLastFrame=%.0fms consumeCost=%.0fms frameAge=%.0fms", (mainStart - self.perfLastMain) * 1000, (mainNow - mainStart) * 1000, (mainStart - (frame?.timestamp ?? mainStart)) * 1000)
-            self.perfLastMain = mainStart
-            #endif
         }
     }
 

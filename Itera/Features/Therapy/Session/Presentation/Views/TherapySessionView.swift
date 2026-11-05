@@ -838,7 +838,7 @@ struct TherapySessionView: View {
             CGPoint(x: point.x / guide.aspect, y: point.y)
         }
         let active = guide.targetActive ? guide.target : guide.start
-        let inside = (guide.tracked - active).length <= guide.radius
+        let inside = guide.acceptedInside ?? ((guide.tracked - active).length <= guide.radius)
         let bubble = SessionBubbleGuide(
             startCenter: normalized(guide.start),
             targetCenter: normalized(guide.target),

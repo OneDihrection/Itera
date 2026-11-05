@@ -26,6 +26,7 @@ struct TargetGuide {
     var capturing = false
     var savedStart = false
     var farthest: TherapyPoint? = nil
+    var acceptedInside: Bool? = nil
 }
 
 enum ActivityStatus { case preparing, running, suspended, finished }

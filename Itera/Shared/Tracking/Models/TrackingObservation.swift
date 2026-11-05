@@ -37,11 +37,17 @@ struct TherapyRectangle {
     }
 }
 
+enum CupTrackingState { case searching, tracking, lost, ambiguous }
+
 struct CupEvidence {
     let timestamp: Double
     let generation: UUID
     let centers: [TherapyPoint]
     var bounds: [TherapyRectangle] = []
+    var trackID: UUID? = nil
+    var confidence: Float = 0
+    var lastDetectionTimestamp: Double? = nil
+    var state: CupTrackingState = .searching
 }
 
 struct TrackingObservation {
