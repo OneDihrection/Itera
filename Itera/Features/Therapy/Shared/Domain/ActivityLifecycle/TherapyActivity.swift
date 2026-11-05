@@ -15,7 +15,7 @@ struct TherapyViewport: Equatable {
 struct TargetGuide {
     let start: TherapyPoint
     let target: TherapyPoint
-    let tracked: TherapyPoint
+    var tracked: TherapyPoint
     let radius: Double
     let targetActive: Bool
     var progress: Double
@@ -26,6 +26,7 @@ struct TargetGuide {
     var capturing = false
     var savedStart = false
     var farthest: TherapyPoint? = nil
+    var acceptedInside: Bool? = nil
 }
 
 enum ActivityStatus { case preparing, running, suspended, finished }
@@ -49,7 +50,7 @@ struct MovementSnapshot {
     var guide: TargetGuide?
     var pose: ExamplePose = .start
     var countingDown = false
-    var seconds = 5
+    var seconds = 3
     var trackingMessage: String?
 }
 
@@ -89,50 +90,61 @@ struct ReachOutcome: Codable, Equatable {
 }
 
 enum ActivityPresentation {
+    case towel(TowelSnapshot)
     case movement(MovementSnapshot)
     case reach(ReachSnapshot)
     case cup(CupSnapshot)
     case timed(TimedPracticeSnapshot)
+    case sitToStand(SitToStandSnapshot)
 
     var countdownSeconds: Int? {
         switch self {
+        case .towel(let value): return value.phase == .countdown ? value.seconds : nil
         case .movement(let value): return value.phase == .countdown ? value.seconds : nil
         case .reach(let value): return value.phase == .countdown ? value.seconds : nil
         case .cup(let value): return value.phase == .countdown ? value.seconds : nil
-        case .timed: return nil
+        case .timed(let value): return value.countdownSeconds
+        case .sitToStand(let value): return value.phase == .countdown ? value.seconds : nil
         }
     }
 
     var instruction: String {
         switch self {
+        case .towel(let value): return value.instruction
         case .movement(let value): return value.instruction
         case .reach(let value): return value.instruction
         case .cup(let value): return value.instruction
         case .timed: return "session.timedPractice"
+        case .sitToStand(let value): return value.instruction
         }
     }
     var count: Int {
         switch self {
+        case .towel(let value): return value.count
         case .movement(let value): return value.count
         case .reach(let value): return value.count
         case .cup(let value): return value.count
         case .timed: return 0
+        case .sitToStand(let value): return value.count
         }
     }
     var progress: Double {
         switch self {
+        case .towel(let value): return value.holdProgress
         case .movement(let value): return value.progress
         case .reach(let value): return value.progress
         case .cup(let value): return value.progress
         case .timed(let value): return value.seconds / value.goal
+        case .sitToStand(let value): return value.progress
         }
     }
     var guide: TargetGuide? {
         switch self {
+        case .towel: return nil
         case .movement(let value): return value.guide
         case .reach(let value): return value.guide
         case .cup(let value): return value.guide
-        case .timed: return nil
+        case .timed, .sitToStand: return nil
         }
     }
 }
@@ -143,7 +155,9 @@ enum ActivityEvent {
     case suspend
     case resume
     case recalibrate
+    case nextSet
     case viewport(TherapyViewport)
+    case countdownReady(Double)
     case guidanceCompleted(Double)
     case command(ActivityCommand, at: Double)
 }

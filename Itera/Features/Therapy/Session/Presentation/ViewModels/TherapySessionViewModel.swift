@@ -16,6 +16,9 @@ final class TherapySessionViewModel {
     let sessionLanguage = AppLanguage.selected
     var sessionLocale: Locale { sessionLanguage.locale }
     private(set) var snapshot = SessionSnapshot()
+    private(set) var towelDisplay: TowelSnapshot?
+    private(set) var towelInterpolates = false
+    @ObservationIgnored private var towelSmoother = TowelPresentationSmoother()
     private(set) var personVisible = false
     private(set) var cameraDenied = false
     private(set) var failure: String?
@@ -89,12 +92,13 @@ final class TherapySessionViewModel {
         guard !exited else { return }
         permissions.refresh()
         audio.prepare()
-        guard allPermissionsGranted, audio.startListening() == .started else {
+        guard allPermissionsGranted, await audio.startListening() == .started else {
             audio.stop()
             entryMessage = "home.entryBlocked"
             entryFailure = true
             return
         }
+        guard !exited, !isBackgrounded, !Task.isCancelled else { return }
         entryFailure = false
         voiceReady = true
         listening = true
@@ -107,7 +111,9 @@ final class TherapySessionViewModel {
                 return
             }
             self.personVisible = frame.personCount == 1
-            self.send(.observation(frame))
+            var observation = frame
+            observation.workspaceMirrored = self.frontCamera
+            self.send(.observation(observation))
         }.store(in: &subscriptions)
         tracking.cupFailures.receive(on: DispatchQueue.main).sink { [weak self] error in
             guard let self else { return }
@@ -128,6 +134,13 @@ final class TherapySessionViewModel {
         timer = Timer.publish(every: 0.05, on: .main, in: .common).autoconnect().sink {
             [weak self] _ in self?.send(.tick(ProcessInfo.processInfo.systemUptime))
         }
+        let orientation = UIApplication.shared.connectedScenes
+            .compactMap { ($0 as? UIWindowScene)?.interfaceOrientation }
+            .first { $0 == .landscapeLeft || $0 == .landscapeRight }
+        landscapeRight = orientation == .landscapeRight
+        frontCamera = true
+        tracking.requireHand(snapshot.activity?.kind == .foldTowel)
+        tracking.configure(front: true, landscapeRight: landscapeRight)
         tracking.start()
         send(.command(.resume))
     }
@@ -158,7 +171,8 @@ final class TherapySessionViewModel {
             blockReadiness()
             return
         }
-        voiceReady = audio.startListening() == .started
+        voiceReady = await audio.startListening() == .started
+        guard live, !exited, !isBackgrounded else { return }
         if voiceReady {
             cameraDenied = false
             failure = nil
@@ -221,7 +235,11 @@ final class TherapySessionViewModel {
         tracking.configure(front: frontCamera, landscapeRight: landscapeRight)
     }
 
+    private var isBackgrounded = false
+
     func background() {
+        isBackgrounded = true
+        audio.stop()
         guard live else {
             return
         }
@@ -233,13 +251,19 @@ final class TherapySessionViewModel {
     }
 
     func foreground() {
+        isBackgrounded = false
+        Task { await restoreForeground() }
+    }
+
+    private func restoreForeground() async {
         guard live else { return }
         permissions?.refresh()
         guard allPermissionsGranted else {
             blockReadiness()
             return
         }
-        voiceReady = audio.startListening() == .started
+        voiceReady = await audio.startListening() == .started
+        guard live, !exited, !isBackgrounded else { return }
         if voiceReady { tracking.start() }
     }
 
@@ -265,6 +289,8 @@ final class TherapySessionViewModel {
             return
         }
         switch event {
+        case .cancelled:
+            break
         case .feedbackUnavailable:
             failure = String(localized: "parity.audioUnavailable", bundle: sessionLanguage.resourceBundle, locale: sessionLocale)
         case .completed(let id, let available): send(.guidanceCompleted(id, available))
@@ -317,7 +343,20 @@ final class TherapySessionViewModel {
                 audio.resumeMusic()
             }
         }
+        towelInterpolates = false
+        if snapshot.paused || snapshot.cameraWaiting || snapshot.stage != .activity {
+            towelSmoother.reset()
+            towelDisplay = nil
+        } else if case .observation(let frame) = event,
+                  case .towel(let raw) = snapshot.presentation {
+            towelDisplay = towelSmoother.consume(raw, time: frame.timestamp, generation: frame.generation)
+            towelInterpolates = towelSmoother.interpolates
+        } else if case .towel(let raw) = snapshot.presentation {
+            towelSmoother.reset()
+            towelDisplay = raw
+        }
         if previousKind != snapshot.activity?.kind {
+            tracking.requireHand(snapshot.activity?.kind == .foldTowel)
             tracking.requireCup(snapshot.activity?.kind == .cup)
         }
         for effect in transition.effects {
@@ -331,10 +370,13 @@ final class TherapySessionViewModel {
                     case .elbowBend: kindKey = "session.elbowBend"
                     case .directionalReach: kindKey = "session.directionalReach"
                     case .cup: kindKey = "session.cup"
+                    case .foldTowel: kindKey = "session.foldTowel"
+                    case .sitToStand: kindKey = "session.sitToStand"
                     }
                     let sideKey = activity.side == .left ? "session.left" : "session.right"
-                    text = String(localized: String.LocalizationValue(kindKey), bundle: sessionLanguage.resourceBundle, locale: sessionLocale) + ". "
-                        + String(localized: String.LocalizationValue(sideKey), bundle: sessionLanguage.resourceBundle, locale: sessionLocale) + ". " + text
+                    let kindText = String(localized: String.LocalizationValue(kindKey), bundle: sessionLanguage.resourceBundle, locale: sessionLocale)
+                    let sideText = String(localized: String.LocalizationValue(sideKey), bundle: sessionLanguage.resourceBundle, locale: sessionLocale)
+                    text = activity.hasSide ? kindText + ". " + sideText + ". " + text : kindText + ". " + text
                 }
                 // A single-key sentence can use its bundled recording; numbers and the
                 // combined exercise/side/guidance cue keep the system voice.
@@ -384,8 +426,9 @@ final class TherapySessionViewModel {
             return
         }
         live = false
-        tracking.requireCup(false)
         tracking.stop()
+        tracking.requireCup(false)
+        tracking.requireHand(false)
         if preserveClosing { audio.stopListening() } else { audio.stop() }
         timer?.cancel()
         timer = nil
@@ -396,6 +439,8 @@ final class TherapySessionViewModel {
 
 #if DEBUG
 private actor PresentationFixtureRepository: SessionRepository {
+    func history() async throws -> [SessionSummary] { [] }
+    func delete(id: UUID) async throws {}
     func recoverInterrupted() {}
     func checkpoint(_ value: SessionCheckpoint) {}
     func finalize(_ value: SessionSummary) {}

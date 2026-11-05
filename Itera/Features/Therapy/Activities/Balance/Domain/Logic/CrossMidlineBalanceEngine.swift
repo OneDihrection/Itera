@@ -9,7 +9,7 @@ import Foundation
 
 /// Body-relative cross-midline scoring. Coordinates use image-height units, so X is
 /// aspect-corrected before any distance or angle calculation.
-struct CrossMidlineBalanceEngine {
+struct CrossMidlineBalanceEngine: BalanceMovementEngine {
     private struct Geometry {
         let neck: TherapyPoint
         let root: TherapyPoint
@@ -873,7 +873,8 @@ struct CrossMidlineBalanceEngine {
         let range: ClosedRange<Double> = switch joint {
         case .nose, .neck, .root, .leftShoulder, .rightShoulder, .leftHip, .rightHip:
             0.18...0.72
-        case .leftElbow, .rightElbow, .leftWrist, .rightWrist:
+        case .leftElbow, .rightElbow, .leftWrist, .rightWrist,
+            .leftKnee, .rightKnee, .leftAnkle, .rightAnkle:
             0.30...0.88
         }
         let motionWeight = range.lowerBound
@@ -886,7 +887,8 @@ struct CrossMidlineBalanceEngine {
         switch joint {
         case .nose, .neck, .root, .leftShoulder, .rightShoulder, .leftHip, .rightHip:
             return 0.70
-        case .leftElbow, .rightElbow, .leftWrist, .rightWrist:
+        case .leftElbow, .rightElbow, .leftWrist, .rightWrist,
+            .leftKnee, .rightKnee, .leftAnkle, .rightAnkle:
             return 1.30
         }
     }

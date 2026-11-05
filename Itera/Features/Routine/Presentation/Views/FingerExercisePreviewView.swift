@@ -15,6 +15,8 @@ struct FingerExercisePreviewView: View {
     @Environment(\.dynamicTypeSize) private var typeSize
     @State private var starting = false
 
+    private var home: FingerHomeViewModel { dependencies.homeModel(for: exercise.category) }
+
     var body: some View {
         content
             .scenePadding(.horizontal)
@@ -49,12 +51,12 @@ struct FingerExercisePreviewView: View {
 
     private var demonstration: some View {
         TherapyMediaPanel {
-            FingerDemonstrationView(
+            FingerExampleView(
                 exercise: exercise,
                 phase: .demonstration,
                 returning: false,
                 finger: 0,
-                side: dependencies.home.routine.side,
+                side: home.routine.side,
                 paused: false
             )
             .background(TherapyPalette.mediaBackground)
@@ -78,7 +80,7 @@ struct FingerExercisePreviewView: View {
                 .padding(.top, 12)
             targets
 
-            if let error = dependencies.home.errorKey {
+            if let error = home.errorKey {
                 TherapyError(key: error)
             }
 
@@ -94,9 +96,9 @@ struct FingerExercisePreviewView: View {
             : AnyLayout(HStackLayout(spacing: 16))
 
         return layout {
-            TherapyTargetTile(value: dependencies.home.routine.sets, unit: "exercise.setsUnit")
+            TherapyTargetTile(value: home.routine.sets, unit: "exercise.setsUnit")
             TherapyTargetTile(
-                value: dependencies.home.routine.repetitions,
+                value: home.routine.repetitions,
                 unit: "exercise.repetitionsUnit",
                 suffix: "x"
             )
@@ -116,11 +118,11 @@ struct FingerExercisePreviewView: View {
         Task {
             defer { starting = false }
 
-            guard await dependencies.home.saveRoutine() else {
+            guard await home.saveRoutine() else {
                 return
             }
 
-            dependencies.prepareSession()
+            dependencies.prepareSession(category: exercise.category)
             router.presentFullScreenCover(.fingerSession)
         }
     }

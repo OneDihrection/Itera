@@ -49,6 +49,22 @@ struct DirectionalReachActivity: TherapyActivity {
 
     mutating func handle(_ event: ActivityEvent) -> ActivityTransition {
         switch event {
+        case .nextSet:
+            snapshot = ReachSnapshot()
+            snapshot.instruction = "session.countdown"
+            snapshot.seconds = 3
+            phase = .countdown
+            direction = 0
+            pendingOutcomes = []
+            restartingRound = false
+            awaitingGuidance = false
+            deadline = nil
+            resetAttempt()
+        case .countdownReady(let time):
+            if phase == .countdown {
+                deadline = time + 3
+                snapshot.seconds = 3
+            }
         case .command(let command, let time):
             receive(command, at: time)
         case .guidanceCompleted(let time):
@@ -439,7 +455,7 @@ struct DirectionalReachActivity: TherapyActivity {
         let inside = (relative - (outward ? target : start)).length <= effective
         if !inside { dwell = nil }
         if inside, dwell == nil { dwell = time }
-        let progress = inside ? min(1, (time - (dwell ?? time)) / 0.25) : 0
+        let progress = inside ? min(1, (time - (dwell ?? time)) / 1.0) : 0
         snapshot.progress = progress
         snapshot.guide = TargetGuide(
             start: shoulder + start, target: shoulder + target, tracked: wrist, radius: effective,

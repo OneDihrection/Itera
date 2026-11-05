@@ -8,7 +8,15 @@
 import Foundation
 
 actor LocalFingerRoutineRepository: FingerRoutineRepository {
-    private let url = URL.applicationSupportDirectory.appendingPathComponent("finger-routine.json")
+    private let category: ExerciseCategory
+    private let url: URL
+
+    init(category: ExerciseCategory = .fingers) {
+        self.category = category
+        // Finger plans keep their original file name.
+        let name = category == .fingers ? "finger-routine.json" : "\(category.rawValue)-routine.json"
+        url = URL.applicationSupportDirectory.appendingPathComponent(name)
+    }
 
     private struct Record: Codable {
         let version: Int
@@ -29,6 +37,7 @@ actor LocalFingerRoutineRepository: FingerRoutineRepository {
               (1...5).contains(record.sets), (1...20).contains(record.repetitions),
               (5...120).contains(record.restSeconds) else { throw StorageError.invalid }
         var routine = FingerRoutine()
+        routine.category = category
         routine.side = side
         routine.sets = record.sets
         routine.repetitions = record.repetitions

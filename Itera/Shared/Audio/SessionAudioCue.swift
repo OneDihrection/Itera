@@ -10,6 +10,9 @@ indirect enum SessionAudioCue {
     case count(Int)
     case countdown(Int)
     case target
+    case towelGrab
+    case towelFold
+    case towelCompleted
     case closing(completed: Bool)
     case guidance(prefix: SessionAudioCue, key: String)
 }

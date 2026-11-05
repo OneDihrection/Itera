@@ -146,7 +146,7 @@ struct FingerLandmarkOverlay: View {
     // MARK: - Geometry
 
     private var usesWholeHandCircle: Bool {
-        exercise == .fullFist || exercise == .hookFist
+        exercise == .fullFist || exercise == .hookFist || exercise == .forearmRotation
     }
 
     /// On-screen distance from the wrist to the middle-finger knuckle: a steady size cue that

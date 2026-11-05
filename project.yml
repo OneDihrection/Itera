@@ -18,19 +18,25 @@ targets:
           - "**/*.md"
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: devplaceholder.SXTZ4HVL.Itera
+        PRODUCT_BUNDLE_IDENTIFIER: com.OneDihrection.Itera
         DEVELOPMENT_TEAM: A2WQZ32XVK
         CODE_SIGN_STYLE: Automatic
         TARGETED_DEVICE_FAMILY: "2"
-        SUPPORTS_MACCATALYST: NO
+        SUPPORTS_MACCATALYST: YES
         SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD: NO
-        ASSETCATALOG_COMPILER_APPICON_NAME: ""
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         SWIFT_VERSION: "5.0"
         CURRENT_PROJECT_VERSION: 1
         MARKETING_VERSION: "1.0"
         SWIFT_EMIT_LOC_STRINGS: YES
         SWIFT_GENERATE_LOCALIZATION_SYMBOLS: NO
         LOCALIZATION_PREFERS_STRING_CATALOGS: YES
+    entitlements:
+      path: Generated/Itera.entitlements
+      properties:
+        # Required on Mac Catalyst, where hardened runtime silently denies capture without them.
+        com.apple.security.device.camera: true
+        com.apple.security.device.audio-input: true
     info:
       path: Generated/Info.plist
       properties:
@@ -38,6 +44,7 @@ targets:
           - PlusJakartaSans-Regular.ttf
           - PlusJakartaSans-Bold.ttf
         CFBundleDisplayName: Itera
+        ITSAppUsesNonExemptEncryption: false
         CFBundleShortVersionString: "$(MARKETING_VERSION)"
         CFBundleVersion: "$(CURRENT_PROJECT_VERSION)"
         UILaunchScreen: {}

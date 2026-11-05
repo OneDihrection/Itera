@@ -12,7 +12,8 @@ struct TherapySessionView: View {
     @Environment(\.locale) private var locale
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @Environment(\.accessibilityVoiceOverEnabled) private var voiceOver
+    /// Read from UIAccessibility instead of the environment key, which traps on Mac Catalyst.
+    @State private var voiceOver = UIAccessibility.isVoiceOverRunning
     @ScaledMetric(relativeTo: .largeTitle) private var instructionSize = 96.0
     @Environment(PermissionManager.self) private var permissions
     @Environment(NavigationRouter.self) private var router
@@ -33,6 +34,15 @@ struct TherapySessionView: View {
     #endif
 
     var body: some View {
+        sessionContent
+            .onReceive(
+                NotificationCenter.default.publisher(for: UIAccessibility.voiceOverStatusDidChangeNotification)
+            ) { _ in
+                voiceOver = UIAccessibility.isVoiceOverRunning
+            }
+    }
+
+    private var sessionContent: some View {
         GeometryReader { geometry in
             if model.entryFailure {
                 VStack(spacing: 24) {
@@ -158,7 +168,9 @@ struct TherapySessionView: View {
             if let activity = model.snapshot.activity {
                 HStack(spacing: 16) {
                     Text(kindKey(activity.kind))
-                    Text(LocalizedStringKey("side." + activity.side.rawValue))
+                    if activity.hasSide {
+                        Text(LocalizedStringKey("side." + activity.side.rawValue))
+                    }
                 }
                 .typography(.title2)
             }
@@ -193,6 +205,9 @@ struct TherapySessionView: View {
                     VStack(spacing: 16) {
                         Text("session.paused").typography(.therapyPause)
                         Text("session.resumeHelp")
+                        if let failure = model.failure {
+                            Text(verbatim: failure).typography(.caption).foregroundStyle(.orange)
+                        }
                         if let assistanceKey = model.snapshot.assistanceKey {
                             Text(LocalizedStringKey(assistanceKey))
                                 .multilineTextAlignment(.leading)
@@ -249,7 +264,9 @@ struct TherapySessionView: View {
                 if let activity = model.snapshot.activity {
                     HStack(spacing: 8) {
                         Text(kindKey(activity.kind))
-                        Text(activity.side == .left ? "session.left" : "session.right")
+                        if activity.hasSide {
+                            Text(activity.side == .left ? "session.left" : "session.right")
+                        }
                     }
                     .typography(.title2)
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -262,6 +279,8 @@ struct TherapySessionView: View {
                         },
                         size: 44
                     )
+                    Button("session.camera") { model.switchCamera() }
+                        .buttonStyle(SessionButtonStyle(compact: true))
                     Button("session.help") { model.command(.help) }
                         .buttonStyle(SessionButtonStyle(compact: true))
                     Button("session.pause") { model.command(.pause) }
@@ -274,6 +293,9 @@ struct TherapySessionView: View {
                 Text(phaseLabel).foregroundStyle(phaseColor)
                 Spacer(minLength: 0)
                 if let activity = model.snapshot.activity {
+                    if activity.kind != .sitToStand {
+                        Text("session.setProgress \(model.snapshot.setNumber) \(activity.sets)")
+                    }
                     Text(verbatim: "\(model.snapshot.presentation?.count ?? 0) / \(activity.goal)")
                         .monospacedDigit()
                 }
@@ -295,6 +317,7 @@ struct TherapySessionView: View {
         case .summary: return "session.complete"
         case .activity:
             switch model.snapshot.presentation {
+            case .towel: return "session.practice"
             case .movement(let value):
                 return value.phase == .practice ? "session.practice" : "session.calibration"
             case .reach(let value):
@@ -308,6 +331,9 @@ struct TherapySessionView: View {
             case .cup(let value):
                 return value.phase == .practice ? "session.practice" : "session.rehearsal"
             case .timed: return "session.timedPractice"
+            case .sitToStand(let value):
+                return value.phase == .practice || value.phase == .returnToSeat || value.phase == .countdown
+                    ? "session.practice" : "session.calibration"
             case nil: return "session.cameraWait"
             }
         }
@@ -327,11 +353,24 @@ struct TherapySessionView: View {
                 BodyCameraPreview(
                     session: model.tracking.session, front: model.frontCamera,
                     onReady: model.previewReady, onOrientation: model.orientationChanged)
+                    .frame(width: geometry.size.width, height: geometry.size.height)
                 if !model.snapshot.paused, !model.snapshot.cameraWaiting,
                     model.snapshot.stage == .activity,
                     let guide = model.snapshot.presentation?.guide
                 {
                     targetOverlay(guide, size: geometry.size)
+                }
+                if !model.snapshot.paused, !model.snapshot.cameraWaiting,
+                    model.snapshot.stage == .activity,
+                    case .sitToStand(let value)? = model.snapshot.presentation,
+                    let joints = value.joints
+                {
+                    sitToStandOverlay(value, joints: joints)
+                }
+                if !model.snapshot.paused, !model.snapshot.cameraWaiting,
+                   model.snapshot.stage == .activity,
+                   case .towel(let towel) = model.snapshot.presentation {
+                    TowelWorkspaceView(snapshot: model.towelDisplay ?? towel, interpolates: model.towelInterpolates)
                 }
                 if !hasFullScreenPresentation, model.snapshot.stage == .activity,
                     let active = cornerExampleActive
@@ -373,6 +412,7 @@ struct TherapySessionView: View {
         case .feedback: return .green
         case .activity:
             switch model.snapshot.presentation {
+            case .towel: return .green
             case .movement(let value):
                 return value.phase == .startCapture || value.phase == .targetCapture ? .yellow : .green
             case .reach(let value):
@@ -384,6 +424,11 @@ struct TherapySessionView: View {
             case .cup(let value):
                 return value.phase == .practice || value.phase == .countdown ? .green : .blue
             case .timed: return .green
+            case .sitToStand(let value):
+                switch value.phase {
+                case .seatedCapture, .trial: return .yellow
+                case .returnToSeat, .countdown, .practice: return .green
+                }
             case nil: return .gray
             }
         }
@@ -456,6 +501,10 @@ struct TherapySessionView: View {
     }
 
     @ViewBuilder private var demonstration: some View {
+        if model.snapshot.activity?.kind == .foldTowel {
+            TowelDemonstrationView()
+        }
+
         if let activity = model.snapshot.activity, activity.kind == .armRaise || activity.kind == .elbowBend {
             let mode: TherapyAnimationPlayback = {
                 if model.snapshot.stage == .demonstration {
@@ -482,9 +531,11 @@ struct TherapySessionView: View {
 
     private var primaryMovementCue: String {
         switch model.snapshot.presentation {
+        case .towel(let value): return value.trackingMessage ?? value.instruction
         case .movement(let value): return value.trackingMessage ?? model.snapshot.instruction
         case .reach(let value): return value.trackingMessage ?? model.snapshot.instruction
         case .cup(let value): return value.evidenceMessage ?? model.snapshot.instruction
+        case .sitToStand(let value): return value.trackingMessage ?? value.cue ?? model.snapshot.instruction
         default: return model.snapshot.instruction
         }
     }
@@ -501,6 +552,10 @@ struct TherapySessionView: View {
                 Text(verbatim: support).typography(.title2)
             }
             switch model.snapshot.presentation {
+            case .towel(let towel):
+                if towel.phase == .practice {
+                    Text("towel.foldNumber \(towel.foldIndex + 1)")
+                }
             case .movement(let movement):
                 if movement.phase == .startCapture || movement.phase == .targetCapture {
                     HStack(spacing: 16) {
@@ -526,6 +581,8 @@ struct TherapySessionView: View {
                 }
             case .timed(let practice):
                 Text("session.practiceSeconds \(Int(practice.seconds)) \(Int(practice.goal))")
+            case .sitToStand(let value):
+                sitToStandStatus(value)
             case nil: EmptyView()
             }
             if let failure = model.failure {
@@ -535,6 +592,63 @@ struct TherapySessionView: View {
         .typography(.title2)
         .padding(8)
         .background(.black, in: RoundedRectangle(cornerRadius: 12))
+    }
+
+    @ViewBuilder
+    private func sitToStandStatus(_ value: SitToStandSnapshot) -> some View {
+        switch value.phase {
+        case .seatedCapture:
+            HStack(spacing: 16) {
+                Text("session.remaining \(value.seconds)").monospacedDigit()
+                ProgressView(value: value.progress)
+                    .tint(.yellow)
+                    .accessibilityLabel(Text("session.holdProgress"))
+            }
+        case .practice:
+            VStack(spacing: 10) {
+                HStack(spacing: 24) {
+                    stageChip("sts.stage.lean", done: value.leanReached)
+                    stageChip("sts.stage.stand", done: value.stage == .standing || value.stage == .lowering)
+                    stageChip("sts.stage.sit", done: false)
+                }
+                ProgressView(value: value.rise)
+                    .tint(.green)
+                    .accessibilityLabel(Text("sts.riseProgress"))
+            }
+        case .trial, .returnToSeat, .countdown:
+            EmptyView()
+        }
+    }
+
+    private func stageChip(_ key: LocalizedStringKey, done: Bool) -> some View {
+        Label(key, systemImage: done ? "checkmark.circle.fill" : "circle")
+            .foregroundStyle(done ? .green : .white)
+    }
+
+    /// Joint chain with the knee angle and trunk lean read from it, in the session's language.
+    private func sitToStandOverlay(_ value: SitToStandSnapshot, joints: SitToStandJoints) -> some View {
+        func normalized(_ point: TherapyPoint) -> CGPoint {
+            CGPoint(x: point.x / value.aspect, y: point.y)
+        }
+        func caption(_ key: String, _ degrees: Double) -> String {
+            let format = String(
+                localized: String.LocalizationValue(key),
+                bundle: model.sessionLanguage.resourceBundle, locale: model.sessionLocale
+            )
+            return String(format: format, Int(degrees.rounded()))
+        }
+        let capturing = value.phase == .seatedCapture || value.phase == .trial
+        return SessionJointChainOverlay(
+            imageSize: CGSize(width: value.aspect, height: 1),
+            joints: [
+                .init(point: normalized(joints.shoulder)),
+                .init(point: normalized(joints.hip), caption: caption("sts.leanLabel %lld", value.trunkLean)),
+                .init(point: normalized(joints.knee), caption: caption("sts.kneeLabel %lld", value.kneeAngle), highlighted: true),
+                .init(point: normalized(joints.ankle)),
+            ],
+            color: value.cue != nil ? .orange : (capturing ? .yellow : .green),
+            mirrored: model.frontCamera
+        )
     }
 
     private func cupSupportCue(_ step: CupStep) -> String {
@@ -563,13 +677,14 @@ struct TherapySessionView: View {
 
     private var recoveryControls: some View {
         VStack(spacing: 12) {
-            Button("session.recalibrate") { model.command(.retryCalibration) }
+            Button(model.snapshot.activity?.kind == .foldTowel ? "towel.restart" : "session.recalibrate") { model.command(.retryCalibration) }
                 .buttonStyle(SessionButtonStyle())
             if model.snapshot.stage == .activity {
                 HStack {
                     Button("session.redo") { model.command(.redo) }
                         .buttonStyle(SessionButtonStyle())
                     let reachActivity = model.snapshot.activity?.kind == .directionalReach
+                        || model.snapshot.activity?.kind == .sitToStand
                     let cupRehearsal: Bool = {
                         guard case .cup(let cup) = model.snapshot.presentation else { return false }
                         return cup.phase == .rehearsal
@@ -586,6 +701,10 @@ struct TherapySessionView: View {
                         Button("session.skipStep") { model.command(.skipStep) }
                             .buttonStyle(SessionButtonStyle())
                     }
+                }
+                if model.snapshot.activity?.kind == .sitToStand {
+                    Button("session.retryStep") { model.command(.retryStep) }
+                        .buttonStyle(SessionButtonStyle())
                 }
                 if model.snapshot.activity?.kind == .armRaise || model.snapshot.activity?.kind == .elbowBend {
                     HStack {
@@ -613,6 +732,8 @@ struct TherapySessionView: View {
                     Button("session.retryCamera") {
                         Task { await model.retryCamera(permissions: permissions) }
                     }.buttonStyle(SessionButtonStyle())
+                    Button("session.camera") { model.switchCamera() }
+                        .buttonStyle(SessionButtonStyle())
                     recoveryControls
                 }
             }
@@ -647,6 +768,9 @@ struct TherapySessionView: View {
                         .accessibilityHidden(true)
                 }
             }
+            if summary.routine.activities.contains(where: { $0.kind != .sitToStand }) {
+                Text("session.completedSets \(summary.completedSets)")
+            }
             Section("session.results") {
                 ForEach(summary.results, id: \.executionID) { result in
                     summaryRow(result)
@@ -672,8 +796,13 @@ struct TherapySessionView: View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
                 Text(kindKey(result.activity.kind))
-                Text(result.activity.side == .left ? "session.left" : "session.right")
+                if result.activity.hasSide {
+                    Text(result.activity.side == .left ? "session.left" : "session.right")
+                }
                 Spacer()
+                if result.activity.kind != .sitToStand {
+                    Text("session.setProgress \(result.setNumber ?? 1) \(result.activity.sets)")
+                }
                 Text(LocalizedStringKey("session.outcome." + result.outcome.rawValue))
                 if result.practiceSeconds > 0, result.completedWork == 0 {
                     Text("session.elapsed \(Int(result.practiceSeconds))")
@@ -725,6 +854,8 @@ struct TherapySessionView: View {
         case .elbowBend: return "session.elbowBend"
         case .directionalReach: return "session.directionalReach"
         case .cup: return "session.cup"
+        case .foldTowel: return "session.foldTowel"
+        case .sitToStand: return "session.sitToStand"
         }
     }
 
@@ -733,7 +864,7 @@ struct TherapySessionView: View {
             CGPoint(x: point.x / guide.aspect, y: point.y)
         }
         let active = guide.targetActive ? guide.target : guide.start
-        let inside = (guide.tracked - active).length <= guide.radius
+        let inside = guide.acceptedInside ?? ((guide.tracked - active).length <= guide.radius)
         let bubble = SessionBubbleGuide(
             startCenter: normalized(guide.start),
             targetCenter: normalized(guide.target),

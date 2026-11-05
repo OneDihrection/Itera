@@ -9,19 +9,22 @@ import Foundation
 
 enum AppRoute: Hashable {
     case home
-    case fingerHome
-    case routineConfiguration
-    case exercisePicker
+    case fingerHome(ExerciseCategory)
+    case routineConfiguration(TherapyCategory)
+    case exercisePicker(TherapyCategory)
     case therapySession
-    case therapyOverview
-    case balanceOverview
+    case therapyOverview(TherapyCategory)
+    case balanceOverview(BalanceExercise)
+    case armRotationHome
     case balanceSession(
+        exercise: BalanceExercise,
         repetitions: Int,
         holdSeconds: Int,
         armSelection: BalanceArmSelection
     )
-    case plan
+    case plan(ExerciseCategory)
     case reports
+    case taskReports
     case achievements
     case achievementCelebration
     case achievement(String)
@@ -32,7 +35,7 @@ enum AppRoute: Hashable {
     case reflection
     case sessionComplete
     case practicePreferences
-    case routineSettings
+    case routineSettings(ExerciseCategory)
     case exercisePreview(FingerExercise)
 }
 

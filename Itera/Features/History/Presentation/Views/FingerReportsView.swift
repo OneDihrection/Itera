@@ -20,6 +20,9 @@ struct FingerReportsView: View {
                 weekRange
                 weekSummary
                 challengeSection
+                TherapyButton(title: "towel.history", symbol: "square.stack.3d.up") {
+                    router.push(.taskReports)
+                }
                 historySection
             }
             // The system page margin keeps content aligned under the large navigation title.

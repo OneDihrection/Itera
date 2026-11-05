@@ -95,7 +95,7 @@ final class FingerSessionViewModel {
     }
 
     var showsGuideIndicators: Bool {
-        !paused && guideEvidence != nil && [.baseline, .target, .active].contains(activity.phase)
+        !paused && guideEvidence != nil && [.baseline, .target, .range, .active].contains(activity.phase)
     }
 
     var showsGuideTimer: Bool {
@@ -106,7 +106,10 @@ final class FingerSessionViewModel {
         switch activity.phase {
         case .baseline, .target, .active:
             return true
-        case .demonstration, .countdown, .feedback, .rest, .finished:
+        case .range:
+            // The ready countdown shows its timer; the sweep that follows does not.
+            return !activity.rangeReady
+        case .rangeResult, .demonstration, .countdown, .feedback, .rest, .finished:
             return false
         }
     }
@@ -116,6 +119,8 @@ final class FingerSessionViewModel {
         switch activity.phase {
         case .baseline: return "baseline." + activity.kind.rawValue
         case .target: return "move." + activity.kind.rawValue
+        case .range: return activity.rangeReady ? "range.instruction" : "range.ready"
+        case .rangeResult: return "range.resultSpoken"
         case .demonstration: return "demo." + activity.kind.rawValue
         case .active: return (activity.returning || activity.needsStart) ? "return." + activity.kind.rawValue : "move." + activity.kind.rawValue
         case .countdown: return "session.ready"
@@ -126,7 +131,8 @@ final class FingerSessionViewModel {
     }
     var stageKey: String {
         switch activity.phase {
-        case .baseline, .target: return "stage.calibration"
+        case .baseline, .target, .range: return "stage.calibration"
+        case .rangeResult: return "stage.calibrationResult"
         case .demonstration: return "stage.demonstration"
         case .countdown: return "stage.countdown"
         case .active: return "stage.exercise"
@@ -198,6 +204,12 @@ final class FingerSessionViewModel {
         }
         if activity.phase == .baseline || activity.phase == .target {
             return activity.progress > 0.05 ? "feedback.hold" : "feedback.comfortable"
+        }
+        if activity.phase == .range {
+            guard activity.rangeReady else {
+                return activity.holdElapsed > 0.05 ? "feedback.hold" : "feedback.comfortable"
+            }
+            return activity.rangeTooSmall ? "feedback.rangeTooSmall" : "feedback.rangeMeasuring"
         }
         if activity.phase == .active {
             return activity.progress > 0.75 ? "feedback.almost" : "feedback.slow"
@@ -377,12 +389,13 @@ final class FingerSessionViewModel {
             if !requiresHandTracking && previewAttached {
                 trackingRecovery.reset()
             }
-            evidence = sample.evidence
-            guard let hand = sample.evidence, hand.side == routine.side,
+            let detected = attributedToExercisedHand(sample.evidence)
+            evidence = detected
+            guard let hand = detected, hand.side == routine.side,
                   hand.metric(for: activity.kind, finger: activity.finger) != nil else {
                 trackingReady = false
                 // Keep the drawing filter warm across a brief miss; scoring is suspended immediately.
-                if let hand = sample.evidence {
+                if let hand = detected {
                     cameraMessage = hand.side == routine.side ? "camera.showFingers" : "camera.selectedHand"
                 } else {
                     cameraMessage = "camera.position"
@@ -425,6 +438,16 @@ final class FingerSessionViewModel {
             updateRewards()
             updateGuidance()
         }
+    }
+
+    /// Forearm rotation turns the palm toward and away from the camera, which makes a hand's
+    /// reported chirality unreliable. Capture accepts a single hand, so credit it to the
+    /// exercised side instead of rejecting the end of the movement.
+    private func attributedToExercisedHand(_ hand: HandEvidence?) -> HandEvidence? {
+        guard activity.kind == .forearmRotation, let hand else {
+            return hand
+        }
+        return hand.assigning(side: routine.side)
     }
 
     /// A brief miss (a bystander, an occluded hand) freezes the hold; a long one restarts the cycle.
@@ -725,6 +748,18 @@ final class FingerSessionViewModel {
             finish(completed: true)
         }
         else { Task { await saveCheckpoint() } }
+    }
+
+    func confirmRange() {
+        engine.confirmRange()
+        previousInstruction = ""
+        updateGuidance()
+    }
+
+    func remeasureRange() {
+        engine.remeasureRange()
+        previousInstruction = ""
+        updateGuidance()
     }
 
     func retryCalibration() {

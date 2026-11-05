@@ -43,13 +43,11 @@ struct SessionTargetOverlay: View {
     var body: some View {
         Canvas { context, size in
             guard let image = imageSize, image.width > 0, image.height > 0 else { return }
-            let scale = min(size.width / image.width, size.height / image.height)
-            let offset = CGPoint(x: (size.width - image.width * scale) / 2, y: (size.height - image.height * scale) / 2)
+            let geometry = CameraDisplayGeometry(aspect: image.width / image.height, viewport: size)
+            let scale = geometry.imageRect.height / image.height
+            let offset = geometry.imageRect.origin
             func point(_ point: CGPoint) -> CGPoint {
-                CGPoint(
-                    x: offset.x + (mirrored ? 1 - point.x : point.x) * image.width * scale,
-                    y: offset.y + (1 - point.y) * image.height * scale
-                )
+                geometry.point(point, mirrored: mirrored)
             }
             if let directionGuide {
                 let bounds = CGRect(origin: offset, size: CGSize(width: image.width * scale, height: image.height * scale))

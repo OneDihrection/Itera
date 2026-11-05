@@ -24,7 +24,7 @@ struct BodyCameraPreview: UIViewRepresentable {
             [weak view] layer, _ in
             DispatchQueue.main.async { [weak view] in
                 view?.setNeedsLayout()
-                view?.onReady?(layer.isPreviewing)
+                view?.reportReadiness()
             }
         }
         return view
@@ -36,6 +36,7 @@ struct BodyCameraPreview: UIViewRepresentable {
     }
 
     static func dismantleUIView(_ view: PreviewView, coordinator: ()) {
+        view.onReady?(false)
         view.observation = nil
         view.onReady = nil
         view.onOrientation = nil
@@ -48,6 +49,7 @@ struct BodyCameraPreview: UIViewRepresentable {
         var onOrientation: ((Bool) -> Void)?
         var front = true
         private var lastOrientation: UIInterfaceOrientation?
+        private var reportedReady = false
         override class var layerClass: AnyClass { AVCaptureVideoPreviewLayer.self }
         var previewLayer: AVCaptureVideoPreviewLayer { layer as! AVCaptureVideoPreviewLayer }
 
@@ -57,23 +59,47 @@ struct BodyCameraPreview: UIViewRepresentable {
                 lastOrientation = nil
             }
             setNeedsLayout()
+            reportReadiness()
+        }
+
+        func reportReadiness() {
+            let ready = window != nil
+                && !isHidden
+                && bounds.width > 0
+                && bounds.height > 0
+                && previewLayer.session != nil
+                && previewLayer.isPreviewing
+            guard ready != reportedReady else { return }
+            reportedReady = ready
+            NSLog("Body preview rendering=%@ attached=%@", ready.description, (window != nil).description)
+            onReady?(ready)
         }
 
         override func layoutSubviews() {
             super.layoutSubviews()
+            reportReadiness()
+            #if targetEnvironment(macCatalyst)
+            // Mac windows have no interface orientation and Mac cameras deliver upright frames, so use the unrotated (0°) landscapeRight path.
+            let orientation = UIInterfaceOrientation.landscapeRight
+            #else
             guard let orientation = window?.windowScene?.interfaceOrientation,
-                  orientation == .landscapeLeft || orientation == .landscapeRight else {
-                return
-            }
+                  orientation == .landscapeLeft || orientation == .landscapeRight else { return }
+            #endif
             let right = orientation == .landscapeRight
             let videoOrientation: AVCaptureVideoOrientation = right ? .landscapeRight : .landscapeLeft
             CATransaction.begin()
             CATransaction.setDisableActions(true)
             if let connection = previewLayer.connection {
+                #if targetEnvironment(macCatalyst)
+                if connection.isVideoRotationAngleSupported(0) {
+                    connection.videoRotationAngle = 0
+                }
+                #else
                 if connection.isVideoOrientationSupported,
                    connection.videoOrientation != videoOrientation {
                     connection.videoOrientation = videoOrientation
                 }
+                #endif
                 if connection.isVideoMirroringSupported {
                     connection.automaticallyAdjustsVideoMirroring = false
                     connection.isVideoMirrored = front

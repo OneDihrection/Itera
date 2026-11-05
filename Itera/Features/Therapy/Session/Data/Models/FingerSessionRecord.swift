@@ -9,6 +9,7 @@ import Foundation
 
 struct FingerSessionRecord: Codable {
     let version: Int
+    let category: String?
     let id: UUID
     let started: Date
     let ended: Date
@@ -35,6 +36,7 @@ struct FingerSessionRecord: Codable {
 
     init(_ summary: FingerSessionSummary) {
         version = 1
+        category = summary.routine.category.rawValue
         id = summary.id
         started = summary.started
         ended = summary.ended
@@ -61,6 +63,8 @@ struct FingerSessionRecord: Codable {
               (5...120).contains(rest), (0..<5).contains(exerciseIndex),
               feeling == nil || SessionFeeling(rawValue: feeling!) != nil else { throw RecordError.invalid }
         var routine = FingerRoutine()
+        // Records written before categories existed are finger sessions.
+        routine.category = category.flatMap(ExerciseCategory.init(rawValue:)) ?? .fingers
         routine.side = side
         routine.sets = sets
         routine.repetitions = repetitions

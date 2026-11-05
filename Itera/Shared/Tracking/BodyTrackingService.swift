@@ -19,6 +19,8 @@ final class BodyTrackingService: NSObject, AVCaptureVideoDataOutputSampleBufferD
     let availability = PassthroughSubject<TrackingAvailability, Never>()
 
     private let queue = DispatchQueue(label: "Itera.bodyTracking", qos: .userInitiated)
+    private let inferenceQueue = DispatchQueue(label: "Itera.bodyInference", qos: .userInitiated)
+    private var inferenceBusy = false
     private let deliveryLock = NSLock()
     private var pending: TrackingObservation?
     private var deliveryScheduled = false
@@ -26,20 +28,28 @@ final class BodyTrackingService: NSObject, AVCaptureVideoDataOutputSampleBufferD
     private var position: AVCaptureDevice.Position = .front
     private var orientation: AVCaptureVideoOrientation = .landscapeLeft
     private var previousCenterStage: (mode: AVCaptureDevice.CenterStageControlMode, enabled: Bool)?
+    private var wantsCapture = false
     private var configured = false
     private var hasInitialOrientation = false
     private var timestampOffset: Double?
     private var lastPublished = 0.0
     /// Keeps tracking the patient while bystanders are in view. Confined to `queue`.
     private var subjects = BodySubjectSelector()
+    private var lastInferenceFailure = 0.0
     private var cupRequest: VNCoreMLRequest?
     private var cupEnabled = false
+    private let cupTracker = CupObjectTracker()
+    private var watchdogIdentity = UUID()
+    private var frameWatchdog: DispatchWorkItem?
+    private var awaitingFirstFrame = false
+    private var captureStartedAt = 0.0
 
     func requireCup(_ enabled: Bool) {
-        queue.async { [weak self] in
+        inferenceQueue.async { [weak self] in
             guard let self, self.cupEnabled != enabled || (enabled && self.cupRequest == nil) else { return }
             self.cupEnabled = enabled
             self.cupRequest = nil
+            self.cupTracker.reset()
             guard enabled else { return }
             do {
                 guard let url = Bundle.main.url(forResource: "yolo11n", withExtension: "mlmodelc") else {
@@ -54,21 +64,50 @@ final class BodyTrackingService: NSObject, AVCaptureVideoDataOutputSampleBufferD
         }
     }
 
+    private let handRequest = VNDetectHumanHandPoseRequest()
+    private var handEnabled = false
+    private var normalLens = false
+
+    /// Hand inference shares the capture session and bounded delivery with body and cup modes.
+    func requireHand(_ enabled: Bool) {
+        inferenceQueue.async { [weak self] in
+            self?.handEnabled = enabled
+        }
+        queue.async { [weak self] in
+            guard let self, self.normalLens != enabled else { return }
+            self.normalLens = enabled
+            guard self.configured else { return }
+            self.availability.send(.discontinuity)
+            self.session.stopRunning()
+            self.cancelFrameWatchdog()
+            self.session.beginConfiguration()
+            for input in self.session.inputs { self.session.removeInput(input) }
+            for output in self.session.outputs { self.session.removeOutput(output) }
+            self.session.commitConfiguration()
+            self.configured = false
+            self.invalidateGeneration()
+            self.startIfRequested()
+        }
+    }
+
     private let request = VNDetectHumanBodyPoseRequest()
     private var notifications: [NSObjectProtocol] = []
 
     override init() {
         super.init()
+        handRequest.maximumHandCount = 2
         let center = NotificationCenter.default
         notifications.append(
             center.addObserver(
                 forName: AVCaptureSession.wasInterruptedNotification, object: session, queue: nil
-            ) { [weak self] _ in
+            ) { [weak self] notification in
+                NSLog("Body capture interrupted reason=%@", String(describing: notification.userInfo?[AVCaptureSessionInterruptionReasonKey]))
                 guard let self else {
                     return
                 }
                 self.queue.async {
-                    self.generation = UUID()
+                    self.cancelFrameWatchdog()
+                    self.invalidateGeneration()
                     self.availability.send(.discontinuity)
                 }
             })
@@ -76,7 +115,13 @@ final class BodyTrackingService: NSObject, AVCaptureVideoDataOutputSampleBufferD
             center.addObserver(
                 forName: AVCaptureSession.interruptionEndedNotification, object: session, queue: nil
             ) { [weak self] _ in
-                self?.start()
+                guard let self else { return }
+                self.queue.async {
+                    guard self.wantsCapture else { return }
+                    self.awaitingFirstFrame = true
+                    self.startIfRequested()
+                    self.scheduleFrameWatchdog(for: self.generation)
+                }
             })
         notifications.append(
             center.addObserver(
@@ -86,11 +131,14 @@ final class BodyTrackingService: NSObject, AVCaptureVideoDataOutputSampleBufferD
                     return
                 }
                 self.queue.async {
+                    self.cancelFrameWatchdog()
+                    self.invalidateGeneration()
                     self.session.stopRunning()
                     self.restoreCenterStage()
                     self.availability.send(.discontinuity)
                 }
-                let error = notification.userInfo?[AVCaptureSessionErrorKey] as? Error
+                let error = notification.userInfo?[AVCaptureSessionErrorKey] as? NSError
+                NSLog("Body capture runtime error domain=%@ code=%ld", error?.domain ?? "unknown", error?.code ?? 0)
                 self.failures.send(
                     error?.localizedDescription ?? "")
             })
@@ -108,37 +156,50 @@ final class BodyTrackingService: NSObject, AVCaptureVideoDataOutputSampleBufferD
             guard let self else {
                 return
             }
-            do {
-                if self.previousCenterStage == nil {
-                    self.previousCenterStage = (
-                        AVCaptureDevice.centerStageControlMode,
-                        AVCaptureDevice.isCenterStageEnabled
-                    )
-                }
-                AVCaptureDevice.centerStageControlMode = .app
-                AVCaptureDevice.isCenterStageEnabled = false
-                guard self.hasInitialOrientation, !self.session.isRunning else { return }
-                try self.configureIfNeeded()
-                self.generation = UUID()
-                self.timestampOffset =
-                    ProcessInfo.processInfo.systemUptime
-                    - CMTimeGetSeconds(CMClockGetTime(CMClockGetHostTimeClock()))
-                self.session.startRunning()
-                self.availability.send(.ready(self.generation))
-                if self.cupEnabled, self.cupRequest == nil {
-                    self.cupEnabled = false
-                    self.requireCup(true)
-                }
-            } catch {
-                self.restoreCenterStage()
-                self.failures.send(error.localizedDescription)
-                self.availability.send(.waiting)
+            self.wantsCapture = true
+            self.startIfRequested()
+        }
+    }
+
+    private func startIfRequested() {
+        guard wantsCapture else { return }
+        do {
+            if self.previousCenterStage == nil {
+                self.previousCenterStage = (
+                    AVCaptureDevice.centerStageControlMode,
+                    AVCaptureDevice.isCenterStageEnabled
+                )
             }
+            AVCaptureDevice.centerStageControlMode = .app
+            AVCaptureDevice.isCenterStageEnabled = false
+            guard self.hasInitialOrientation, !self.session.isRunning else { return }
+            try self.configureIfNeeded()
+            self.invalidateGeneration()
+            self.timestampOffset =
+                ProcessInfo.processInfo.systemUptime
+                - CMTimeGetSeconds(CMClockGetTime(CMClockGetHostTimeClock()))
+            NSLog("Body capture start requested")
+            self.session.startRunning()
+            self.captureStartedAt = ProcessInfo.processInfo.systemUptime
+            NSLog("Body capture running=%@ generation=%@", self.session.isRunning.description, self.generation.uuidString)
+            guard self.session.isRunning else {
+                throw TrackingError.cameraUnavailable
+            }
+            self.awaitingFirstFrame = true
+            self.scheduleFrameWatchdog(for: self.generation)
+        } catch {
+            self.cancelFrameWatchdog()
+            self.restoreCenterStage()
+            self.failures.send(error.localizedDescription)
+            self.availability.send(.waiting)
         }
     }
 
     func stop() {
         queue.async { [weak self] in
+            self?.wantsCapture = false
+            self?.invalidateGeneration()
+            self?.cancelFrameWatchdog()
             self?.session.stopRunning()
             self?.restoreCenterStage()
             self?.availability.send(.waiting)
@@ -162,6 +223,7 @@ final class BodyTrackingService: NSObject, AVCaptureVideoDataOutputSampleBufferD
                 self.availability.send(.discontinuity)
             }
             self.session.stopRunning()
+            self.cancelFrameWatchdog()
             self.session.beginConfiguration()
             for input in self.session.inputs { self.session.removeInput(input) }
             for output in self.session.outputs { self.session.removeOutput(output) }
@@ -169,7 +231,8 @@ final class BodyTrackingService: NSObject, AVCaptureVideoDataOutputSampleBufferD
             self.configured = false
             self.position = position
             self.orientation = orientation
-            self.start()
+            self.invalidateGeneration()
+            self.startIfRequested()
         }
     }
 
@@ -187,21 +250,23 @@ final class BodyTrackingService: NSObject, AVCaptureVideoDataOutputSampleBufferD
         guard !configured else {
             return
         }
-        guard
-            let camera = AVCaptureDevice.DiscoverySession(
-                deviceTypes: [.builtInUltraWideCamera], mediaType: .video, position: position
-            ).devices.first ?? AVCaptureDevice.default(
-                .builtInWideAngleCamera, for: .video, position: position)
-        else {
+        let selectedCamera = (normalLens ? nil : AVCaptureDevice.default(
+            .builtInUltraWideCamera, for: .video, position: position
+        )) ?? AVCaptureDevice.default(
+            .builtInWideAngleCamera, for: .video, position: position
+        ) ?? AVCaptureDevice.default(for: .video)
+        guard let camera = selectedCamera else {
             throw TrackingError.cameraUnavailable
         }
         let input = try AVCaptureDeviceInput(device: camera)
+        NSLog("Body capture selected device=%@ type=%@ position=%ld", camera.localizedName, camera.deviceType.rawValue, position.rawValue)
         let output = AVCaptureVideoDataOutput()
         output.alwaysDiscardsLateVideoFrames = true
         output.setSampleBufferDelegate(self, queue: queue)
         session.beginConfiguration()
+        session.automaticallyConfiguresApplicationAudioSession = false
         defer { session.commitConfiguration() }
-        session.sessionPreset = .high
+        session.sessionPreset = session.canSetSessionPreset(.hd1280x720) ? .hd1280x720 : .high
         guard session.canAddInput(input), session.canAddOutput(output) else {
             throw TrackingError.cameraUnavailable
         }
@@ -210,22 +275,38 @@ final class BodyTrackingService: NSObject, AVCaptureVideoDataOutputSampleBufferD
         if let connection = output.connection(with: .video) {
             // Semantic orientation accounts for the selected camera's sensor mounting.
             // A fixed raw angle can invert front-camera frames by 180 degrees.
+            #if targetEnvironment(macCatalyst)
+            if connection.isVideoRotationAngleSupported(0) {
+                connection.videoRotationAngle = 0
+            }
+            #else
             if connection.isVideoOrientationSupported {
                 connection.videoOrientation = orientation
             }
+            #endif
             if connection.isVideoMirroringSupported {
                 connection.automaticallyAdjustsVideoMirroring = false
                 connection.isVideoMirrored = false
             }
         }
+        if camera.activeFormat.videoSupportedFrameRateRanges.contains(where: {
+            $0.minFrameRate <= 30 && $0.maxFrameRate >= 30
+        }) {
+            try camera.lockForConfiguration()
+            camera.activeVideoMinFrameDuration = CMTime(value: 1, timescale: 30)
+            camera.activeVideoMaxFrameDuration = CMTime(value: 1, timescale: 30)
+            camera.unlockForConfiguration()
+        }
         configured = true
+        NSLog("Body capture configuration complete")
     }
 
     func captureOutput(
         _ output: AVCaptureOutput, didOutput sampleBuffer: CMSampleBuffer,
         from connection: AVCaptureConnection
     ) {
-        guard let image = CMSampleBufferGetImageBuffer(sampleBuffer) else {
+        guard wantsCapture, session.outputs.contains(where: { $0 === output }),
+              let image = CMSampleBufferGetImageBuffer(sampleBuffer) else {
             return
         }
         let rawTime = CMTimeGetSeconds(CMSampleBufferGetPresentationTimeStamp(sampleBuffer))
@@ -236,13 +317,30 @@ final class BodyTrackingService: NSObject, AVCaptureVideoDataOutputSampleBufferD
             return
         }
         let time = rawTime + timestampOffset
-        guard time - lastPublished >= 1.0 / 20 else {
-            return
+        if awaitingFirstFrame {
+            awaitingFirstFrame = false
+            NSLog("Body capture first frame delay=%.3f seconds generation=%@", ProcessInfo.processInfo.systemUptime - captureStartedAt, generation.uuidString)
+            availability.send(.ready(generation))
         }
+        scheduleFrameWatchdog(for: generation)
+        guard wantsCapture, !inferenceBusy else { return }
+        inferenceBusy = true
+        let expectedGeneration = generation
+        inferenceQueue.async { [weak self] in
+            guard let self else { return }
+            self.process(image, time: time, generation: expectedGeneration)
+            self.queue.async { self.inferenceBusy = false }
+        }
+    }
+
+    private func process(_ image: CVPixelBuffer, time: Double, generation: UUID) {
+        guard (!cupEnabled && !handEnabled) || time - lastPublished >= 1.0 / 20 else { return }
         lastPublished = time
         do {
-            try VNImageRequestHandler(cvPixelBuffer: image, orientation: .up).perform([request])
-            let people = request.results ?? []
+            if !cupEnabled && !handEnabled {
+                try VNImageRequestHandler(cvPixelBuffer: image, orientation: .up).perform([request])
+            }
+            let people = cupEnabled || handEnabled ? [] : (request.results ?? [])
             let personPoints = people.map { (try? $0.recognizedPoints(.all)) ?? [:] }
             let imageAspect = Double(CVPixelBufferGetWidth(image)) / Double(CVPixelBufferGetHeight(image))
             let subject = subjects.select(
@@ -262,29 +360,29 @@ final class BodyTrackingService: NSObject, AVCaptureVideoDataOutputSampleBufferD
                     }
                 }
             }
+            var hand: HandEvidence?
+            if handEnabled {
+                try VNImageRequestHandler(cvPixelBuffer: image, orientation: .up).perform([handRequest])
+                if let hands = handRequest.results, hands.count == 1, let observation = hands.first {
+                    hand = try HandPoseExtractor.evidence(
+                        from: observation, timestamp: time, generation: generation,
+                        width: Double(CVPixelBufferGetWidth(image)),
+                        height: Double(CVPixelBufferGetHeight(image))
+                    )
+                }
+            }
             var cup: CupEvidence?
             if cupEnabled, let cupRequest {
                 do {
-                    try VNImageRequestHandler(cvPixelBuffer: image, orientation: .up).perform([cupRequest])
+                    cup = try cupTracker.process(
+                        image, timestamp: time, generation: generation, detector: cupRequest)
                 } catch {
+                    cupTracker.reset()
                     self.cupRequest = nil
                     cupFailures.send("cup.modelUnavailable")
                 }
-                let objects: [VNRecognizedObjectObservation] = self.cupRequest == nil
-                    ? [] : (cupRequest.results as? [VNRecognizedObjectObservation] ?? [])
-                let aspect = Double(CVPixelBufferGetWidth(image)) / Double(CVPixelBufferGetHeight(image))
-                let centers = objects.compactMap { object -> TherapyPoint? in
-                    guard let label = object.labels.first, label.identifier == "cup",
-                        label.confidence >= 0.45 else { return nil }
-                    return TherapyPoint(x: object.boundingBox.midX * aspect, y: object.boundingBox.midY)
-                }
-                let bounds = objects.compactMap { object -> TherapyRectangle? in
-                    guard object.labels.first?.identifier == "cup", (object.labels.first?.confidence ?? 0) >= 0.45 else { return nil }
-                    let box = object.boundingBox
-                    return TherapyRectangle(minX: box.minX * aspect, minY: box.minY, width: box.width * aspect, height: box.height)
-                }
-                cup = CupEvidence(timestamp: time, generation: generation, centers: centers, bounds: bounds)
             }
+
             deliver(
                 TrackingObservation(
                     timestamp: time, generation: generation, width: CVPixelBufferGetWidth(image),
@@ -292,14 +390,31 @@ final class BodyTrackingService: NSObject, AVCaptureVideoDataOutputSampleBufferD
                     // Bystanders are excluded once the patient is selected; ambiguity reports everyone.
                     personCount: subject == nil ? people.count : 1,
                     joints: joints,
-                    cup: cup
+                    cup: cup, hand: hand
                 ))
         } catch {
-            failures.send(error.localizedDescription)
+            if time - lastInferenceFailure >= 5 {
+                lastInferenceFailure = time
+                NSLog("Body inference failed: %@", error.localizedDescription)
+            }
+            // Missing evidence clears holds without taking down healthy video.
+            deliver(TrackingObservation(
+                timestamp: time, generation: generation,
+                width: CVPixelBufferGetWidth(image), height: CVPixelBufferGetHeight(image),
+                personCount: 0, joints: [:], cup: nil
+            ))
         }
     }
 
     private func deliver(_ frame: TrackingObservation) {
+        queue.async { [weak self] in
+            guard let self, self.wantsCapture, self.generation == frame.generation,
+                  ProcessInfo.processInfo.systemUptime - frame.timestamp <= 0.3 else { return }
+            self.enqueueDelivery(frame)
+        }
+    }
+
+    private func enqueueDelivery(_ frame: TrackingObservation) {
         deliveryLock.lock()
         pending = frame
         let schedule = !deliveryScheduled
@@ -353,11 +468,49 @@ final class BodyTrackingService: NSObject, AVCaptureVideoDataOutputSampleBufferD
         return BodySubjectSelector.Candidate(torso: center, size: diagonal.length)
     }
 
+    private func invalidateGeneration() {
+        generation = UUID()
+        deliveryLock.lock()
+        pending = nil
+        deliveryLock.unlock()
+    }
+
+    private func cancelFrameWatchdog() {
+        watchdogIdentity = UUID()
+        frameWatchdog?.cancel()
+        frameWatchdog = nil
+        awaitingFirstFrame = false
+    }
+
+    private func scheduleFrameWatchdog(for expectedGeneration: UUID) {
+        frameWatchdog?.cancel()
+        let firstFrame = awaitingFirstFrame
+        let identity = UUID()
+        watchdogIdentity = identity
+        let work = DispatchWorkItem { [weak self] in
+            guard let self, self.watchdogIdentity == identity, self.wantsCapture,
+                  self.generation == expectedGeneration, self.session.isRunning else {
+                return
+            }
+            self.cancelFrameWatchdog()
+            self.invalidateGeneration()
+            self.session.stopRunning()
+            self.restoreCenterStage()
+            NSLog("Body capture frame timeout firstFrame=%@ generation=%@", firstFrame.description, expectedGeneration.uuidString)
+            self.availability.send(.discontinuity)
+            self.failures.send(firstFrame ? "Camera did not deliver a startup frame." : "Camera frames stopped arriving.")
+        }
+        frameWatchdog = work
+        queue.asyncAfter(deadline: .now() + (firstFrame ? 3.0 : 1.0), execute: work)
+    }
+
     private static let jointMap: [(BodyJoint, VNHumanBodyPoseObservation.JointName)] = [
         (.nose, .nose), (.neck, .neck), (.root, .root),
         (.leftShoulder, .leftShoulder), (.rightShoulder, .rightShoulder),
         (.leftElbow, .leftElbow), (.rightElbow, .rightElbow), (.leftWrist, .leftWrist),
         (.rightWrist, .rightWrist), (.leftHip, .leftHip), (.rightHip, .rightHip),
+        (.leftKnee, .leftKnee), (.rightKnee, .rightKnee),
+        (.leftAnkle, .leftAnkle), (.rightAnkle, .rightAnkle),
     ]
     private enum TrackingError: Error { case cameraUnavailable }
 }

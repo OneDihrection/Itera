@@ -115,6 +115,11 @@ struct FingerSessionView: View {
                 .typography(size: 36, weight: .semiBold, relativeTo: .title)
                 .lineLimit(2)
                 .minimumScaleFactor(0.7)
+            if model.activity.phase == .range, model.activity.rangeReady {
+                ProgressView(value: model.activity.rangeProgress)
+                    .accessibilityLabel("session.rangeProgress")
+                    .frame(maxWidth: 420)
+            }
             if model.activity.kind.isSequential && isTracking(model) {
                 Text(LocalizedStringKey(model.fingerKey))
                     .typography(size: 22, weight: .medium, relativeTo: .title3)
@@ -149,8 +154,33 @@ struct FingerSessionView: View {
     }
 
     private func isTracking(_ model: FingerSessionViewModel) -> Bool {
-        [.baseline, .target, .active].contains(model.activity.phase)
+        [.baseline, .target, .range, .active].contains(model.activity.phase)
     }
+
+    /// Shows the calibrated range, then lets the patient or caregiver start or measure again.
+    private func rangeResult(_ model: FingerSessionViewModel) -> some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 24) {
+                Text("range.resultTitle").typography(.title)
+                    .accessibilityAddTraits(.isHeader)
+                TherapyRangeGauge(startLabel: "range.startEnd", endLabel: "range.farEnd")
+                Text("range.target").typography(.headline)
+                Text("range.repExplainer").typography(.body)
+                    .foregroundStyle(TherapyPalette.muted)
+                Text("range.disclaimer").typography(.footnote)
+                    .foregroundStyle(TherapyPalette.muted)
+                HStack(spacing: 16) {
+                    TherapyButton(title: "range.start", symbol: "play.fill", action: model.confirmRange)
+                    TherapyButton(title: "range.remeasure", symbol: "arrow.clockwise", secondary: true, action: model.remeasureRange)
+                }
+            }
+            .frame(maxWidth: 640, alignment: .leading)
+            .padding(28)
+            .frame(maxWidth: .infinity)
+        }
+        .background(TherapyPalette.cream)
+    }
+
 
     // MARK: - Full-screen pages
 
@@ -159,6 +189,8 @@ struct FingerSessionView: View {
     @ViewBuilder
     private func phasePage(_ model: FingerSessionViewModel) -> some View {
         switch model.activity.phase {
+        case .rangeResult:
+            rangeResult(model)
         case .demonstration:
             demonstration(model)
         case .feedback:
@@ -175,7 +207,7 @@ struct FingerSessionView: View {
     }
 
     private func coversSession(_ model: FingerSessionViewModel) -> Bool {
-        [.demonstration, .feedback, .rest].contains(model.activity.phase)
+        [.rangeResult, .demonstration, .feedback, .rest].contains(model.activity.phase)
     }
 
     // MARK: - Camera
@@ -248,7 +280,7 @@ struct FingerSessionView: View {
     }
 
     private func example(_ model: FingerSessionViewModel) -> some View {
-        FingerDemonstrationView(
+        FingerExampleView(
             exercise: model.activity.kind, phase: model.activity.phase,
             returning: model.activity.returning || model.activity.needsStart,
             finger: model.activity.finger, side: model.routine.side, paused: model.paused || model.waitingForCamera

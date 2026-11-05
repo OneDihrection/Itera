@@ -42,6 +42,20 @@ struct MovementActivity: TherapyActivity {
 
     mutating func handle(_ event: ActivityEvent) -> ActivityTransition {
         switch event {
+        case .countdownReady(let time):
+            if snapshot.countingDown {
+                countdown = time + 3
+                snapshot.seconds = 3
+            }
+        case .nextSet:
+            snapshot.count = 0
+            interrupt()
+            landmarkSmoother.reset()
+            snapshot.countingDown = true
+            snapshot.seconds = 3
+            snapshot.instruction = "session.countdown"
+            countdown = nil
+            returningBeforePractice = false
         case .guidanceCompleted:
             break
         case .viewport(let value):
@@ -223,9 +237,21 @@ struct MovementActivity: TherapyActivity {
         lastValid = time
         let offset = (tracked - anchor).scaled(1 / scale)
         if target == nil {
+            // Keep live geometry visible even when this position cannot be captured.
+            snapshot.guide = TargetGuide(
+                start: start.map { anchor + $0.scaled(scale) } ?? tracked, target: tracked, tracked: tracked,
+                radius: bubbleRadius(body: scale * offset.length * 0.2, separation: nil, aspect: frame.aspect, viewport: viewport),
+                targetActive: false, progress: 0, aspect: frame.aspect,
+                capturing: true, savedStart: start != nil
+            )
+
             if let start, (offset - start).length <= limb * 0.4 {
                 hold.clear()
                 snapshot.progress = 0
+                snapshot.seconds = 3
+                cueHolding = false
+                cueCandidate = false
+                cueSince = nil
                 snapshot.instruction = "session.farther"
                 return
             }
@@ -233,7 +259,7 @@ struct MovementActivity: TherapyActivity {
             hold.consume(
                 offset,
                 time: time,
-                duration: start == nil ? 5 : 3,
+                duration: 3,
                 tolerance: offset.length * 0.1,
                 maximumGap: InterruptibleHold.trackingGrace,
                 creditedStep: 0.15,
@@ -249,13 +275,8 @@ struct MovementActivity: TherapyActivity {
                 cueHolding = candidate
             }
             snapshot.instruction = start == nil ? "session.holdStart" : (cueHolding ? "session.holdTarget" : "parity.moveComfortably")
-            snapshot.guide = TargetGuide(
-                start: start.map { anchor + $0.scaled(scale) } ?? tracked, target: tracked, tracked: tracked,
-                radius: bubbleRadius(body: scale * offset.length * 0.2, separation: nil, aspect: frame.aspect, viewport: viewport),
-                targetActive: false, progress: hold.progress, aspect: frame.aspect,
-                capturing: true, savedStart: start != nil
-            )
-            snapshot.seconds = Int(ceil((start == nil ? 5 : 3) * (1 - hold.progress)))
+            snapshot.guide?.progress = hold.progress
+            snapshot.seconds = Int(ceil(3 * (1 - hold.progress)))
             guard hold.progress >= 1, let mean = hold.mean else {
                 return
             }
@@ -302,7 +323,7 @@ struct MovementActivity: TherapyActivity {
         let inside = (tracked - active).length <= radius
         if !inside { dwell = nil }
         if inside, dwell == nil { dwell = time }
-        let progress = inside ? min(1, (time - (dwell ?? time)) / 0.25) : 0
+        let progress = inside ? min(1, (time - (dwell ?? time)) / 1.0) : 0
         snapshot.instruction = phase == 1 ? "session.moveTarget" : "session.returnStart"
         snapshot.progress = progress
         snapshot.guide = TargetGuide(

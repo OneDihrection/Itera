@@ -14,36 +14,43 @@ enum AppRouterView {
         switch route {
         case .home:
             HomeView()
-        case .fingerHome:
-            FingerHomeView()
-        case .therapyOverview:
-            TherapyOverview()
+        case .fingerHome(let category):
+            FingerHomeView(category: category)
+        case .therapyOverview(let category):
+            TherapyOverview(category: category)
                 .environment(\.buttonFeedback, {})
                 .environment(\.locale, AppLanguage.selected.locale)
-        case .balanceOverview:
-            BalanceOverviewView()
+        case .armRotationHome:
+            ArmRotationHomeView()
                 .environment(\.locale, AppLanguage.selected.locale)
-        case .balanceSession(let repetitions, let holdSeconds, let armSelection):
+        case .balanceOverview(let exercise):
+            BalanceOverviewView(exercise: exercise)
+                .environment(\.locale, AppLanguage.selected.locale)
+        case .balanceSession(let exercise, let repetitions, let holdSeconds, let armSelection):
             BalanceSessionDestination(
+                exercise: exercise,
                 repetitions: repetitions,
                 holdSeconds: holdSeconds,
                 armSelection: armSelection
             )
                 .environment(\.locale, AppLanguage.selected.locale)
-        case .routineConfiguration:
-            RoutineConfigurationView()
+        case .routineConfiguration(let category):
+            RoutineConfigurationView(category: category)
                 .environment(\.buttonFeedback, {})
                 .environment(\.locale, AppLanguage.selected.locale)
-        case .exercisePicker:
-            RoutineExercisePicker()
+        case .exercisePicker(let category):
+            RoutineExercisePicker(category: category)
                 .environment(\.buttonFeedback, {})
                 .environment(\.locale, AppLanguage.selected.locale)
         case .therapySession:
             SessionDestination()
                 .environment(\.buttonFeedback, {})
                 .environment(\.locale, AppLanguage.selected.locale)
-        case .plan:
-            FingerPlanView()
+        case .plan(let category):
+            FingerPlanView(category: category)
+        case .taskReports:
+            TaskReportsDestination()
+                .environment(\.locale, AppLanguage.selected.locale)
         case .reports:
             FingerReportsView()
         case .achievements:
@@ -66,8 +73,8 @@ enum AppRouterView {
             FingerSessionCompleteView()
         case .practicePreferences:
             PracticePreferencesView()
-        case .routineSettings:
-            FingerRoutineSettingsView()
+        case .routineSettings(let category):
+            FingerRoutineSettingsView(category: category)
         case .exercisePreview(let exercise):
             FingerExercisePreviewView(exercise: exercise)
         }
@@ -126,6 +133,7 @@ private struct SessionDestination: View {
 
 private struct BalanceSessionDestination: View {
     @Environment(AppDependencies.self) private var dependencies
+    let exercise: BalanceExercise
     let repetitions: Int
     let holdSeconds: Int
     let armSelection: BalanceArmSelection
@@ -136,7 +144,16 @@ private struct BalanceSessionDestination: View {
             audio: dependencies.audio,
             repetitions: repetitions,
             holdSeconds: holdSeconds,
-            armSelection: armSelection
+            armSelection: armSelection,
+            exercise: exercise
         ))
+    }
+}
+
+private struct TaskReportsDestination: View {
+    @Environment(AppDependencies.self) private var dependencies
+
+    var body: some View {
+        TaskReportsView(model: TaskReportsViewModel(repository: dependencies.sessions))
     }
 }

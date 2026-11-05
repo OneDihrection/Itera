@@ -13,15 +13,19 @@ import Observation
 final class AppDependencies: HistoryRecovering {
     let progress: PracticeProgressViewModel
     let home: FingerHomeViewModel
+    let forearm: FingerHomeViewModel
     private(set) var session: FingerSessionViewModel?
     let permissions: PermissionManager
     @ObservationIgnored private let camera = HandCameraService()
     @ObservationIgnored private let fingerAudio = GuidanceAudioService()
     @ObservationIgnored private let repository: any FingerSessionRepository
+    @ObservationIgnored private let forearmRepository: any FingerSessionRepository
 
     let tracking = BodyTrackingService()
     let audio = SessionAudioService()
     let routine: RoutineViewModel
+    let taskRoutine: RoutineViewModel
+    let trunkRoutine: RoutineViewModel
     var selectedRoutine = Routine.demo()
     let sessions: any SessionRepository
     private(set) var recoveryFailure: String?
@@ -36,10 +40,23 @@ final class AppDependencies: HistoryRecovering {
         routine = RoutineViewModel(repository: LocalRoutineRepository(
             url: URL.applicationSupportDirectory.appendingPathComponent("routines.json")
         ))
+        trunkRoutine = RoutineViewModel(repository: LocalRoutineRepository(
+            url: URL.applicationSupportDirectory.appendingPathComponent("routines-trunk.json")
+        ))
+
+        taskRoutine = RoutineViewModel(repository: LocalRoutineRepository(
+            url: URL.applicationSupportDirectory.appendingPathComponent("routines-task-oriented.json")
+        ))
 
         let repository = LocalFingerSessionRepository()
         self.repository = repository
         home = FingerHomeViewModel(repository: repository, routineRepository: LocalFingerRoutineRepository())
+        let forearmRepository = LocalFingerSessionRepository(category: .forearm)
+        self.forearmRepository = forearmRepository
+        forearm = FingerHomeViewModel(
+            category: .forearm, repository: forearmRepository,
+            routineRepository: LocalFingerRoutineRepository(category: .forearm)
+        )
         progress = PracticeProgressViewModel(history: repository, repository: LocalAchievementRepository())
     }
 
@@ -57,11 +74,30 @@ final class AppDependencies: HistoryRecovering {
         fingerAudio.playAchievementCue()
     }
 
-    func prepareSession(continuing: Bool = false) {
-        let checkpoint = continuing ? home.checkpoint : nil
+    func routineModel(for category: TherapyCategory) -> RoutineViewModel {
+        switch category {
+        case .arm: return routine
+        case .trunk: return trunkRoutine
+        case .taskOriented: return taskRoutine
+        }
+    }
+
+    func homeModel(for category: ExerciseCategory) -> FingerHomeViewModel {
+        category == .fingers ? home : forearm
+    }
+
+    func refreshHomes() async {
+        await home.refresh()
+        await forearm.refresh()
+    }
+
+    func prepareSession(category: ExerciseCategory = .fingers, continuing: Bool = false) {
+        let model = homeModel(for: category)
+        let checkpoint = continuing ? model.checkpoint : nil
         session = FingerSessionViewModel(
-            routine: checkpoint?.routine ?? home.routine, checkpoint: checkpoint,
-            camera: camera, audio: fingerAudio, permissions: permissions, repository: repository
+            routine: checkpoint?.routine ?? model.routine, checkpoint: checkpoint,
+            camera: camera, audio: fingerAudio, permissions: permissions,
+            repository: category == .fingers ? repository : forearmRepository
         )
     }
 

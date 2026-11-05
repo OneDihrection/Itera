@@ -9,6 +9,7 @@ import Charts
 import SwiftUI
 
 struct BalanceSessionSummary: View {
+    let exercise: BalanceExercise
     let metrics: BalanceMetrics
     let goal: Int
     let holdDuration: Double
@@ -65,12 +66,19 @@ struct BalanceSessionSummary: View {
             .accessibilityLabel("balance.summary.chartAccessibility")
 
             HStack(spacing: 12) {
-                TherapyMetric(
-                    title: "balance.summary.crossMidlineTime",
-                    value: metrics.midlineDwellTime.formatted(
-                        .number.precision(.fractionLength(1))
-                    ) + "s"
-                )
+                if exercise.isRotation {
+                    TherapyMetric(
+                        title: exercise.localized("summary.peak"),
+                        value: "\(Int(metrics.peakRotation.rounded()))°"
+                    )
+                } else {
+                    TherapyMetric(
+                        title: "balance.summary.crossMidlineTime",
+                        value: metrics.midlineDwellTime.formatted(
+                            .number.precision(.fractionLength(1))
+                        ) + "s"
+                    )
+                }
                 TherapyMetric(
                     title: "balance.summary.prescribedHold",
                     value: prescribedHold.formatted(

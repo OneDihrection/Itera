@@ -67,3 +67,7 @@ Top-level navigation uses the system `TabView` (a top tab bar on iPadOS 18, a bo
 
 
 `TherapyMusicMenu` uses a native Menu/Picker for mutually exclusive music choices. It accepts a string binding, value-only `TherapyMusicOption` labels and a button size (minimum 44 points), exposes the selected value to accessibility, and owns no preferences or playback. Session views map the shared track catalog into options. `TherapyPageHeader.trailingContentWidth` reserves centered-title space for trailing session actions so the music control does not overlap the title.
+
+`TherapyRangeGauge` (Components/TherapyRangeGauge.swift) draws a measured movement range as a start zone, a target zone, and end labels. It takes labels and zone fractions only; the caller decides what the range means.
+
+`TherapyFoldPanel` renders supplied fold progress as two shaded hinged panels with layer depth. It accepts progress, fold axis, layer count, and fill opacity, and uses flat movement under Reduce Motion. The caller owns gesture recognition, scoring, and demonstration timing. `CameraDisplayGeometry` shares aspect-fit image bounds and normalized-coordinate mapping between camera overlays, excluding letterbox margins.

@@ -164,7 +164,7 @@ struct FingerPauseView: View {
                 if await model.saveForLater() {
                     router.dismissSheet()
                     router.dismissFullScreenCover()
-                    await dependencies.home.refresh()
+                    await dependencies.refreshHomes()
                 }
             }
         }

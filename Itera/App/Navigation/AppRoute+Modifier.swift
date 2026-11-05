@@ -50,6 +50,9 @@ private struct RouterViewModifier: ViewModifier {
 
 private struct ModalStackModifier: ViewModifier {
     @Environment(NavigationRouter.self) private var router
+    @Environment(AppDependencies.self) private var dependencies
+    @Environment(PermissionManager.self) private var permissions
+    @Environment(\.buttonFeedback) private var buttonFeedback
     let index: Int
     let isCover: Bool
     var sheetHostCoverID: UUID? = nil
@@ -104,8 +107,15 @@ private struct ModalStackModifier: ViewModifier {
                 }
             }
         }
-        .environment(router)
         .modifier(ModalStackModifier(index: index + 1, isCover: isCover, sheetHostCoverID: sheetHostCoverID))
+        // Applied last so nested presentations see them too; Mac Catalyst does not
+        // reliably forward the presenter's environment into sheet and cover content.
+        .environment(router)
+        .environment(dependencies)
+        .environment(permissions)
+        .environment(\.buttonFeedback, buttonFeedback)
+        .typography(.body)
+        .buttonStyle(TherapySoundButtonStyle())
     }
 }
 

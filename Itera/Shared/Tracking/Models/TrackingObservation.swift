@@ -10,6 +10,7 @@ import Foundation
 enum BodyJoint: String, CaseIterable {
     case nose, neck, root, leftShoulder, rightShoulder, leftElbow, rightElbow
     case leftWrist, rightWrist, leftHip, rightHip
+    case leftKnee, rightKnee, leftAnkle, rightAnkle
 }
 
 struct TherapyPoint: Equatable {
@@ -36,11 +37,17 @@ struct TherapyRectangle {
     }
 }
 
+enum CupTrackingState { case searching, tracking, lost, ambiguous }
+
 struct CupEvidence {
     let timestamp: Double
     let generation: UUID
     let centers: [TherapyPoint]
     var bounds: [TherapyRectangle] = []
+    var trackID: UUID? = nil
+    var confidence: Float = 0
+    var lastDetectionTimestamp: Double? = nil
+    var state: CupTrackingState = .searching
 }
 
 struct TrackingObservation {
@@ -58,6 +65,8 @@ struct TrackingObservation {
     let personCount: Int
     let joints: [BodyJoint: Landmark]
     var cup: CupEvidence? = nil
+    var hand: HandEvidence? = nil
+    var workspaceMirrored = false
 
     var aspect: Double { Double(width) / Double(max(1, height)) }
 
