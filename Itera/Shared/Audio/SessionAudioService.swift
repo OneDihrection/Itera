@@ -66,6 +66,7 @@ final class SessionAudioService: NSObject, VoiceReadinessProviding, AVSpeechSynt
     private var voice: AVSpeechSynthesisVoice?
     private var clips: [String: PreparedAudioClip] = [:]
     private var targetEffect: PreparedAudioClip?
+    private var towelEffects: [String: PreparedAudioClip] = [:]
     private var activeClip: PreparedAudioClip?
     private var clipID: UUID?
     private var clipWatchdog: Task<Void, Never>?
@@ -106,6 +107,12 @@ final class SessionAudioService: NSObject, VoiceReadinessProviding, AVSpeechSynt
         synthesisLocale = language.speechIdentifier
         voice = AVSpeechSynthesisVoice(language: synthesisLocale)
         clips = [:]
+        towelEffects = [:]
+        for name in ["button-click", "target-reached", "set-complete"] {
+            if let url = Bundle.main.url(forResource: name, withExtension: "wav") {
+                towelEffects[name] = try? PreparedAudioClip(url: url)
+            }
+        }
         if let url = Bundle.main.url(forResource: "target-reached", withExtension: "wav") {
             targetEffect = try? PreparedAudioClip(url: url)
         }
@@ -152,6 +159,7 @@ final class SessionAudioService: NSObject, VoiceReadinessProviding, AVSpeechSynt
         speechWatchdog?.cancel()
         speechWatchdog = nil
         targetEffect?.stop()
+        towelEffects.values.forEach { $0.stop() }
         clipID = nil
         clipWatchdog?.cancel()
         clipWatchdog = nil
@@ -173,6 +181,25 @@ final class SessionAudioService: NSObject, VoiceReadinessProviding, AVSpeechSynt
 
     func play(id: UUID, cue: SessionAudioCue) {
         switch cue {
+        case .towelGrab, .towelFold, .towelCompleted:
+            guard UserDefaults.standard.object(forKey: PracticePreferences.celebrationSounds) as? Bool ?? true else {
+                return
+            }
+            let name: String
+            switch cue {
+            case .towelGrab: name = "button-click"
+            case .towelFold: name = "target-reached"
+            default: name = "set-complete"
+            }
+            towelEffects.values.forEach { $0.stop() }
+            let volume: Float = utteranceIDs.isEmpty && clipID == nil ? 0.65 : 0.26
+            guard let player = towelEffects[name],
+                  player.play(id: id, volume: volume, completion: { [weak self] _, success in
+                      if !success { self?.events.send(.feedbackUnavailable) }
+                  }) else {
+                events.send(.feedbackUnavailable)
+                return
+            }
         case .target:
             let volume: Float = utteranceIDs.isEmpty && clipID == nil ? 1 : 0.4
             guard let targetEffect,

@@ -34,13 +34,16 @@ private struct HomeContent: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 28) {
-                Text(LocalizedStringKey(category == .arm ? "therapy.overview.title" : "trunk.overview.title"))
+                Text(LocalizedStringKey(category == .taskOriented ? "task.category" : (category == .arm ? "therapy.overview.title" : "trunk.overview.title")))
                     .typography(.largeTitle)
                     .accessibilityAddTraits(.isHeader)
                 LanguageSelector(language: $language)
                     .disabled(model.busy)
                 Text(LocalizedStringKey(category.positioningKey)).typography(.body)
                 exercises
+                if category == .taskOriented {
+                    TherapyButton(title: "towel.history", symbol: "chart.bar") { router.push(.taskReports) }
+                }
                 Label(
                     LocalizedStringKey(model.message),
                     systemImage: model.ready ? "checkmark.circle.fill" : "info.circle"
@@ -117,6 +120,7 @@ private struct HomeContent: View {
         case .armRaise: return "figure.arms.open"
         case .elbowBend: return "figure.strengthtraining.traditional"
         case .directionalReach: return "hand.point.up.left"
+        case .foldTowel: return "square.stack.3d.up"
         case .cup: return "cup.and.saucer.fill"
         case .sitToStand: return "figure.stand"
         }

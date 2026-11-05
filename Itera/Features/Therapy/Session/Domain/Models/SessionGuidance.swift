@@ -26,6 +26,12 @@ struct SessionGuidance {
     var watchdog: Double = 20
 
     static func opening(_ activity: SessionActivity, includePositioning: Bool) -> Self {
+        if activity.kind == .foldTowel {
+            return Self(cards: [
+                Card(key: "towel.opening." + activity.side.rawValue),
+                Card(key: "towel.demo", demonstration: true)
+            ], destination: .activity)
+        }
         if activity.kind == .cup {
             return Self(cards: [Card(key: "parity.cupOpening")], destination: .activity, quietDelay: 1)
         }

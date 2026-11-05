@@ -19,6 +19,36 @@ struct RoutineExercise: Identifiable, Codable, Equatable {
     var leftGoal = 5
     var rightGoal = 5
     var rounds = 1
+    var sets = 1
+
+    enum CodingKeys: String, CodingKey {
+        case id, kind, sides, firstSide, leftGoal, rightGoal, rounds, sets
+    }
+
+    init(kind: TherapyKind, sides: RoutineSides = .both) {
+        self.kind = kind
+        self.sides = sides
+        if kind == .foldTowel {
+            leftGoal = 1
+            rightGoal = 1
+        }
+    }
+
+    init(from decoder: Decoder) throws {
+        let values = try decoder.container(keyedBy: CodingKeys.self)
+        id = try values.decode(UUID.self, forKey: .id)
+        kind = try values.decode(TherapyKind.self, forKey: .kind)
+        sides = try values.decode(RoutineSides.self, forKey: .sides)
+        firstSide = try values.decode(TherapySide.self, forKey: .firstSide)
+        leftGoal = try values.decode(Int.self, forKey: .leftGoal)
+        rightGoal = try values.decode(Int.self, forKey: .rightGoal)
+        rounds = try values.decode(Int.self, forKey: .rounds)
+        sets = try values.decodeIfPresent(Int.self, forKey: .sets) ?? 1
+        guard (1...5).contains(sets) else {
+            throw DecodingError.dataCorruptedError(
+                forKey: .sets, in: values, debugDescription: "Invalid set count")
+        }
+    }
 
     /// Repetition goals are per side for arm movements; sit-to-stand has no side and uses `leftGoal`
     /// as its one repetition goal so previously saved routines still decode.
@@ -35,8 +65,9 @@ struct RoutineExercise: Identifiable, Codable, Equatable {
         return selected.map { side in
             SessionActivity(
                 kind: kind, side: side,
-                goal: kind == .armRaise || kind == .elbowBend
-                    ? (side == .left ? leftGoal : rightGoal) : rounds
+                goal: kind == .armRaise || kind == .elbowBend || kind == .foldTowel
+                    ? (side == .left ? leftGoal : rightGoal) : rounds,
+                sets: sets
             )
         }
     }

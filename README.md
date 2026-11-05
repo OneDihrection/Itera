@@ -125,3 +125,5 @@ Mac Catalyst support is retained from main as an explicit exception to the origi
 ## TestFlight automation
 
 See [TestFlight setup](Documentation/TestFlightSetup.md) for signing, GitHub secrets, and production version-tag releases.
+
+To trigger a TestFlight release, run `./release-testflight.sh v1.2.3` from a clean checkout. See [release instructions](Documentation/TestFlightSetup.md#each-release) for prerequisites and recovery steps.

@@ -24,6 +24,7 @@ final class AppDependencies: HistoryRecovering {
     let tracking = BodyTrackingService()
     let audio = SessionAudioService()
     let routine: RoutineViewModel
+    let taskRoutine: RoutineViewModel
     let trunkRoutine: RoutineViewModel
     var selectedRoutine = Routine.demo()
     let sessions: any SessionRepository
@@ -41,6 +42,10 @@ final class AppDependencies: HistoryRecovering {
         ))
         trunkRoutine = RoutineViewModel(repository: LocalRoutineRepository(
             url: URL.applicationSupportDirectory.appendingPathComponent("routines-trunk.json")
+        ))
+
+        taskRoutine = RoutineViewModel(repository: LocalRoutineRepository(
+            url: URL.applicationSupportDirectory.appendingPathComponent("routines-task-oriented.json")
         ))
 
         let repository = LocalFingerSessionRepository()
@@ -70,7 +75,11 @@ final class AppDependencies: HistoryRecovering {
     }
 
     func routineModel(for category: TherapyCategory) -> RoutineViewModel {
-        category == .arm ? routine : trunkRoutine
+        switch category {
+        case .arm: return routine
+        case .trunk: return trunkRoutine
+        case .taskOriented: return taskRoutine
+        }
     }
 
     func homeModel(for category: ExerciseCategory) -> FingerHomeViewModel {

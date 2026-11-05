@@ -31,23 +31,21 @@ struct CupSnapshot {
 struct CupActivity: TherapyActivity {
     private let configuration: SessionActivity
     private var snapshot = CupSnapshot()
-    private var wristStart: TherapyPoint?
     private var cupStart: TherapyPoint?
-    private var faceTarget: TherapyPoint?
+    private var raisedTarget: TherapyPoint?
     private var transferTarget: TherapyPoint?
     private var hold = StableHold()
-    private var cupHold = StableHold()
+    private var calibratedRadius: Double?
+    private var displayedCenter: TherapyPoint?
+    private var displayTime: Double?
     private var viewport: TherapyViewport?
     private var suspended = false
     private var deadline: Double?
     private var last: Double?
     private var cupTimestamp: Double?
     private var boundary = 0.0
+    private var trackID: UUID?
     private var restarting = false
-
-    private var requiresCupEvidence: Bool {
-        snapshot.step == .start || snapshot.step == .transfer || snapshot.step == .cupReturn
-    }
 
     init(configuration: SessionActivity) {
         self.configuration = configuration
@@ -57,6 +55,15 @@ struct CupActivity: TherapyActivity {
 
     mutating func handle(_ event: ActivityEvent) -> ActivityTransition {
         switch event {
+        case .nextSet:
+            snapshot = CupSnapshot()
+            snapshot.phase = .countdown
+            snapshot.instruction = "session.countdown"
+            deadline = nil
+            last = nil
+            cupTimestamp = nil
+            restarting = false
+            clearHolds()
         case .countdownReady(let time):
             if snapshot.phase == .countdown {
                 deadline = time + 3
@@ -66,15 +73,14 @@ struct CupActivity: TherapyActivity {
             receive(command, at: time)
         case .guidanceCompleted:
             break
-        case .viewport(let value): viewport = value
+        case .viewport(let value):
+            if viewport != value {
+                viewport = value
+                clearHolds()
+            }
         case .suspend:
             suspended = true
-            clearHolds()
-            if snapshot.phase == .practice {
-                snapshot.step = .handReturn
-                restarting = true
-                snapshot.outcomes.removeAll { $0.round > snapshot.count }
-            }
+            loseEvidence(message: "cup.trackingLost")
         case .resume:
             suspended = false
             last = nil
@@ -82,14 +88,14 @@ struct CupActivity: TherapyActivity {
         case .recalibrate:
             let count = snapshot.count
             let outcomes = snapshot.outcomes.filter { $0.round <= count }
+            let currentViewport = viewport
             self = CupActivity(configuration: configuration)
+            viewport = currentViewport
             snapshot.count = count
             snapshot.outcomes = outcomes
         case .tick(let time):
             if let last, time - last > 0.3 {
-                clearHolds()
-                snapshot.evidenceMessage = requiresCupEvidence
-                    ? "cup.evidenceMissing" : "cup.bodyTrackingLost"
+                loseEvidence(message: "cup.trackingLost")
             }
         case .observation(let frame):
             if !suspended { consume(frame) }
@@ -124,18 +130,19 @@ struct CupActivity: TherapyActivity {
             } else {
                 switch snapshot.step {
                 case .start:
-                    wristStart = nil
                     cupStart = nil
+                    calibratedRadius = nil
                 case .nearFace:
-                    faceTarget = nil
+                    raisedTarget = nil
                 case .handReturn:
-                    wristStart = nil
                     cupStart = nil
+                    calibratedRadius = nil
                     snapshot.step = .start
                 case .transfer:
                     transferTarget = nil
                 case .cupReturn:
                     transferTarget = nil
+                    snapshot.step = .transfer
                 }
             }
             boundary = time
@@ -146,9 +153,21 @@ struct CupActivity: TherapyActivity {
         }
     }
 
+    private mutating func loseEvidence(message: String) {
+        clearHolds()
+        snapshot.evidenceMessage = message
+        if snapshot.phase == .practice {
+            snapshot.outcomes.removeAll { $0.round > snapshot.count }
+            snapshot.step = .handReturn
+            snapshot.instruction = "cup.handReturn"
+            restarting = true
+        }
+    }
+
     private mutating func clearHolds() {
         hold.clear()
-        cupHold.clear()
+        displayedCenter = nil
+        displayTime = nil
         snapshot.progress = 0
         snapshot.guide = nil
     }
@@ -185,147 +204,132 @@ struct CupActivity: TherapyActivity {
         }
     }
 
-    private func trackedPoint(wrist: TherapyPoint, cup: TherapyPoint?) -> TherapyPoint {
-        cup ?? wrist
-    }
-
     private mutating func consume(_ frame: TrackingObservation) {
-        var time = frame.timestamp
+        let time = frame.timestamp
         guard last.map({ time > $0 }) ?? true else { return }
-        if let last, time - last > 0.3 { clearHolds() }
         last = time
+        guard snapshot.phase != .finished else { return }
+        guard let evidence = frame.cup,
+            evidence.generation == frame.generation,
+            evidence.timestamp > boundary,
+            evidence.state == .tracking,
+            let identity = evidence.trackID,
+            evidence.confidence.isFinite,
+            let confirmation = evidence.lastDetectionTimestamp,
+            confirmation.isFinite, confirmation <= evidence.timestamp,
+            evidence.timestamp - confirmation <= 0.3,
+            evidence.confidence >= (confirmation == evidence.timestamp ? 0.45 : 0.5),
+            evidence.timestamp <= time,
+            time - evidence.timestamp <= 0.3,
+            evidence.centers.count == 1, evidence.bounds.count == 1,
+            let center = evidence.centers.first,
+            center.x.isFinite, center.y.isFinite,
+            (0...frame.aspect).contains(center.x), (0...1).contains(center.y),
+            evidence.bounds[0].contains(center, margin: 0)
+        else {
+            let message: String
+            switch frame.cup?.state {
+            case .ambiguous: message = "cup.ambiguous"
+            case .lost: message = "cup.trackingLost"
+            default: message = "cup.evidenceMissing"
+            }
+            loseEvidence(message: message)
+            return
+        }
+        guard cupTimestamp.map({ evidence.timestamp > $0 }) ?? true else { return }
+        if trackID != identity || cupTimestamp.map({ evidence.timestamp - $0 > 0.3 }) == true {
+            loseEvidence(message: "cup.trackingLost")
+        }
+        trackID = identity
+        cupTimestamp = evidence.timestamp
+        snapshot.evidenceMessage = nil
+        if let previous = displayedCenter, let displayTime {
+            let alpha = 1 - exp(-(time - displayTime) / 0.06)
+            displayedCenter = previous + (center - previous).scaled(alpha)
+        } else {
+            displayedCenter = center
+        }
+        displayTime = time
         if snapshot.phase == .countdown {
-            if deadline == nil { deadline = time + 3 }
-            snapshot.seconds = max(0, Int(ceil((deadline ?? time) - time)))
+            guard let deadline else { return }
+            snapshot.seconds = max(0, Int(ceil(deadline - time)))
             guard snapshot.seconds == 0 else { return }
             snapshot.phase = .practice
             boundary = time
-        }
-        guard snapshot.phase != .finished else { return }
-        let left = configuration.side == .left
-        guard let shoulder = frame.point(left ? .leftShoulder : .rightShoulder),
-            let elbow = frame.point(left ? .leftElbow : .rightElbow),
-            let wrist = frame.point(left ? .leftWrist : .rightWrist),
-            let nose = frame.point(.nose)
-        else {
-            snapshot.evidenceMessage = "cup.bodyTrackingLost"
-            clearHolds()
             return
         }
-        let forearm = (wrist - elbow).length
-        guard forearm > 0.015 else {
-            snapshot.evidenceMessage = "cup.bodyTrackingLost"
-            clearHolds()
-            return
-        }
-        let bodyRadius = forearm * 0.2
-        let requiresCup = requiresCupEvidence
-        var cup: TherapyPoint?
-        if requiresCup {
-            guard let evidence = frame.cup, evidence.generation == frame.generation,
-                evidence.timestamp > boundary, time - evidence.timestamp <= 0.3,
-                evidence.timestamp <= time, evidence.centers.count == 1,
-                let center = evidence.centers.first,
-                center.x.isFinite, center.y.isFinite,
-                evidence.bounds.count == 1
-            else {
-                snapshot.evidenceMessage = "cup.evidenceMissing"
-                clearHolds()
-                return
-            }
-            guard evidence.bounds[0].contains(wrist, margin: bodyRadius) else {
-                snapshot.evidenceMessage = "cup.holdCup"
-                clearHolds()
-                return
-            }
-            guard cupTimestamp.map({ evidence.timestamp > $0 }) ?? true else { return }
-            if cupTimestamp.map({ evidence.timestamp - $0 > 0.3 }) == true { clearHolds() }
-            cupTimestamp = evidence.timestamp
-            time = evidence.timestamp
-            cup = center
-        }
-        snapshot.evidenceMessage = nil
-        let rehearsing = snapshot.phase == .rehearsal
-        defer {
-            if snapshot.guide?.capturing == true {
-                snapshot.guide?.progress = snapshot.progress
-            }
-        }
-        if rehearsing {
-            snapshot.guide = TargetGuide(
-                start: trackedPoint(wrist: wrist, cup: cup), target: trackedPoint(wrist: wrist, cup: cup),
-                tracked: trackedPoint(wrist: wrist, cup: cup), radius: bodyRadius, targetActive: false,
-                progress: snapshot.progress, aspect: frame.aspect, capturing: true
-            )
-        }
+        let box = evidence.bounds[0]
+        let cupRadius = calibratedRadius ?? max(0.015, min(box.width, box.height) * 0.5)
+        let capturing = snapshot.phase == .rehearsal
+            && (snapshot.step == .start || snapshot.step == .nearFace || snapshot.step == .transfer)
+        var guideRadius = bubbleRadius(body: cupRadius, separation: nil, aspect: frame.aspect, viewport: viewport)
         var target: TherapyPoint?
-        let tracked = requiresCup ? (cup ?? wrist) : wrist
-        switch snapshot.step {
-        case .start:
-            if !rehearsing {
-                guard let cupStart else { clearHolds(); return }
-                let radius = bubbleRadius(body: bodyRadius, separation: nil, aspect: frame.aspect, viewport: viewport)
-                if (tracked - cupStart).length <= radius {
-                    hold.consume(tracked, time: time, duration: 0.25, tolerance: radius * 2, maximumGap: 0.3)
-                } else {
+        var destination: TherapyPoint?
+        var inside = false
+        if capturing {
+            if snapshot.step != .start {
+                guard let cupStart else { return }
+                let offset = center - cupStart
+                let validDirection = snapshot.step == .transfer
+                    ? abs(offset.x) >= abs(offset.y) : offset.y > 0
+                guard validDirection, offset.length > cupRadius * 2 else {
                     hold.clear()
-                }
-                snapshot.progress = hold.progress
-                snapshot.guide = TargetGuide(start: cupStart, target: cupStart, tracked: tracked, radius: radius, targetActive: false, progress: hold.progress, aspect: frame.aspect)
-                if hold.progress >= 1 { advance(at: time) }
-                return
-            }
-            hold.consume(wrist - shoulder, time: time, duration: 1, tolerance: bodyRadius / 2, maximumGap: 0.3)
-            cupHold.consume(cup ?? wrist, time: time, duration: 1, tolerance: bodyRadius / 2, maximumGap: 0.3)
-            snapshot.progress = min(hold.progress, cupHold.progress)
-            if snapshot.progress >= 1 {
-                wristStart = hold.mean
-                cupStart = cupHold.mean
-                advance(at: time)
-            }
-            return
-        case .nearFace:
-            if rehearsing {
-                guard (wrist - nose).length <= forearm * 1.5,
-                    let wristStart, (wrist - (shoulder + wristStart)).length > bodyRadius * 2
-                else { clearHolds(); return }
-                hold.consume(wrist - nose, time: time, duration: 1, tolerance: bodyRadius / 2, maximumGap: 0.3)
-                snapshot.progress = hold.progress
-                if hold.progress >= 1 { faceTarget = hold.mean; advance(at: time) }
-                return
-            }
-            target = faceTarget.map { nose + $0 }
-        case .handReturn: target = wristStart.map { shoulder + $0 }
-        case .transfer:
-            if rehearsing {
-                guard let cup, let cupStart else { clearHolds(); return }
-                let offset = cup - cupStart
-                guard abs(offset.x) >= abs(offset.y), offset.length > bodyRadius * 2 else {
-                    clearHolds()
+                    snapshot.progress = 0
+                    snapshot.guide = TargetGuide(
+                        start: cupStart, target: center, tracked: displayedCenter ?? center,
+                        radius: guideRadius, targetActive: false, progress: 0,
+                        aspect: frame.aspect, capturing: true, savedStart: true)
                     return
                 }
-                hold.consume(cup, time: time, duration: 1, tolerance: bodyRadius / 2, maximumGap: 0.3)
-                snapshot.progress = hold.progress
-                if hold.progress >= 1 { transferTarget = hold.mean; advance(at: time) }
-                return
             }
-            target = transferTarget
-        case .cupReturn: target = cupStart
+            hold.consume(center, time: evidence.timestamp, duration: 1,
+                         tolerance: cupRadius / 2, maximumGap: 0.3)
+            target = center
+            destination = center
+            inside = true
+        } else {
+            switch snapshot.step {
+            case .nearFace: target = raisedTarget
+            case .transfer: target = transferTarget
+            case .start, .handReturn, .cupReturn: target = cupStart
+            }
+            guard let target else { clearHolds(); return }
+            destination = snapshot.step == .transfer || snapshot.step == .cupReturn
+                ? transferTarget : raisedTarget
+            let separation = destination.flatMap { endpoint in
+                cupStart.map { (endpoint - $0).length }
+            }
+            let radius = bubbleRadius(body: cupRadius,
+                separation: separation,
+                aspect: frame.aspect, viewport: viewport)
+            guideRadius = radius
+            inside = (center - target).length <= radius
+            if inside {
+                hold.consume(center, time: evidence.timestamp, duration: 1,
+                             tolerance: radius * 2, maximumGap: 0.3)
+            } else {
+                hold.clear()
+            }
         }
-        guard let target else { clearHolds(); return }
-        let origin = requiresCup ? (cupStart ?? target) : wristStart.map { shoulder + $0 } ?? target
-        let radius = bubbleRadius(
-            body: bodyRadius, separation: (target - origin).length > 0 ? (target - origin).length : nil,
-            aspect: frame.aspect, viewport: viewport
-        )
-        if (tracked - target).length <= radius {
-            hold.consume(tracked, time: time, duration: 0.25, tolerance: radius * 2, maximumGap: 0.3)
-        } else { hold.clear() }
+        guard let target else { return }
         snapshot.progress = hold.progress
         snapshot.guide = TargetGuide(
-            start: origin, target: target, tracked: tracked, radius: radius,
-            targetActive: true, progress: hold.progress, aspect: frame.aspect
-        )
-        if hold.progress >= 1 { advance(at: time) }
+            start: cupStart ?? center, target: destination ?? target, tracked: displayedCenter ?? center,
+            radius: guideRadius,
+            targetActive: snapshot.step == .nearFace || snapshot.step == .transfer,
+            progress: hold.progress, aspect: frame.aspect, capturing: capturing, savedStart: cupStart != nil,
+            acceptedInside: inside)
+        guard hold.progress >= 1 else { return }
+        if capturing {
+            switch snapshot.step {
+            case .start:
+                cupStart = hold.mean
+                calibratedRadius = cupRadius
+            case .nearFace: raisedTarget = hold.mean
+            case .transfer: transferTarget = hold.mean
+            case .handReturn, .cupReturn: break
+            }
+        }
+        advance(at: time)
     }
 }

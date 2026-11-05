@@ -121,7 +121,7 @@ private struct RoutineExerciseRow: View {
                 Picker("routine.side", selection: $exercise.sides) {
                     Text("session.left").tag(RoutineSides.left)
                     Text("session.right").tag(RoutineSides.right)
-                    if exercise.kind == .armRaise || exercise.kind == .elbowBend {
+                    if exercise.kind == .armRaise || exercise.kind == .elbowBend || exercise.kind == .foldTowel {
                         Text("routine.both").tag(RoutineSides.both)
                     }
                 }
@@ -134,12 +134,21 @@ private struct RoutineExerciseRow: View {
                     .pickerStyle(.segmented)
                 }
             }
+            if exercise.kind != .sitToStand {
+                Stepper(value: $exercise.sets, in: 1...5) {
+                    Text("routine.sets \(exercise.sets)")
+                }
+                Text("routine.perSet")
+            }
+            if exercise.kind == .foldTowel {
+                Text("towel.routineDetail")
+            }
             if exercise.kind == .sitToStand {
                 Stepper(value: $exercise.leftGoal, in: 1...100) {
                     Text("routine.repetitions \(exercise.leftGoal)")
                 }
                 Text("routine.sitToStandDetail")
-            } else if exercise.kind == .armRaise || exercise.kind == .elbowBend {
+            } else if exercise.kind == .armRaise || exercise.kind == .elbowBend || exercise.kind == .foldTowel {
                 if exercise.sides != .right {
                     Stepper(value: $exercise.leftGoal, in: 1...100) {
                         Text("routine.leftGoal \(exercise.leftGoal)")

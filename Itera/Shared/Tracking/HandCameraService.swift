@@ -167,27 +167,10 @@ final class HandCameraService: NSObject, AVCaptureVideoDataOutputSampleBufferDel
                 events.send(.sample(CameraSample(evidence: nil, timestamp: timestamp, generation: generation)))
                 return
             }
-            let names: [VNHumanHandPoseObservation.JointName] = [
-                .wrist, .thumbCMC, .thumbMP, .thumbIP, .thumbTip,
-                .indexMCP, .indexPIP, .indexDIP, .indexTip,
-                .middleMCP, .middlePIP, .middleDIP, .middleTip,
-                .ringMCP, .ringPIP, .ringDIP, .ringTip,
-                .littleMCP, .littlePIP, .littleDIP, .littleTip
-            ]
-            let points = try names.map { name in
-                let p = try hand.recognizedPoint(name)
-                return HandPoint(x: p.location.x, y: p.location.y, confidence: p.confidence)
-            }
-            let side: HandSide?
-            switch hand.chirality {
-            case .left: side = .left
-            case .right: side = .right
-            default: side = nil
-            }
-            let evidence = HandEvidence(
-                timestamp: timestamp, generation: generation,
+            let evidence = try HandPoseExtractor.evidence(
+                from: hand, timestamp: timestamp, generation: generation,
                 width: Double(CVPixelBufferGetWidth(pixelBuffer)),
-                height: Double(CVPixelBufferGetHeight(pixelBuffer)), side: side, points: points
+                height: Double(CVPixelBufferGetHeight(pixelBuffer))
             )
             events.send(.sample(CameraSample(evidence: evidence, timestamp: timestamp, generation: generation)))
         } catch {

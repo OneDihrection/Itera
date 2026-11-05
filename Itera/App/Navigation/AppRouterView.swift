@@ -48,6 +48,9 @@ enum AppRouterView {
                 .environment(\.locale, AppLanguage.selected.locale)
         case .plan(let category):
             FingerPlanView(category: category)
+        case .taskReports:
+            TaskReportsDestination()
+                .environment(\.locale, AppLanguage.selected.locale)
         case .reports:
             FingerReportsView()
         case .achievements:
@@ -142,5 +145,13 @@ private struct BalanceSessionDestination: View {
             armSelection: armSelection,
             exercise: exercise
         ))
+    }
+}
+
+private struct TaskReportsDestination: View {
+    @Environment(AppDependencies.self) private var dependencies
+
+    var body: some View {
+        TaskReportsView(model: TaskReportsViewModel(repository: dependencies.sessions))
     }
 }

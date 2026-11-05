@@ -20,6 +20,7 @@ struct SessionProgress {
     let routine: Routine
     let startedAt: Date
     private(set) var index = 0
+    private(set) var setNumber = 1
     private(set) var executionID = UUID()
     private(set) var stage: Stage = .activity
     private(set) var results: [SessionActivityResult] = []
@@ -91,7 +92,8 @@ struct SessionProgress {
                 reachOutcomes: reachOutcomes,
                 skippedReachSteps: skippedReachSteps,
                 cupOutcomes: cupOutcomes,
-                practiceSeconds: practiceSeconds
+                practiceSeconds: practiceSeconds,
+                setNumber: setNumber
             )
         )
         stage = .feedback(UUID())
@@ -102,7 +104,7 @@ struct SessionProgress {
             return
         }
 
-        if index + 1 == routine.activities.count {
+        if !hasNextSet, index + 1 == routine.activities.count {
             finalize(stopped: false, date: date)
             return
         }
@@ -119,9 +121,23 @@ struct SessionProgress {
             return
         }
 
-        index += 1
+        if hasNextSet {
+            setNumber += 1
+        } else {
+            index += 1
+            setNumber = 1
+        }
         executionID = UUID()
         stage = .activity
+    }
+
+    private var hasNextSet: Bool {
+        guard let activity = currentActivity, let last = results.last else {
+            return false
+        }
+        return last.activity.id == activity.id
+            && last.outcome == .completed
+            && setNumber < activity.sets
     }
 
     mutating func finalize(stopped: Bool, date: Date) {
