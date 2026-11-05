@@ -8,6 +8,7 @@
 import SwiftUI
 
 struct BalanceSessionView: View {
+    @AppStorage(ExerciseMusicTrack.storageKey) private var musicTrack = ExerciseMusicTrack.defaultValue
     @Environment(NavigationRouter.self) private var router
     @Environment(PermissionManager.self) private var permissions
     @Environment(\.scenePhase) private var scenePhase
@@ -127,6 +128,13 @@ struct BalanceSessionView: View {
                     ) {
                         model.togglePause()
                     }
+                    TherapyMusicMenu(
+                        selection: $musicTrack,
+                        options: ExerciseMusicTrack.allCases.map {
+                            TherapyMusicOption(id: $0.rawValue, title: LocalizedStringKey($0.titleKey))
+                        },
+                        size: 44
+                    )
                     TherapyIconButton(title: "session.camera", symbol: "arrow.triangle.2.circlepath.camera") {
                         model.switchCamera()
                     }

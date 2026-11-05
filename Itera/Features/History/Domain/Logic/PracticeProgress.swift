@@ -40,6 +40,7 @@ struct PracticeProgress {
             var daily = days[day] ?? PracticeDay(date: day)
             daily.repetitions += session.totalRepetitions
             daily.seconds += session.duration
+            daily.sessions += 1
             days[day] = daily
             for result in session.results where result.repetitions > 0 {
                 movements.insert(result.kind)

@@ -332,7 +332,17 @@ final class TherapySessionViewModel {
         }
         let transition = engine.handle(event, at: ProcessInfo.processInfo.systemUptime)
         let previousKind = snapshot.activity?.kind
+        let wasPaused = snapshot.paused
         snapshot = transition.snapshot
+        if snapshot.summary != nil {
+            audio.stopMusic()
+        } else if wasPaused != snapshot.paused {
+            if snapshot.paused {
+                audio.pauseMusic()
+            } else if live {
+                audio.resumeMusic()
+            }
+        }
         towelInterpolates = false
         if snapshot.paused || snapshot.cameraWaiting || snapshot.stage != .activity {
             towelSmoother.reset()
@@ -368,7 +378,13 @@ final class TherapySessionViewModel {
                     let sideText = String(localized: String.LocalizationValue(sideKey), bundle: sessionLanguage.resourceBundle, locale: sessionLocale)
                     text = activity.hasSide ? kindText + ". " + sideText + ". " + text : kindText + ". " + text
                 }
-                audio.speak(id: id, text: text)
+                // A single-key sentence can use its bundled recording; numbers and the
+                // combined exercise/side/guidance cue keep the system voice.
+                if Int(key) == nil && key != "session.guidance" {
+                    audio.speak(id: id, key: key)
+                } else {
+                    audio.speak(id: id, text: text)
+                }
             case .audio(let id, let cue): audio.play(id: id, cue: cue)
             case .cancelSpeech: audio.cancelSpeech()
             case .checkpoint, .finalize: pendingSaves.append(effect)

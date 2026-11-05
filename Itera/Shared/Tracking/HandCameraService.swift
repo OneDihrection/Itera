@@ -9,10 +9,13 @@ import AVFoundation
 import Combine
 import Vision
 
+enum HandDetectionIssue: Equatable { case missingHand, multipleHands, unreadable }
+
 struct CameraSample {
     let evidence: HandEvidence?
     let timestamp: Double
     let generation: UUID
+    var issue: HandDetectionIssue? = nil
 }
 
 enum HandCameraEvent {
@@ -33,10 +36,14 @@ final class HandCameraService: NSObject, AVCaptureVideoDataOutputSampleBufferDel
     private var previousCenterStage: (mode: AVCaptureDevice.CenterStageControlMode, enabled: Bool)?
     private var lastInference = 0.0
     private var notifications: [NSObjectProtocol] = []
+    /// Keeps scoring on the patient's hand when bystanders' or the other hand appear. Queue-confined.
+    private var subjects = HandSubjectSelector()
 
     override init() {
         super.init()
-        request.maximumHandCount = 2
+        // Room for both of the patient's hands plus a bystander's, so the exercised hand
+        // is not crowded out of the results; the subject selector picks among them.
+        request.maximumHandCount = 4
         for name in [AVCaptureSession.wasInterruptedNotification, AVCaptureSession.runtimeErrorNotification] {
             notifications.append(NotificationCenter.default.addObserver(forName: name, object: session, queue: nil) { [weak self] _ in
                 self?.events.send(.failure("camera.interrupted"))
@@ -74,6 +81,14 @@ final class HandCameraService: NSObject, AVCaptureVideoDataOutputSampleBufferDel
             }
             generation = UUID()
             restoreCenterStage()
+        }
+    }
+
+    /// Sets the exercised side, used only to choose between several newly visible hands.
+    func track(side: HandSide) {
+        queue.async { [self] in
+            subjects.preferredSide = side
+            subjects.reset()
         }
     }
 
@@ -156,26 +171,95 @@ final class HandCameraService: NSObject, AVCaptureVideoDataOutputSampleBufferDel
             from: session.synchronizationClock ?? CMClockGetHostTimeClock(),
             to: CMClockGetHostTimeClock()
         ).seconds
-        guard timestamp - lastInference >= 1.0 / 15,
+        guard timestamp - lastInference >= 1.0 / 15 - 0.001,
               let pixelBuffer = CMSampleBufferGetImageBuffer(buffer) else { return }
         lastInference = timestamp
         do {
             try VNImageRequestHandler(cvPixelBuffer: pixelBuffer, orientation: .up).perform([request])
             let hands = request.results ?? []
-            // Multiple hands are ambiguous: do not choose a patient by screen position.
-            guard hands.count == 1, let hand = hands.first else {
-                events.send(.sample(CameraSample(evidence: nil, timestamp: timestamp, generation: generation)))
+            let aspect = Double(CVPixelBufferGetWidth(pixelBuffer)) / Double(CVPixelBufferGetHeight(pixelBuffer))
+
+            // Never choose by screen position alone; ambiguous scenes report no hand.
+            guard let index = subjects.select(
+                hands.map { Self.candidate(for: $0, aspect: aspect) },
+                at: timestamp,
+                generation: generation
+            ) else {
+                events.send(.sample(CameraSample(
+                    evidence: nil, timestamp: timestamp, generation: generation,
+                    issue: hands.count > 1 ? .multipleHands : .missingHand
+                )))
                 return
             }
-            let evidence = try HandPoseExtractor.evidence(
-                from: hand, timestamp: timestamp, generation: generation,
+
+            let hand = hands[index]
+            let names: [VNHumanHandPoseObservation.JointName] = [
+                .wrist, .thumbCMC, .thumbMP, .thumbIP, .thumbTip,
+                .indexMCP, .indexPIP, .indexDIP, .indexTip,
+                .middleMCP, .middlePIP, .middleDIP, .middleTip,
+                .ringMCP, .ringPIP, .ringDIP, .ringTip,
+                .littleMCP, .littlePIP, .littleDIP, .littleTip
+            ]
+            let points = try names.map { name in
+                let p = try hand.recognizedPoint(name)
+                return HandPoint(x: p.location.x, y: p.location.y, confidence: p.confidence)
+            }
+            let side: HandSide?
+            switch hand.chirality {
+            case .left: side = .left
+            case .right: side = .right
+            default: side = nil
+            }
+            let evidence = HandEvidence(
+                timestamp: timestamp, generation: generation,
                 width: Double(CVPixelBufferGetWidth(pixelBuffer)),
-                height: Double(CVPixelBufferGetHeight(pixelBuffer))
+                height: Double(CVPixelBufferGetHeight(pixelBuffer)), side: side, points: points
             )
             events.send(.sample(CameraSample(evidence: evidence, timestamp: timestamp, generation: generation)))
         } catch {
-            events.send(.sample(CameraSample(evidence: nil, timestamp: timestamp, generation: generation)))
+            events.send(.sample(CameraSample(evidence: nil, timestamp: timestamp, generation: generation, issue: .unreadable)))
         }
+    }
+
+    private static func candidate(
+        for hand: VNHumanHandPoseObservation,
+        aspect: Double
+    ) -> HandSubjectSelector.Candidate {
+        let wrist = try? hand.recognizedPoint(.wrist)
+        let knuckle = try? hand.recognizedPoint(.middleMCP)
+
+        func position(_ point: VNRecognizedPoint?) -> TherapyPoint? {
+            guard let point, point.confidence >= 0.3 else {
+                return nil
+            }
+
+            return TherapyPoint(x: point.location.x * aspect, y: point.location.y)
+        }
+
+        let wristPosition = position(wrist)
+        let knucklePosition = position(knuckle)
+        var size = 0.0
+
+        if let wristPosition, let knucklePosition {
+            size = (wristPosition - knucklePosition).length
+        }
+
+        let side: HandSide?
+        switch hand.chirality {
+        case .left:
+            side = .left
+        case .right:
+            side = .right
+        default:
+            side = nil
+        }
+
+        return HandSubjectSelector.Candidate(
+            // An unreadable wrist sits far away, so continuity can never select it.
+            wrist: wristPosition ?? TherapyPoint(x: .infinity, y: .infinity),
+            size: size,
+            side: side
+        )
     }
 
     private enum CameraError: Error { case unavailable }

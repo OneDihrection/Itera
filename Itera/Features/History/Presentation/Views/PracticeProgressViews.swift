@@ -217,6 +217,7 @@ struct PracticeAchievementDetailView: View {
                 Text(award.earned, format: .dateTime.day().month(.wide).year()).typography(.body)
                 Text("achievement.encouragement").typography(.title2).multilineTextAlignment(.center)
                 TherapyButton(title: "achievement.share", symbol: "square.and.arrow.up") {
+                    dependencies.progress.clearShareError()
                     router.presentSheet(.achievementShare(badge.id))
                 }
             } else {
@@ -225,6 +226,7 @@ struct PracticeAchievementDetailView: View {
                     .typography(.largeTitle).monospacedDigit()
                 Text("achievement.smallSteps").typography(.body).multilineTextAlignment(.center)
             }
+            if let error = model.shareErrorKey { TherapyError(key: error) }
             TherapyButton(title: "action.done") { router.dismissSheet() }
         }.padding(40).frame(maxWidth: 650).frame(maxWidth: .infinity)
     }
@@ -247,10 +249,11 @@ struct AchievementCelebrationView: View {
                     Text("achievement.encouragement").typography(.body).multilineTextAlignment(.center)
                     if dependencies.progress.award(for: badge) != nil {
                         TherapyButton(title: "achievement.share", symbol: "square.and.arrow.up", secondary: true) {
+                            dependencies.progress.clearShareError()
                             router.presentSheet(.achievementShare(badge.id))
                         }
                     }
-                    if let error = dependencies.progress.errorKey { TherapyError(key: error) }
+                    if let error = dependencies.progress.shareErrorKey ?? dependencies.progress.errorKey { TherapyError(key: error) }
                 }
                 .padding(36)
                 .frame(maxWidth: .infinity)
@@ -299,10 +302,12 @@ struct AchievementShareDestination: View {
                     dependencies.progress.title(for: badge)
                 ),
                 locale: locale
-            ) {
-                if router.presentedSheets.last?.route == .achievementShare(id) {
-                    router.dismissSheet()
+            ) { failed in
+                guard router.presentedSheets.last?.route == .achievementShare(id) else {
+                    return
                 }
+                dependencies.progress.sharingCompleted(failed: failed)
+                router.dismissSheet()
             }
         } else {
             TherapyButton(title: "action.done") {

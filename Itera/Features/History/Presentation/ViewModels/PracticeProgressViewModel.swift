@@ -16,6 +16,7 @@ final class PracticeProgressViewModel {
     private(set) var week: [PracticeDay] = []
     private(set) var weekOffset = 0
     private(set) var errorKey: String?
+    private(set) var shareErrorKey: String?
     private(set) var loading = false
     private(set) var acknowledging = false
     @ObservationIgnored private let history: any FingerHistoryReading
@@ -36,6 +37,23 @@ final class PracticeProgressViewModel {
     var next: PracticeAchievement? {
         let ids = Set(awards.map(\.id))
         return PracticeAchievement.catalog.first { !ids.contains($0.id) }
+    }
+
+    /// The next session goal still to earn, shown as the current challenge.
+    var sessionChallenge: PracticeAchievement? {
+        let earned = Set(awards.map(\.id))
+        return PracticeAchievement.catalog.first { $0.family == .sessions && !earned.contains($0.id) }
+    }
+
+    /// The most recently earned badge and its award.
+    var latestAward: (badge: PracticeAchievement, award: AchievementAward)? {
+        awards
+            .sorted { $0.earned > $1.earned }
+            .lazy
+            .compactMap { award in
+                PracticeAchievement.catalog.first { $0.id == award.id }.map { ($0, award) }
+            }
+            .first
     }
 
     func refresh() async {
@@ -75,16 +93,22 @@ final class PracticeProgressViewModel {
         }
     }
 
+    func clearShareError() { shareErrorKey = nil }
+
+    func sharingCompleted(failed: Bool) {
+        shareErrorKey = failed ? "recovery.sharing" : nil
+    }
+
     func award(for badge: PracticeAchievement) -> AchievementAward? {
         awards.first { $0.id == badge.id }
     }
 
     func title(for badge: PracticeAchievement) -> String {
         if let movement = badge.movement {
-            return String(localized: String.LocalizationValue(movement.title))
+            return String(localized: String.LocalizationValue(movement.title), bundle: AppLanguage.selected.resourceBundle)
         }
         return String.localizedStringWithFormat(
-            String(localized: String.LocalizationValue("achievement.title." + badge.family.rawValue)),
+            String(localized: String.LocalizationValue("achievement.title." + badge.family.rawValue), bundle: AppLanguage.selected.resourceBundle),
             Int64(badge.target)
         )
     }

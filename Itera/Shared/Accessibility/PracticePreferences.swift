@@ -12,4 +12,6 @@ enum PracticePreferences {
     static let calmMode = "practice.calmMode"
     static let celebrationSounds = "practice.celebrationSounds"
     static let buttonSounds = "practice.buttonSounds"
+    /// How Home and Progress address the patient. Stored only on this device; empty means no name.
+    static let patientName = "practice.patientName"
 }

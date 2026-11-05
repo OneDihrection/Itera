@@ -11,10 +11,13 @@ enum AppLanguage: String, CaseIterable {
     case english = "en"
     case indonesian = "id"
 
+    /// UserDefaults key for an explicit language choice made in Settings.
+    static let storageKey = "app.language"
+
+    /// Bahasa Indonesia unless English was explicitly chosen, whatever the device language.
     static var selected: AppLanguage {
-        let saved = UserDefaults.standard.string(forKey: "app.language")
-        return saved.flatMap(AppLanguage.init(rawValue:))
-            ?? (Locale.preferredLanguages.first?.hasPrefix("id") == true ? .indonesian : .english)
+        UserDefaults.standard.string(forKey: storageKey)
+            .flatMap(AppLanguage.init(rawValue:)) ?? .indonesian
     }
 
     /// Explicit resource selection also applies to strings rendered outside SwiftUI.

@@ -49,6 +49,8 @@ final class SessionAudioService: NSObject, VoiceReadinessProviding, AVSpeechSynt
     private let logger = Logger(subsystem: Bundle.main.bundleIdentifier ?? "Itera", category: "SessionAudio")
     private var routeObserver: NSObjectProtocol?
     private let synthesizer = AVSpeechSynthesizer()
+    private let music = ExerciseMusicPlayer()
+    private var narrationClips: [String: PreparedAudioClip] = [:]
     private let inputWorker = AudioInputWorker()
     private var starting: Task<VoiceStartupResult, Never>?
     private var listeningActive = false
@@ -72,7 +74,7 @@ final class SessionAudioService: NSObject, VoiceReadinessProviding, AVSpeechSynt
     private var clipWatchdog: Task<Void, Never>?
     private var afterClip: (() -> Void)?
     private var failedClip: (() -> Void)?
-    private var pendingSpeech: (id: UUID, text: String)?
+    private var pendingSpeech: (id: UUID, text: String, key: String?)?
     private var pendingCounts: [(id: UUID, number: Int)] = []
     private var speechWatchdog: Task<Void, Never>?
     private var closingWatchdog: Task<Void, Never>?
@@ -93,7 +95,10 @@ final class SessionAudioService: NSObject, VoiceReadinessProviding, AVSpeechSynt
             else {
                 return
             }
-            Task { @MainActor in self?.events.send(.interrupted) }
+            Task { @MainActor in
+                self?.music.pause()
+                self?.events.send(.interrupted)
+            }
         }
     }
 
@@ -105,7 +110,7 @@ final class SessionAudioService: NSObject, VoiceReadinessProviding, AVSpeechSynt
     func prepare() {
         language = AppLanguage.selected
         synthesisLocale = language.speechIdentifier
-        voice = AVSpeechSynthesisVoice(language: synthesisLocale)
+        voice = NarrationVoice.best(for: synthesisLocale)
         clips = [:]
         towelEffects = [:]
         for name in ["button-click", "target-reached", "set-complete"] {
@@ -121,7 +126,7 @@ final class SessionAudioService: NSObject, VoiceReadinessProviding, AVSpeechSynt
     func speak(id: UUID, text: String) {
         if !utteranceIDs.isEmpty || clipID != nil {
             if let previous = pendingSpeech { events.send(.cancelled(previous.id)) }
-            pendingSpeech = (id, text)
+            pendingSpeech = (id, text, nil)
             return
         }
         guard let voice else {
@@ -133,17 +138,16 @@ final class SessionAudioService: NSObject, VoiceReadinessProviding, AVSpeechSynt
             }
             return
         }
-        let utterance = AVSpeechUtterance(string: text)
-        utterance.voice = voice
-        utterance.volume = 1
-        utterance.rate = AVSpeechUtteranceDefaultSpeechRate * 0.8
+        let utterance = NarrationVoice.utterance(text, voice: voice)
         utteranceIDs[ObjectIdentifier(utterance)] = id
+        music.setDucked(true)
         synthesizer.speak(utterance)
         speechWatchdog?.cancel()
         speechWatchdog = Task { [weak self] in
             do { try await Task.sleep(for: .seconds(45)) } catch { return }
             guard let self, self.utteranceIDs.values.contains(id) else { return }
             self.utteranceIDs.removeAll()
+            self.music.setDucked(false)
             self.synthesizer.stopSpeaking(at: .immediate)
             self.events.send(.feedbackUnavailable)
             self.events.send(.completed(id, false))
@@ -171,6 +175,7 @@ final class SessionAudioService: NSObject, VoiceReadinessProviding, AVSpeechSynt
         closingWatchdog = nil
         utteranceIDs.removeAll()
         synthesizer.stopSpeaking(at: .immediate)
+        music.setDucked(false)
         for id in cancelled { events.send(.cancelled(id)) }
     }
 
@@ -277,6 +282,52 @@ final class SessionAudioService: NSObject, VoiceReadinessProviding, AVSpeechSynt
         }
     }
 
+    func speak(id: UUID, key: String) {
+        let text = String(localized: String.LocalizationValue(key), bundle: language.resourceBundle, locale: language.locale)
+        guard utteranceIDs.isEmpty, clipID == nil else {
+            if let previous = pendingSpeech {
+                events.send(.cancelled(previous.id))
+            }
+            pendingSpeech = (id, text, key)
+            return
+        }
+        let line = NarrationLine(key: key)
+        let name = NarrationClips.resourceName(for: line)
+        if narrationClips[name] == nil, let url = NarrationClips.url(for: line, language: language) {
+            narrationClips[name] = try? PreparedAudioClip(url: url)
+        }
+        guard let clip = narrationClips[name] else {
+            speak(id: id, text: text)
+            return
+        }
+        activeClip = clip
+        clipID = id
+        music.setDucked(true)
+        let completed: (UUID, Bool) -> Void = { [weak self] id, success in
+            guard let self, self.clipID == id else { return }
+            self.clipID = nil
+            self.activeClip?.stop()
+            self.activeClip = nil
+            self.clipWatchdog?.cancel()
+            self.clipWatchdog = nil
+            self.music.setDucked(false)
+            if success {
+                self.events.send(.completed(id, true))
+                self.drainPendingAudio()
+            } else {
+                self.speak(id: id, text: text)
+            }
+        }
+        guard clip.play(id: id, completion: completed) else {
+            completed(id, false)
+            return
+        }
+        clipWatchdog = Task {
+            do { try await Task.sleep(for: .seconds(30)) } catch { return }
+            completed(id, false)
+        }
+    }
+
     private func playClip(_ name: String, id: UUID, timeout: Double, failure: (() -> Void)? = nil, completion: (() -> Void)? = nil) {
         clips.removeAll()
         prepareClip(name)
@@ -288,6 +339,7 @@ final class SessionAudioService: NSObject, VoiceReadinessProviding, AVSpeechSynt
             return
         }
         activeClip = clip
+        music.setDucked(true)
         clipID = id
         afterClip = completion
         failedClip = failure
@@ -314,6 +366,7 @@ final class SessionAudioService: NSObject, VoiceReadinessProviding, AVSpeechSynt
         clipWatchdog = nil
         activeClip?.stop()
         activeClip = nil
+        music.setDucked(false)
         if !success {
             events.send(.feedbackUnavailable)
             failure?()
@@ -329,7 +382,11 @@ final class SessionAudioService: NSObject, VoiceReadinessProviding, AVSpeechSynt
             play(id: next.id, cue: .count(next.number))
         } else if let next = pendingSpeech {
             pendingSpeech = nil
-            speak(id: next.id, text: next.text)
+            if let key = next.key {
+                speak(id: next.id, key: key)
+            } else {
+                speak(id: next.id, text: next.text)
+            }
         }
     }
 
@@ -344,6 +401,7 @@ final class SessionAudioService: NSObject, VoiceReadinessProviding, AVSpeechSynt
             }
             self.speechWatchdog?.cancel()
             self.speechWatchdog = nil
+            self.music.setDucked(false)
             self.events.send(.completed(id, true))
             self.drainPendingAudio()
         }
@@ -357,6 +415,7 @@ final class SessionAudioService: NSObject, VoiceReadinessProviding, AVSpeechSynt
                   let id = self.utteranceIDs.removeValue(forKey: ObjectIdentifier(utterance)) else { return }
             self.speechWatchdog?.cancel()
             self.speechWatchdog = nil
+            self.music.setDucked(false)
             self.events.send(.feedbackUnavailable)
             self.events.send(.completed(id, false))
             self.drainPendingAudio()
@@ -520,7 +579,21 @@ final class SessionAudioService: NSObject, VoiceReadinessProviding, AVSpeechSynt
         events.send(.listening(false))
     }
 
+    func startMusic() {
+        do {
+            try NarrationAudioSession.activate(listening: listeningActive)
+            music.start()
+        } catch {
+            music.pause()
+        }
+    }
+
+    func pauseMusic() { music.pause() }
+    func resumeMusic() { startMusic() }
+    func stopMusic() { music.stop() }
+
     func stop() {
+        music.stop()
         cancelSpeech()
         stopListening()
         inputWorker.stop(deactivate: true)

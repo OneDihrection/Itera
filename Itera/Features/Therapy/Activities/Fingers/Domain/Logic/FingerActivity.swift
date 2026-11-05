@@ -29,10 +29,10 @@ struct FingerActivity {
     private(set) var baselines = [Double](repeating: 0, count: 4)
     private(set) var targets = [Double](repeating: 0, count: 4)
     private(set) var best = [Double](repeating: 0, count: 4)
-    private(set) var holdElapsed = 0.0
     private(set) var holdCompletionID: UUID?
     private var holdCompletionWasPresented = false
-    private var lastHoldTimestamp: Double?
+    /// Credited hold time; survives brief tracking loss and zone wobble without crediting them.
+    private var hold = InterruptibleHold()
     private var holdValue = 0.0
     private var holdSum = 0.0
     private var holdCount = 0
@@ -82,7 +82,11 @@ struct FingerActivity {
 
     var needsStart: Bool { awaitingStart }
     var holdDuration: Double { phase == .range ? Self.readyCountdown : 2 }
-    var isHolding: Bool { lastHoldTimestamp != nil || holdCompletionID != nil }
+    var isHolding: Bool { hold.isHolding || holdCompletionID != nil }
+    /// A completed hold presents a full timer until its completion is acknowledged.
+    var holdElapsed: Double {
+        holdCompletionID != nil ? holdDuration : min(holdDuration, hold.elapsed)
+    }
     var holdRemaining: Double { max(0, holdDuration - holdElapsed) }
     var demonstrationRemaining: Double {
         max(0, Self.demonstrationDuration - demonstrationSeconds)
@@ -103,13 +107,16 @@ struct FingerActivity {
         activeSeconds = result.activeSeconds
     }
 
-    // Evidence loss resets holds/cycles, independently of the preview-driven stage clock.
-    mutating func suspendEvidence() {
+    /// Brief evidence loss (a bystander, an occluded hand) freezes the current hold.
+    ///
+    /// The partial hold survives for `InterruptibleHold.trackingGrace` without receiving
+    /// credit for the missing time; longer losses go through `breakEvidence()` instead.
+    mutating func suspendEvidence(at now: Double) {
         // An earned endpoint may finish its visual acknowledgment during a brief occlusion.
-        // Partial holds still reset immediately and no missing time receives credit.
-        if holdCompletionID == nil {
+        if holdCompletionID == nil, !hold.interrupt(at: now, grace: InterruptibleHold.trackingGrace) {
             resetHold()
         }
+
         peakStart = nil
         lastTimestamp = nil
     }
@@ -137,6 +144,16 @@ struct FingerActivity {
         resetRange()
         rangeTooSmall = false
         breakEvidence()
+    }
+
+    /// Ends the rest early. The next set still begins with its countdown, and the next
+    /// exercise still begins with its own setup; only the waiting time is shortened.
+    mutating func skipRest() {
+        guard phase == .rest else {
+            return
+        }
+
+        remaining = 0
     }
 
     /// Accepts the measured range and moves on to the demonstration.
@@ -242,13 +259,16 @@ struct FingerActivity {
             return
         }
         let delta = evidence.timestamp - (lastTimestamp ?? evidence.timestamp)
-        if delta > 0.3 {
-            resetHold()
+
+        // A frame gap earns no hold credit; only a gap beyond the grace restarts the cycle.
+        if delta > InterruptibleHold.maximumCreditedStep {
             peakStart = nil
-            if delta > 0.5 {
-                returning = false
-                awaitingStart = true
-            }
+        }
+
+        if delta > InterruptibleHold.trackingGrace {
+            resetHold()
+            returning = false
+            awaitingStart = true
         }
         lastTimestamp = evidence.timestamp
         if !narrationFinished, [.baseline, .target, .active, .range].contains(phase) {
@@ -271,8 +291,8 @@ struct FingerActivity {
             movementFraction = min(1, max(0, normalized))
             capturePeak(value, time: evidence.timestamp, tolerance: range * 0.12)
             if awaitingStart {
-                guard normalized <= (lastHoldTimestamp == nil ? 0.25 : 0.35) else {
-                    resetHold()
+                guard normalized <= (hold.isHolding ? 0.35 : 0.25) else {
+                    leaveZone(at: evidence.timestamp)
                     return
                 }
                 if stable(value, time: evidence.timestamp, tolerance: range * 0.20, duration: holdDuration) {
@@ -282,12 +302,12 @@ struct FingerActivity {
             }
             progress = min(1, max(0, returning ? 1 - normalized : normalized))
             // Separate entry/exit bands prevent tiny boundary noise from restarting a valid hold.
-            let holding = lastHoldTimestamp != nil
+            let holding = hold.isHolding
             let arrived = returning
                 ? normalized <= (holding ? 0.35 : 0.25)
                 : normalized >= (holding ? 0.70 : 0.80)
             guard arrived else {
-                resetHold()
+                leaveZone(at: evidence.timestamp)
                 return
             }
             guard stable(value, time: evidence.timestamp, tolerance: range * 0.20, duration: holdDuration) else {
@@ -373,8 +393,7 @@ struct FingerActivity {
     private mutating func capture(_ value: Double, time: Double) {
         // A stationary hand outside the requested target must never run its hold clock.
         if phase == .target, value - baselines[finger] <= 0.08 {
-            resetHold()
-            progress = 0
+            leaveZone(at: time)
             return
         }
         guard stable(value, time: time, tolerance: 0.10, duration: holdDuration) else {
@@ -394,7 +413,6 @@ struct FingerActivity {
         guard holdCompletionID == nil else {
             return
         }
-        holdElapsed = holdDuration
         progress = 1
         holdCompletionID = UUID()
         holdCompletionWasPresented = false
@@ -451,9 +469,17 @@ struct FingerActivity {
         resetHold()
     }
 
+    /// Leaving the zone briefly (detector wobble at the edge) freezes the hold; staying out clears it.
+    private mutating func leaveZone(at time: Double) {
+        if hold.isHolding, hold.interrupt(at: time, grace: InterruptibleHold.zoneExitGrace) {
+            return
+        }
+
+        resetHold()
+    }
+
     private mutating func resetHold() {
-        lastHoldTimestamp = nil
-        holdElapsed = 0
+        hold.reset()
         holdSum = 0
         holdCount = 0
         holdCompletionID = nil
@@ -462,17 +488,26 @@ struct FingerActivity {
     }
 
     private mutating func stable(_ value: Double, time: Double, tolerance: Double, duration: Double) -> Bool {
-        if lastHoldTimestamp == nil || abs(value - holdValue) > tolerance {
+        // A brief drift beyond tolerance (detector noise) freezes the hold; sustained drift restarts it.
+        if hold.isHolding, abs(value - holdValue) > tolerance {
+            leaveZone(at: time)
+
+            if hold.isHolding {
+                return false
+            }
+        }
+
+        if !hold.isHolding {
             resetHold()
             holdValue = value
         }
-        let interval = max(0, time - (lastHoldTimestamp ?? time))
-        lastHoldTimestamp = time
+
+        // Accumulate only fresh observed intervals; interrupted time is never credited.
+        hold.credit(at: time)
         holdSum += value
         holdCount += 1
-        // Accumulate only fresh observed intervals, with bounded per-frame credit.
-        holdElapsed = min(duration, holdElapsed + min(0.3, interval))
-        progress = holdElapsed / duration
-        return holdElapsed >= duration
+        progress = min(1, hold.elapsed / duration)
+
+        return hold.elapsed >= duration
     }
 }

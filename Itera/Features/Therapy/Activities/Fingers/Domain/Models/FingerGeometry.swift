@@ -21,7 +21,7 @@ extension HandEvidence {
         case .extensionSequence:
             let base = bases[finger]
             // The selected fingertip must also be visible to present its completion ring.
-            return [0, 9, base, base + 1, base + 2, base + 3]
+            return [0, base, base + 1, base + 2, base + 3]
         case .forearmRotation:
             // The wrist, palm axis, and both outer knuckles define how far the palm faces the camera.
             return [0, 5, 9, 17]
@@ -70,9 +70,14 @@ extension HandEvidence {
         if isGrip && visibleBases.count < 2 {
             return nil
         }
-        let palm = isGrip
-            ? visibleBases.map { distance(0, $0) }.reduce(0, +) / Double(visibleBases.count)
-            : distance(0, 9)
+        let palm: Double
+        if isGrip {
+            palm = visibleBases.map { distance(0, $0) }.reduce(0, +) / Double(visibleBases.count)
+        } else if exercise == .extensionSequence {
+            palm = distance(0, bases[finger])
+        } else {
+            palm = distance(0, 9)
+        }
         guard palm > 0.04 else {
             return nil
         }
@@ -91,7 +96,10 @@ extension HandEvidence {
             return (distance(8, 12) + distance(12, 16) + distance(16, 20)) / palm
         case .extensionSequence:
             let base = bases[finger]
-            return angle(base, base + 1, base + 2) / 180
+            // Extension may happen at either joint; a straight PIP must not hide DIP movement.
+            let middleJoint = angle(base, base + 1, base + 2)
+            let tipJoint = angle(base + 1, base + 2, base + 3)
+            return (middleJoint + tipJoint) / 360
         case .forearmRotation:
             return palmFacing()
         }

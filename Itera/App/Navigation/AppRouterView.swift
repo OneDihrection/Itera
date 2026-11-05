@@ -69,6 +69,8 @@ enum AppRouterView {
             FingerSessionView()
         case .reflection:
             FingerReflectionView()
+        case .sessionComplete:
+            FingerSessionCompleteView()
         case .practicePreferences:
             PracticePreferencesView()
         case .routineSettings(let category):

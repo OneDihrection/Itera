@@ -23,10 +23,10 @@ final class AudioInputWorker: @unchecked Sendable {
             queue.async { [self] in
                 do {
                     let session = AVAudioSession.sharedInstance()
-                    var mode: AVAudioSession.Mode = .voiceChat
+                    var mode: AVAudioSession.Mode = .default
                     #if DEBUG
-                    if ProcessInfo.processInfo.arguments.contains("-IteraCompareDefaultAudioMode") {
-                        mode = .default
+                    if ProcessInfo.processInfo.arguments.contains(NarrationAudioSession.voiceChatComparisonArgument) {
+                        mode = .voiceChat
                     }
                     #endif
                     try session.setCategory(.playAndRecord, mode: mode, options: [.defaultToSpeaker])

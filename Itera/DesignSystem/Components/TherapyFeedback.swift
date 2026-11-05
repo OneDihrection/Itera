@@ -12,13 +12,17 @@ struct TherapyProgressRing: View {
     var lineWidth: CGFloat = 12
     var animatesProgress = true
     var animationDuration = 0.12
+    var tint: Color = TherapyPalette.primary
+    /// Defaults to a faint version of `tint`.
+    var track: Color? = nil
+    var lineCap: CGLineCap = .round
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         ZStack {
-            Circle().stroke(TherapyPalette.primary.opacity(0.15), lineWidth: lineWidth)
+            Circle().stroke(track ?? tint.opacity(0.15), lineWidth: lineWidth)
             Circle().trim(from: 0, to: min(1, max(0, progress)))
-                .stroke(TherapyPalette.primary, style: StrokeStyle(lineWidth: lineWidth, lineCap: .round))
+                .stroke(tint, style: StrokeStyle(lineWidth: lineWidth, lineCap: lineCap))
                 .rotationEffect(.degrees(-90))
                 .animation(reduceMotion || !animatesProgress ? nil : .linear(duration: animationDuration), value: progress)
         }
