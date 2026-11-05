@@ -62,11 +62,38 @@ final class BodyTrackingService: NSObject, AVCaptureVideoDataOutputSampleBufferD
         }
     }
 
+    private let handRequest = VNDetectHumanHandPoseRequest()
+    private var handEnabled = false
+    private var normalLens = false
+
+    /// Hand inference shares the capture session and bounded delivery with body and cup modes.
+    func requireHand(_ enabled: Bool) {
+        inferenceQueue.async { [weak self] in
+            self?.handEnabled = enabled
+        }
+        queue.async { [weak self] in
+            guard let self, self.normalLens != enabled else { return }
+            self.normalLens = enabled
+            guard self.configured else { return }
+            self.availability.send(.discontinuity)
+            self.session.stopRunning()
+            self.cancelFrameWatchdog()
+            self.session.beginConfiguration()
+            for input in self.session.inputs { self.session.removeInput(input) }
+            for output in self.session.outputs { self.session.removeOutput(output) }
+            self.session.commitConfiguration()
+            self.configured = false
+            self.invalidateGeneration()
+            self.startIfRequested()
+        }
+    }
+
     private let request = VNDetectHumanBodyPoseRequest()
     private var notifications: [NSObjectProtocol] = []
 
     override init() {
         super.init()
+        handRequest.maximumHandCount = 2
         let center = NotificationCenter.default
         notifications.append(
             center.addObserver(
@@ -221,9 +248,9 @@ final class BodyTrackingService: NSObject, AVCaptureVideoDataOutputSampleBufferD
         guard !configured else {
             return
         }
-        let selectedCamera = AVCaptureDevice.default(
+        let selectedCamera = (normalLens ? nil : AVCaptureDevice.default(
             .builtInUltraWideCamera, for: .video, position: position
-        ) ?? AVCaptureDevice.default(
+        )) ?? AVCaptureDevice.default(
             .builtInWideAngleCamera, for: .video, position: position
         ) ?? AVCaptureDevice.default(for: .video)
         guard let camera = selectedCamera else {
@@ -297,13 +324,13 @@ final class BodyTrackingService: NSObject, AVCaptureVideoDataOutputSampleBufferD
     }
 
     private func process(_ image: CVPixelBuffer, time: Double, generation: UUID) {
-        guard !cupEnabled || time - lastPublished >= 1.0 / 20 else { return }
+        guard (!cupEnabled && !handEnabled) || time - lastPublished >= 1.0 / 20 else { return }
         lastPublished = time
         do {
-            if !cupEnabled {
+            if !cupEnabled && !handEnabled {
                 try VNImageRequestHandler(cvPixelBuffer: image, orientation: .up).perform([request])
             }
-            let people = cupEnabled ? [] : (request.results ?? [])
+            let people = cupEnabled || handEnabled ? [] : (request.results ?? [])
             var joints: [BodyJoint: TrackingObservation.Landmark] = [:]
             if people.count == 1, let person = people.first {
                 let points = try person.recognizedPoints(.all)
@@ -313,6 +340,17 @@ final class BodyTrackingService: NSObject, AVCaptureVideoDataOutputSampleBufferD
                             position: TherapyPoint(x: point.location.x, y: point.location.y),
                             confidence: point.confidence)
                     }
+                }
+            }
+            var hand: HandEvidence?
+            if handEnabled {
+                try VNImageRequestHandler(cvPixelBuffer: image, orientation: .up).perform([handRequest])
+                if let hands = handRequest.results, hands.count == 1, let observation = hands.first {
+                    hand = try HandPoseExtractor.evidence(
+                        from: observation, timestamp: time, generation: generation,
+                        width: Double(CVPixelBufferGetWidth(image)),
+                        height: Double(CVPixelBufferGetHeight(image))
+                    )
                 }
             }
             var cup: CupEvidence?
@@ -330,7 +368,7 @@ final class BodyTrackingService: NSObject, AVCaptureVideoDataOutputSampleBufferD
             deliver(
                 TrackingObservation(
                     timestamp: time, generation: generation, width: CVPixelBufferGetWidth(image),
-                    height: CVPixelBufferGetHeight(image), personCount: people.count, joints: joints, cup: cup
+                    height: CVPixelBufferGetHeight(image), personCount: people.count, joints: joints, cup: cup, hand: hand
                 ))
         } catch {
             if time - lastInferenceFailure >= 5 {

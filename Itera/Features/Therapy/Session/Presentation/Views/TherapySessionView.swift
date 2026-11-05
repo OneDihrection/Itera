@@ -309,6 +309,7 @@ struct TherapySessionView: View {
         case .summary: return "session.complete"
         case .activity:
             switch model.snapshot.presentation {
+            case .towel: return "session.practice"
             case .movement(let value):
                 return value.phase == .practice ? "session.practice" : "session.calibration"
             case .reach(let value):
@@ -344,6 +345,7 @@ struct TherapySessionView: View {
                 BodyCameraPreview(
                     session: model.tracking.session, front: model.frontCamera,
                     onReady: model.previewReady, onOrientation: model.orientationChanged)
+                    .frame(width: geometry.size.width, height: geometry.size.height)
                 if !model.snapshot.paused, !model.snapshot.cameraWaiting,
                     model.snapshot.stage == .activity,
                     let guide = model.snapshot.presentation?.guide
@@ -356,6 +358,11 @@ struct TherapySessionView: View {
                     let joints = value.joints
                 {
                     sitToStandOverlay(value, joints: joints)
+                }
+                if !model.snapshot.paused, !model.snapshot.cameraWaiting,
+                   model.snapshot.stage == .activity,
+                   case .towel(let towel) = model.snapshot.presentation {
+                    TowelWorkspaceView(snapshot: model.towelDisplay ?? towel, interpolates: model.towelInterpolates)
                 }
                 if !hasFullScreenPresentation, model.snapshot.stage == .activity,
                     let active = cornerExampleActive
@@ -397,6 +404,7 @@ struct TherapySessionView: View {
         case .feedback: return .green
         case .activity:
             switch model.snapshot.presentation {
+            case .towel: return .green
             case .movement(let value):
                 return value.phase == .startCapture || value.phase == .targetCapture ? .yellow : .green
             case .reach(let value):
@@ -485,6 +493,10 @@ struct TherapySessionView: View {
     }
 
     @ViewBuilder private var demonstration: some View {
+        if model.snapshot.activity?.kind == .foldTowel {
+            TowelDemonstrationView()
+        }
+
         if let activity = model.snapshot.activity, activity.kind == .armRaise || activity.kind == .elbowBend {
             let mode: TherapyAnimationPlayback = {
                 if model.snapshot.stage == .demonstration {
@@ -511,6 +523,7 @@ struct TherapySessionView: View {
 
     private var primaryMovementCue: String {
         switch model.snapshot.presentation {
+        case .towel(let value): return value.trackingMessage ?? value.instruction
         case .movement(let value): return value.trackingMessage ?? model.snapshot.instruction
         case .reach(let value): return value.trackingMessage ?? model.snapshot.instruction
         case .cup(let value): return value.evidenceMessage ?? model.snapshot.instruction
@@ -531,6 +544,10 @@ struct TherapySessionView: View {
                 Text(verbatim: support).typography(.title2)
             }
             switch model.snapshot.presentation {
+            case .towel(let towel):
+                if towel.phase == .practice {
+                    Text("towel.foldNumber \(towel.foldIndex + 1)")
+                }
             case .movement(let movement):
                 if movement.phase == .startCapture || movement.phase == .targetCapture {
                     HStack(spacing: 16) {
@@ -652,7 +669,7 @@ struct TherapySessionView: View {
 
     private var recoveryControls: some View {
         VStack(spacing: 12) {
-            Button("session.recalibrate") { model.command(.retryCalibration) }
+            Button(model.snapshot.activity?.kind == .foldTowel ? "towel.restart" : "session.recalibrate") { model.command(.retryCalibration) }
                 .buttonStyle(SessionButtonStyle())
             if model.snapshot.stage == .activity {
                 HStack {
@@ -829,6 +846,7 @@ struct TherapySessionView: View {
         case .elbowBend: return "session.elbowBend"
         case .directionalReach: return "session.directionalReach"
         case .cup: return "session.cup"
+        case .foldTowel: return "session.foldTowel"
         case .sitToStand: return "session.sitToStand"
         }
     }

@@ -48,6 +48,25 @@ actor LocalSessionRepository: SessionRepository {
                 endedAt: Date(), stopped: true, interrupted: true, results: results))
     }
 
+    func history() throws -> [SessionSummary] {
+        guard FileManager.default.fileExists(atPath: directory.path) else { return [] }
+        let urls = try FileManager.default.contentsOfDirectory(
+            at: directory, includingPropertiesForKeys: nil
+        ).filter { $0.pathExtension == "json" && $0.lastPathComponent != "active.json" }
+        return try urls.map { url in
+            let record = try storage.read(Record<SessionSummary>.self, from: url)
+            guard record.version == 1 else { throw StorageError.unsupportedVersion }
+            return record.value
+        }.sorted { $0.startedAt > $1.startedAt }
+    }
+
+    func delete(id: UUID) throws {
+        let url = directory.appendingPathComponent(id.uuidString + ".json")
+        if FileManager.default.fileExists(atPath: url.path) {
+            try FileManager.default.removeItem(at: url)
+        }
+    }
+
     func checkpoint(_ value: SessionCheckpoint) throws {
         try write(Record(version: 1, value: value), to: activeURL)
     }

@@ -15,7 +15,7 @@ struct TherapyViewport: Equatable {
 struct TargetGuide {
     let start: TherapyPoint
     let target: TherapyPoint
-    let tracked: TherapyPoint
+    var tracked: TherapyPoint
     let radius: Double
     let targetActive: Bool
     var progress: Double
@@ -90,6 +90,7 @@ struct ReachOutcome: Codable, Equatable {
 }
 
 enum ActivityPresentation {
+    case towel(TowelSnapshot)
     case movement(MovementSnapshot)
     case reach(ReachSnapshot)
     case cup(CupSnapshot)
@@ -98,6 +99,7 @@ enum ActivityPresentation {
 
     var countdownSeconds: Int? {
         switch self {
+        case .towel(let value): return value.phase == .countdown ? value.seconds : nil
         case .movement(let value): return value.phase == .countdown ? value.seconds : nil
         case .reach(let value): return value.phase == .countdown ? value.seconds : nil
         case .cup(let value): return value.phase == .countdown ? value.seconds : nil
@@ -108,6 +110,7 @@ enum ActivityPresentation {
 
     var instruction: String {
         switch self {
+        case .towel(let value): return value.instruction
         case .movement(let value): return value.instruction
         case .reach(let value): return value.instruction
         case .cup(let value): return value.instruction
@@ -117,6 +120,7 @@ enum ActivityPresentation {
     }
     var count: Int {
         switch self {
+        case .towel(let value): return value.count
         case .movement(let value): return value.count
         case .reach(let value): return value.count
         case .cup(let value): return value.count
@@ -126,6 +130,7 @@ enum ActivityPresentation {
     }
     var progress: Double {
         switch self {
+        case .towel(let value): return value.holdProgress
         case .movement(let value): return value.progress
         case .reach(let value): return value.progress
         case .cup(let value): return value.progress
@@ -135,6 +140,7 @@ enum ActivityPresentation {
     }
     var guide: TargetGuide? {
         switch self {
+        case .towel: return nil
         case .movement(let value): return value.guide
         case .reach(let value): return value.guide
         case .cup(let value): return value.guide

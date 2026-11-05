@@ -15,6 +15,9 @@ struct FingerReportsView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 26) {
                 Text("reports.title").typography(.largeTitle)
+                TherapyButton(title: "towel.history", symbol: "square.stack.3d.up") {
+                    router.push(.taskReports)
+                }
                 PracticeProgressSection()
                 Text("reports.history").typography(.title)
                 if let error = dependencies.home.errorKey {

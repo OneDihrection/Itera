@@ -32,6 +32,23 @@ enum SessionPresentationFixtures {
                 }
             }
         }
+        let towel = SessionActivity(kind: .foldTowel, side: .left, goal: 1)
+        for fold in 0..<4 {
+            var value = base(towel)
+            var state = TowelSnapshot()
+            state.phase = .practice
+            state.foldIndex = fold
+            state.foldProgress = 0.45
+            state.instruction = "towel.fold"
+            state.interaction = .folding
+            state.grip = .closed
+            state.grabPoint = fold % 2 == 0 ? .init(x: 0.8, y: 0.5) : .init(x: 0.5, y: 0.2)
+            state.destination = fold % 2 == 0 ? .init(x: 0.2, y: 0.5) : .init(x: 0.5, y: 0.8)
+            state.handPosition = (state.grabPoint + state.destination).scaled(0.5)
+            value.presentation = .towel(state)
+            value.instruction = state.instruction
+            fixtures.append(Fixture(id: "towel-fold-\(fold + 1)", snapshot: value))
+        }
         let movement = SessionActivity(kind: .armRaise, side: .left, goal: 5)
         for phase in [MovementPhase.startCapture, .targetCapture, .returnToStart, .countdown, .practice] {
             for progress in [0.0, 0.5, 1.0] {
@@ -146,6 +163,7 @@ enum SessionPresentationFixtures {
         case .elbowBend: return "session.assistance.elbowBend"
         case .directionalReach: return "session.assistance.reach"
         case .cup: return "session.assistance.cup"
+        case .foldTowel: return "session.assistance.foldTowel"
         case .sitToStand: return "session.assistance.sitToStand"
         }
     }

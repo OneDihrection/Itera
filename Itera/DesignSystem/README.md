@@ -50,3 +50,5 @@ TherapyIconButton in Components/TherapyControls.swift provides a large icon acti
 `TherapyAchievementShareSheet` renders a value-driven badge card in memory and exposes the native iPad sharing controller. The shared router owns presentation and completion; the component has no achievement eligibility or persistence logic.
 
 `TherapyRangeGauge` (Components/TherapyRangeGauge.swift) draws a measured movement range as a start zone, a target zone, and end labels. It takes labels and zone fractions only; the caller decides what the range means.
+
+`TherapyFoldPanel` renders supplied fold progress as two shaded hinged panels with layer depth. It accepts progress, fold axis, layer count, and fill opacity, and uses flat movement under Reduce Motion. The caller owns gesture recognition, scoring, and demonstration timing. `CameraDisplayGeometry` shares aspect-fit image bounds and normalized-coordinate mapping between camera overlays, excluding letterbox margins.

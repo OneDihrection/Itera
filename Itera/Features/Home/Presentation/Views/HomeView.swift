@@ -47,6 +47,7 @@ struct HomeView: View {
                 trunkCategory
                 balanceCategory
                 armRotationCategory
+                taskCategory
             }
         } else {
             VStack(spacing: 28) {
@@ -58,12 +59,17 @@ struct HomeView: View {
                     armCategory
                     trunkCategory
                 }
+                taskCategory
                 HStack(alignment: .top, spacing: 28) {
                     balanceCategory
                     armRotationCategory
                 }
             }
         }
+    }
+
+    private var taskCategory: some View {
+        category(title: "task.category", artwork: "symbol:square.stack.3d.up", route: .therapyOverview(.taskOriented))
     }
 
     private var fingerCategory: some View {

@@ -63,6 +63,8 @@ struct TrackingObservation {
     let personCount: Int
     let joints: [BodyJoint: Landmark]
     var cup: CupEvidence? = nil
+    var hand: HandEvidence? = nil
+    var workspaceMirrored = false
 
     var aspect: Double { Double(width) / Double(max(1, height)) }
 

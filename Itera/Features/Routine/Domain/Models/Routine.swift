@@ -18,17 +18,45 @@ enum TherapyKind: String, Codable, CaseIterable {
     case directionalReach
     case cup
     case sitToStand
+    case foldTowel
 
-    var category: TherapyCategory { self == .sitToStand ? .trunk : .arm }
+    var category: TherapyCategory {
+        switch self {
+        case .foldTowel: return .taskOriented
+        case .sitToStand: return .trunk
+        case .armRaise, .elbowBend, .directionalReach, .cup: return .arm
+        }
+    }
 }
 
 /// A group of therapy kinds that share the guided-session flow and have their own routine.
 enum TherapyCategory: String, CaseIterable, Identifiable, Hashable {
-    case arm, trunk
+    case arm, trunk, taskOriented
     var id: String { rawValue }
-    var title: String { self == .arm ? "home.armPractice" : "home.trunkPractice" }
-    var artwork: String { self == .arm ? "symbol:figure.arms.open" : "symbol:figure.stand" }
-    var positioningKey: String { self == .arm ? "home.positioning" : "trunk.positioning" }
+    var title: String {
+        switch self {
+        case .arm: return "home.armPractice"
+        case .trunk: return "home.trunkPractice"
+        case .taskOriented: return "task.category"
+        }
+    }
+
+    var artwork: String {
+        switch self {
+        case .arm: return "symbol:figure.arms.open"
+        case .trunk: return "symbol:figure.stand"
+        case .taskOriented: return "symbol:square.stack.3d.up"
+        }
+    }
+
+    var positioningKey: String {
+        switch self {
+        case .arm: return "home.positioning"
+        case .trunk: return "trunk.positioning"
+        case .taskOriented: return "towel.positioning"
+        }
+    }
+
     var kinds: [TherapyKind] { TherapyKind.allCases.filter { $0.category == self } }
 }
 

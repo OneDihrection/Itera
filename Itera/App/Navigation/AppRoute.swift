@@ -24,6 +24,7 @@ enum AppRoute: Hashable {
     )
     case plan(ExerciseCategory)
     case reports
+    case taskReports
     case achievements
     case achievementCelebration
     case achievement(String)

@@ -16,6 +16,9 @@ final class TherapySessionViewModel {
     let sessionLanguage = AppLanguage.selected
     var sessionLocale: Locale { sessionLanguage.locale }
     private(set) var snapshot = SessionSnapshot()
+    private(set) var towelDisplay: TowelSnapshot?
+    private(set) var towelInterpolates = false
+    @ObservationIgnored private var towelSmoother = TowelPresentationSmoother()
     private(set) var personVisible = false
     private(set) var cameraDenied = false
     private(set) var failure: String?
@@ -108,7 +111,9 @@ final class TherapySessionViewModel {
                 return
             }
             self.personVisible = frame.personCount == 1
-            self.send(.observation(frame))
+            var observation = frame
+            observation.workspaceMirrored = self.frontCamera
+            self.send(.observation(observation))
         }.store(in: &subscriptions)
         tracking.cupFailures.receive(on: DispatchQueue.main).sink { [weak self] error in
             guard let self else { return }
@@ -134,6 +139,7 @@ final class TherapySessionViewModel {
             .first { $0 == .landscapeLeft || $0 == .landscapeRight }
         landscapeRight = orientation == .landscapeRight
         frontCamera = true
+        tracking.requireHand(snapshot.activity?.kind == .foldTowel)
         tracking.configure(front: true, landscapeRight: landscapeRight)
         tracking.start()
         send(.command(.resume))
@@ -327,7 +333,20 @@ final class TherapySessionViewModel {
         let transition = engine.handle(event, at: ProcessInfo.processInfo.systemUptime)
         let previousKind = snapshot.activity?.kind
         snapshot = transition.snapshot
+        towelInterpolates = false
+        if snapshot.paused || snapshot.cameraWaiting || snapshot.stage != .activity {
+            towelSmoother.reset()
+            towelDisplay = nil
+        } else if case .observation(let frame) = event,
+                  case .towel(let raw) = snapshot.presentation {
+            towelDisplay = towelSmoother.consume(raw, time: frame.timestamp, generation: frame.generation)
+            towelInterpolates = towelSmoother.interpolates
+        } else if case .towel(let raw) = snapshot.presentation {
+            towelSmoother.reset()
+            towelDisplay = raw
+        }
         if previousKind != snapshot.activity?.kind {
+            tracking.requireHand(snapshot.activity?.kind == .foldTowel)
             tracking.requireCup(snapshot.activity?.kind == .cup)
         }
         for effect in transition.effects {
@@ -341,6 +360,7 @@ final class TherapySessionViewModel {
                     case .elbowBend: kindKey = "session.elbowBend"
                     case .directionalReach: kindKey = "session.directionalReach"
                     case .cup: kindKey = "session.cup"
+                    case .foldTowel: kindKey = "session.foldTowel"
                     case .sitToStand: kindKey = "session.sitToStand"
                     }
                     let sideKey = activity.side == .left ? "session.left" : "session.right"
@@ -390,8 +410,9 @@ final class TherapySessionViewModel {
             return
         }
         live = false
-        tracking.requireCup(false)
         tracking.stop()
+        tracking.requireCup(false)
+        tracking.requireHand(false)
         if preserveClosing { audio.stopListening() } else { audio.stop() }
         timer?.cancel()
         timer = nil
@@ -402,6 +423,8 @@ final class TherapySessionViewModel {
 
 #if DEBUG
 private actor PresentationFixtureRepository: SessionRepository {
+    func history() async throws -> [SessionSummary] { [] }
+    func delete(id: UUID) async throws {}
     func recoverInterrupted() {}
     func checkpoint(_ value: SessionCheckpoint) {}
     func finalize(_ value: SessionSummary) {}

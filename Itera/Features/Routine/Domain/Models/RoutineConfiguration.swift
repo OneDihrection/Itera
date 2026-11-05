@@ -28,6 +28,10 @@ struct RoutineExercise: Identifiable, Codable, Equatable {
     init(kind: TherapyKind, sides: RoutineSides = .both) {
         self.kind = kind
         self.sides = sides
+        if kind == .foldTowel {
+            leftGoal = 1
+            rightGoal = 1
+        }
     }
 
     init(from decoder: Decoder) throws {
@@ -61,7 +65,7 @@ struct RoutineExercise: Identifiable, Codable, Equatable {
         return selected.map { side in
             SessionActivity(
                 kind: kind, side: side,
-                goal: kind == .armRaise || kind == .elbowBend
+                goal: kind == .armRaise || kind == .elbowBend || kind == .foldTowel
                     ? (side == .left ? leftGoal : rightGoal) : rounds,
                 sets: sets
             )
