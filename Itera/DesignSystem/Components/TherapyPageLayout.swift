@@ -15,6 +15,7 @@ struct TherapyPageHeader: View {
     var leadingTitle: LocalizedStringKey? = nil
     var leadingSymbol = "chevron.left"
     var leadingAction: (() -> Void)? = nil
+    var trailingContentWidth: CGFloat = 0
 
     var body: some View {
         ZStack {
@@ -22,7 +23,7 @@ struct TherapyPageHeader: View {
                 .typography(size: 24, weight: .semiBold, relativeTo: .title2)
                 .multilineTextAlignment(.center)
                 .lineLimit(2)
-                .padding(.horizontal, 80)
+                .padding(.horizontal, max(80, trailingContentWidth + 16))
                 .accessibilityAddTraits(.isHeader)
 
             if let leadingAction, let leadingTitle {

@@ -48,6 +48,7 @@ final class SessionAudioService: NSObject, VoiceReadinessProviding, AVSpeechSynt
     private let logger = Logger(subsystem: Bundle.main.bundleIdentifier ?? "Itera", category: "SessionAudio")
     private var routeObserver: NSObjectProtocol?
     private let synthesizer = AVSpeechSynthesizer()
+    private let music = ExerciseMusicPlayer()
     private let engine = AVAudioEngine()
     private var recognizer: SFSpeechRecognizer?
     private var recognition: SFSpeechRecognitionTask?
@@ -86,7 +87,10 @@ final class SessionAudioService: NSObject, VoiceReadinessProviding, AVSpeechSynt
             else {
                 return
             }
-            Task { @MainActor in self?.events.send(.interrupted) }
+            Task { @MainActor in
+                self?.music.pause()
+                self?.events.send(.interrupted)
+            }
         }
     }
 
@@ -117,6 +121,7 @@ final class SessionAudioService: NSObject, VoiceReadinessProviding, AVSpeechSynt
         let utterance = NarrationVoice.utterance(text, voice: voice)
         utterance.volume = 1
         utteranceIDs[ObjectIdentifier(utterance)] = id
+        music.setDucked(true)
         synthesizer.speak(utterance)
     }
 
@@ -131,6 +136,7 @@ final class SessionAudioService: NSObject, VoiceReadinessProviding, AVSpeechSynt
         closingWatchdog = nil
         utteranceIDs.removeAll()
         synthesizer.stopSpeaking(at: .immediate)
+        music.setDucked(false)
     }
 
     private func prepareClip(_ name: String) {
@@ -202,6 +208,7 @@ final class SessionAudioService: NSObject, VoiceReadinessProviding, AVSpeechSynt
 
         cancelSpeech()
         activeClip = clip
+        music.setDucked(true)
         clipID = id
 
         let started = clip.play(id: id) { [weak self] id, success in
@@ -211,6 +218,7 @@ final class SessionAudioService: NSObject, VoiceReadinessProviding, AVSpeechSynt
 
             self.clipID = nil
             self.activeClip = nil
+            self.music.setDucked(false)
             self.clipWatchdog?.cancel()
             self.clipWatchdog = nil
 
@@ -260,6 +268,7 @@ final class SessionAudioService: NSObject, VoiceReadinessProviding, AVSpeechSynt
             return
         }
         activeClip = clip
+        music.setDucked(true)
         clipID = id
         afterClip = completion
         guard clip.play(id: id, completion: { [weak self] id, success in
@@ -283,6 +292,7 @@ final class SessionAudioService: NSObject, VoiceReadinessProviding, AVSpeechSynt
         clipWatchdog = nil
         activeClip?.stop()
         activeClip = nil
+        music.setDucked(false)
         if !success { events.send(.feedbackUnavailable) }
         completion?()
     }
@@ -296,6 +306,7 @@ final class SessionAudioService: NSObject, VoiceReadinessProviding, AVSpeechSynt
             else {
                 return
             }
+            self.music.setDucked(false)
             self.events.send(.completed(id, true))
         }
     }
@@ -519,7 +530,24 @@ final class SessionAudioService: NSObject, VoiceReadinessProviding, AVSpeechSynt
         }
     }
 
+    func startMusic() {
+        do {
+            try NarrationAudioSession.activate(listening: tapInstalled)
+            music.start()
+        } catch {
+            // Music is optional; retain the existing narration/listening recovery flow.
+            music.stop()
+        }
+    }
+
+    func pauseMusic() { music.pause() }
+
+    func resumeMusic() { startMusic() }
+
+    func stopMusic() { music.stop() }
+
     func stop() {
+        music.stop()
         cancelSpeech()
         stopListening()
         try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)

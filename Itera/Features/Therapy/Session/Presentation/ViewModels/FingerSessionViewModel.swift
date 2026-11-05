@@ -207,7 +207,7 @@ final class FingerSessionViewModel {
 
     func readReflection() {
         do {
-            try audio.configure(language: language, ambientSound: false)
+            try audio.configure(language: language)
             audio.speak(
             String(localized: "reflection.title", bundle: sessionLanguage.resourceBundle),
             lines: [NarrationLine(key: "reflection.title")]
@@ -261,7 +261,7 @@ final class FingerSessionViewModel {
             return
         }
         do {
-            try audio.configure(language: language, ambientSound: routine.ambientSound)
+            try audio.configure(language: language)
         } catch {
             errorKey = "audio.unavailable"
         }
@@ -274,6 +274,7 @@ final class FingerSessionViewModel {
         camera.track(side: routine.side)
         camera.start()
         if !paused {
+            audio.startMusic()
             durationClock.resume(at: ProcessInfo.processInfo.systemUptime)
         }
         startTimer()
@@ -678,7 +679,7 @@ final class FingerSessionViewModel {
         }
         errorKey = nil
         do {
-            try audio.configure(language: language, ambientSound: routine.ambientSound)
+            try audio.configure(language: language)
         } catch {
             errorKey = "audio.unavailable"
         }
@@ -759,7 +760,7 @@ final class FingerSessionViewModel {
             return
         }
         do {
-            try audio.configure(language: language, ambientSound: routine.ambientSound)
+            try audio.configure(language: language)
             voiceEnabled = try audio.enableVoice()
         } catch {
             voiceEnabled = false

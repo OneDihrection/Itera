@@ -8,6 +8,7 @@
 import SwiftUI
 
 struct PracticePreferencesView: View {
+    @AppStorage(ExerciseMusicTrack.storageKey) private var musicTrack = ExerciseMusicTrack.defaultValue
     @Environment(NavigationRouter.self) private var router
     @Environment(AppDependencies.self) private var dependencies
     @AppStorage(PracticePreferences.calmMode) private var calmMode = false
@@ -67,6 +68,12 @@ struct PracticePreferencesView: View {
                 Text("cognitive.calmHelp").typography(.body)
             }
             Section {
+                Picker("music.title", selection: $musicTrack) {
+                    ForEach(ExerciseMusicTrack.allCases) { track in
+                        Text(LocalizedStringKey(track.titleKey)).tag(track.rawValue)
+                    }
+                }
+                .frame(minHeight: 64)
                 Toggle("cognitive.clicks", isOn: $buttonSounds)
                     .frame(minHeight: 64)
                 Toggle("cognitive.celebrationSounds", isOn: $celebrationSounds)

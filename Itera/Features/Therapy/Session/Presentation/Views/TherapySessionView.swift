@@ -8,6 +8,7 @@
 import SwiftUI
 
 struct TherapySessionView: View {
+    @AppStorage(ExerciseMusicTrack.storageKey) private var musicTrack = ExerciseMusicTrack.defaultValue
     @Environment(\.locale) private var locale
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -254,6 +255,13 @@ struct TherapySessionView: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
                 }
                 if model.snapshot.summary == nil {
+                    TherapyMusicMenu(
+                        selection: $musicTrack,
+                        options: ExerciseMusicTrack.allCases.map {
+                            TherapyMusicOption(id: $0.rawValue, title: LocalizedStringKey($0.titleKey))
+                        },
+                        size: 44
+                    )
                     Button("session.help") { model.command(.help) }
                         .buttonStyle(SessionButtonStyle(compact: true))
                     Button("session.pause") { model.command(.pause) }

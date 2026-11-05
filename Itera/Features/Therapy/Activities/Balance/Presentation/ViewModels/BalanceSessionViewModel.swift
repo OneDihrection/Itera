@@ -73,6 +73,7 @@ final class BalanceSessionViewModel {
                 self.updateAudio(from: previous, to: self.snapshot)
                 if previous.phase != .complete, self.snapshot.phase == .complete {
                     self.tracking.stop()
+                    self.audio.stopMusic()
                 }
             }
             .store(in: &subscriptions)
@@ -118,6 +119,9 @@ final class BalanceSessionViewModel {
         } else {
             voiceAvailable = false
         }
+        if !paused, snapshot.phase != .complete {
+            audio.startMusic()
+        }
     }
 
     func previewReady(_ ready: Bool) {
@@ -143,6 +147,7 @@ final class BalanceSessionViewModel {
         cameraWaiting = true
         lastSpokenCountdown = nil
         audio.cancelSpeech()
+        audio.startMusic()
         engine.restart()
         snapshot = engine.snapshot
         tracking.start()
@@ -155,13 +160,15 @@ final class BalanceSessionViewModel {
     func pause() {
         guard !paused else { return }
         paused = true
+        audio.pauseMusic()
         audio.cancelSpeech()
         lastSpokenCountdown = nil
     }
 
     func resume() {
-        guard paused else { return }
+        guard paused, snapshot.phase != .complete else { return }
         paused = false
+        audio.resumeMusic()
     }
 
     func foreground(permissions: any PermissionManaging) {
@@ -182,6 +189,7 @@ final class BalanceSessionViewModel {
     }
 
     func background() {
+        paused = true
         cameraWaiting = true
         if snapshot.phase != .complete {
             engine.invalidateCalibration()

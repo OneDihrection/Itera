@@ -8,6 +8,7 @@
 import SwiftUI
 
 struct FingerRoutineSettingsView: View {
+    @AppStorage(ExerciseMusicTrack.storageKey) private var musicTrack = ExerciseMusicTrack.defaultValue
     @Environment(AppDependencies.self) private var dependencies
     @Environment(NavigationRouter.self) private var router
 
@@ -33,7 +34,12 @@ struct FingerRoutineSettingsView: View {
             }
             Section("plan.audioShort") {
                 Toggle("plan.voice", isOn: $home.routine.voiceControl)
-                Toggle("plan.music", isOn: $home.routine.ambientSound)
+                Picker("music.title", selection: $musicTrack) {
+                    ForEach(ExerciseMusicTrack.allCases) { track in
+                        Text(LocalizedStringKey(track.titleKey)).tag(track.rawValue)
+                    }
+                }
+                .frame(minHeight: 64)
             }
             Section {
                 DisclosureGroup("plan.caregiverShort") {

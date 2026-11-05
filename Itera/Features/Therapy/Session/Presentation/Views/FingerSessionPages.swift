@@ -185,13 +185,15 @@ struct FingerUpcomingPage: View {
 struct FingerSessionCloseHeader: View {
     let model: FingerSessionViewModel
     let title: LocalizedStringKey?
+    var trailingContentWidth: CGFloat = 0
 
     var body: some View {
         TherapyPageHeader(
             title: title ?? "",
             leadingTitle: "session.close",
             leadingSymbol: "xmark",
-            leadingAction: { model.handleCommand(.pause) }
+            leadingAction: { model.handleCommand(.pause) },
+            trailingContentWidth: trailingContentWidth
         )
     }
 }

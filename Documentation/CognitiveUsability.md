@@ -132,3 +132,19 @@ Save failures retain pending results and block unsafe continuation until retry s
 ## Garden and kampung games removed (5 November 2026)
 
 My Garden (Home, finger Home and Reports), the garden settings toggle, the in-camera kampung finger games, the bamboo chimes and the balance mango harvest are removed. Sessions return to the plain guided layout, with the hold timer on the bubbles. Tracking recovery, display smoothing and the inference cadence fix above remain.
+
+
+## Selectable exercise music (5 November 2026)
+
+Floats (Swoop) and Homecoming (Tranquilium), supplied by the user, are bundled unchanged for offline playback. A shared device-local choice defaults to Floats and supports either track or No music. Settings and finger-routine audio settings expose the choice; finger, body-therapy and Balancing session screens offer a music-note selection button. Selecting a track updates the existing player without changing exercise state, recognition or narration. Changing music while paused prepares the selected track without playing it; explicit Resume starts it. The old routine ambient flag is retained in persisted data for compatibility but no longer controls music.
+
+Music loops at low volume and ducks during both recorded and synthesized guidance/counts. The existing audio service owns audio-session configuration, while ExerciseMusicPlayer only manages AVAudioPlayer playback. Pause/interruption suspends music, backgrounding stops resources, and completion/exit stops music. Returning from background never resumes Balancing automatically; Resume remains explicit. No music plays on idle Home or through the reflection/report flow.
+
+Verification: the production music helper was exercised with the real supplied MP3s and AVAudioPlayer on the development Mac. Checks passed idle silence, looping, automatic preference notification, replacement while paused, position-preserving resume, avoiding duplicate players, volume duck/recovery, No music and stop cleanup. Both files decode as 44.1-kHz stereo MP3s. Physical iPad sound balance, Bluetooth routing and voice recognition during music still need device checks. Final production Debug Simulator build passed; both bundled MP3s are byte-identical to the supplied files.
+
+
+## Music startup and audibility correction (5 November 2026)
+
+The supplied tracks have soft introductions. The previous narration gain reduced Floats' first-ten-second RMS to approximately -60 dBFS, making background playback difficult to hear. Music now uses 0.50 normal gain and 0.18 under narration (formerly 0.12/0.025). Finger start/resume explicitly activates the owning audio service before playback. A failed initial player/resource load is retried on subsequent start/resume instead of treating the selected but unloaded track as ready. No music selection is overridden.
+
+Verification: a temporary replay reproduced the failed-first-load/no-retry case and passed after correction. An iOS Simulator fixture using the actual GuidanceAudioService and bundled Floats MP3 passed playback start, normal gain, narration ducking, pause and resume. It requested no camera/microphone and restored the prior music preference. Fixture source was restored and the final production Debug build passed. Actual iPad speaker/Bluetooth loudness and voice-command coexistence remain physical checks.

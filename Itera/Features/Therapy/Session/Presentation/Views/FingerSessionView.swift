@@ -8,6 +8,7 @@
 import SwiftUI
 
 struct FingerSessionView: View {
+    @AppStorage(ExerciseMusicTrack.storageKey) private var musicTrack = ExerciseMusicTrack.defaultValue
     @Environment(AppDependencies.self) private var dependencies
     @Environment(NavigationRouter.self) private var router
     @Environment(\.scenePhase) private var scenePhase
@@ -81,10 +82,18 @@ struct FingerSessionView: View {
     private func header(_ model: FingerSessionViewModel) -> some View {
         FingerSessionCloseHeader(
             model: model,
-            title: "session.setTitle \(model.activity.set) \(model.exerciseTitle)"
+            title: "session.setTitle \(model.activity.set) \(model.exerciseTitle)",
+            trailingContentWidth: 140
         )
         .overlay(alignment: .trailing) {
             HStack(spacing: 4) {
+                TherapyMusicMenu(
+                    selection: $musicTrack,
+                    options: ExerciseMusicTrack.allCases.map {
+                        TherapyMusicOption(id: $0.rawValue, title: LocalizedStringKey($0.titleKey))
+                    },
+                    size: 44
+                )
                 TherapyIconButton(title: "action.repeat", symbol: "speaker.wave.2.fill", size: 44, circle: true) {
                     model.narrate()
                 }

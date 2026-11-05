@@ -306,7 +306,17 @@ final class TherapySessionViewModel {
         }
         let transition = engine.handle(event, at: ProcessInfo.processInfo.systemUptime)
         let previousKind = snapshot.activity?.kind
+        let wasPaused = snapshot.paused
         snapshot = transition.snapshot
+        if snapshot.summary != nil {
+            audio.stopMusic()
+        } else if wasPaused != snapshot.paused {
+            if snapshot.paused {
+                audio.pauseMusic()
+            } else if live {
+                audio.resumeMusic()
+            }
+        }
         if previousKind != snapshot.activity?.kind {
             tracking.requireCup(snapshot.activity?.kind == .cup)
         }

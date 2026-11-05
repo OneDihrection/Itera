@@ -33,7 +33,7 @@ final class GuidanceAudioService: NSObject, AVSpeechSynthesizerDelegate {
     private var pendingCommand: VoiceCommand?
     private var pendingCommandTask: Task<Void, Never>?
     private var utterances: [ObjectIdentifier: UUID] = [:]
-    private var ambient: AVAudioPlayer?
+    private let music = ExerciseMusicPlayer()
     private var cuePlayer: AVAudioPlayer?
     private var buttonPlayer: AVAudioPlayer?
     private var audioSessionActive = false
@@ -71,18 +71,12 @@ final class GuidanceAudioService: NSObject, AVSpeechSynthesizerDelegate {
         }
     }
 
-    func configure(language: String, ambientSound: Bool) throws {
+    func configure(language: String) throws {
         locale = language
         voice = NarrationVoice.best(for: language)
         vocabulary = VoiceCommandVocabulary()
         try applySessionMode(listening: voiceEnabled)
         audioSessionActive = true
-        if ambientSound, let url = Bundle.main.url(forResource: "calm", withExtension: "wav") {
-            ambient = try AVAudioPlayer(contentsOf: url)
-            ambient?.numberOfLoops = -1
-            ambient?.volume = 0.08
-            ambient?.play()
-        }
     }
 
     /// Speaks one cue. When every line has a bundled recording, those play in order;
@@ -92,7 +86,7 @@ final class GuidanceAudioService: NSObject, AVSpeechSynthesizerDelegate {
     func speak(_ text: String, lines: [NarrationLine] = []) -> UUID {
         cancelSpeech()
         let id = UUID()
-        ambient?.volume = 0.015
+        music.setDucked(true)
 
         if let recorded = recordedClips(for: lines) {
             narrationID = id
@@ -107,6 +101,7 @@ final class GuidanceAudioService: NSObject, AVSpeechSynthesizerDelegate {
 
     private func synthesize(_ text: String, id: UUID) {
         guard let voice = voice ?? NarrationVoice.best(for: locale) else {
+            music.setDucked(false)
             Task { events.send(.narrationUnavailable(id)) }
             return
         }
@@ -153,7 +148,7 @@ final class GuidanceAudioService: NSObject, AVSpeechSynthesizerDelegate {
 
         guard !narrationQueue.isEmpty else {
             stopNarrationClips()
-            ambient?.volume = 0.08
+            music.setDucked(false)
             events.send(.completed(id))
             return
         }
@@ -248,7 +243,7 @@ final class GuidanceAudioService: NSObject, AVSpeechSynthesizerDelegate {
         stopNarrationClips()
         utterances.removeAll()
         synthesizer.stopSpeaking(at: .immediate)
-        ambient?.volume = 0.08
+        music.setDucked(false)
     }
 
     func enableVoice() throws -> Bool {
@@ -398,21 +393,31 @@ final class GuidanceAudioService: NSObject, AVSpeechSynthesizerDelegate {
 
     func suspend() {
         cancelSpeech()
-        ambient?.pause()
+        music.pause()
         cuePlayer?.stop()
         disableVoice()
     }
 
     func pauseAmbient() {
-        ambient?.pause()
+        music.pause()
         cuePlayer?.stop()
     }
 
-    func resumeAmbient() { ambient?.play() }
+    func startMusic() {
+        do {
+            try applySessionMode(listening: voiceEnabled)
+            audioSessionActive = true
+            music.start()
+        } catch {
+            music.pause()
+        }
+    }
+
+    func resumeAmbient() { startMusic() }
 
     func stop() {
         suspend()
-        ambient = nil
+        music.stop()
         buttonPlayer?.stop()
         audioSessionActive = false
         try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
@@ -423,7 +428,7 @@ final class GuidanceAudioService: NSObject, AVSpeechSynthesizerDelegate {
             guard let id = utterances.removeValue(forKey: ObjectIdentifier(utterance)) else {
                 return
             }
-            ambient?.volume = 0.08
+            music.setDucked(false)
             events.send(.completed(id))
         }
     }
