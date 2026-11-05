@@ -32,7 +32,6 @@ TherapyIconButton in Components/TherapyControls.swift provides a large icon acti
 
 `MeasuredInstructionText` adapts VisionPoc’s measured, scrollable instruction reader. It accepts rendered text, a request identity, scaled font size, accessibility settings, and a reading-status callback. It owns measurement and presentation pacing only; the session engine decides when to advance. Typography resolves UIKit fonts alongside SwiftUI fonts in Typography.
 
-
 `ExerciseIllustration` presents a noninteractive SF Symbol and scalable label. Home uses `homeHeading` (64 points) and `homeLabel` (32 points); `SessionButtonStyle` already provides scalable 32-point primary text and a 72-point minimum height.
 
 ## Full-screen session presentation
@@ -49,12 +48,3 @@ TherapyIconButton in Components/TherapyControls.swift provides a large icon acti
 
 `TherapyAchievementShareSheet` renders a value-driven badge card in memory and exposes the native iPad sharing controller. The shared router owns presentation and completion; the component has no achievement eligibility or persistence logic. Its completion reports actual sharing errors separately from ordinary cancellation.
 
-`TherapyHoldTimer` provides a detached, accessible countdown in the instruction panel. `TherapyGuideBubble.showsTimerText` can hide its central timer and hold caption while preserving progress and visible-completion acknowledgment; outline-only fingertip rings keep the hand visible.
-
-`TherapyCameraGardenObject` renders the kampung finger games at supplied camera coordinates: a jeruk that flattens into a juice glass (`juice`), a bucket rising from a sumur that waters a growing plant (`well`), a melati picked into a garland (`garland`), a kembang sepatu that opens and sends a butterfly to the garden (`bloom`), and four bamboo chimes, one per finger (`chimes`). It accepts pose, secured state, waiting state, active/deposit finger and an identified accepted deposit. Bounded deposit flights and chime swings cancel on pause/background and respect Reduce Motion/calm mode; no view callback scores or advances exercise state. `TherapyGardenFlower` and `TherapyGardenBed` render value-driven history artwork. The camera overlay, anchoring and exercise mapping belong to session presentation.
-
-
-`TherapyFruitHarvest` presents a mango carried above the supplied hand position and a woven shoulder bag (tas anyaman) at the supplied target-shoulder position, with hold progress, delivered/waiting state and accepted collection count. The mango drops into the bag once per delivery; the drop is cancellable on pause/background and respects Reduce Motion and the caller's animation preference. It owns no balance geometry, exercise timing, rewards or navigation.
-
-
-All kampung artwork is original, generated as vector SVG image sets (`kampung-*`) by `Tools/generate_kampung_art.py` in one shared flat style: no outlines, one lower-right shade, one upper-left highlight and a warm village palette. Regenerate with `python3 Tools/generate_kampung_art.py`. No third-party artwork is bundled for these games.

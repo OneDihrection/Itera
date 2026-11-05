@@ -8,7 +8,6 @@
 import SwiftUI
 
 struct HomeView: View {
-    @Environment(AppDependencies.self) private var dependencies
     @Environment(NavigationRouter.self) private var router
     @Environment(\.dynamicTypeSize) private var typeSize
 
@@ -20,13 +19,11 @@ struct HomeView: View {
                 Text("home.chooseTherapy").typography(.largeTitle)
                     .accessibilityAddTraits(.isHeader)
                 therapyCategories
-                PracticeGardenSection()
             }
             .padding(28)
         }
         .background(TherapyPalette.cream)
         .navigationTitle("Itera")
-        .task { await dependencies.progress.refresh() }
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
                 Button {

@@ -238,33 +238,7 @@ final class BalanceSessionViewModel {
         }
     }
 
-    var fruitWaiting: Bool {
-        let movementCues = [
-            "balance.reachRight", "balance.reachLeft", "balance.hold",
-            "balance.return", "balance.returnHold"
-        ]
-        return paused || cameraWaiting || snapshot.compensation.isCompensating
-            || !movementCues.contains(snapshot.instructionKey)
-    }
-
-    var fruitCue: String {
-        if fruitWaiting && [.reaching, .holding, .returning].contains(snapshot.phase) {
-            return "balance.fruit.wait"
-        }
-        switch snapshot.phase {
-        case .findingBody, .calibrating: return "balance.fruit.prepare"
-        case .reaching: return "balance.fruit.reach"
-        case .holding: return "balance.fruit.ripen"
-        case .returning: return "balance.fruit.return"
-        case .complete: return "balance.fruit.complete"
-        }
-    }
-
     private func updateAudio(from previous: BalanceSnapshot, to current: BalanceSnapshot) {
-        if previous.phase != .complete, current.phase == .complete {
-            audio.play(id: UUID(), cue: .guidance(prefix: .target, key: "balance.voice.complete"))
-            return
-        }
         if current.metrics.completedTouches > previous.metrics.completedTouches {
             lastSpokenCountdown = nil
             let key = completionGuidanceKey(for: current)

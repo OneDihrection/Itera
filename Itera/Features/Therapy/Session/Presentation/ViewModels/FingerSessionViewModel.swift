@@ -32,14 +32,11 @@ final class FingerSessionViewModel {
     private(set) var finalSummary: FingerSessionSummary?
     private(set) var hasStarted = false
     private(set) var celebrationID = 0
-    private(set) var gardenDepositID = 0
-    private(set) var gardenDepositFinger = 0
     private(set) var trackingRecovery = FingerTrackingRecovery()
     private(set) var trackingRecoveryPaused = false
     private(set) var calibrationNeedsHelp = false
     @ObservationIgnored private var instructionSince = 0.0
     @ObservationIgnored private var celebratedSets: [Int: Int] = [:]
-    @ObservationIgnored private var gardenSoundSteps: [Int: Int] = [:]
     @ObservationIgnored private var lastCountdownCue = ""
     let camera: HandCameraService
     @ObservationIgnored private let audio: GuidanceAudioService
@@ -70,20 +67,12 @@ final class FingerSessionViewModel {
         self.permissions = permissions
         self.repository = repository
         celebratedSets[engine.summary.exerciseIndex] = engine.activity.completedSets
-        for (index, kind) in routine.exercises.enumerated() {
-            if let result = engine.summary.results.first(where: { $0.kind == kind }) {
-                gardenSoundSteps[index] = result.repetitions * (kind.isSequential ? 4 : 1)
-            }
-        }
-        gardenSoundSteps[engine.summary.exerciseIndex] = gardenCompletedSteps
     }
 
 
 
 
     var activity: FingerActivity { engine.activity }
-    var gardenCollectedCount: Int { gardenSoundSteps.values.reduce(0, +) }
-    var gardenActivityCollectedCount: Int { gardenSoundSteps[engine.summary.exerciseIndex, default: 0] }
     var paused: Bool { engine.paused }
     var routine: FingerRoutine { engine.summary.routine }
     /// Brief misses retain a drawing anchor only; stale positions are never scored again.
@@ -177,22 +166,6 @@ final class FingerSessionViewModel {
         }
         let index = engine.summary.exerciseIndex
         let sets = activity.completedSets
-        let steps = gardenCompletedSteps
-        let previousSteps = gardenSoundSteps[index, default: steps]
-        gardenSoundSteps[index] = max(previousSteps, steps)
-        if steps > previousSteps {
-            gardenDepositFinger = activity.kind.isSequential ? max(0, steps - 1) % 4 : 0
-            gardenDepositID += 1
-        }
-        if steps > previousSteps, activity.phase == .active,
-           UserDefaults.standard.object(forKey: PracticePreferences.gardenActivities) as? Bool ?? true,
-           !(UserDefaults.standard.object(forKey: PracticePreferences.calmMode) as? Bool ?? false) {
-            // Each bamboo tube has its own note, so a full sequence plays a short tune.
-            let cue: GuidanceSound = activity.kind == .extensionSequence
-                ? .gardenChime(gardenDepositFinger)
-                : .gardenStep
-            audio.playCue(cue)
-        }
         if sets > celebratedSets[index, default: 0] {
             celebratedSets[index] = sets
             celebrationID += 1

@@ -248,8 +248,6 @@ struct CrossMidlineBalanceEngine {
     }
 
     mutating func invalidateCalibration() {
-        // Retain delivered cycles; an unfinished carry must be picked again after recalibration.
-        snapshot.metrics.completedTouches = snapshot.deliveredFruit
         baseline = nil
         baselineCapture = nil
         snapshot.phase = .findingBody
@@ -431,15 +429,9 @@ struct CrossMidlineBalanceEngine {
             if returnProgress(at: frame.timestamp) >= 1 {
                 returnHoldStartedAt = nil
                 returnOutsideSince = nil
-                snapshot.deliveredFruit += 1
-                if snapshot.metrics.completedTouches >= snapshot.goal {
-                    snapshot.phase = .complete
-                    snapshot.instructionKey = "balance.complete"
-                } else {
-                    snapshot.activeArm = snapshot.armSelection.arm(after: snapshot.activeArm)
-                    snapshot.phase = .reaching
-                    snapshot.instructionKey = instruction(for: snapshot.activeArm)
-                }
+                snapshot.activeArm = snapshot.armSelection.arm(after: snapshot.activeArm)
+                snapshot.phase = .reaching
+                snapshot.instructionKey = instruction(for: snapshot.activeArm)
                 resetPath()
             }
             return
@@ -482,9 +474,13 @@ struct CrossMidlineBalanceEngine {
         targetHoldStartedAt = nil
         targetOutsideSince = nil
         resetPath()
-        // Every picked fruit, including the final one, requires the existing return hold.
-        snapshot.phase = .returning
-        snapshot.instructionKey = "balance.return"
+        if snapshot.metrics.completedTouches >= snapshot.goal {
+            snapshot.phase = .complete
+            snapshot.instructionKey = "balance.complete"
+        } else {
+            snapshot.phase = .returning
+            snapshot.instructionKey = "balance.return"
+        }
     }
 
     private func compensation(for geometry: Geometry, baseline: Baseline) -> TrunkCompensation {

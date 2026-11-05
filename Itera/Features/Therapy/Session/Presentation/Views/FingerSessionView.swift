@@ -9,7 +9,6 @@ import SwiftUI
 
 struct FingerSessionView: View {
     @ScaledMetric(relativeTo: .body) private var guidanceHeight = 156.0
-    @AppStorage(PracticePreferences.gardenActivities) private var gardenActivities = true
     @AppStorage(PracticePreferences.calmMode) private var calmMode = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(AppDependencies.self) private var dependencies
@@ -129,29 +128,14 @@ struct FingerSessionView: View {
                 if model.activity.phase == .demonstration {
                     demonstration(model)
                 } else if model.activity.phase == .feedback {
-                    if gardenActivities {
-                        VStack {
-                            Label("garden.setBloom", systemImage: "leaf.fill")
-                                .typography(.headline)
-                                .padding(16)
-                                .background(TherapyPalette.surface, in: Capsule())
-                            if !calmMode && !reduceMotion {
-                                TherapyCelebration().id(model.celebrationID).frame(height: 120)
-                            }
-                            Spacer()
+                    VStack(spacing: 20) {
+                        if !calmMode && !reduceMotion {
+                            TherapyCelebration().id(model.celebrationID).frame(height: 250)
                         }
-                        .padding(20)
-                        .allowsHitTesting(false)
-                    } else {
-                        VStack(spacing: 20) {
-                            if !calmMode && !reduceMotion {
-                                TherapyCelebration().id(model.celebrationID).frame(height: 250)
-                            }
-                            Text("session.setComplete").typography(.largeTitle)
-                        }
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                        .background(TherapyPalette.cream)
+                        Text("session.setComplete").typography(.largeTitle)
                     }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .background(TherapyPalette.cream)
                 } else if model.activity.phase == .rest {
                     rest(model)
                 }
@@ -219,9 +203,6 @@ struct FingerSessionView: View {
                     completionID: model.activity.holdCompletionID,
                     onCompletionPresented: model.holdCompletionPresented
                 )
-            }
-            if gardenActivities && [.active, .feedback].contains(model.activity.phase) {
-                FingerCameraGardenOverlay(model: model, animated: !calmMode)
             }
             Text(LocalizedStringKey(model.routine.side.title)).typography(.headline)
                 .padding(14).background(TherapyPalette.surface, in: Capsule())
@@ -300,20 +281,17 @@ struct FingerSessionView: View {
                         }
                         HStack(spacing: 14) {
                             if model.recoveryGuidanceKey != nil {
-                                Text("garden.waitingHand").typography(.callout)
+                                Text("recovery.tryAgainSlowly").typography(.callout)
                             } else if model.activity.kind.isSequential && [.baseline, .target, .active].contains(model.activity.phase) {
                                 Text(LocalizedStringKey(model.fingerKey)).typography(.headline)
                             }
                             if model.recoveryGuidanceKey == nil && [.baseline, .target, .active].contains(model.activity.phase) && model.trackingReady {
-                                Text(LocalizedStringKey(gardenActivities ? model.gardenFeedbackKey : model.liveFeedbackKey)).typography(.callout)
+                                Text(LocalizedStringKey(model.liveFeedbackKey)).typography(.callout)
                                     .foregroundStyle(TherapyPalette.primary)
                             }
                         }
                     }
                     Spacer(minLength: 12)
-                    TherapyHoldTimer(remaining: model.activity.holdRemaining)
-                        .opacity(model.showsGuideTimer ? 1 : 0)
-                        .accessibilityHidden(!model.showsGuideTimer)
                     Button(action: model.narrate) {
                         Image(systemName: "speaker.wave.2.fill").typography(.title2)
                             .frame(width: 68, height: 68)

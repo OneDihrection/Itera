@@ -123,50 +123,12 @@ Indicator selection/size now uses presentation availability separately from hold
 
 Verification: actual-filter replay passes moderate spike rejection, short confidence loss and expiry, sustained movement, long-gap reset and unchanged raw evidence. Simulator build passes. Temporary diagnostics are removed. Physical camera verification remains pending; these synthetic checks cannot establish that every real detector glitch is resolved.
 
-## Combined garden activities (3 November 2026)
+## Tracking recovery (3 November 2026)
 
-Work continues on `codex/garden-exercises`, carrying forward the uncommitted timer-placement and tracking improvements. The five existing finger movements now drive a shared garden theme: fist gathers/releases light, hook fist gathers/releases rain, opposition lifts/plants seeds, spreading opens/closes petals, and sequential extension lights four stepping stones. The original instruction, example video, calibration, holds, full-ring acknowledgment, set/repetition rules and session engine remain authoritative. Art cannot send progression events.
-
-A fixed side rail keeps the existing example above the live game, outside the hand preview. The camera remains mounted with the same viewport across phases. Artwork uses supplied pose, accepted hold progress, selected finger and completed substep counts. It does not run a game timer. Pause or missing tracking disables animation and hides earned-hold progress; no detection gap earns rewards. Validated returning movements update the seed/path counters; calibration fingers never count. Optional step feedback reuses bundled target-reached audio through the existing audio owner, respecting calm mode and celebration-sound preferences. Set completion retains its existing sound/celebration and displays a flower.
-
-Home, finger Home and Reports show five garden beds. Each saved completed set adds one flower in its movement's bed. Saved partial repetitions can show a seedling without adding a flower. Garden totals derive from deduplicated finalized local history; no schema migration, new storage or camera data is introduced. Saved-for-later checkpoints and empty work do not contribute. Deleting a historical report removes its contribution. Existing earned badges provide up to four tappable garden decorations through the shared router. Report details identify the session's new flowers.
-
-Garden activities default on and can be turned off in presentation settings to compare with the simpler session. Calm mode and Reduce Motion suppress transitions; illustrations remain responsive without decorative looping animations. All new user copy is available in English and Indonesian. No speed targets, penalties, withering, bonus repetitions or inferred grip-force claims were added.
-
-Verification: a temporary actual-domain history replay passed cross-session accumulation, duplicate/checkpoint/empty-work rejection and seedling behavior. Temporary Simulator fixtures exercised the actual session screen/engine with synthetic hand samples, showed seed and stepping-stone progression alongside the unobscured hand area, and inspected all five artwork themes. They did not request capture or store practice. Fixtures are removed before production build. Physical-iPad comfort, tracking, audio coexistence and performance checks remain pending.
-
-
-## Garden inside the camera and recovery (3 November 2026)
-
-This replaces the separate side rail described above. A small corner demonstration remains over the persistent camera. Transparent light, a revealing leaf/flower, a selected-finger seed, translucent petals and a selected-finger firefly respond to the five existing movements. One object is active at a time; accepted returns send objects to a fixed planter at the bottom edge. The hold countdown remains outside the hand. Pose feedback can respond before acceptance, but collection requires the original accepted target and return. Calibration and missing evidence never produce rewards.
-
-Brief tracking loss parks the object and suspends scoring immediately. A delayed, stable hint avoids flickering messages: position the hand, use the selected side, show the required fingers, or leave only one hand visible. Sustained loss opens the shared pause sheet. Stable recovery never resumes automatically; the patient explicitly continues. Camera startup receives a longer grace period than an interrupted running camera. Permission failures offer Settings and Check again; camera/audio failures offer retry. Calibration with no accepted hold offers retry without relaxing acceptance thresholds.
+Brief tracking loss suspends scoring immediately. A delayed, stable hint avoids flickering messages: position the hand, use the selected side, show the required fingers, or leave only one hand visible. Sustained loss opens the shared pause sheet. Stable recovery never resumes automatically; the patient explicitly continues. Camera startup receives a longer grace period than an interrupted running camera. Permission failures offer Settings and Check again; camera/audio failures offer retry. Calibration with no accepted hold offers retry without relaxing acceptance thresholds.
 
 Save failures retain pending results and block unsafe continuation until retry succeeds, even if a camera error occurs simultaneously. Sharing cancellation returns normally; actual sharing errors offer retry. Session language stays fixed for text/narration, with English on-device voice commands independently of narration language. Backgrounding stops resources and requires explicit continuation after recovery.
 
-Verification: production-helper replays passed recovery debounce, stable reacquisition, timeout and camera-layout bounds. A temporary Simulator fixture exercised the actual view model and engine: calibration/partial holds produced no deposits, accepted return produced one, duplicate updates produced none, recalibration preserved collected objects, preview detachment prevented recovery, Settings return restarted the clock, storage and camera errors could not mask each other, and failed finalization retained retryable results. Native screenshots confirmed seed/leaf placement, detached hold timer, waiting artwork, pause sheet and explicit command resume. Synthetic fixtures were removed; no patient capture or practice data was saved. Physical iPad camera tracking, microphone recognition, comfort and performance remain pending.
+## Garden and kampung games removed (5 November 2026)
 
-
-## Butterfly shelter and pinched seeds (4 November 2026)
-
-Hook fist now folds a leaf as the fingers bend. After an accepted target hold, the required return opens the shelter to reveal a butterfly; accepted return triggers one bounded flight to the garden. An unaccepted bend may move the leaf but cannot reveal/collect a butterfly. Opposition uses one small seed at the screen-space midpoint of the thumb tip and only the active fingertip, with two light tethers identifying that pair. Contact compresses the seed; accepted target secures it, and accepted return plants it in the bottom-edge pot. Sequence advancement and scoring remain owned by the original activity. Pot counters for these styles represent accepted substeps of the current exercise rather than mixing seed/butterfly counts with other movements.
-
-Tracking loss keeps the existing parked artwork and removes uncertain tethers. Pause/background cancel decorative flight; Reduce Motion/calm mode suppress flight. The hold timer stays outside the hand and only the small seed occupies the active contact area. Primary exercise instructions remain intact, with short bilingual supporting cues. (The Twemoji artwork described here was replaced on 4 November 2026 by original kampung artwork; see below.)
-
-Verification: an actual-geometry activity replay passed hook target/return gating, absent-evidence noncredit, obsolete/full-ring acknowledgment and all four opposition finger cycles. A layout replay checks mirrored thumb/selected-tip midpoints and butterfly viewport bounds at two landscape sizes. A temporary Simulator artwork fixture confirmed the actual vector assets, folded/open leaf, revealed butterfly, single seed/tethers and pot rendering without camera/microphone or saved exercise data. Fixture startup was restored and the final production Debug Simulator build passed. Physical-iPad tracking, fingertip occlusion and visual comfort remain pending.
-
-## Kampung finger games (4 November 2026)
-
-The five finger movements now drive an Indonesian village theme with one natural mapping each, replacing light, leaf, seed, petals and firefly:
-
-| Movement | Game | Moving out | Returning |
-| --- | --- | --- | --- |
-| Full fist | Squeeze a jeruk | The orange flattens; juice drops appear | Juice flies to a glass (five oranges fill one glass) |
-| Hook fist | Draw water from the sumur | The bucket rises from the water | Water flies to a pot; the sprout grows |
-| Opposition | String a melati garland | A jasmine flower glows at the pinch | The flower joins the garland (12 per garland) |
-| Spreading | Open a kembang sepatu | The bud opens into a hibiscus; a butterfly lands when the target is secured | The butterfly flies to the garden |
-| Sequential extension | Ring bamboo chimes | The named finger's tube glows and leans | That tube rings with its own pentatonic note; a full sequence plays a short tune |
-
-Cognitive-load rules retained: one active object, one fixed mapping per movement, short bilingual supporting cues, no timers, scores or failure states, and no reading during movement. Solid artwork sits beside the hand (only the small melati is near the pinch, offset upward), so the patient's own fingers stay visible. The engine remains the only source of acceptance; artwork reads pose, secured state and accepted deposit identity. Chime sounds follow the celebration-sound preference and calm mode. Reduce Motion and calm mode suppress flights and swings.
-
-Verification status: source changes only. Simulator build, visual placement against live hand tracking and physical iPad comfort/audio checks are pending.
+My Garden (Home, finger Home and Reports), the garden settings toggle, the in-camera kampung finger games, the bamboo chimes and the balance mango harvest are removed. Sessions return to the plain guided layout, with the hold timer on the bubbles. Tracking recovery, display smoothing and the inference cadence fix above remain.

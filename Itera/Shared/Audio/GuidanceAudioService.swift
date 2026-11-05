@@ -10,13 +10,7 @@ import Combine
 import Speech
 
 // Service vocabulary is independent of exercise progression.
-enum GuidanceSound: Equatable {
-    case countdown
-    case setCompleted
-    case gardenStep
-    /// One bamboo tube per finger, index (0) to little (3).
-    case gardenChime(Int)
-}
+enum GuidanceSound { case countdown, setCompleted }
 
 enum GuidanceAudioEvent {
     case completed(UUID)
@@ -143,17 +137,7 @@ final class GuidanceAudioService: NSObject, AVSpeechSynthesizerDelegate {
     }
 
     func playCue(_ cue: GuidanceSound) {
-        let name: String
-        switch cue {
-        case .countdown: name = "countdown"
-        case .setCompleted: name = "set-complete"
-        case .gardenStep: name = "target-reached"
-        case .gardenChime(let finger): name = "bamboo-chime-\(min(4, max(1, finger + 1)))"
-        }
-        if cue.isGameFeedback,
-           !(UserDefaults.standard.object(forKey: PracticePreferences.celebrationSounds) as? Bool ?? true) {
-            return
-        }
+        let name = cue == .setCompleted ? "set-complete" : "countdown"
         guard let url = Bundle.main.url(forResource: name, withExtension: "wav") else {
             return
         }
@@ -346,14 +330,3 @@ final class GuidanceAudioService: NSObject, AVSpeechSynthesizerDelegate {
     private enum AudioError: Error { case unavailable }
 }
 
-private extension GuidanceSound {
-    /// Optional game feedback follows the celebration-sound preference.
-    var isGameFeedback: Bool {
-        switch self {
-        case .gardenStep, .gardenChime:
-            return true
-        case .countdown, .setCompleted:
-            return false
-        }
-    }
-}

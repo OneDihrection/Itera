@@ -9,7 +9,6 @@ import Foundation
 
 /// Presentation choices never change therapy timing or required voice readiness.
 enum PracticePreferences {
-    static let gardenActivities = "practice.gardenActivities"
     static let calmMode = "practice.calmMode"
     static let celebrationSounds = "practice.celebrationSounds"
     static let buttonSounds = "practice.buttonSounds"

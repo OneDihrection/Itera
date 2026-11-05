@@ -16,7 +16,6 @@ struct PracticeProgress {
     private(set) var bestStreak = 0
     private(set) var days: [Date: PracticeDay] = [:]
     private(set) var candidates: [AchievementAward] = []
-    private(set) var gardenSets: [FingerExercise: Int] = [:]
     private(set) var movements = Set<FingerExercise>()
     let today: Date
     let calendar: Calendar
@@ -44,7 +43,6 @@ struct PracticeProgress {
             days[day] = daily
             for result in session.results where result.repetitions > 0 {
                 movements.insert(result.kind)
-                gardenSets[result.kind, default: 0] += max(0, result.completedSets)
             }
             if day != lastDay {
                 let consecutive = lastDay.map { calendar.dateComponents([.day], from: $0, to: day).day == 1 } ?? false

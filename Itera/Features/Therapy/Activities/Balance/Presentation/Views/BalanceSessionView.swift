@@ -31,7 +31,6 @@ struct BalanceSessionView: View {
                 BalanceCompletionOverlay(
                     metrics: model.snapshot.metrics,
                     goal: model.snapshot.goal,
-                    collectedFruit: model.snapshot.deliveredFruit,
                     holdDuration: model.snapshot.holdDuration,
                     voiceListening: model.voiceListening,
                     repeatPractice: model.restart,
@@ -92,11 +91,6 @@ struct BalanceSessionView: View {
                 )
                 if let overlay = model.snapshot.overlay {
                     BalancePoseOverlay(state: overlay, mirrored: model.frontCamera)
-                    BalanceFruitOverlay(
-                        snapshot: model.snapshot,
-                        mirrored: model.frontCamera,
-                        waiting: model.fruitWaiting
-                    )
                 }
                 if model.cameraWaiting {
                     ProgressView("balance.cameraWaiting")
@@ -192,14 +186,6 @@ struct BalanceSessionView: View {
                         .fixedSize(horizontal: false, vertical: true)
                         .accessibilityAddTraits(.isHeader)
                 }
-
-                Text(LocalizedStringKey(model.fruitCue))
-                    .typography(.headline)
-                    .foregroundStyle(TherapyPalette.green)
-
-                Text("balance.fruit.count \(Int64(model.snapshot.deliveredFruit))")
-                    .typography(.footnote)
-                    .foregroundStyle(TherapyPalette.ink)
 
                 if model.snapshot.phase == .calibrating {
                     ProgressView(value: model.snapshot.calibrationProgress)

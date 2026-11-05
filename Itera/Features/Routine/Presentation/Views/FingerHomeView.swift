@@ -31,7 +31,6 @@ struct FingerHomeView: View {
                         exerciseList.frame(maxWidth: .infinity)
                     }
                 }
-                PracticeGardenSection()
             }
             .padding(28)
         }

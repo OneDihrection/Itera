@@ -9,7 +9,6 @@ import SwiftUI
 
 struct PracticePreferencesView: View {
     @Environment(NavigationRouter.self) private var router
-    @AppStorage(PracticePreferences.gardenActivities) private var gardenActivities = true
     @AppStorage(PracticePreferences.calmMode) private var calmMode = false
     @AppStorage(PracticePreferences.buttonSounds) private var buttonSounds = true
 
@@ -17,12 +16,6 @@ struct PracticePreferencesView: View {
 
     var body: some View {
         Form {
-            Section {
-                Toggle("garden.enabled", isOn: $gardenActivities)
-                    .frame(minHeight: 64)
-            } footer: {
-                Text("garden.settingsHelp").typography(.body)
-            }
             Section {
                 Toggle("cognitive.calm", isOn: $calmMode)
                     .frame(minHeight: 64)
@@ -36,12 +29,6 @@ struct PracticePreferencesView: View {
                     .frame(minHeight: 64)
             } footer: {
                 Text("cognitive.soundHelp").typography(.body)
-            }
-            Section {
-                DisclosureGroup("garden.assetCredits") {
-                    Text("garden.assetAttribution")
-                        .typography(.body)
-                }
             }
         }
         .typography(.body)
