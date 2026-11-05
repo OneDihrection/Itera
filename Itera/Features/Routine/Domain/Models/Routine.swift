@@ -37,15 +37,32 @@ struct SessionActivity: Identifiable, Codable, Equatable {
     let kind: TherapyKind
     let side: TherapySide
     let goal: Int
+    var sets: Int = 1
+
+    enum CodingKeys: String, CodingKey { case id, kind, side, goal, sets }
+
+    init(from decoder: Decoder) throws {
+        let values = try decoder.container(keyedBy: CodingKeys.self)
+        id = try values.decode(UUID.self, forKey: .id)
+        kind = try values.decode(TherapyKind.self, forKey: .kind)
+        side = try values.decode(TherapySide.self, forKey: .side)
+        goal = try values.decode(Int.self, forKey: .goal)
+        sets = try values.decodeIfPresent(Int.self, forKey: .sets) ?? 1
+        guard (1...5).contains(sets), kind != .sitToStand || sets == 1 else {
+            throw DecodingError.dataCorruptedError(
+                forKey: .sets, in: values, debugDescription: "Invalid set count")
+        }
+    }
 
     /// Sit-to-stand has no trained side: the camera follows whichever leg it sees best.
     var hasSide: Bool { kind != .sitToStand }
 
-    init(kind: TherapyKind, side: TherapySide, goal: Int) {
+    init(kind: TherapyKind, side: TherapySide, goal: Int, sets: Int = 1) {
         id = UUID()
         self.kind = kind
         self.side = side
         self.goal = max(1, goal)
+        self.sets = kind == .sitToStand ? 1 : min(5, max(1, sets))
     }
 }
 

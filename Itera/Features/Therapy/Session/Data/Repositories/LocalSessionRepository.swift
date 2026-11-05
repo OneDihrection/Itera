@@ -27,11 +27,20 @@ actor LocalSessionRepository: SessionRepository {
         guard record.version == 1 else { throw StorageError.unsupportedVersion }
         let checkpoint = record.value
         var results = checkpoint.results
-        if results.count < checkpoint.routine.activities.count {
+        // One activity now has one result per set. Never index the routine by result count.
+        for activity in checkpoint.routine.activities {
+            let recorded = results.filter { $0.activity.id == activity.id }
+            if recorded.contains(where: { $0.outcome != .completed }) {
+                continue
+            }
+            let completedSets = recorded.count
+            guard completedSets < activity.sets else { continue }
             results.append(
                 SessionActivityResult(
-                    executionID: UUID(), activity: checkpoint.routine.activities[results.count],
-                    outcome: .interrupted, completedWork: 0))
+                    executionID: UUID(), activity: activity,
+                    outcome: .interrupted, completedWork: 0,
+                    setNumber: completedSets + 1))
+            break
         }
         try finalize(
             SessionSummary(

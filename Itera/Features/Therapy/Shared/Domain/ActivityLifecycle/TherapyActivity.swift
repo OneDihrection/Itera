@@ -100,7 +100,7 @@ enum ActivityPresentation {
         case .movement(let value): return value.phase == .countdown ? value.seconds : nil
         case .reach(let value): return value.phase == .countdown ? value.seconds : nil
         case .cup(let value): return value.phase == .countdown ? value.seconds : nil
-        case .timed: return nil
+        case .timed(let value): return value.countdownSeconds
         case .sitToStand(let value): return value.phase == .countdown ? value.seconds : nil
         }
     }
@@ -148,6 +148,7 @@ enum ActivityEvent {
     case suspend
     case resume
     case recalibrate
+    case nextSet
     case viewport(TherapyViewport)
     case countdownReady(Double)
     case guidanceCompleted(Double)

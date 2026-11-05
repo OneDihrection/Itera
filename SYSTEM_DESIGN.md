@@ -112,7 +112,7 @@ Require one person and usable required joints (confidence at least 0.5). Correct
 | Valid geometry | Reference segment and tracked displacement exceed 0.03 aspect-correct image-height units. |
 | Stability | Reset hold if displacement from its first sample exceeds 10% of current normalized limb length. Nonincreasing time or a gap over 150 ms clears hold. |
 | Distinct target | Distance from start exceeds 40% of captured starting limb length. Use mean held offsets. |
-| Repetition | Require 250 ms in each accepted zone; start → target → start credits one repetition. The captured start may initialize the first target phase. |
+| Repetition | Require one second in each accepted zone; start → target → start credits one repetition. The captured start may initialize the first target phase. |
 | Interruption | Gaps over 150 ms clear dwell; over 500 ms, explicit break-cycle, or prolonged missing evidence reset to start. Preserve completed repetitions. |
 
 ### Directional reaching
@@ -121,11 +121,11 @@ Capture a stable starting wrist position relative to the selected shoulder. Requ
 
 Assess right, left, and up separately for eight usable seconds each. A candidate endpoint requires a one-second stable hold. Accept only positive displacement in the requested direction with forward displacement at least its orthogonal displacement. Select the farthest stable endpoint, not a noisy single-frame extreme. Return to start between directions.
 
-Use the full endpoint as target, not 75% of its distance. Require separation greater than two body radii; otherwise that direction remains unscored. Keep positions shoulder-relative. After a three-second countdown, perform the guided sequence of direction targets and returns. Target and return arrivals require 250 ms dwell. Each outward attempt has eight usable seconds: record reached, not reached, or unscored, then continue. A trial/rehearsal precedes counted practice. Credit practice time only during practice; per-sample time increments are capped at 200 ms, with gaps above 300 ms contributing nothing.
+Use the full endpoint as target, not 75% of its distance. Require separation greater than two body radii; otherwise that direction remains unscored. Keep positions shoulder-relative. After a three-second countdown, perform the guided sequence of direction targets and returns. Target and return arrivals require one-second dwell. Each outward attempt has eight usable seconds: record reached, not reached, or unscored, then continue. A trial/rehearsal precedes counted practice. Credit practice time only during practice; per-sample time increments are capped at 200 ms, with gaps above 300 ms contributing nothing.
 
 ### Cup practice
 
-Use one continuous uncounted rehearsal: start → near face → hand return → sideways transfer → cup return. Capture wrist and cup start together after one stable second. Near-face capture requires wrist within 1.5 forearm lengths of the nose and a distinct endpoint. Capture sideways in either direction with predominantly horizontal displacement and separation greater than two body radii. Stable capture tolerance is half the body radius. Return arrivals require 250 ms.
+Use one continuous uncounted rehearsal: start → near face → hand return → sideways transfer → cup return. Capture wrist and cup start together after one stable second. Near-face capture requires wrist within 1.5 forearm lengths of the nose and a distinct endpoint. Capture sideways in either direction with predominantly horizontal displacement and separation greater than two body radii. Stable capture tolerance is half the body radius. Return arrivals require one second.
 
 Store wrist start relative to shoulder, near-face target relative to nose, and cup start/transfer in camera coordinates. Require exactly one fresh cup near the selected wrist for cup-evidence steps. Evidence must have a distinct capture timestamp, be later than the step boundary, and be no older than 300 ms. Wrist-only near-face/hand-return stages do not require continuous visible cup evidence. Missing evidence clears holds and can recover automatically without crediting the gap.
 
@@ -493,3 +493,12 @@ Target success effects use a separate prepared player, at 40% volume when foregr
 ## Mac Catalyst compatibility
 
 Mac Catalyst support is retained from main as an explicit exception to the original iPad-only platform scope. Physical M1-iPad acceptance remains required. Voice commands remain exact English phrases with en-US on-device recognition in both interface languages. Catalyst camera and audio acceptance remains pending.
+
+
+## Arm and Reaching sets and camera preference
+
+Arm raises, elbow bends, directional reaching, and cup practice configure 1–5 sets per exercise, defaulting to one. Repetition and round goals apply per set and per selected side. Complete all sets on the first selected side before switching sides. Use configured rest between sets and a three-second countdown before subsequent practice. Activities retain their calibration between sets; camera discontinuities or explicit recalibration invalidate it. Rehearsal does not repeat between ordinary sets. Timed-practice fallback uses the configured duration for each remaining set. Skip skips the remaining sets of the current activity/side.
+
+Session coordination owns set ordering and rest. Each completed set records and checkpoints one result with its set number; summaries retain per-set goals and work, so totals are the sum of results. Missing set configuration in older files means one set; missing result set number means set one. Interrupted recovery preserves saved sets and marks the next unfinished set interrupted without inventing work. Calibration is never persisted for reuse after termination.
+
+All body exercises prefer the selected side's ultra-wide camera, then its standard wide-angle camera, then the system-default video device. Hand/finger exercises retain their normal-lens preference. Validate lens selection and tracking geometry physically; a Simulator build does not establish device acceptance.

@@ -224,14 +224,11 @@ final class BodyTrackingService: NSObject, AVCaptureVideoDataOutputSampleBufferD
         guard !configured else {
             return
         }
-        var selectedCamera = AVCaptureDevice.default(
-                .builtInWideAngleCamera, for: .video, position: position
-            ) ?? AVCaptureDevice.default(
-                .builtInUltraWideCamera, for: .video, position: position
-            )
-        #if targetEnvironment(macCatalyst)
-        selectedCamera = selectedCamera ?? AVCaptureDevice.default(for: .video)
-        #endif
+        let selectedCamera = AVCaptureDevice.default(
+            .builtInUltraWideCamera, for: .video, position: position
+        ) ?? AVCaptureDevice.default(
+            .builtInWideAngleCamera, for: .video, position: position
+        ) ?? AVCaptureDevice.default(for: .video)
         guard let camera = selectedCamera else {
             throw TrackingError.cameraUnavailable
         }

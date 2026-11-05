@@ -57,6 +57,15 @@ struct CupActivity: TherapyActivity {
 
     mutating func handle(_ event: ActivityEvent) -> ActivityTransition {
         switch event {
+        case .nextSet:
+            snapshot = CupSnapshot()
+            snapshot.phase = .countdown
+            snapshot.instruction = "session.countdown"
+            deadline = nil
+            last = nil
+            cupTimestamp = nil
+            restarting = false
+            clearHolds()
         case .countdownReady(let time):
             if snapshot.phase == .countdown {
                 deadline = time + 3
@@ -266,7 +275,7 @@ struct CupActivity: TherapyActivity {
                 guard let cupStart else { clearHolds(); return }
                 let radius = bubbleRadius(body: bodyRadius, separation: nil, aspect: frame.aspect, viewport: viewport)
                 if (tracked - cupStart).length <= radius {
-                    hold.consume(tracked, time: time, duration: 0.25, tolerance: radius * 2, maximumGap: 0.3)
+                    hold.consume(tracked, time: time, duration: 1, tolerance: radius * 2, maximumGap: 0.3)
                 } else {
                     hold.clear()
                 }
@@ -319,7 +328,7 @@ struct CupActivity: TherapyActivity {
             aspect: frame.aspect, viewport: viewport
         )
         if (tracked - target).length <= radius {
-            hold.consume(tracked, time: time, duration: 0.25, tolerance: radius * 2, maximumGap: 0.3)
+            hold.consume(tracked, time: time, duration: 1, tolerance: radius * 2, maximumGap: 0.3)
         } else { hold.clear() }
         snapshot.progress = hold.progress
         snapshot.guide = TargetGuide(

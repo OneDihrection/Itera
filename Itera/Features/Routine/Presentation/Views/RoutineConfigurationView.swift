@@ -134,6 +134,12 @@ private struct RoutineExerciseRow: View {
                     .pickerStyle(.segmented)
                 }
             }
+            if exercise.kind != .sitToStand {
+                Stepper(value: $exercise.sets, in: 1...5) {
+                    Text("routine.sets \(exercise.sets)")
+                }
+                Text("routine.perSet")
+            }
             if exercise.kind == .sitToStand {
                 Stepper(value: $exercise.leftGoal, in: 1...100) {
                     Text("routine.repetitions \(exercise.leftGoal)")

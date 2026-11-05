@@ -35,6 +35,7 @@ struct SessionSnapshot {
     var activity: SessionActivity?
     var activityCount = 0
     var index = 0
+    var setNumber = 1
     var seconds = 0
     var paused = false
     var assistanceKey: String?
@@ -78,6 +79,7 @@ struct SessionEngine {
     private var guidanceStartedAt = 0.0
     private var awaitingCountdownGuidance = false
     private var announcedCountdown: Int?
+    private var calibrationInvalidatedBetweenSets = false
 
     init(routine: Routine = .demo(), date: Date = Date()) {
         progress = SessionProgress(routine: routine, startedAt: date)
@@ -150,6 +152,7 @@ struct SessionEngine {
         snapshot.guidanceID = guidance
         snapshot.activity = progress.currentActivity
         snapshot.index = progress.index
+        snapshot.setNumber = progress.setNumber
         snapshot.activityCount = progress.routine.activities.count
         snapshot.paused = pausedSince != nil
         snapshot.summary = progress.summary
@@ -173,6 +176,7 @@ struct SessionEngine {
     private var canProgress: Bool { pausedSince == nil && !snapshot.cameraWaiting }
 
     private mutating func selectActivity() {
+        calibrationInvalidatedBetweenSets = false
         awaitingCountdownGuidance = false
         announcedCountdown = nil
         guard let configuration = progress.currentActivity else {
@@ -193,6 +197,28 @@ struct SessionEngine {
         snapshot.instruction = "session.cameraWait"
         deadline = nil
         guidance = nil
+    }
+
+    private mutating func beginNextSet() {
+        _ = activity?.handle(.resume)
+        _ = activity?.handle(.nextSet)
+        if calibrationInvalidatedBetweenSets {
+            calibrationInvalidatedBetweenSets = false
+            _ = activity?.handle(.recalibrate)
+            snapshot.presentation = activity?.presentation
+            snapshot.stage = .preparing
+            deadline = nil
+            guidance = nil
+            updateReadiness()
+            return
+        }
+        snapshot.presentation = activity?.presentation
+        snapshot.stage = .activity
+        evidenceBoundary = now
+        deadline = nil
+        awaitingCountdownGuidance = true
+        announcedCountdown = nil
+        announce("parity.getReady", timed: false)
     }
 
     private mutating func observation(_ frame: TrackingObservation) {
@@ -345,10 +371,15 @@ struct SessionEngine {
         }
         if case .rest(let deadline) = progress.stage {
             snapshot.seconds = max(0, Int(ceil(deadline - now)))
+            let previousIndex = progress.index
             progress.tick(at: now)
             if progress.stage == .activity {
-                selectActivity()
-                updateReadiness()
+                if progress.index == previousIndex {
+                    beginNextSet()
+                } else {
+                    selectActivity()
+                    updateReadiness()
+                }
             }
         } else if let deadline {
             snapshot.seconds = max(0, Int(ceil(deadline - now)))
@@ -642,6 +673,8 @@ struct SessionEngine {
 
     private mutating func recalibrate() {
         guard progress.stage == .activity else {
+            // Cached targets must never survive a camera change while resting between sets.
+            calibrationInvalidatedBetweenSets = true
             return
         }
         awaitingCountdownGuidance = false

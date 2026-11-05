@@ -285,6 +285,9 @@ struct TherapySessionView: View {
                 Text(phaseLabel).foregroundStyle(phaseColor)
                 Spacer(minLength: 0)
                 if let activity = model.snapshot.activity {
+                    if activity.kind != .sitToStand {
+                        Text("session.setProgress \(model.snapshot.setNumber) \(activity.sets)")
+                    }
                     Text(verbatim: "\(model.snapshot.presentation?.count ?? 0) / \(activity.goal)")
                         .monospacedDigit()
                 }
@@ -740,6 +743,9 @@ struct TherapySessionView: View {
                         .accessibilityHidden(true)
                 }
             }
+            if summary.routine.activities.contains(where: { $0.kind != .sitToStand }) {
+                Text("session.completedSets \(summary.completedSets)")
+            }
             Section("session.results") {
                 ForEach(summary.results, id: \.executionID) { result in
                     summaryRow(result)
@@ -769,6 +775,9 @@ struct TherapySessionView: View {
                     Text(result.activity.side == .left ? "session.left" : "session.right")
                 }
                 Spacer()
+                if result.activity.kind != .sitToStand {
+                    Text("session.setProgress \(result.setNumber ?? 1) \(result.activity.sets)")
+                }
                 Text(LocalizedStringKey("session.outcome." + result.outcome.rawValue))
                 if result.practiceSeconds > 0, result.completedWork == 0 {
                     Text("session.elapsed \(Int(result.practiceSeconds))")
