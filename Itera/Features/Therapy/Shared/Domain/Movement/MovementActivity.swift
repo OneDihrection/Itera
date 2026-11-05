@@ -47,6 +47,15 @@ struct MovementActivity: TherapyActivity {
                 countdown = time + 3
                 snapshot.seconds = 3
             }
+        case .nextSet:
+            snapshot.count = 0
+            interrupt()
+            landmarkSmoother.reset()
+            snapshot.countingDown = true
+            snapshot.seconds = 3
+            snapshot.instruction = "session.countdown"
+            countdown = nil
+            returningBeforePractice = false
         case .guidanceCompleted:
             break
         case .viewport(let value):
@@ -280,7 +289,7 @@ struct MovementActivity: TherapyActivity {
         let inside = (tracked - active).length <= radius
         if !inside { dwell = nil }
         if inside, dwell == nil { dwell = time }
-        let progress = inside ? min(1, (time - (dwell ?? time)) / 0.25) : 0
+        let progress = inside ? min(1, (time - (dwell ?? time)) / 1.0) : 0
         snapshot.instruction = phase == 1 ? "session.moveTarget" : "session.returnStart"
         snapshot.progress = progress
         snapshot.guide = TargetGuide(

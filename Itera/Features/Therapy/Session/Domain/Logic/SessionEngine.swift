@@ -35,6 +35,7 @@ struct SessionSnapshot {
     var activity: SessionActivity?
     var activityCount = 0
     var index = 0
+    var setNumber = 1
     var seconds = 0
     var paused = false
     var assistanceKey: String?
@@ -78,6 +79,7 @@ struct SessionEngine {
     private var guidanceStartedAt = 0.0
     private var awaitingCountdownGuidance = false
     private var announcedCountdown: Int?
+    private var calibrationInvalidatedBetweenSets = false
 
     init(routine: Routine = .demo(), date: Date = Date()) {
         progress = SessionProgress(routine: routine, startedAt: date)
@@ -131,6 +133,14 @@ struct SessionEngine {
             tick()
         }
         if canProgress, snapshot.stage == .activity,
+           case .towel(let towel) = snapshot.presentation, towel.phase == .countdown {
+            // Towel readiness comes from opening/demo and capture, never live speech.
+            awaitingCountdownGuidance = false
+            _ = activity?.handle(.countdownReady(now))
+            snapshot.presentation = activity?.presentation
+        }
+        if canProgress, snapshot.stage == .activity,
+           progress.currentActivity?.kind != .foldTowel,
            snapshot.presentation?.countdownSeconds != nil,
            previousCountdown == nil, !awaitingCountdownGuidance {
             awaitingCountdownGuidance = true
@@ -150,6 +160,7 @@ struct SessionEngine {
         snapshot.guidanceID = guidance
         snapshot.activity = progress.currentActivity
         snapshot.index = progress.index
+        snapshot.setNumber = progress.setNumber
         snapshot.activityCount = progress.routine.activities.count
         snapshot.paused = pausedSince != nil
         snapshot.summary = progress.summary
@@ -173,12 +184,14 @@ struct SessionEngine {
     private var canProgress: Bool { pausedSince == nil && !snapshot.cameraWaiting }
 
     private mutating func selectActivity() {
+        calibrationInvalidatedBetweenSets = false
         awaitingCountdownGuidance = false
         announcedCountdown = nil
         guard let configuration = progress.currentActivity else {
             return
         }
         switch configuration.kind {
+        case .foldTowel: activity = FoldTowelActivity(configuration: configuration)
         case .armRaise: activity = ArmRaiseActivity(configuration: configuration)
         case .elbowBend: activity = ElbowBendActivity(configuration: configuration)
         case .directionalReach: activity = DirectionalReachActivity(configuration: configuration)
@@ -193,6 +206,28 @@ struct SessionEngine {
         snapshot.instruction = "session.cameraWait"
         deadline = nil
         guidance = nil
+    }
+
+    private mutating func beginNextSet() {
+        _ = activity?.handle(.resume)
+        _ = activity?.handle(.nextSet)
+        if calibrationInvalidatedBetweenSets {
+            calibrationInvalidatedBetweenSets = false
+            _ = activity?.handle(.recalibrate)
+            snapshot.presentation = activity?.presentation
+            snapshot.stage = .preparing
+            deadline = nil
+            guidance = nil
+            updateReadiness()
+            return
+        }
+        snapshot.presentation = activity?.presentation
+        snapshot.stage = .activity
+        evidenceBoundary = now
+        deadline = nil
+        awaitingCountdownGuidance = true
+        announcedCountdown = nil
+        announce("parity.getReady", timed: false)
     }
 
     private mutating func observation(_ frame: TrackingObservation) {
@@ -224,6 +259,23 @@ struct SessionEngine {
         snapshot.instruction = result.presentation.instruction
         if result.status == .finished {
             record(.completed)
+            if case .towel = result.presentation {
+                effects.append(.audio(UUID(), .towelCompleted))
+            }
+            return
+        }
+        if case .towel(let before) = old, case .towel(let after) = result.presentation {
+            // Live narration is replaceable feedback, never a practice advancement gate.
+            if before.instruction != after.instruction {
+                announce(after.instruction, timed: false)
+            }
+            if after.count != before.count {
+                effects.append(.audio(UUID(), .towelCompleted))
+            } else if after.foldIndex != before.foldIndex {
+                effects.append(.audio(UUID(), .towelFold))
+            } else if after.grabID != before.grabID {
+                effects.append(.audio(UUID(), .towelGrab))
+            }
             return
         }
         if case .movement(let before) = old, case .movement(let after) = result.presentation,
@@ -250,6 +302,7 @@ struct SessionEngine {
             }
         } else if case .movement = result.presentation, old?.count != result.presentation.count {
             effects.append(.audio(UUID(), .count(result.presentation.count)))
+
         } else if case .sitToStand(let after) = result.presentation,
             old?.count != after.count {
             effects.append(.audio(UUID(), .count(after.count)))
@@ -310,8 +363,17 @@ struct SessionEngine {
             return
         }
         if snapshot.stage == .activity && !awaitingCountdownGuidance {
+            let previous = snapshot.presentation
             _ = activity?.handle(.tick(now))
             snapshot.presentation = activity?.presentation
+            if case .towel(let before) = previous,
+               case .towel(let after) = snapshot.presentation,
+               before.instruction != after.instruction {
+                if before.phase == .countdown, after.phase == .practice {
+                    evidenceBoundary = now
+                }
+                announce(after.instruction, timed: false)
+            }
         }
         if let timeout = speechTimeout, now >= timeout, let guidance {
             effects.append(.cancelSpeech)
@@ -345,10 +407,15 @@ struct SessionEngine {
         }
         if case .rest(let deadline) = progress.stage {
             snapshot.seconds = max(0, Int(ceil(deadline - now)))
+            let previousIndex = progress.index
             progress.tick(at: now)
             if progress.stage == .activity {
-                selectActivity()
-                updateReadiness()
+                if progress.index == previousIndex {
+                    beginNextSet()
+                } else {
+                    selectActivity()
+                    updateReadiness()
+                }
             }
         } else if let deadline {
             snapshot.seconds = max(0, Int(ceil(deadline - now)))
@@ -356,7 +423,10 @@ struct SessionEngine {
     }
 
     private mutating func announce(_ key: String, timed: Bool) {
-        if timed { effects.append(.cancelSpeech) }
+        let liveTowel = snapshot.stage == .activity
+            && progress.currentActivity?.kind == .foldTowel
+            && snapshot.presentation?.countdownSeconds == nil
+        if timed || liveTowel { effects.append(.cancelSpeech) }
         let id = UUID()
         guidance = id
         narrationComplete = false
@@ -385,6 +455,10 @@ struct SessionEngine {
             announcedCountdown = nil
         }
         if snapshot.stage == .activity {
+            // A live towel cue may finish late, fail, or never finish. None changes mechanics.
+            if case .towel(let towel) = snapshot.presentation, towel.phase == .practice {
+                return
+            }
             if awaitingCountdownGuidance {
                 awaitingCountdownGuidance = false
                 _ = activity?.handle(.countdownReady(now))
@@ -452,6 +526,12 @@ struct SessionEngine {
         snapshot.stage = .activity
         evidenceBoundary = now
         snapshot.instruction = activity?.presentation.instruction ?? "session.holdStart"
+        if case .towel = activity?.presentation {
+            guidance = nil
+            speechTimeout = nil
+            effects.append(.cancelSpeech)
+            return
+        }
         announce(snapshot.instruction, timed: false)
     }
 
@@ -493,7 +573,7 @@ struct SessionEngine {
         feedbackEnteredAt = now
         var countsRepetitions = false
         switch presentation {
-        case .movement, .sitToStand: countsRepetitions = true
+        case .movement, .sitToStand, .towel: countsRepetitions = true
         default: break
         }
         if outcome == .completed, countsRepetitions, let count = presentation?.count, count > 0 {
@@ -587,6 +667,7 @@ struct SessionEngine {
         case .elbowBend: return "session.assistance.elbowBend"
         case .directionalReach: return "session.assistance.reach"
         case .cup: return "session.assistance.cup"
+        case .foldTowel: return "session.assistance.foldTowel"
         case .sitToStand: return "session.assistance.sitToStand"
         case nil: return nil
         }
@@ -642,6 +723,8 @@ struct SessionEngine {
 
     private mutating func recalibrate() {
         guard progress.stage == .activity else {
+            // Cached targets must never survive a camera change while resting between sets.
+            calibrationInvalidatedBetweenSets = true
             return
         }
         awaitingCountdownGuidance = false

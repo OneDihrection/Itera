@@ -15,6 +15,8 @@ struct SessionCheckpoint: Codable {
 }
 
 protocol SessionRepository: Sendable {
+    func history() async throws -> [SessionSummary]
+    func delete(id: UUID) async throws
     func recoverInterrupted() async throws
     func checkpoint(_ value: SessionCheckpoint) async throws
     func finalize(_ value: SessionSummary) async throws

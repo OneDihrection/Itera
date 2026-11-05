@@ -37,6 +37,9 @@ struct SessionActivityResult: Codable, Equatable {
     var skippedReachSteps: [ReachSkippedStep]? = nil
     var cupOutcomes: [CupMilestone]? = nil
     var practiceSeconds: Double = 0
+    /// Absent in summaries saved before per-exercise sets were introduced.
+    var setNumber: Int? = nil
+
 }
 
 struct SessionSummary: Codable, Equatable, Identifiable {
@@ -47,4 +50,8 @@ struct SessionSummary: Codable, Equatable, Identifiable {
     let stopped: Bool
     var interrupted = false
     let results: [SessionActivityResult]
+
+    var completedSets: Int {
+        results.filter { $0.activity.kind != .sitToStand && $0.outcome == .completed }.count
+    }
 }
