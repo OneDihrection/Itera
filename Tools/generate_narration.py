@@ -48,6 +48,8 @@ FINGER_PREFIXES = ("baseline.", "move.", "demo.", "return.", "finger.", "recover
 FINGER_KEYS = (
     "session.ready", "session.good", "session.restInstruction", "session.complete",
     "reflection.title",
+    # Range measurement before forearm rotation (FingerSessionViewModel.instructionKey).
+    "range.ready", "range.instruction", "range.resultSpoken",
 )
 # Format keys with the values the app passes; FingerActivity holds for 2 seconds.
 FORMAT_KEYS = {"guide.holdDuration %lld": (2,)}

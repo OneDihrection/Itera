@@ -257,18 +257,19 @@ final class SessionAudioService: NSObject, VoiceReadinessProviding, AVSpeechSynt
                 name = "count-\(language)-\(number)"
                 timeout = 20
             default:
-                speak(id: id, text: String(localized: String.LocalizationValue(key), bundle: language.resourceBundle, locale: language.locale))
+                // Recorded Marizka narration when bundled, otherwise the system voice.
+                speak(id: id, key: key)
                 return
             }
             playClip(name, id: id, timeout: timeout, completion: { [weak self] in
-                self?.speak(id: id, text: String(localized: String.LocalizationValue(key), bundle: self?.language.resourceBundle ?? AppLanguage.selected.resourceBundle, locale: self?.language.locale ?? AppLanguage.selected.locale))
+                self?.speak(id: id, key: key)
             })
         case .closing(let completed):
             cancelSpeech()
             let key = completed ? "parity.closingComplete" : "parity.closingPartial"
             let speakClosing = { [weak self] in
                 guard let self else { return }
-                self.speak(id: id, text: String(localized: String.LocalizationValue(key), bundle: self.language.resourceBundle, locale: self.language.locale))
+                self.speak(id: id, key: key)
                 self.closingWatchdog = Task { [weak self] in
                     do { try await Task.sleep(for: .seconds(20)) } catch { return }
                     self?.cancelSpeech()
