@@ -16,7 +16,10 @@ struct FoldTowelActivity: TherapyActivity {
     private var last: Double?
     private var generation: UUID?
     private var countdownDeadline: Double?
-    private var grip = TowelFoldSequence.Grip.uncertain
+    /// Last confirmed open or closed state, held through brief mid-curl frames.
+    private var stableGrip: TowelFoldSequence.Grip?
+    private var stableGripTime = 0.0
+    private var cursorFilter = HandCursorFilter()
     private var viewport: TherapyViewport?
 
     init(configuration: SessionActivity) { self.configuration = configuration }
@@ -48,6 +51,7 @@ struct FoldTowelActivity: TherapyActivity {
             }
         case .suspend:
             suspended = true
+            cursorFilter.reset()
             sequence.suspend()
             loseTracking()
             countdownDeadline = nil
@@ -64,6 +68,7 @@ struct FoldTowelActivity: TherapyActivity {
             setPhase(.countdown)
         case .viewport(let value):
             if let viewport, viewport != value {
+                cursorFilter.reset()
                 sequence.suspend()
                 loseTracking()
             }
@@ -90,6 +95,7 @@ struct FoldTowelActivity: TherapyActivity {
     private mutating func restart() {
         let count = sequence.repetitions
         generation = nil
+        cursorFilter.reset()
         sequence.suspend()
         snapshot = TowelSnapshot()
         snapshot.count = count
@@ -98,7 +104,7 @@ struct FoldTowelActivity: TherapyActivity {
     }
 
     private mutating func loseTracking(at time: Double? = nil) {
-        grip = .uncertain
+        stableGrip = nil
         snapshot.grip = .uncertain
         snapshot.handPosition = nil
         snapshot.trackingMessage = "towel.trackingLost"
@@ -133,10 +139,15 @@ struct FoldTowelActivity: TherapyActivity {
             return
         }
         snapshot.trackingMessage = nil
-        snapshot.grip = measurement.curl.map { classify($0) } ?? .uncertain
-        let position = TherapyPoint(
-            x: frame.workspaceMirrored ? 1 - measurement.position.x : measurement.position.x,
-            y: measurement.position.y
+        snapshot.grip = measurement.pinch.map { classify($0, at: frame.timestamp) } ?? .uncertain
+
+        // Cursor and acceptance share one filtered point, so what is drawn is what is scored.
+        let position = cursorFilter.consume(
+            TherapyPoint(
+                x: frame.workspaceMirrored ? 1 - measurement.position.x : measurement.position.x,
+                y: measurement.position.y
+            ),
+            at: frame.timestamp
         )
         snapshot.handPosition = position
         if snapshot.phase == .practice {
@@ -144,13 +155,45 @@ struct FoldTowelActivity: TherapyActivity {
         }
     }
 
-    private mutating func classify(_ curl: Double) -> TowelFoldSequence.Grip {
-        if grip == .open, curl <= 0.25 { return .open }
-        if grip == .closed, curl >= 0.30 { return .closed }
-        if curl <= 0.20 { grip = .open }
-        else if curl >= 0.35 { grip = .closed }
-        else { grip = .transitioning }
-        return grip
+    // MARK: - Pinch thresholds
+
+    // Ratios of thumb-to-index tip distance over palm length. Starting values pending device tuning.
+    private static let pinchEnter = 0.25
+    private static let pinchHold = 0.40
+    private static let openEnter = 0.55
+    private static let openHold = 0.45
+
+    /// `.closed` means pinched. A pinch starts at a ratio of 0.25 and an open hand at 0.55, then each is
+    /// held to 0.40 / 0.45 once confirmed. Mid-range frames keep the confirmed state for 0.15 s, so a
+    /// half-formed detector sample does not read as a lost hand.
+    private mutating func classify(_ pinch: Double, at time: Double) -> TowelFoldSequence.Grip {
+        if stableGrip == .closed, pinch <= Self.pinchHold {
+            stableGripTime = time
+            return .closed
+        }
+
+        if stableGrip == .open, pinch >= Self.openHold {
+            stableGripTime = time
+            return .open
+        }
+
+        if pinch <= Self.pinchEnter {
+            stableGrip = .closed
+            stableGripTime = time
+            return .closed
+        }
+
+        if pinch >= Self.openEnter {
+            stableGrip = .open
+            stableGripTime = time
+            return .open
+        }
+
+        if let stableGrip, time - stableGripTime <= 0.15 {
+            return stableGrip
+        }
+
+        return .transitioning
     }
 
     private mutating func syncSequence() {
@@ -160,9 +203,7 @@ struct FoldTowelActivity: TherapyActivity {
         if snapshot.phase == .practice {
             switch sequence.phase {
             case .approach: snapshot.instruction = "towel.approach"
-            case .grabbing: snapshot.instruction = "towel.grab"
             case .folding: snapshot.instruction = "towel.fold"
-            case .destinationHold: snapshot.instruction = "towel.destinationHold"
             case .readyToRelease: snapshot.instruction = "towel.release"
             case .recovering: snapshot.instruction = "towel.recover"
             }

@@ -68,6 +68,73 @@ struct TherapyCountdown: View {
     }
 }
 
+/// A large countdown digit inside a thick ring that sweeps continuously.
+///
+/// Owners publish whole seconds. While `running`, the ring animates linearly to the next second's
+/// value over exactly one second, so it moves smoothly instead of stepping. When the clock is not
+/// running yet (a cue is still being spoken) or has been reset, the ring rests full with no
+/// animation, so it never moves ahead of the digit.
+struct TherapyCountdownDial: View {
+    let secondsLeft: Int
+    let total: Int
+    /// False while the countdown is waiting to start; the ring then holds its full value.
+    var running = true
+    var tint: Color = TherapyPalette.primary
+    var track: Color = TherapyPalette.secondary
+    var unit: LocalizedStringKey? = nil
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    /// Set after the first render, so a dial that appears already running still starts from this
+    /// second's value and sweeps, instead of starting one second ahead.
+    @State private var armed = false
+
+    var body: some View {
+        GeometryReader { geometry in
+            let diameter = max(120, min(geometry.size.width, geometry.size.height) * 0.94)
+            let lineWidth = diameter * 0.06
+
+            ZStack {
+                Circle().stroke(track, lineWidth: lineWidth)
+                Circle()
+                    .trim(from: 0, to: target)
+                    .stroke(tint, style: StrokeStyle(lineWidth: lineWidth, lineCap: .butt))
+                    .rotationEffect(.degrees(-90))
+                    .animation(running && armed ? .linear(duration: 1) : nil, value: target)
+
+                VStack(spacing: 0) {
+                    Text(verbatim: String(max(0, secondsLeft)))
+                        .typography(size: diameter * 0.46, weight: .bold, relativeTo: .largeTitle)
+                        .monospacedDigit()
+                        .contentTransition(reduceMotion ? .identity : .numericText(countsDown: true))
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.4)
+
+                    if let unit {
+                        Text(unit)
+                            .typography(size: diameter * 0.075, weight: .medium, relativeTo: .title2)
+                            .foregroundStyle(TherapyPalette.muted)
+                    }
+                }
+                .foregroundStyle(TherapyPalette.ink)
+                .padding(lineWidth * 1.5)
+            }
+            .frame(width: diameter, height: diameter)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+        }
+        .onAppear { armed = true }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(Text("stage.countdown"))
+        .accessibilityValue(Text(verbatim: String(max(0, secondsLeft))))
+    }
+
+    /// The value the ring is heading for: the end of the current second while running, otherwise
+    /// the start of it.
+    private var target: Double {
+        let remaining = running && armed ? secondsLeft - 1 : secondsLeft
+
+        return min(1, max(0, Double(remaining) / Double(max(1, total))))
+    }
+}
+
 /// A bounded, deterministic burst; Reduce Motion keeps the success symbol without moving particles.
 struct TherapyCelebration: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion

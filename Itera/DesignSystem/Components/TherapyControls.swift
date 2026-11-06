@@ -40,6 +40,9 @@ enum TherapyPalette {
     static let tertiary = peach
     static let mediaBackground = Color(red: 0.743, green: 0.775, blue: 0.757)
     static let hero = Color(red: 0.85, green: 0.93, blue: 0.87)
+    /// Backdrop behind the 3D exercise examples. Bright and fixed (the 3D view takes a static
+    /// colour) so the figure stands out from it instead of matching a grey panel.
+    static let exerciseBackdrop = Color(red: 0.95, green: 0.98, blue: 0.96)
     static let pastelInk = Color(red: 0.10, green: 0.16, blue: 0.18)
     static let lavender = peach
     static let rose = mint
@@ -75,6 +78,13 @@ enum TherapyPalette {
     /// Countdown ring shown while resting.
     static let restRing = Color(uiColor: .systemBlue)
     static let restTrack = Color(uiColor: .systemGray5)
+    /// Mint green and peach for camera guidance bubbles, rings and arrows, matching the finger
+    /// exercise identity (`secondary` and `tertiary`). Fixed rather than adaptive because they sit
+    /// on live video under a dark underlay. Guidance never uses red. The names are historical.
+    static let calmTeal = Color(red: 0.62, green: 0.90, blue: 0.76)
+    static let calmBlue = Color(red: 0.99, green: 0.80, blue: 0.60)
+    /// Dark edge drawn under every guidance shape so it keeps contrast on light and dark video.
+    static let calmUnderlay = Color.black.opacity(0.5)
     /// Challenge card fill and its bold green ink (custom pair, contrast above 7:1).
     static let challengeFill = adaptive(light: (0.93, 0.96, 0.94), dark: (0.12, 0.18, 0.15))
     static let challengeInk = adaptive(light: (0.10, 0.27, 0.20), dark: (0.66, 0.86, 0.75))

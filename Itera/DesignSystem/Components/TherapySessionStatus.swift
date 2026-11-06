@@ -184,23 +184,25 @@ struct TherapyRepetitionPanel: View {
     let unit: LocalizedStringKey
     let completed: Int
     let total: Int
+    /// A shorter card, so a neighbouring illustration can be the larger panel.
+    var compact = false
 
     private let dotColumns = [GridItem(.adaptive(minimum: 22, maximum: 26), spacing: 6)]
 
     var body: some View {
         let done = min(max(0, completed), max(0, total))
 
-        VStack(alignment: .leading, spacing: 14) {
+        VStack(alignment: .leading, spacing: compact ? 8 : 14) {
             Text(title)
-                .typography(size: 26, weight: .medium, relativeTo: .title3)
+                .typography(size: compact ? 22 : 26, weight: .medium, relativeTo: .title3)
                 .accessibilityAddTraits(.isHeader)
 
             HStack(alignment: .lastTextBaseline, spacing: 10) {
                 HStack(alignment: .lastTextBaseline, spacing: 0) {
                     Text(done, format: .number)
-                        .typography(size: 88, weight: .bold, relativeTo: .largeTitle)
+                        .typography(size: compact ? 56 : 88, weight: .bold, relativeTo: .largeTitle)
                     Text(verbatim: "/\(total)")
-                        .typography(size: 52, weight: .bold, relativeTo: .largeTitle)
+                        .typography(size: compact ? 34 : 52, weight: .bold, relativeTo: .largeTitle)
                 }
                 .monospacedDigit()
                 .contentTransition(.numericText())
@@ -222,9 +224,9 @@ struct TherapyRepetitionPanel: View {
             .accessibilityHidden(true)
         }
         .foregroundStyle(TherapyPalette.ink)
-        .padding(22)
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-        .background(TherapyPalette.panel, in: RoundedRectangle(cornerRadius: 34))
+        .padding(compact ? 18 : 22)
+        .frame(maxWidth: .infinity, maxHeight: compact ? nil : .infinity, alignment: .topLeading)
+        .background(TherapyPalette.panel, in: RoundedRectangle(cornerRadius: compact ? 28 : 34))
         .accessibilityElement(children: .combine)
     }
 }

@@ -12,6 +12,7 @@ struct MovementLandmarkSmoother {
     private var filters: [BodyJoint: JointPositionFilter] = [:]
     private var lastTimestamp: Double?
     private var lastGeneration: UUID?
+    private var lastEpoch = 0
     private var imageWidth = 0
     private var imageHeight = 0
 
@@ -19,20 +20,29 @@ struct MovementLandmarkSmoother {
         filters.removeAll(keepingCapacity: true)
         lastTimestamp = nil
         lastGeneration = nil
+        lastEpoch = 0
         imageWidth = 0
         imageHeight = 0
     }
 
     mutating func consume(_ observation: TrackingObservation) -> TrackingObservation {
-        guard observation.personCount == 1,
-              observation.timestamp.isFinite,
+        guard observation.timestamp.isFinite,
               observation.width > 0,
               observation.height > 0 else {
             reset()
             return observation
         }
 
-        let discontinuity = observation.generation != lastGeneration
+        // A frame without a selected patient passes through untouched. Filters survive a short gap
+        // (the timestamp rule below clears them after 0.3 s), so a one-frame miss does not make the
+        // next frame restart unfiltered.
+        guard observation.personCount == 1 else {
+            return observation
+        }
+
+        // A different locked person must never be blended with the previous one.
+        let discontinuity = observation.subjectEpoch != lastEpoch
+            || observation.generation != lastGeneration
             || observation.width != imageWidth
             || observation.height != imageHeight
             || lastTimestamp.map {
@@ -76,6 +86,7 @@ struct MovementLandmarkSmoother {
 
         lastTimestamp = observation.timestamp
         lastGeneration = observation.generation
+        lastEpoch = observation.subjectEpoch
         imageWidth = observation.width
         imageHeight = observation.height
 
@@ -86,7 +97,8 @@ struct MovementLandmarkSmoother {
             height: observation.height,
             personCount: observation.personCount,
             joints: joints,
-            cup: observation.cup
+            cup: observation.cup,
+            subjectEpoch: observation.subjectEpoch
         )
     }
 

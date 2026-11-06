@@ -62,7 +62,18 @@ BODY_KEYS = (
     "session.cameraWait", "session.countdown", "session.farther", "session.holdStart",
     "session.holdTarget", "session.moveTarget", "session.reachStart", "session.rest",
     "session.returnStart", "session.timedPractice",
+    "session.reachRight", "session.reachLeft", "session.reachUp",
+) + tuple(
+    f"session.opening.{kind}.{side}.{part}"
+    for kind in ("armRaise", "elbowBend")
+    for side in ("left", "right")
+    for part in ("positioning", "ready")
 )
+
+# The app speaks `speak.<key>` when the catalog has one (shorter than the displayed text), so the
+# recording is rendered from it. Rendering a spoken variant for a key that already has a recording
+# replaces that recording on the next run, because the text fingerprint changes.
+SPOKEN_PREFIX = "speak."
 
 # Calm, clear delivery for older patients. `speed` below 1 slows speech slightly.
 VOICE_SETTINGS = {
@@ -103,7 +114,7 @@ def collect_lines(groups):
 
     lines = []
     for key, argument in wanted:
-        text = indonesian_text(strings.get(key, {}))
+        text = indonesian_text(strings.get(SPOKEN_PREFIX + key, {})) or indonesian_text(strings.get(key, {}))
         if not text:
             print(f"skip {key}: no Indonesian text", file=sys.stderr)
             continue

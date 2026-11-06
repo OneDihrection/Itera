@@ -22,18 +22,28 @@ struct SessionPanel<Content: View>: View {
     }
 
     private let tone: Tone
+    /// Light pages draw the soft grey panel of the finger pages instead of a tinted black one.
+    private let light: Bool
     private let content: Content
 
-    init(tone: Tone = .neutral, @ViewBuilder content: () -> Content) {
+    init(tone: Tone = .neutral, light: Bool = false, @ViewBuilder content: () -> Content) {
         self.tone = tone
+        self.light = light
         self.content = content()
     }
 
+    @ViewBuilder
     var body: some View {
-        content
-            .padding(20)
-            .background(tone.color.opacity(0.18), in: RoundedRectangle(cornerRadius: 16))
-            .background(.black, in: RoundedRectangle(cornerRadius: 16))
+        if light {
+            content
+                .padding(20)
+                .background(TherapyPalette.panel, in: RoundedRectangle(cornerRadius: 24))
+        } else {
+            content
+                .padding(20)
+                .background(tone.color.opacity(0.18), in: RoundedRectangle(cornerRadius: 16))
+                .background(.black, in: RoundedRectangle(cornerRadius: 16))
+        }
     }
 }
 

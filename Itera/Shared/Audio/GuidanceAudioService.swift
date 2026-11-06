@@ -421,6 +421,7 @@ final class GuidanceAudioService: NSObject, AVSpeechSynthesizerDelegate {
         buttonPlayer?.stop()
         audioSessionActive = false
         try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
+        NarrationAudioSession.noteDeactivated()
     }
 
     nonisolated func speechSynthesizer(_ synthesizer: AVSpeechSynthesizer, didFinish utterance: AVSpeechUtterance) {
