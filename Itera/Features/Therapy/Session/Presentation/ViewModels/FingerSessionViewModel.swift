@@ -244,7 +244,10 @@ final class FingerSessionViewModel {
             let cue = "\(index)-\(activity.set)-\(countdown)"
             if cue != lastCountdownCue {
                 lastCountdownCue = cue
-                audio.playCue(.countdown)
+                // Marizka says "tiga, dua, satu" when recorded; otherwise the beep as before.
+                if countdown <= 0 || !audio.playCount(countdown) {
+                    audio.playCue(.countdown)
+                }
             }
         }
     }
@@ -582,6 +585,14 @@ final class FingerSessionViewModel {
         previousInstruction = key
         instructionSince = ProcessInfo.processInfo.systemUptime
         calibrationNeedsHelp = false
+
+        // The spoken numbers carry the countdown; narrating "Bersiap…" at the same time
+        // would talk over "tiga". The countdown never waits on narration, so nothing stalls.
+        if activity.phase == .countdown && audio.hasRecordedCounts {
+            engine.guidanceCompleted()
+            return
+        }
+
         narrate()
     }
 

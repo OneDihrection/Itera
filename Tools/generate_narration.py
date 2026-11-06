@@ -66,6 +66,27 @@ BODY_KEYS = (
     "session.returnStart", "session.timedPractice",
 )
 
+# Spoken numbers for countdowns and repetition counts, one clip each ("narration-id-count-3").
+NUMBER_RANGE = range(1, 101)
+UNITS = ["", "satu", "dua", "tiga", "empat", "lima", "enam", "tujuh", "delapan", "sembilan"]
+
+
+def indonesian_number(n):
+    """Indonesian words for 1-100: sebelas, dua belas, dua puluh satu, seratus."""
+    if n == 100:
+        return "seratus"
+    if n == 10:
+        return "sepuluh"
+    if n == 11:
+        return "sebelas"
+    if n < 10:
+        return UNITS[n]
+    if n < 20:
+        return f"{UNITS[n - 10]} belas"
+    tens, unit = divmod(n, 10)
+    return f"{UNITS[tens]} puluh" + (f" {UNITS[unit]}" if unit else "")
+
+
 # Calm, clear delivery for older patients. `speed` below 1 slows speech slightly.
 VOICE_SETTINGS = {
     "stability": 0.55,
@@ -103,6 +124,13 @@ def collect_lines(groups):
         for key, values in FORMAT_KEYS.items():
             wanted.extend((key, value) for value in values)
 
+    numbers = []
+    if "numbers" in groups:
+        for n in NUMBER_RANGE:
+            # A full stop gives each number a clean, final ending.
+            text = indonesian_number(n).capitalize() + "."
+            numbers.append({"key": "count", "argument": n, "text": text, "name": clip_name("count", n)})
+
     lines = []
     for key, argument in wanted:
         text = indonesian_text(strings.get(key, {}))
@@ -113,7 +141,7 @@ def collect_lines(groups):
             text = text.replace("%lld", str(argument))
         lines.append({"key": key, "argument": argument, "text": text, "name": clip_name(key, argument)})
 
-    return sorted(lines, key=lambda line: line["name"])
+    return sorted(lines + numbers, key=lambda line: line["name"])
 
 
 def tls_context():
@@ -187,7 +215,7 @@ def main():
     parser.add_argument("--voice-name", default="Marizka")
     parser.add_argument("--voice-id", help="Use this voice ID instead of searching by name.")
     parser.add_argument("--model", default="eleven_multilingual_v2")
-    parser.add_argument("--groups", default="finger,body", help="Comma-separated: finger, body.")
+    parser.add_argument("--groups", default="finger,body,numbers", help="Comma-separated: finger, body, numbers.")
     parser.add_argument("--dry-run", action="store_true", help="List sentences and characters only.")
     parser.add_argument("--force", action="store_true", help="Re-render every sentence.")
     parser.add_argument("--normalize-only", action="store_true", help="Re-level existing raw clips; no API calls.")

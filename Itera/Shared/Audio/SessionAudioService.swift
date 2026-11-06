@@ -180,8 +180,24 @@ final class SessionAudioService: NSObject, VoiceReadinessProviding, AVSpeechSynt
     }
 
     private func prepareClip(_ name: String) {
-        guard let url = Bundle.main.url(forResource: name, withExtension: "wav") else { return }
+        guard let url = clipURL(name) else { return }
         clips[name] = try? PreparedAudioClip(url: url)
+    }
+
+    /// Effects and older count clips are WAV; recorded narration is AAC.
+    private func clipURL(_ name: String) -> URL? {
+        Bundle.main.url(forResource: name, withExtension: "wav")
+            ?? Bundle.main.url(forResource: name, withExtension: "m4a")
+    }
+
+    /// Marizka's recorded number when bundled, otherwise the older count clip.
+    private func countClipName(_ number: Int) -> String {
+        if NarrationClips.countURL(number, language: language) != nil {
+            return NarrationClips.resourceName(for: NarrationLine(key: "count", argument: number))
+        }
+
+        let code = synthesisLocale.hasPrefix("id") ? "id" : "en"
+        return "count-\(code)-\(number)"
     }
 
     func play(id: UUID, cue: SessionAudioCue) {
@@ -223,9 +239,8 @@ final class SessionAudioService: NSObject, VoiceReadinessProviding, AVSpeechSynt
                 pendingCounts.append((id, number))
                 return
             }
-            let language = synthesisLocale.hasPrefix("id") ? "id" : "en"
-            let name = "count-\(language)-\(number)"
-            if Bundle.main.url(forResource: name, withExtension: "wav") != nil {
+            let name = countClipName(number)
+            if clipURL(name) != nil {
                 playClip(name, id: id, timeout: 20, failure: { [weak self] in
                     self?.speak(id: id, text: String(number))
                 })
@@ -235,10 +250,11 @@ final class SessionAudioService: NSObject, VoiceReadinessProviding, AVSpeechSynt
         case .countdown(let number):
             // Countdown time is authoritative; never queue an expired number.
             cancelSpeech()
-            let language = synthesisLocale.hasPrefix("id") ? "id" : "en"
-            let name = "count-\(language)-\(number)"
-            if Bundle.main.url(forResource: name, withExtension: "wav") != nil {
-                playClip(name, id: id, timeout: 1, failure: { [weak self] in
+            let name = countClipName(number)
+            if clipURL(name) != nil {
+                // A spoken number can outlast one second with its natural pauses; the next
+                // number cancels this one first, so the longer watchdog never doubles it.
+                playClip(name, id: id, timeout: 1.5, failure: { [weak self] in
                     self?.speak(id: id, text: String(number))
                 })
             } else {

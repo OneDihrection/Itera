@@ -33,6 +33,11 @@ enum NarrationClips {
         return Bundle.main.url(forResource: resourceName(for: line), withExtension: "m4a")
     }
 
+    /// The recorded spoken number ("tiga") for countdowns and repetition counts.
+    static func countURL(_ number: Int, language: AppLanguage) -> URL? {
+        url(for: NarrationLine(key: "count", argument: number), language: language)
+    }
+
     /// The bundled file name for a line. Must match `clip_name` in Tools/generate_narration.py.
     static func resourceName(for line: NarrationLine) -> String {
         var name = line.key.replacingOccurrences(of: " %lld", with: "")
