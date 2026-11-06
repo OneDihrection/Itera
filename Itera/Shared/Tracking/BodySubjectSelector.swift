@@ -9,36 +9,61 @@ import Foundation
 
 /// Chooses which detected person is the patient when others are in view.
 ///
-/// The patient sits facing the iPad, so a bystander walking past is usually smaller and
-/// briefly overlaps them at most. Selection prefers, in order:
+/// The patient sits facing the iPad and stays in roughly one place, while bystanders walk
+/// through. Selection prefers, in order:
 /// 1. **Continuity**: the person whose torso is nearest the patient's recently tracked torso,
-///    at a similar size.
-/// 2. **Dominance**: a person clearly larger (closer to the camera) than everyone else.
+///    at a similar size, and still near the patient's usual place.
+/// 2. **Usual place**: after a longer loss (someone walked in front), only a person back at
+///    the remembered seat and size is picked up again, never simply the largest person.
+/// 3. **First pick**: before any place is known, a person clearly larger than everyone else,
+///    or, among people of similar size, the one clearly nearest the centre of the frame,
+///    where setup places the patient. Position only breaks ties; it never decides alone.
 ///
-/// When neither rule settles it, no subject is reported. Anatomical sides always come from
-/// the selected person's own landmarks, never from screen position.
+/// When no rule settles it, no subject is reported, so exercises pause rather than follow a
+/// stranger. Anatomical sides always come from the selected person's own landmarks, never
+/// from screen position.
 struct BodySubjectSelector {
     struct Candidate {
         /// Aspect-corrected mean of the confident torso joints.
         let torso: TherapyPoint
-        /// Aspect-corrected diagonal of the confident joints' bounding box.
+        /// Aspect-corrected diagonal of the torso (shoulders, neck, hips). Arm movement does
+        /// not change it, so it reliably tells a nearer bystander from the seated patient.
         let size: Double
+        /// Horizontal distance of the torso from the frame's centre, 0 to 0.5.
+        var centerOffset: Double = 0.5
     }
 
     /// How long a lost patient remains the preferred subject. Matches the exercise hold grace.
     static let continuityWindow = 1.5
+    /// How long the patient's usual place is remembered after tracking is lost.
+    static let anchorMemory = 60.0
+    /// How much more centred the patient must be than everyone else to win a first-pick tie.
+    private static let centeringMargin = 0.12
     private static let dominanceRatio = 1.4
-    private static let sizeRange = 0.6...1.6
+    private static let sizeRange = 0.7...1.45
+    /// Stricter size match when picking the patient up again at their usual place.
+    private static let anchorSizeRange = 0.75...1.33
+    /// How quickly the usual place follows the tracked patient. Slow, so reaching across the
+    /// body during an exercise does not drag the remembered seat with the arm.
+    private static let anchorFollowRate = 0.05
 
     private var lastTorso: TherapyPoint?
     private var lastSize = 0.0
     private var lastTime: Double?
+    private var anchorTorso: TherapyPoint?
+    private var anchorSize = 0.0
+    private var anchorTime: Double?
     private var generation: UUID?
 
+    /// Forgets the patient. A new camera generation (restart, camera or orientation change)
+    /// means positions are no longer comparable.
     mutating func reset() {
         lastTorso = nil
         lastSize = 0
         lastTime = nil
+        anchorTorso = nil
+        anchorSize = 0
+        anchorTime = nil
         generation = nil
     }
 
@@ -53,14 +78,15 @@ struct BodySubjectSelector {
             return nil
         }
 
-        guard let index = continuingIndex(in: candidates, at: time) ?? initialIndex(in: candidates) else {
+        let found = continuingIndex(in: candidates, at: time)
+            ?? anchoredIndex(in: candidates, at: time)
+            ?? initialIndex(in: candidates, at: time)
+
+        guard let index = found else {
             return nil
         }
 
-        lastTorso = candidates[index].torso
-        lastSize = candidates[index].size
-        lastTime = time
-
+        remember(candidates[index], at: time)
         return index
     }
 
@@ -79,6 +105,8 @@ struct BodySubjectSelector {
 
         let nearest = candidates.indices
             .filter { Self.sizeRange.contains(candidates[$0].size / lastSize) }
+            .filter { matchesAnchorSize(candidates[$0], at: time) }
+            .filter { isNearAnchor(candidates[$0], at: time, gateScale: 1.5) }
             .map { (index: $0, distance: (candidates[$0].torso - lastTorso).length) }
             .min { $0.distance < $1.distance }
 
@@ -89,10 +117,95 @@ struct BodySubjectSelector {
         return nearest.index
     }
 
-    private func initialIndex(in candidates: [Candidate]) -> Int? {
-        dominantSubjectIndex(
-            sizes: candidates.map(\.size),
-            ratio: Self.dominanceRatio
-        )
+    /// After a longer loss, only someone back at the patient's usual place and size.
+    private func anchoredIndex(in candidates: [Candidate], at time: Double) -> Int? {
+        guard let anchorTorso, hasAnchor(at: time) else {
+            return nil
+        }
+
+        let nearest = candidates.indices
+            .filter { matchesAnchorSize(candidates[$0], at: time) }
+            .filter { isNearAnchor(candidates[$0], at: time, gateScale: 1) }
+            .map { (index: $0, distance: (candidates[$0].torso - anchorTorso).length) }
+            .min { $0.distance < $1.distance }
+
+        return nearest?.index
+    }
+
+    /// Only before the patient's place is known; afterwards a stranger is never picked by size.
+    private func initialIndex(in candidates: [Candidate], at time: Double) -> Int? {
+        guard !hasAnchor(at: time) else {
+            return nil
+        }
+
+        if let dominant = dominantSubjectIndex(sizes: candidates.map(\.size), ratio: Self.dominanceRatio) {
+            return dominant
+        }
+
+        return centredIndex(in: candidates)
+    }
+
+    /// Among similarly sized people, the one clearly nearest the centre of the frame.
+    private func centredIndex(in candidates: [Candidate]) -> Int? {
+        let ranked = candidates.indices.sorted { candidates[$0].centerOffset < candidates[$1].centerOffset }
+
+        guard let best = ranked.first else {
+            return nil
+        }
+
+        guard ranked.count > 1 else {
+            return best
+        }
+
+        let runnerUp = candidates[ranked[1]].centerOffset
+        return runnerUp - candidates[best].centerOffset >= Self.centeringMargin ? best : nil
+    }
+
+    // MARK: - Usual place
+
+    private func hasAnchor(at time: Double) -> Bool {
+        guard anchorTorso != nil, let anchorTime, anchorSize > 0 else {
+            return false
+        }
+
+        return time - anchorTime <= Self.anchorMemory
+    }
+
+    /// True when there is no usual place yet, or the candidate's torso is the patient's size.
+    /// Someone walking in front of the patient is nearer the camera, so their torso is larger.
+    private func matchesAnchorSize(_ candidate: Candidate, at time: Double) -> Bool {
+        guard hasAnchor(at: time) else {
+            return true
+        }
+
+        return Self.anchorSizeRange.contains(candidate.size / anchorSize)
+    }
+
+    /// True when there is no usual place yet, or the candidate sits within it.
+    private func isNearAnchor(_ candidate: Candidate, at time: Double, gateScale: Double) -> Bool {
+        guard let anchorTorso, hasAnchor(at: time) else {
+            return true
+        }
+
+        let gate = max(0.1, anchorSize * 0.6) * gateScale
+        return (candidate.torso - anchorTorso).length <= gate
+    }
+
+    private mutating func remember(_ candidate: Candidate, at time: Double) {
+        lastTorso = candidate.torso
+        lastSize = candidate.size
+        lastTime = time
+
+        guard let anchorTorso, hasAnchor(at: time) else {
+            self.anchorTorso = candidate.torso
+            anchorSize = candidate.size
+            anchorTime = time
+            return
+        }
+
+        let rate = Self.anchorFollowRate
+        self.anchorTorso = anchorTorso + (candidate.torso - anchorTorso).scaled(rate)
+        anchorSize += (candidate.size - anchorSize) * rate
+        anchorTime = time
     }
 }
