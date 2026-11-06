@@ -336,6 +336,11 @@ final class TherapySessionViewModel {
             return
         }
 
+        // While guidance plays, leave it unspoken; the next update says the number shown then.
+        guard audio.canSpeakHoldNumber else {
+            return
+        }
+
         lastHoldSecond = movement.seconds
         audio.play(id: UUID(), cue: .holdSecond(movement.seconds))
     }

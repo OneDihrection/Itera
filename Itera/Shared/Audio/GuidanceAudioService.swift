@@ -267,13 +267,23 @@ final class GuidanceAudioService: NSObject, AVSpeechSynthesizerDelegate {
     }
 
     /// Speaks the number in the hold readout, only while no instruction is being spoken,
-    /// so a number never talks over or cuts off guidance. Nothing plays without a recording.
-    func playHoldSecond(_ number: Int) {
-        guard number > 0, narrationID == nil, !synthesizer.isSpeaking else {
-            return
+    /// so a number never talks over or cuts off guidance.
+    ///
+    /// - Returns: false only while an instruction is playing, so the caller can try again
+    ///   once it ends with whatever number is shown then. True when the number was spoken,
+    ///   or when there is nothing to retry (no number, or no recording).
+    @discardableResult
+    func playHoldSecond(_ number: Int) -> Bool {
+        guard number > 0 else {
+            return true
+        }
+
+        guard narrationID == nil, !synthesizer.isSpeaking else {
+            return false
         }
 
         _ = playCount(number)
+        return true
     }
 
     private var narrationLanguage: AppLanguage {

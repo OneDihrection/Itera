@@ -303,6 +303,16 @@ final class SessionAudioService: NSObject, VoiceReadinessProviding, AVSpeechSynt
         }
     }
 
+    /// True when a hold number can be spoken now: nothing is playing or waiting except an
+    /// older hold number. Callers retry on their next update while this is false.
+    var canSpeakHoldNumber: Bool {
+        let onlyOlderHoldNumber = clipID != nil && clipID == holdSecondID
+        return utteranceIDs.isEmpty
+            && pendingSpeech == nil
+            && pendingCounts.isEmpty
+            && (clipID == nil || onlyOlderHoldNumber)
+    }
+
     /// Speaks a hold-bubble number in the recorded voice when the narrator is otherwise quiet.
     private func playHoldSecond(_ number: Int, id: UUID) {
         // Replace an older hold number that is still playing; never touch anything else.

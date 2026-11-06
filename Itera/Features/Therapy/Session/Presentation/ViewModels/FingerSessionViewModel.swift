@@ -269,8 +269,11 @@ final class FingerSessionViewModel {
             return
         }
 
-        lastHoldSecond = shown
-        audio.playHoldSecond(shown)
+        // While an instruction plays, leave the number unspoken; the next frame retries and,
+        // once the instruction ends, says whatever number the readout shows then.
+        if audio.playHoldSecond(shown) {
+            lastHoldSecond = shown
+        }
     }
 
     func start() async {
@@ -625,7 +628,7 @@ final class FingerSessionViewModel {
         if activity.kind.isSequential && [.baseline, .target, .active].contains(activity.phase) {
             text += ". " + String(localized: String.LocalizationValue(fingerKey), bundle: sessionLanguage.resourceBundle)
         }
-        if activity.phase == .target || activity.phase == .active {
+        if narratesHoldDuration {
             text += ". " + String.localizedStringWithFormat(
                 String(localized: "guide.holdDuration %lld", bundle: sessionLanguage.resourceBundle), Int64(activity.holdDuration)
             )
@@ -644,11 +647,18 @@ final class FingerSessionViewModel {
             lines.append(NarrationLine(key: fingerKey))
         }
 
-        if activity.phase == .target || activity.phase == .active {
+        if narratesHoldDuration {
             lines.append(NarrationLine(key: "guide.holdDuration %lld", argument: Int(activity.holdDuration)))
         }
 
         return lines
+    }
+
+    /// "Tahan 2 detik" closes a hold instruction only when the numbers are not spoken live.
+    /// With recorded numbers, "dua, satu" says the same thing, and leaving the line out keeps
+    /// the instruction from still playing when the hold, and its first number, begins.
+    private var narratesHoldDuration: Bool {
+        (activity.phase == .target || activity.phase == .active) && !audio.hasRecordedCounts
     }
 
     var needsPermissionSettings: Bool {

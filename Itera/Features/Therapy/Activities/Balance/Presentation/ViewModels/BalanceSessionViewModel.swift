@@ -302,6 +302,8 @@ final class BalanceSessionViewModel {
             return
         }
         guard remaining != lastSpokenCountdown else { return }
+        // While guidance plays, leave it unspoken; the next frame says whatever the bubble shows then.
+        guard audio.canSpeakHoldNumber else { return }
         lastSpokenCountdown = remaining
         audio.play(id: UUID(), cue: .holdSecond(remaining))
     }
