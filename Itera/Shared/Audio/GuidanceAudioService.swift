@@ -266,6 +266,16 @@ final class GuidanceAudioService: NSObject, AVSpeechSynthesizerDelegate {
         }
     }
 
+    /// Speaks the number in the hold readout, only while no instruction is being spoken,
+    /// so a number never talks over or cuts off guidance. Nothing plays without a recording.
+    func playHoldSecond(_ number: Int) {
+        guard number > 0, narrationID == nil, !synthesizer.isSpeaking else {
+            return
+        }
+
+        _ = playCount(number)
+    }
+
     private var narrationLanguage: AppLanguage {
         locale.hasPrefix("id") ? .indonesian : .english
     }

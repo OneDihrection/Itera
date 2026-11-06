@@ -293,8 +293,9 @@ final class BalanceSessionViewModel {
             return
         }
 
+        // Speak exactly the number drawn in the bubble, for the reach hold and the return hold.
         guard !paused,
-            current.phase == .holding,
+            current.phase == .holding || current.phase == .returning,
             let remaining = current.overlay?.holdSecondsRemaining
         else {
             lastSpokenCountdown = nil
@@ -302,7 +303,7 @@ final class BalanceSessionViewModel {
         }
         guard remaining != lastSpokenCountdown else { return }
         lastSpokenCountdown = remaining
-        audio.play(id: UUID(), cue: .count(remaining))
+        audio.play(id: UUID(), cue: .holdSecond(remaining))
     }
 
     private func completionGuidanceKey(for snapshot: BalanceSnapshot) -> String {

@@ -38,6 +38,8 @@ final class FingerSessionViewModel {
     @ObservationIgnored private var instructionSince = 0.0
     @ObservationIgnored private var celebratedSets: [Int: Int] = [:]
     @ObservationIgnored private var lastCountdownCue = ""
+    /// The hold-readout number last spoken, so each shown second is said once.
+    @ObservationIgnored private var lastHoldSecond: Int?
     let camera: HandCameraService
     @ObservationIgnored private let audio: GuidanceAudioService
     @ObservationIgnored private let permissions: any PermissionManaging
@@ -240,6 +242,7 @@ final class FingerSessionViewModel {
             celebrationID += 1
             audio.playCue(.setCompleted)
         }
+        speakHoldSecondIfNeeded()
         if activity.phase == .countdown, !paused {
             let cue = "\(index)-\(activity.set)-\(countdown)"
             if cue != lastCountdownCue {
@@ -250,6 +253,24 @@ final class FingerSessionViewModel {
                 }
             }
         }
+    }
+
+    /// Says the number shown in the "Tahan N detik" readout as it counts down, using the
+    /// readout's own rounding, so the voice and the screen always agree.
+    private func speakHoldSecondIfNeeded() {
+        guard !paused, showsGuideTimer, activity.holdCompletionID == nil else {
+            lastHoldSecond = nil
+            return
+        }
+
+        let shown = Int(ceil(max(0, activity.holdRemaining)))
+
+        guard shown > 0, shown != lastHoldSecond else {
+            return
+        }
+
+        lastHoldSecond = shown
+        audio.playHoldSecond(shown)
     }
 
     func start() async {

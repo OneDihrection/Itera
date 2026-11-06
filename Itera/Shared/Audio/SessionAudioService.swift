@@ -50,6 +50,8 @@ final class SessionAudioService: NSObject, VoiceReadinessProviding, AVSpeechSynt
     private var routeObserver: NSObjectProtocol?
     private let synthesizer = AVSpeechSynthesizer()
     private let music = ExerciseMusicPlayer()
+    /// The hold-bubble number currently playing, so the next second can replace it.
+    private var holdSecondID: UUID?
     private var narrationClips: [String: PreparedAudioClip] = [:]
     private let inputWorker = AudioInputWorker()
     private var starting: Task<VoiceStartupResult, Never>?
@@ -247,6 +249,8 @@ final class SessionAudioService: NSObject, VoiceReadinessProviding, AVSpeechSynt
             } else {
                 speak(id: id, text: String(number))
             }
+        case .holdSecond(let number):
+            playHoldSecond(number, id: id)
         case .countdown(let number):
             // Countdown time is authoritative; never queue an expired number.
             cancelSpeech()
@@ -297,6 +301,29 @@ final class SessionAudioService: NSObject, VoiceReadinessProviding, AVSpeechSynt
                 speakClosing()
             }
         }
+    }
+
+    /// Speaks a hold-bubble number in the recorded voice when the narrator is otherwise quiet.
+    private func playHoldSecond(_ number: Int, id: UUID) {
+        // Replace an older hold number that is still playing; never touch anything else.
+        if let current = holdSecondID, clipID == current {
+            cancelSpeech()
+        }
+        holdSecondID = nil
+
+        let quiet = utteranceIDs.isEmpty && clipID == nil && pendingSpeech == nil && pendingCounts.isEmpty
+        guard number > 0, quiet else {
+            return
+        }
+
+        let name = countClipName(number)
+        guard clipURL(name) != nil else {
+            return
+        }
+
+        holdSecondID = id
+        // One second per number; a slightly longer watchdog lets the clip finish naturally.
+        playClip(name, id: id, timeout: 1.5)
     }
 
     func speak(id: UUID, key: String) {
