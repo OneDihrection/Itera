@@ -64,6 +64,11 @@ final class AppDependencies: HistoryRecovering {
         guard UserDefaults.standard.object(forKey: PracticePreferences.buttonSounds) as? Bool ?? true else {
             return
         }
+        // A tap sound never lands on top of narration from a running session.
+        guard !audio.isNarrating else {
+            return
+        }
+
         fingerAudio.playButtonClick()
     }
 
@@ -71,7 +76,14 @@ final class AppDependencies: HistoryRecovering {
         guard UserDefaults.standard.object(forKey: PracticePreferences.celebrationSounds) as? Bool ?? true else {
             return
         }
-        fingerAudio.playAchievementCue()
+        // Wait (briefly) for narration to finish rather than playing over it.
+        Task { @MainActor [weak self] in
+            for _ in 0..<30 where self?.audio.isNarrating == true {
+                try? await Task.sleep(for: .milliseconds(100))
+            }
+
+            self?.fingerAudio.playAchievementCue()
+        }
     }
 
     func routineModel(for category: TherapyCategory) -> RoutineViewModel {

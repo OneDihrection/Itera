@@ -29,9 +29,10 @@ final class PreparedAudioClip {
         return true
     }
 
-    func stop() {
+    /// Fades out before pausing, so a cut never clicks. A later `play` takes over immediately.
+    func stop(fade: TimeInterval = 0.04) {
         identity = nil
-        worker.stop()
+        worker.stop(fade: fade)
     }
 
     private final class PlayerWorker: NSObject, AVAudioPlayerDelegate, @unchecked Sendable {
@@ -39,6 +40,8 @@ final class PreparedAudioClip {
         private let url: URL
         private var player: AVAudioPlayer?
         private var completion: ((Bool) -> Void)?
+        /// Changes on every play and stop, so late callbacks from an earlier play are ignored.
+        private var token = 0
 
         init(url: URL) {
             self.url = url
@@ -51,13 +54,14 @@ final class PreparedAudioClip {
 
         func play(volume: Float, completion: @escaping (Bool) -> Void) {
             queue.async {
+                self.token &+= 1
                 self.player?.pause()
                 self.completion = completion
                 do {
                     let player = try self.player ?? AVAudioPlayer(contentsOf: self.url)
                     self.player = player
                     player.delegate = self
-                    player.volume = volume
+                    player.setVolume(volume, fadeDuration: 0)
                     player.currentTime = 0
                     guard player.play() else {
                         self.finish(false)
@@ -69,11 +73,26 @@ final class PreparedAudioClip {
             }
         }
 
-        func stop() {
+        func stop(fade: TimeInterval) {
             queue.async {
+                self.token &+= 1
                 self.completion = nil
-                self.player?.pause()
-                self.player?.currentTime = 0
+
+                guard let player = self.player, player.isPlaying else {
+                    return
+                }
+
+                let stopToken = self.token
+                player.setVolume(0, fadeDuration: fade)
+                self.queue.asyncAfter(deadline: .now() + fade) {
+                    // A new play in the meantime owns the player now.
+                    guard self.token == stopToken else {
+                        return
+                    }
+
+                    player.pause()
+                    player.currentTime = 0
+                }
             }
         }
 
@@ -85,7 +104,9 @@ final class PreparedAudioClip {
 
         func audioPlayerDidFinishPlaying(_ player: AVAudioPlayer, successfully flag: Bool) {
             queue.async {
-                guard self.player === player else { return }
+                // A finish queued from an earlier play must not complete a newer one that is
+                // already playing on the same cached player.
+                guard self.player === player, !player.isPlaying else { return }
                 self.finish(flag)
             }
         }

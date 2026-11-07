@@ -18,18 +18,36 @@ struct DirectionalReachActivity: TherapyActivity {
     private var direction = 0
     private var rightSign = 1.0
     private var radius = 0.0
+    /// Upper arm plus forearm, frozen with `radius`; the farthest the wrist can sit from the shoulder.
+    private var armLength = 0.0
+    private var shoulderWidth = 0.0
     private var hold = StableHold()
-    private var farthest: TherapyPoint?
     private var elapsed = 0.0
-    private var dwell: Double?
+    private var dwell = InterruptibleHold()
+
+    /// Seconds the wrist holds inside the target or start bubble before it is accepted.
+    private static let dwellDuration = 2.0
+    /// Seconds the wrist holds still to capture the start position and each candidate endpoint.
+    private static let holdDuration = 2.0
+    private var landmarkSmoother = MovementLandmarkSmoother()
+    /// Longest tracking loss a dwell survives before it clears.
+    private static let dwellTrackingGrace = 0.5
     private var last: Double?
     private var deadline: Double?
     private var suspended = false
     private var viewport: TherapyViewport?
     private var restartingRound = false
     private var awaitingGuidance = true
-    private var preparingUntil: Double?
     private var pendingOutcomes: [ReachOutcome] = []
+    private var missingSince: Double?
+    private var recoveringSince: Double?
+
+    /// Seconds evidence must be missing before the tracking message replaces the instruction.
+    private static let trackingMessageDelay = 1.0
+    /// Seconds evidence must stay good before the tracking message is hidden again.
+    private static let trackingRecoveryDelay = 0.5
+    /// Usable seconds without any accepted endpoint before a direction is left unscored.
+    private static let assessmentIdleLimit = 30.0
 
     init(configuration: SessionActivity) { self.configuration = configuration }
     var presentation: ActivityPresentation {
@@ -67,16 +85,14 @@ struct DirectionalReachActivity: TherapyActivity {
             }
         case .command(let command, let time):
             receive(command, at: time)
-        case .guidanceCompleted(let time):
-            if awaitingGuidance {
-                awaitingGuidance = false
-                if phase == .start { preparingUntil = time + 5 }
-            }
+        case .guidanceCompleted:
+            awaitingGuidance = false
         case .viewport(let value):
             viewport = value
             clearEvidence()
         case .suspend:
             suspended = true
+            landmarkSmoother.reset()
             clearEvidence()
             // Partial practice milestones cannot survive an interruption.
             if phase == .outward || phase == .returning {
@@ -89,27 +105,26 @@ struct DirectionalReachActivity: TherapyActivity {
             suspended = false
             if phase == .start {
                 awaitingGuidance = true
-                preparingUntil = nil
             }
             if phase == .countdown { deadline = nil }
         case .recalibrate:
+            landmarkSmoother.reset()
             phase = .start
             start = nil
             targets = [:]
             direction = 0
             elapsed = 0
-            farthest = nil
             pendingOutcomes = []
             restartingRound = false
             snapshot.rehearsal = false
             snapshot.instruction = "session.reachStart"
             awaitingGuidance = true
-            preparingUntil = nil
             clearEvidence()
         case .tick(let time):
             if last.map({ time - $0 > 0.3 }) == true { clearEvidence() }
+            if !suspended { advanceCountdown(at: time) }
         case .observation(let frame):
-            if !suspended { consume(frame) }
+            if !suspended { consume(landmarkSmoother.consume(frame)) }
         }
         return ActivityTransition(
             status: phase == .finished ? .finished : (suspended ? .suspended : .running),
@@ -142,14 +157,14 @@ struct DirectionalReachActivity: TherapyActivity {
             phase = .assess
             snapshot.rehearsal = false
             awaitingGuidance = false
-            snapshot.instruction = directionKey
+            snapshot.instruction = assessmentKey
             resetAttempt()
         case .retryStep:
             switch phase {
             case .assess, .assessReturn:
                 phase = .assess
                 awaitingGuidance = false
-                snapshot.instruction = directionKey
+                snapshot.instruction = assessmentKey
                 resetAttempt()
             case .outward, .returning:
                 phase = .returning
@@ -205,7 +220,7 @@ struct DirectionalReachActivity: TherapyActivity {
             direction += 1
             phase = .assess
             awaitingGuidance = true
-            snapshot.instruction = directionKey
+            snapshot.instruction = assessmentKey
             resetAttempt()
             return
         }
@@ -239,10 +254,96 @@ struct DirectionalReachActivity: TherapyActivity {
 
     private mutating func clearEvidence() {
         hold.clear()
-        dwell = nil
+        dwell.reset()
         last = nil
         snapshot.guide = nil
         snapshot.progress = 0
+    }
+
+    /// Freezes a running dwell through brief tracking loss; clears everything once it lasts.
+    ///
+    /// The bubble stays at its last position with its ring paused, and no time is credited.
+    private mutating func freezeEvidence(at time: Double) {
+        hold.clear()
+
+        guard dwell.isHolding,
+              dwell.interrupt(at: time, grace: Self.dwellTrackingGrace) else {
+            clearEvidence()
+            return
+        }
+    }
+
+    /// Shows the tracking message only after the evidence has been missing for a while, so a
+    /// single dropped frame never swaps the cue text.
+    private mutating func noteTrackingLoss(at time: Double) {
+        recoveringSince = nil
+        let since = missingSince ?? time
+        missingSince = since
+
+        if time - since >= Self.trackingMessageDelay {
+            snapshot.trackingMessage = "session.reachTrackingLost"
+        }
+    }
+
+    /// Hides the tracking message only after evidence has stayed good for a moment.
+    private mutating func noteTrackingRecovery(at time: Double) {
+        missingSince = nil
+
+        guard snapshot.trackingMessage != nil else {
+            recoveringSince = nil
+            return
+        }
+
+        let since = recoveringSince ?? time
+        recoveringSince = since
+
+        if time - since >= Self.trackingRecoveryDelay {
+            snapshot.trackingMessage = nil
+            recoveringSince = nil
+        }
+    }
+
+    /// Fraction of the ghost distance a held endpoint must cover to be accepted.
+    private static let minimumReachFraction = 0.5
+    /// Keeps the ghost this far inside the image edge, in image-height units.
+    private static let ghostEdgeMargin = 0.06
+
+    /// True when the arm reaches toward the opposite side of the body, which takes trunk rotation.
+    private var isCrossDirection: Bool {
+        let left = configuration.side == .left
+
+        return (direction == 0 && left) || (direction == 1 && !left)
+    }
+
+    /// Cue for the assessment: reach as far as possible, and across the body for the cross side.
+    private var assessmentKey: String {
+        if isCrossDirection {
+            return "session.reachAcross"
+        }
+
+        return ["session.reachRightFar", "session.reachLeftFar", "session.reachUpFar"][direction]
+    }
+
+    /// Distance from `origin` along the direction to the ghost, kept inside the image.
+    ///
+    /// The cross direction extends past the opposite shoulder, which an arm cannot reach
+    /// without turning the trunk.
+    private func ghostDistance(from origin: TherapyPoint, aspect: Double) -> Double {
+        var distance = armLength * 0.95
+
+        if isCrossDirection {
+            distance = max(distance, shoulderWidth * 1.2)
+        }
+
+        let margin = Self.ghostEdgeMargin
+        let xRoom = vector.x > 0 ? aspect - margin - origin.x : origin.x - margin
+        let yRoom = vector.y > 0 ? 1 - margin - origin.y : origin.y - margin
+        let room = min(
+            vector.x == 0 ? .infinity : xRoom / abs(vector.x),
+            vector.y == 0 ? .infinity : yRoom / abs(vector.y)
+        )
+
+        return max(radius * 4, min(distance, room))
     }
 
     private var directionKey: String {
@@ -272,11 +373,11 @@ struct DirectionalReachActivity: TherapyActivity {
             abs(rightShoulder.x - leftShoulder.x) > 0.015,
             (wrist - elbow).length > 0.015
         else {
-            snapshot.trackingMessage = "session.reachTrackingLost"
-            clearEvidence()
+            noteTrackingLoss(at: time)
+            freezeEvidence(at: time)
             return
         }
-        snapshot.trackingMessage = nil
+        noteTrackingRecovery(at: time)
         let sign = rightShoulder.x > leftShoulder.x ? 1.0 : -1.0
         if start != nil, sign != rightSign {
             _ = handle(.recalibrate)
@@ -287,18 +388,19 @@ struct DirectionalReachActivity: TherapyActivity {
         let delta = gap > 0 && gap <= 0.3 ? min(0.2, gap) : 0
         if gap > 0.3 {
             hold.clear()
-            dwell = nil
         }
         last = time
-        if radius == 0 { radius = (wrist - elbow).length * 0.2 }
+        if radius == 0 {
+            radius = (wrist - elbow).length * 0.2
+            armLength = (elbow - shoulder).length + (wrist - elbow).length
+            shoulderWidth = abs(rightShoulder.x - leftShoulder.x)
+        }
         let relative = wrist - shoulder
         switch phase {
         case .start:
             snapshot.instruction = "session.reachStart"
-            guard !awaitingGuidance, let preparingUntil else { return }
-            snapshot.seconds = max(0, Int(ceil(preparingUntil - time)))
-            guard time >= preparingUntil else { return }
-            hold.consume(relative, time: time, duration: 1, tolerance: radius * 0.5, maximumGap: 0.3)
+            guard !awaitingGuidance else { return }
+            hold.consume(relative, time: time, duration: Self.holdDuration, tolerance: radius * 0.5, maximumGap: 0.3, wobbleGrace: 0.3)
             snapshot.progress = hold.progress
             snapshot.guide = TargetGuide(
                 start: wrist, target: wrist, tracked: wrist, radius: radius,
@@ -308,38 +410,54 @@ struct DirectionalReachActivity: TherapyActivity {
                 start = mean
                 phase = .assess
                 awaitingGuidance = true
-                snapshot.instruction = directionKey
+                snapshot.instruction = assessmentKey
                 resetAttempt()
             }
         case .assess:
             guard let start else {
                 return
             }
-            snapshot.instruction = directionKey
+            snapshot.instruction = assessmentKey
+            // The ghost is anchored at the shoulder, not the resting wrist: left and right sit at
+            // shoulder height and up sits above the shoulder, so the patient reaches out to the
+            // sides and overhead as far as they can.
+            let distance = ghostDistance(from: shoulder, aspect: frame.aspect)
+            let ghost = vector.scaled(distance)
             snapshot.guide = TargetGuide(
-                start: shoulder + start, target: shoulder + start + vector.scaled(max(radius * 4, 0.08)),
+                start: shoulder + start, target: shoulder + ghost,
                 tracked: wrist, radius: radius, targetActive: true,
-                progress: hold.progress, aspect: frame.aspect, directionOnly: true,
-                farthest: farthest.map { shoulder + $0 }
+                progress: hold.progress, aspect: frame.aspect, jointHold: true
             )
             guard !awaitingGuidance else { return }
             elapsed += delta
-            snapshot.seconds = max(0, Int(ceil(8 - elapsed)))
-            hold.consume(relative, time: time, duration: 1, tolerance: radius * 0.5, maximumGap: 0.3)
+            hold.consume(relative, time: time, duration: Self.holdDuration, tolerance: radius * 0.5, maximumGap: 0.3, wobbleGrace: 0.3)
             snapshot.progress = hold.progress
+            snapshot.guide?.progress = hold.progress
+
             if hold.progress >= 1, let mean = hold.mean {
+                // Measured along the line from the rest position to the ghost.
                 let displacement = mean - start
-                let forward = displacement.x * vector.x + displacement.y * vector.y
-                let orthogonal = abs(displacement.x * vector.y - displacement.y * vector.x)
-                let previous = farthest.map { ($0.x - start.x) * vector.x + ($0.y - start.y) * vector.y } ?? 0
-                if forward > 0, forward >= orthogonal, forward > previous {
-                    farthest = mean
+                let toGhost = ghost - start
+                let ghostLength = toGhost.length
+                let axis = ghostLength > 0 ? toGhost.scaled(1 / ghostLength) : vector
+                let forward = displacement.x * axis.x + displacement.y * axis.y
+                let orthogonal = abs(displacement.x * axis.y - displacement.y * axis.x)
+
+                // A token hop short of the ghost is not the farthest reach; the hold restarts.
+                let reachedFar = forward >= ghostLength * Self.minimumReachFraction
+
+                if forward > radius * 2, forward >= orthogonal, reachedFar {
+                    targets[direction] = mean
+                    phase = .assessReturn
+                    resetAttempt()
+                    return
                 }
+
+                // A steady hold in the wrong place starts over instead of being credited.
+                hold.clear()
             }
-            if elapsed >= 8 {
-                if let farthest, (farthest - start).length > radius * 2 {
-                    targets[direction] = farthest
-                }
+
+            if elapsed >= Self.assessmentIdleLimit {
                 phase = .assessReturn
                 resetAttempt()
             }
@@ -352,7 +470,7 @@ struct DirectionalReachActivity: TherapyActivity {
                     direction += 1
                     phase = .assess
                     awaitingGuidance = true
-                    snapshot.instruction = directionKey
+                    snapshot.instruction = assessmentKey
                 } else {
                     phase = .countdown
                     direction = 0
@@ -364,13 +482,7 @@ struct DirectionalReachActivity: TherapyActivity {
             }
         case .countdown:
             if deadline == nil { deadline = time + 3 }
-            snapshot.instruction = "session.countdown"
-            snapshot.seconds = max(0, Int(ceil((deadline ?? time) - time)))
-            if time >= (deadline ?? time) {
-                phase = .returning
-                restartingRound = true
-                resetAttempt()
-            }
+            advanceCountdown(at: time)
         case .outward:
             snapshot.instruction = directionKey
             elapsed += delta
@@ -427,11 +539,29 @@ struct DirectionalReachActivity: TherapyActivity {
         }
     }
 
+    /// Runs from the clock as well as from frames, so losing tracking never freezes the digit.
+    private mutating func advanceCountdown(at time: Double) {
+        guard phase == .countdown, let deadline else {
+            return
+        }
+
+        snapshot.instruction = "session.countdown"
+        snapshot.seconds = max(0, Int(ceil(deadline - time)))
+
+        guard time >= deadline else {
+            return
+        }
+
+        self.deadline = nil
+        phase = .returning
+        restartingRound = true
+        resetAttempt()
+    }
+
     private mutating func resetAttempt() {
         elapsed = 0
-        farthest = nil
         hold.clear()
-        dwell = nil
+        dwell.reset()
         last = nil
         snapshot.progress = 0
         snapshot.guide = nil
@@ -453,9 +583,15 @@ struct DirectionalReachActivity: TherapyActivity {
             body: radius, separation: target == start ? nil : (target - start).length,
             aspect: frame.aspect, viewport: viewport)
         let inside = (relative - (outward ? target : start)).length <= effective
-        if !inside { dwell = nil }
-        if inside, dwell == nil { dwell = time }
-        let progress = inside ? min(1, (time - (dwell ?? time)) / 1.0) : 0
+
+        // Stepping out briefly or a jittery sample freezes the dwell; only a longer exit clears it.
+        if inside {
+            dwell.credit(at: time, maximumStep: 0.3)
+        } else {
+            dwell.interrupt(at: time, grace: InterruptibleHold.zoneExitGrace)
+        }
+
+        let progress = dwell.progress(duration: Self.dwellDuration)
         snapshot.progress = progress
         snapshot.guide = TargetGuide(
             start: shoulder + start, target: shoulder + target, tracked: wrist, radius: effective,
@@ -464,8 +600,14 @@ struct DirectionalReachActivity: TherapyActivity {
             let tip = shoulder + start + vector.scaled(max(radius * 4, 0.08))
             snapshot.guide?.directionTip = tip
             snapshot.guide?.showsDirectionArrow = false
-            snapshot.guide?.farthest = farthest.map { shoulder + $0 }
         }
-        return progress >= 1
+        guard progress >= 1 else {
+            return false
+        }
+
+        // An accepted arrival must not carry its hold into the next zone.
+        dwell.reset()
+
+        return true
     }
 }

@@ -113,6 +113,13 @@ final class SessionAudioService: NSObject, VoiceReadinessProviding, AVSpeechSynt
         voice = NarrationVoice.best(for: synthesisLocale)
         clips = [:]
         towelEffects = [:]
+
+        // Count clips are preloaded so the first play of each number cannot glitch.
+        let countLanguage = synthesisLocale.hasPrefix("id") ? "id" : "en"
+        for number in 1...20 {
+            prepareClip("count-\(countLanguage)-\(number)")
+        }
+
         for name in ["button-click", "target-reached", "set-complete"] {
             if let url = Bundle.main.url(forResource: name, withExtension: "wav") {
                 towelEffects[name] = try? PreparedAudioClip(url: url)
@@ -121,6 +128,17 @@ final class SessionAudioService: NSObject, VoiceReadinessProviding, AVSpeechSynt
         if let url = Bundle.main.url(forResource: "target-reached", withExtension: "wav") {
             targetEffect = try? PreparedAudioClip(url: url)
         }
+    }
+
+    /// True while a cue, count or narration clip is being spoken or queued.
+    var isNarrating: Bool {
+        !utteranceIDs.isEmpty || clipID != nil || pendingSpeech != nil || !pendingCounts.isEmpty
+    }
+
+    /// Short effects never play over speech: fade them out before any narration begins.
+    private func stopEffects() {
+        targetEffect?.stop()
+        towelEffects.values.forEach { $0.stop() }
     }
 
     func speak(id: UUID, text: String) {
@@ -140,6 +158,7 @@ final class SessionAudioService: NSObject, VoiceReadinessProviding, AVSpeechSynt
         }
         let utterance = NarrationVoice.utterance(text, voice: voice)
         utteranceIDs[ObjectIdentifier(utterance)] = id
+        stopEffects()
         music.setDucked(true)
         synthesizer.speak(utterance)
         speechWatchdog?.cancel()
@@ -206,7 +225,7 @@ final class SessionAudioService: NSObject, VoiceReadinessProviding, AVSpeechSynt
                 return
             }
         case .target:
-            let volume: Float = utteranceIDs.isEmpty && clipID == nil ? 1 : 0.4
+            let volume: Float = utteranceIDs.isEmpty && clipID == nil ? 0.8 : 0.4
             guard let targetEffect,
                   targetEffect.play(id: id, volume: volume, completion: { [weak self] _, success in
                       if !success { self?.events.send(.feedbackUnavailable) }
@@ -238,7 +257,7 @@ final class SessionAudioService: NSObject, VoiceReadinessProviding, AVSpeechSynt
             let language = synthesisLocale.hasPrefix("id") ? "id" : "en"
             let name = "count-\(language)-\(number)"
             if Bundle.main.url(forResource: name, withExtension: "wav") != nil {
-                playClip(name, id: id, timeout: 1, failure: { [weak self] in
+                playClip(name, id: id, timeout: 2, failure: { [weak self] in
                     self?.speak(id: id, text: String(number))
                 })
             } else {
@@ -251,24 +270,31 @@ final class SessionAudioService: NSObject, VoiceReadinessProviding, AVSpeechSynt
             switch prefix {
             case .target:
                 name = "target-reached"
-                timeout = 1
+                timeout = 2
             case .count(let number):
                 let language = synthesisLocale.hasPrefix("id") ? "id" : "en"
                 name = "count-\(language)-\(number)"
                 timeout = 20
             default:
-                speak(id: id, text: String(localized: String.LocalizationValue(key), bundle: language.resourceBundle, locale: language.locale))
+                speak(id: id, text: NarrationText.resolve(key, bundle: language.resourceBundle, locale: language.locale))
                 return
             }
             playClip(name, id: id, timeout: timeout, completion: { [weak self] in
-                self?.speak(id: id, text: String(localized: String.LocalizationValue(key), bundle: self?.language.resourceBundle ?? AppLanguage.selected.resourceBundle, locale: self?.language.locale ?? AppLanguage.selected.locale))
+                self?.speak(
+                    id: id,
+                    text: NarrationText.resolve(
+                        key,
+                        bundle: self?.language.resourceBundle ?? AppLanguage.selected.resourceBundle,
+                        locale: self?.language.locale ?? AppLanguage.selected.locale
+                    )
+                )
             })
         case .closing(let completed):
             cancelSpeech()
             let key = completed ? "parity.closingComplete" : "parity.closingPartial"
             let speakClosing = { [weak self] in
                 guard let self else { return }
-                self.speak(id: id, text: String(localized: String.LocalizationValue(key), bundle: self.language.resourceBundle, locale: self.language.locale))
+                self.speak(id: id, text: NarrationText.resolve(key, bundle: self.language.resourceBundle, locale: self.language.locale))
                 self.closingWatchdog = Task { [weak self] in
                     do { try await Task.sleep(for: .seconds(20)) } catch { return }
                     self?.cancelSpeech()
@@ -283,7 +309,7 @@ final class SessionAudioService: NSObject, VoiceReadinessProviding, AVSpeechSynt
     }
 
     func speak(id: UUID, key: String) {
-        let text = String(localized: String.LocalizationValue(key), bundle: language.resourceBundle, locale: language.locale)
+        let text = NarrationText.resolve(key, bundle: language.resourceBundle, locale: language.locale)
         guard utteranceIDs.isEmpty, clipID == nil else {
             if let previous = pendingSpeech {
                 events.send(.cancelled(previous.id))
@@ -302,6 +328,7 @@ final class SessionAudioService: NSObject, VoiceReadinessProviding, AVSpeechSynt
         }
         activeClip = clip
         clipID = id
+        stopEffects()
         music.setDucked(true)
         let completed: (UUID, Bool) -> Void = { [weak self] id, success in
             guard let self, self.clipID == id else { return }
@@ -329,8 +356,9 @@ final class SessionAudioService: NSObject, VoiceReadinessProviding, AVSpeechSynt
     }
 
     private func playClip(_ name: String, id: UUID, timeout: Double, failure: (() -> Void)? = nil, completion: (() -> Void)? = nil) {
-        clips.removeAll()
-        prepareClip(name)
+        if clips[name] == nil {
+            prepareClip(name)
+        }
         guard let clip = clips[name] else {
             events.send(.feedbackUnavailable)
             failure?()
@@ -339,6 +367,7 @@ final class SessionAudioService: NSObject, VoiceReadinessProviding, AVSpeechSynt
             return
         }
         activeClip = clip
+        stopEffects()
         music.setDucked(true)
         clipID = id
         afterClip = completion
@@ -581,7 +610,9 @@ final class SessionAudioService: NSObject, VoiceReadinessProviding, AVSpeechSynt
 
     func startMusic() {
         do {
-            try NarrationAudioSession.activate(listening: listeningActive)
+            // Voice commands are mandatory before therapy, so the session always uses the listening
+            // configuration; switching categories mid-playback would click.
+            try NarrationAudioSession.activate(listening: true)
             music.start()
         } catch {
             music.pause()

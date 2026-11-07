@@ -11,6 +11,7 @@ final class AudioInputWorker: @unchecked Sendable {
     private let lock = NSLock()
     private var request: SFSpeechAudioBufferRecognitionRequest?
     private var installed = false
+    private var voiceProcessingConfigured = false
 
     func replaceRequest(_ value: SFSpeechAudioBufferRecognitionRequest?) {
         lock.lock()
@@ -22,16 +23,10 @@ final class AudioInputWorker: @unchecked Sendable {
         await withCheckedContinuation { continuation in
             queue.async { [self] in
                 do {
-                    let session = AVAudioSession.sharedInstance()
-                    var mode: AVAudioSession.Mode = .default
-                    #if DEBUG
-                    if ProcessInfo.processInfo.arguments.contains(NarrationAudioSession.voiceChatComparisonArgument) {
-                        mode = .voiceChat
-                    }
-                    #endif
-                    try session.setCategory(.playAndRecord, mode: mode, options: [.defaultToSpeaker])
-                    try session.setActive(true)
+                    // The same configuration the narrators use, so nothing flips mid-playback.
+                    try NarrationAudioSession.activate(listening: true)
                     let input = self.engine.inputNode
+                    self.enableVoiceProcessingIfNeeded(on: input)
                     let format = input.outputFormat(forBus: 0)
                     guard format.sampleRate > 0, format.channelCount > 0 else {
                         throw CocoaError(.validationMissingMandatoryProperty)
@@ -62,8 +57,43 @@ final class AudioInputWorker: @unchecked Sendable {
             self.stopEngine()
             if deactivate {
                 try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
+                NarrationAudioSession.noteDeactivated()
             }
         }
+    }
+
+    /// Echo cancellation and noise suppression let the microphone hear the patient while the
+    /// speaker plays narration and music. By default voice processing also ducks every other
+    /// sound hard; minimum ducking keeps narration and music at normal volume.
+    ///
+    /// Configured once, before the engine first starts; a failure leaves listening without it.
+    private func enableVoiceProcessingIfNeeded(on input: AVAudioInputNode) {
+        guard !voiceProcessingConfigured, !Self.voiceProcessingDisabled else {
+            return
+        }
+
+        do {
+            try input.setVoiceProcessingEnabled(true)
+            input.voiceProcessingOtherAudioDuckingConfiguration = AVAudioVoiceProcessingOtherAudioDuckingConfiguration(
+                enableAdvancedDucking: false,
+                duckingLevel: .min
+            )
+            voiceProcessingConfigured = true
+            #if DEBUG
+            NSLog("Voice processing enabled for listening")
+            #endif
+        } catch {
+            NSLog("Voice processing unavailable: %@", error.localizedDescription)
+        }
+    }
+
+    /// Debug launch argument to compare listening and loudness without voice processing.
+    private static var voiceProcessingDisabled: Bool {
+        #if DEBUG
+        return ProcessInfo.processInfo.arguments.contains("-IteraNoVoiceProcessing")
+        #else
+        return false
+        #endif
     }
 
     private func stopEngine() {

@@ -16,7 +16,7 @@ This is an implementation record, not a claim of WCAG or COGA conformance.
 | Prevent mistakes | Tracking acceptance and freshness checks remain immediate. Presentation delays never allow repetitions from missing evidence. |
 | Maintain attention | Calm display removes decorative rest and celebration motion. Button sounds can be disabled separately. System Reduce Motion remains respected. |
 | Reduce memory demands | Temporary camera waits preserve the current stage, example and controls instead of replacing them with a recovery screen. The timer remains owned by the engine. |
-| Help and support | Existing help, repeat instruction and explicit resume remain available; permission and voice failures retain their recovery controls. |
+| Help and support | Repeat instruction and explicit resume remain available (Help only for cup and sit-to-stand); permission and voice failures retain their recovery controls. |
 | Adapt to the user | Comfort choices persist. Full-screen control layout stacks at accessibility text sizes. |
 
 ## Tracking presentation

@@ -181,7 +181,7 @@ final class HandCameraService: NSObject, AVCaptureVideoDataOutputSampleBufferDel
 
             // Never choose by screen position alone; ambiguous scenes report no hand.
             guard let index = subjects.select(
-                hands.map { Self.candidate(for: $0, aspect: aspect) },
+                hands.map { HandPoseExtractor.candidate(for: $0, aspect: aspect) },
                 at: timestamp,
                 generation: generation
             ) else {
@@ -219,47 +219,6 @@ final class HandCameraService: NSObject, AVCaptureVideoDataOutputSampleBufferDel
         } catch {
             events.send(.sample(CameraSample(evidence: nil, timestamp: timestamp, generation: generation, issue: .unreadable)))
         }
-    }
-
-    private static func candidate(
-        for hand: VNHumanHandPoseObservation,
-        aspect: Double
-    ) -> HandSubjectSelector.Candidate {
-        let wrist = try? hand.recognizedPoint(.wrist)
-        let knuckle = try? hand.recognizedPoint(.middleMCP)
-
-        func position(_ point: VNRecognizedPoint?) -> TherapyPoint? {
-            guard let point, point.confidence >= 0.3 else {
-                return nil
-            }
-
-            return TherapyPoint(x: point.location.x * aspect, y: point.location.y)
-        }
-
-        let wristPosition = position(wrist)
-        let knucklePosition = position(knuckle)
-        var size = 0.0
-
-        if let wristPosition, let knucklePosition {
-            size = (wristPosition - knucklePosition).length
-        }
-
-        let side: HandSide?
-        switch hand.chirality {
-        case .left:
-            side = .left
-        case .right:
-            side = .right
-        default:
-            side = nil
-        }
-
-        return HandSubjectSelector.Candidate(
-            // An unreadable wrist sits far away, so continuity can never select it.
-            wrist: wristPosition ?? TherapyPoint(x: .infinity, y: .infinity),
-            size: size,
-            side: side
-        )
     }
 
     private enum CameraError: Error { case unavailable }

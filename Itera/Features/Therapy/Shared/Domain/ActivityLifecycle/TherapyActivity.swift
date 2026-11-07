@@ -23,6 +23,8 @@ struct TargetGuide {
     var directionTip: TherapyPoint? = nil
     var showsDirectionArrow = true
     var directionOnly = false
+    /// Draws the hold ring around the tracked joint instead of around a bubble.
+    var jointHold = false
     var capturing = false
     var savedStart = false
     var farthest: TherapyPoint? = nil
