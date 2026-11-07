@@ -42,6 +42,8 @@ final class BodyTrackingService: NSObject, AVCaptureVideoDataOutputSampleBufferD
     private var watchdogIdentity = UUID()
     private var frameWatchdog: DispatchWorkItem?
     private var awaitingFirstFrame = false
+    /// Automatic restarts since the last delivered frame; bounded so a dead camera is reported, not looped.
+    private var watchdogRestarts = 0
     private var captureStartedAt = 0.0
 
     func requireCup(_ enabled: Bool) {
@@ -67,11 +69,17 @@ final class BodyTrackingService: NSObject, AVCaptureVideoDataOutputSampleBufferD
     private let handRequest = VNDetectHumanHandPoseRequest()
     private var handEnabled = false
     private var normalLens = false
+    /// Chooses the patient's hand among several. Confined to `inferenceQueue`.
+    private var handSubjects = HandSubjectSelector()
 
     /// Hand inference shares the capture session and bounded delivery with body and cup modes.
-    func requireHand(_ enabled: Bool) {
+    /// - Parameter side: the exercised hand, used to pick the patient's hand when several are visible.
+    func requireHand(_ enabled: Bool, side: HandSide? = nil) {
         inferenceQueue.async { [weak self] in
-            self?.handEnabled = enabled
+            guard let self else { return }
+            self.handEnabled = enabled
+            self.handSubjects.preferredSide = side
+            self.handSubjects.reset()
         }
         queue.async { [weak self] in
             guard let self, self.normalLens != enabled else { return }
@@ -95,7 +103,7 @@ final class BodyTrackingService: NSObject, AVCaptureVideoDataOutputSampleBufferD
 
     override init() {
         super.init()
-        handRequest.maximumHandCount = 2
+        handRequest.maximumHandCount = 4
         let center = NotificationCenter.default
         notifications.append(
             center.addObserver(
@@ -320,6 +328,7 @@ final class BodyTrackingService: NSObject, AVCaptureVideoDataOutputSampleBufferD
         if awaitingFirstFrame {
             awaitingFirstFrame = false
             NSLog("Body capture first frame delay=%.3f seconds generation=%@", ProcessInfo.processInfo.systemUptime - captureStartedAt, generation.uuidString)
+            watchdogRestarts = 0
             availability.send(.ready(generation))
         }
         scheduleFrameWatchdog(for: generation)
@@ -334,7 +343,8 @@ final class BodyTrackingService: NSObject, AVCaptureVideoDataOutputSampleBufferD
     }
 
     private func process(_ image: CVPixelBuffer, time: Double, generation: UUID) {
-        guard (!cupEnabled && !handEnabled) || time - lastPublished >= 1.0 / 20 else { return }
+        // Hand inference runs at the full capture rate: a lower rate makes the cursor visibly steppy.
+        guard !cupEnabled || time - lastPublished >= 1.0 / 20 else { return }
         lastPublished = time
         do {
             if !cupEnabled && !handEnabled {
@@ -363,9 +373,15 @@ final class BodyTrackingService: NSObject, AVCaptureVideoDataOutputSampleBufferD
             var hand: HandEvidence?
             if handEnabled {
                 try VNImageRequestHandler(cvPixelBuffer: image, orientation: .up).perform([handRequest])
-                if let hands = handRequest.results, hands.count == 1, let observation = hands.first {
+                let hands = handRequest.results ?? []
+                // Never choose by screen position alone; ambiguous scenes report no hand.
+                if let index = handSubjects.select(
+                    hands.map { HandPoseExtractor.candidate(for: $0, aspect: imageAspect) },
+                    at: time,
+                    generation: generation
+                ) {
                     hand = try HandPoseExtractor.evidence(
-                        from: observation, timestamp: time, generation: generation,
+                        from: hands[index], timestamp: time, generation: generation,
                         width: Double(CVPixelBufferGetWidth(image)),
                         height: Double(CVPixelBufferGetHeight(image))
                     )
@@ -390,7 +406,8 @@ final class BodyTrackingService: NSObject, AVCaptureVideoDataOutputSampleBufferD
                     // Bystanders are excluded once the patient is selected; ambiguity reports everyone.
                     personCount: subject == nil ? people.count : 1,
                     joints: joints,
-                    cup: cup, hand: hand
+                    cup: cup, hand: hand,
+                    subjectEpoch: subjects.epoch
                 ))
         } catch {
             if time - lastInferenceFailure >= 5 {
@@ -454,7 +471,8 @@ final class BodyTrackingService: NSObject, AVCaptureVideoDataOutputSampleBufferD
 
         guard !torso.isEmpty, confident.count >= 2 else {
             // Without a torso this person cannot be followed, so they can never win continuity.
-            return BodySubjectSelector.Candidate(torso: TherapyPoint(x: .infinity, y: .infinity), size: 0)
+            return BodySubjectSelector.Candidate(
+                torso: TherapyPoint(x: .infinity, y: .infinity), size: 0, torsoSize: 0)
         }
 
         let xs = confident.map(\.x)
@@ -465,7 +483,15 @@ final class BodyTrackingService: NSObject, AVCaptureVideoDataOutputSampleBufferD
         )
         let center = torso.reduce(TherapyPoint(x: 0, y: 0), +).scaled(1 / Double(torso.count))
 
-        return BodySubjectSelector.Candidate(torso: center, size: diagonal.length)
+        let torsoXs = torso.map(\.x)
+        let torsoYs = torso.map(\.y)
+        let torsoDiagonal = TherapyPoint(
+            x: (torsoXs.max() ?? 0) - (torsoXs.min() ?? 0),
+            y: (torsoYs.max() ?? 0) - (torsoYs.min() ?? 0)
+        )
+
+        return BodySubjectSelector.Candidate(
+            torso: center, size: diagonal.length, torsoSize: torsoDiagonal.length)
     }
 
     private func invalidateGeneration() {
@@ -499,6 +525,17 @@ final class BodyTrackingService: NSObject, AVCaptureVideoDataOutputSampleBufferD
             NSLog("Body capture frame timeout firstFrame=%@ generation=%@", firstFrame.description, expectedGeneration.uuidString)
             self.availability.send(.discontinuity)
             self.failures.send(firstFrame ? "Camera did not deliver a startup frame." : "Camera frames stopped arriving.")
+
+            // Try once to bring the camera back without waiting for a manual retry; the session
+            // still pauses on the discontinuity and resumes only on explicit request.
+            guard self.watchdogRestarts < 1 else {
+                return
+            }
+
+            self.watchdogRestarts += 1
+            self.queue.asyncAfter(deadline: .now() + 0.5) { [weak self] in
+                self?.startIfRequested()
+            }
         }
         frameWatchdog = work
         queue.asyncAfter(deadline: .now() + (firstFrame ? 3.0 : 1.0), execute: work)

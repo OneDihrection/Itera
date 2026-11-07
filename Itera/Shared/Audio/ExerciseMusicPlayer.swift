@@ -88,7 +88,7 @@ final class ExerciseMusicPlayer {
             return
         }
         ducked = value
-        player?.setVolume(volume, fadeDuration: 0.2)
+        player?.setVolume(volume, fadeDuration: 0.3)
     }
 
     func refresh() {
@@ -115,7 +115,6 @@ final class ExerciseMusicPlayer {
         }
     }
 
-    // Both supplied recordings begin softly. Retain audible music during narration,
-    // rather than attenuating their opening by another 32 dB.
-    private var volume: Float { ducked ? 0.18 : 0.50 }
+    // Music stays audible but well under narration, so speech stays clear and loud.
+    private var volume: Float { ducked ? 0.10 : 0.50 }
 }

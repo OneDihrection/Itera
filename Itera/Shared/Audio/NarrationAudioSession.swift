@@ -18,8 +18,20 @@ enum NarrationAudioSession {
     /// Launch argument that restores `.voiceChat` while listening, to compare on a device.
     static let voiceChatComparisonArgument = "-IteraVoiceChatAudioMode"
 
+    private static let lock = NSLock()
+    private static var isActive = false
+
+    /// Configures the shared session, touching it only when something actually differs.
+    ///
+    /// Changing the category or reactivating while audio plays reconfigures the route and sample
+    /// rate, which clicks and glitches music and narration. A therapy session therefore asks for the
+    /// same configuration throughout, and repeated calls are no-ops.
     static func activate(listening: Bool, allowsBluetoothMicrophone: Bool = false) throws {
+        lock.lock()
+        defer { lock.unlock() }
+
         let session = AVAudioSession.sharedInstance()
+        var changed = false
 
         if listening {
             var options: AVAudioSession.CategoryOptions = [.defaultToSpeaker]
@@ -28,12 +40,39 @@ enum NarrationAudioSession {
                 options.insert(.allowBluetoothHFP)
             }
 
-            try session.setCategory(.playAndRecord, mode: listeningMode, options: options)
+            let matches = session.category == .playAndRecord
+                && session.mode == listeningMode
+                && session.categoryOptions.isSuperset(of: options)
+
+            if !matches {
+                try session.setCategory(.playAndRecord, mode: listeningMode, options: options)
+                changed = true
+            }
         } else {
-            try session.setCategory(.playback, mode: .spokenAudio)
+            let matches = session.category == .playback && session.mode == .spokenAudio
+
+            if !matches {
+                try session.setCategory(.playback, mode: .spokenAudio)
+                changed = true
+            }
+        }
+
+        guard changed || !isActive else {
+            return
         }
 
         try session.setActive(true)
+        isActive = true
+        #if DEBUG
+        NSLog("Audio session configured listening=%@", listening.description)
+        #endif
+    }
+
+    /// Call when the owning service deactivates the session, so the next `activate` reactivates it.
+    static func noteDeactivated() {
+        lock.lock()
+        isActive = false
+        lock.unlock()
     }
 
     private static var listeningMode: AVAudioSession.Mode {

@@ -16,6 +16,7 @@ struct BodyCameraPreview: UIViewRepresentable {
 
     func makeUIView(context: Context) -> PreviewView {
         let view = PreviewView()
+        PreviewView.active = view
         view.previewLayer.videoGravity = .resizeAspect
         view.previewLayer.session = session
         view.onReady = onReady
@@ -36,7 +37,10 @@ struct BodyCameraPreview: UIViewRepresentable {
     }
 
     static func dismantleUIView(_ view: PreviewView, coordinator: ()) {
-        view.onReady?(false)
+        // A replaced view must not clear readiness that its successor already reported.
+        if PreviewView.active === view || PreviewView.active == nil {
+            view.onReady?(false)
+        }
         view.observation = nil
         view.onReady = nil
         view.onOrientation = nil
@@ -44,6 +48,9 @@ struct BodyCameraPreview: UIViewRepresentable {
     }
 
     final class PreviewView: UIView {
+        /// The most recently created preview, the only one allowed to report "not ready" on teardown.
+        static weak var active: PreviewView?
+
         var observation: NSKeyValueObservation?
         var onReady: ((Bool) -> Void)?
         var onOrientation: ((Bool) -> Void)?

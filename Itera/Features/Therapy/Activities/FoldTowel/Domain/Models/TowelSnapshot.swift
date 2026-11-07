@@ -27,10 +27,11 @@ struct TowelSnapshot {
     var trackingMessage: String?
 }
 
-/// Camera-derived curl is a visible gesture estimate, never grip force.
+/// Camera-derived pinch is a visible gesture estimate, never grip force.
 struct TowelHandMeasurement {
     let position: TherapyPoint
-    let curl: Double?
+    /// Thumb-tip to index-tip distance over palm length; small when pinched, `nil` when not measurable.
+    let pinch: Double?
 
     init?(_ hand: HandEvidence) {
         guard hand.points.count == 21,
@@ -47,13 +48,23 @@ struct TowelHandMeasurement {
         }
 
         guard usable(0) else { return nil }
-        let chains = [5, 9, 13, 17].filter {
-            [$0, $0 + 1, $0 + 2].allSatisfy(usable)
-                && hand.angle($0, $0 + 1, $0 + 2).isFinite
+        // Only the thumb and index tips are needed, so the other fingers may stay relaxed or hidden.
+        // Palm length (wrist to middle knuckle) makes the ratio independent of distance to the camera.
+        let palmLength = hand.distance(0, 9)
+        if [4, 8, 9].allSatisfy(usable), palmLength > 0.04 {
+            pinch = hand.distance(4, 8) / palmLength
+        } else {
+            pinch = nil
         }
-        curl = chains.count >= 2
-            ? chains.reduce(0) { $0 + (180 - hand.angle($1, $1 + 1, $1 + 2)) / 180 } / Double(chains.count)
-            : nil
-        position = TherapyPoint(x: hand.points[0].x, y: hand.points[0].y)
+
+        // The palm center (wrist plus knuckles) barely moves when the thumb and index close, unlike the
+        // wrist alone, whose detected position can shift with the hand pose.
+        let palm = ([0] + [5, 9, 13, 17]).filter(usable)
+        guard palm.count >= 3 else { return nil }
+        let count = Double(palm.count)
+        position = TherapyPoint(
+            x: palm.reduce(0) { $0 + hand.points[$1].x } / count,
+            y: palm.reduce(0) { $0 + hand.points[$1].y } / count
+        )
     }
 }

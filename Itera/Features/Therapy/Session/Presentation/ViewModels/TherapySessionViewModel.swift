@@ -39,6 +39,10 @@ final class TherapySessionViewModel {
     private(set) var entryFailure = false
     private(set) var entryMessage = "home.entryBlocked"
     private(set) var validating = false
+
+    /// True until the first `start` has validated entry and begun capture. Startup is not a failure,
+    /// so the view shows a neutral waiting surface instead of recovery controls.
+    var isStarting: Bool { !started && !entryFailure }
     @ObservationIgnored private var exited = false
     @ObservationIgnored private var lastPermissionCheck = 0.0
     @ObservationIgnored private var landscapeRight = false
@@ -69,6 +73,7 @@ final class TherapySessionViewModel {
         model.snapshot = snapshot
         model.voiceReady = true
         model.listening = true
+        model.started = true
         return model
     }
     #endif
@@ -139,10 +144,21 @@ final class TherapySessionViewModel {
             .first { $0 == .landscapeLeft || $0 == .landscapeRight }
         landscapeRight = orientation == .landscapeRight
         frontCamera = true
-        tracking.requireHand(snapshot.activity?.kind == .foldTowel)
+        updateHandRequirement()
         tracking.configure(front: true, landscapeRight: landscapeRight)
         tracking.start()
         send(.command(.resume))
+    }
+
+    /// Hand inference runs only for towel folding, which needs the exercised hand to pick the patient's
+    /// hand when a bystander's is also visible.
+    private func updateHandRequirement() {
+        guard let activity = snapshot.activity, activity.kind == .foldTowel else {
+            tracking.requireHand(false)
+            return
+        }
+
+        tracking.requireHand(true, side: HandSide(rawValue: activity.side.rawValue))
     }
 
     private var allPermissionsGranted: Bool {
@@ -332,6 +348,7 @@ final class TherapySessionViewModel {
         }
         let transition = engine.handle(event, at: ProcessInfo.processInfo.systemUptime)
         let previousKind = snapshot.activity?.kind
+        let previousSide = snapshot.activity?.side
         let wasPaused = snapshot.paused
         snapshot = transition.snapshot
         if snapshot.summary != nil {
@@ -355,14 +372,15 @@ final class TherapySessionViewModel {
             towelSmoother.reset()
             towelDisplay = raw
         }
-        if previousKind != snapshot.activity?.kind {
-            tracking.requireHand(snapshot.activity?.kind == .foldTowel)
+        if previousKind != snapshot.activity?.kind || previousSide != snapshot.activity?.side {
+            updateHandRequirement()
             tracking.requireCup(snapshot.activity?.kind == .cup)
         }
         for effect in transition.effects {
             switch effect {
             case .speak(let id, let key):
-                var text = Int(key).map(String.init) ?? String(localized: String.LocalizationValue(key), bundle: sessionLanguage.resourceBundle, locale: sessionLocale)
+                var text = Int(key).map(String.init)
+                    ?? NarrationText.resolve(key, bundle: sessionLanguage.resourceBundle, locale: sessionLocale)
                 if key == "session.guidance", let activity = snapshot.activity {
                     let kindKey: String
                     switch activity.kind {
@@ -376,7 +394,8 @@ final class TherapySessionViewModel {
                     let sideKey = activity.side == .left ? "session.left" : "session.right"
                     let kindText = String(localized: String.LocalizationValue(kindKey), bundle: sessionLanguage.resourceBundle, locale: sessionLocale)
                     let sideText = String(localized: String.LocalizationValue(sideKey), bundle: sessionLanguage.resourceBundle, locale: sessionLocale)
-                    text = activity.hasSide ? kindText + ". " + sideText + ". " + text : kindText + ". " + text
+                    // Spoken short: the exercise and side only; the screen keeps the full sentence.
+                    text = activity.hasSide ? kindText + ". " + sideText + "." : kindText + "."
                 }
                 // A single-key sentence can use its bundled recording; numbers and the
                 // combined exercise/side/guidance cue keep the system voice.

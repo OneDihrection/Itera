@@ -10,7 +10,7 @@ import Foundation
 /// Evidence-driven folding in normalized preview coordinates. Display interpolation never scores.
 struct TowelFoldSequence {
     enum Grip { case open, closed, transitioning, uncertain }
-    enum Phase { case approach, grabbing, folding, destinationHold, readyToRelease, recovering }
+    enum Phase { case approach, folding, readyToRelease, recovering }
 
     private(set) var foldIndex = 0
     private(set) var repetitions = 0
@@ -20,7 +20,6 @@ struct TowelFoldSequence {
     private(set) var grabID = 0
     private var lastTimestamp: Double?
     private var pendingSince: Double?
-    private var arrivalSince: Double?
     private var missingSince: Double?
     private var recoverySince: Double?
     private var lastPosition: TherapyPoint?
@@ -29,11 +28,17 @@ struct TowelFoldSequence {
     private var baseProgress = 0.0
 
     var horizontal: Bool { foldIndex % 2 == 0 }
-    var grabPoint: TherapyPoint {
-        horizontal ? TherapyPoint(x: 0.8, y: 0.5) : TherapyPoint(x: 0.5, y: 0.2)
-    }
-    var destination: TherapyPoint {
-        horizontal ? TherapyPoint(x: 0.2, y: 0.5) : TherapyPoint(x: 0.5, y: 0.8)
+    var grabPoint: TherapyPoint { Self.path(forFold: foldIndex).grab }
+    var destination: TherapyPoint { Self.path(forFold: foldIndex).destination }
+
+    /// Fixed normalized workspace targets: even folds go right to left, odd folds bottom to top (y is bottom-origin, as in Vision).
+    /// Shared with the demonstration so it shows exactly the reach the patient must make.
+    static func path(forFold index: Int) -> (grab: TherapyPoint, destination: TherapyPoint) {
+        if index % 2 == 0 {
+            return (TherapyPoint(x: 0.8, y: 0.5), TherapyPoint(x: 0.2, y: 0.5))
+        }
+
+        return (TherapyPoint(x: 0.5, y: 0.2), TherapyPoint(x: 0.5, y: 0.8))
     }
 
     mutating func suspend() {
@@ -44,11 +49,10 @@ struct TowelFoldSequence {
 
     mutating func trackingLost(at time: Double? = nil) {
         pendingSince = nil
-        arrivalSince = nil
         recoverySince = nil
         holdProgress = 0
         guard let time, time.isFinite,
-              phase == .folding || phase == .destinationHold || phase == .readyToRelease || phase == .recovering else {
+              phase == .folding || phase == .readyToRelease || phase == .recovering else {
             cancelGrasp()
             return
         }
@@ -76,7 +80,10 @@ struct TowelFoldSequence {
             recover(position: position, grip: grip, timestamp: timestamp)
             return
         }
-        guard grip != .uncertain && grip != .transitioning else {
+        // Opening the hand passes through mid-curl frames; that must not read as a lost hand at the
+        // destination, or the release would be discarded.
+        let midRelease = grip == .transitioning && phase == .readyToRelease
+        guard grip != .uncertain, grip == .open || grip == .closed || midRelease else {
             trackingLost(at: timestamp)
             return
         }
@@ -84,21 +91,19 @@ struct TowelFoldSequence {
         let atGrab = (position - grabPoint).length <= 0.12
         let atDestination = (position - destination).length <= 0.12
         switch phase {
-        case .approach, .grabbing:
+        case .approach:
+            // Pinching inside the grab zone grabs at once; arriving already pinched is valid.
             guard atGrab, grip == .closed else {
                 cancelGrasp()
                 return
             }
-            phase = .grabbing
-            if held(at: timestamp, duration: 0.2) {
-                phase = .folding
-                grabID += 1
-                travelOrigin = position
-                travelPath = destination - position
-                baseProgress = 0
-                clearHold()
-            }
-        case .folding, .destinationHold:
+            phase = .folding
+            grabID += 1
+            travelOrigin = position
+            travelPath = destination - position
+            baseProgress = 0
+            clearHold()
+        case .folding:
             guard grip == .closed, let origin = travelOrigin else {
                 cancelGrasp()
                 return
@@ -109,27 +114,16 @@ struct TowelFoldSequence {
                 let projection = (offset.x * path.x + offset.y * path.y) / (path.length * path.length)
                 let perpendicular = abs(offset.x * path.y - offset.y * path.x) / path.length
                 guard perpendicular <= 0.15 else {
-                    arrivalSince = nil
-                    holdProgress = 0
-                    phase = .folding
                     return
                 }
                 progress = min(1, max(0, baseProgress + projection))
             }
             guard atDestination else {
-                arrivalSince = nil
-                holdProgress = 0
-                phase = .folding
                 return
             }
-            phase = .destinationHold
-            if arrivalSince == nil { arrivalSince = timestamp }
-            holdProgress = min(1, (timestamp - (arrivalSince ?? timestamp)) / 0.5)
-            if holdProgress >= 1 {
-                progress = 1
-                phase = .readyToRelease
-                clearHold()
-            }
+            progress = 1
+            phase = .readyToRelease
+            clearHold()
         case .readyToRelease:
             guard atDestination else {
                 cancelGrasp()
@@ -142,7 +136,9 @@ struct TowelFoldSequence {
                     foldIndex = 0
                 }
                 cancelGrasp()
-            } else if grip == .closed {
+            } else if grip != .open {
+                // Closed or mid-curl: the opening confirmation starts over. An open hand that has
+                // not yet held long enough keeps counting.
                 clearHold()
             }
         case .recovering:
@@ -200,7 +196,6 @@ struct TowelFoldSequence {
         progress = 0
         baseProgress = 0
         travelOrigin = nil
-        arrivalSince = nil
         clearHold()
     }
 }

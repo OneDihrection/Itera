@@ -32,7 +32,9 @@ enum TherapyAnimationPlayback: String {
     private var onEvent: ((Event) -> Void)?
 
     init() {
-        view.environment.background = .color(.init(white: 0.08, alpha: 1))
+        // A bright backdrop the figure stands out from; the SwiftUI panel uses the same colour.
+        view.environment.background = .color(UIColor(TherapyPalette.exerciseBackdrop))
+        view.environment.lighting.intensityExponent = 1.5
         view.isUserInteractionEnabled = false
         view.accessibilityElementsHidden = true
     }
@@ -130,7 +132,7 @@ enum TherapyAnimationPlayback: String {
 
         let camera = PerspectiveCamera()
         camera.camera.fieldOfViewInDegrees = 42
-        let distance = max(height, bounds.extents.x) * 2
+        let distance = max(height, bounds.extents.x) * 1.5
         // Orbit toward the rig's anatomical right (negative X), retaining framing distance.
         let azimuth: Float = (exercise == .armRaise ? -20 : -70) * .pi / 180
         let elevation: Float = 10 * .pi / 180
@@ -146,7 +148,7 @@ enum TherapyAnimationPlayback: String {
         let lightingTarget: SIMD3<Float> = [0, 0, -distance]
         let mainLight = DirectionalLight()
         mainLight.light.color = .white
-        mainLight.light.intensity = 2_500
+        mainLight.light.intensity = 4_000
         camera.addChild(mainLight)
         mainLight.look(
             at: lightingTarget,
@@ -161,6 +163,17 @@ enum TherapyAnimationPlayback: String {
         fillLight.look(
             at: lightingTarget,
             from: [-0.7 * distance, 0.2 * distance, 0],
+            relativeTo: camera
+        )
+
+        // A soft light from behind-above separates the figure from the bright backdrop.
+        let rimLight = DirectionalLight()
+        rimLight.light.color = .white
+        rimLight.light.intensity = 1_500
+        camera.addChild(rimLight)
+        rimLight.look(
+            at: lightingTarget,
+            from: [0, 0.6 * distance, -2 * distance],
             relativeTo: camera
         )
         view.scene.addAnchor(anchor)

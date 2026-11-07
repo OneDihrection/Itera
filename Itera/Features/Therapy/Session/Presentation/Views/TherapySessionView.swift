@@ -8,19 +8,22 @@
 import SwiftUI
 
 struct TherapySessionView: View {
-    @AppStorage(ExerciseMusicTrack.storageKey) private var musicTrack = ExerciseMusicTrack.defaultValue
+    @AppStorage(ExerciseMusicTrack.storageKey) var musicTrack = ExerciseMusicTrack.defaultValue
     @Environment(\.locale) private var locale
-    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.dynamicTypeSize) var dynamicTypeSize
+    @Environment(\.accessibilityReduceMotion) var reduceMotion
     /// Read from UIAccessibility instead of the environment key, which traps on Mac Catalyst.
-    @State private var voiceOver = UIAccessibility.isVoiceOverRunning
-    @ScaledMetric(relativeTo: .largeTitle) private var instructionSize = 96.0
-    @Environment(PermissionManager.self) private var permissions
-    @Environment(NavigationRouter.self) private var router
+    @State var voiceOver = UIAccessibility.isVoiceOverRunning
+    @ScaledMetric(relativeTo: .largeTitle) var instructionSize = 96.0
+    @Environment(PermissionManager.self) var permissions
+    @Environment(NavigationRouter.self) var router
     @Environment(\.scenePhase) private var scenePhase
     @AppStorage(PracticePreferences.calmMode) private var calmMode = false
     @State private var celebrationStart: Date?
-    @State private var model: TherapySessionViewModel
+    @State private var showsCameraRecovery = false
+    /// Rest length as first shown, so the light rest ring has a total to count down from.
+    @State var restTotal = 0.0
+    @State var model: TherapySessionViewModel
 
     private var presentationOnly = false
 
@@ -66,21 +69,7 @@ struct TherapySessionView: View {
                 }
                 .padding(12)
             } else {
-                let cameraHeight = geometry.size.height * (dynamicTypeSize.isAccessibilitySize ? 0.45 : 0.6)
-                let barsHeight = max(0, geometry.size.height - cameraHeight - 40)
-                VStack(spacing: 8) {
-                    ScrollView { header.frame(maxWidth: .infinity) }
-                        .frame(height: barsHeight * 0.4)
-                    camera.frame(height: cameraHeight)
-                    ScrollView {
-                        trackingStatus
-                        footer
-                        if let error = model.saveFailure { saveError(error) }
-                    }
-                    .frame(height: barsHeight * 0.6)
-                }
-                .padding(12)
-                .accessibilityHidden(hasFullScreenPresentation)
+                activityLayout(in: geometry.size)
             }
         }
         .overlay {
@@ -93,6 +82,11 @@ struct TherapySessionView: View {
                 SessionCelebration(start: celebrationStart).ignoresSafeArea()
             }
         }
+        .onChange(of: model.snapshot.stage) { _, stage in
+            if stage == .rest {
+                restTotal = Double(model.snapshot.seconds)
+            }
+        }
         .onChange(of: model.snapshot.summary?.id) { _, id in
             if id != nil, let summary = model.snapshot.summary,
                 !summary.stopped, !summary.interrupted {
@@ -102,21 +96,27 @@ struct TherapySessionView: View {
         .overlay {
             if model.snapshot.summary == nil, !hasFullScreenPresentation {
                 RoundedRectangle(cornerRadius: 36, style: .continuous)
-                    .strokeBorder(phaseColor, lineWidth: 8)
+                    .strokeBorder(
+                        usesLightLayout ? Color.clear : phaseColor,
+                        lineWidth: 8
+                    )
                     .ignoresSafeArea()
                     .allowsHitTesting(false)
                     .accessibilityHidden(true)
             }
         }
         .environment(\.locale, model.sessionLocale)
-        .background(.black)
-        .foregroundStyle(.white)
+        .background(usesLightTheme ? TherapyPalette.canvas : Color.black)
+        .foregroundStyle(usesLightTheme ? TherapyPalette.ink : Color.white)
         .toolbar(model.snapshot.summary == nil ? .hidden : .visible, for: .navigationBar)
         .navigationTitle(model.snapshot.summary == nil ? "" : "session.summaryTitle")
         .statusBarHidden(model.snapshot.summary == nil)
         .navigationBarBackButtonHidden(model.snapshot.summary == nil)
         .task {
             if !presentationOnly { await model.start(permissions: permissions) }
+        }
+        .task(id: model.snapshot.stage == .preparing) {
+            await revealCameraRecoveryAfterDelay()
         }
         .onDisappear { if !presentationOnly { model.exit() } }
         .onChange(of: scenePhase) { _, phase in
@@ -130,7 +130,33 @@ struct TherapySessionView: View {
         }
     }
 
-    private var hasFullScreenPresentation: Bool {
+    /// Arm raise, elbow bend, directional reach and fold towel use the light, finger-exercise
+    /// look: the camera beside a side column, with light stage pages.
+    ///
+    /// This depends on the activity alone, never on the stage: full-screen stages such as the
+    /// countdown cover the layout with an overlay, and the camera preview must stay mounted
+    /// beneath them (SYSTEM_DESIGN.md section 5).
+    var usesLightLayout: Bool {
+        guard let kind = model.snapshot.activity?.kind else {
+            return false
+        }
+
+        return Self.lightKinds.contains(kind)
+    }
+
+    private static let lightKinds: Set<TherapyKind> = [.armRaise, .elbowBend, .directionalReach, .foldTowel]
+
+    /// The whole screen is light while a light activity runs. The summary is light only when every
+    /// result is, so a routine mixing in cup or sit-to-stand does not flip themes at the end.
+    var usesLightTheme: Bool {
+        guard let summary = model.snapshot.summary else {
+            return usesLightLayout
+        }
+
+        return summary.results.allSatisfy { Self.lightKinds.contains($0.activity.kind) }
+    }
+
+    var hasFullScreenPresentation: Bool {
         model.cameraDenied || !model.voiceReady || model.snapshot.paused
             || model.snapshot.stage == .preparing || model.snapshot.stage == .instruction
             || model.snapshot.stage == .demonstration || model.snapshot.stage == .preparationWait || model.snapshot.stage == .rest
@@ -138,7 +164,16 @@ struct TherapySessionView: View {
             || model.snapshot.presentation?.countdownSeconds != nil
     }
 
+    @ViewBuilder
     private var fullScreenPresentation: some View {
+        if usesLightLayout {
+            lightStagePage
+        } else {
+            darkStagePage
+        }
+    }
+
+    private var darkStagePage: some View {
         SessionStageSurface(background: presentationBackground, border: phaseColor) {
             sessionContext
             presentationContent
@@ -182,7 +217,62 @@ struct TherapySessionView: View {
         .accessibilityElement(children: .combine)
     }
 
-    private var trackingStatus: some View {
+    // MARK: - Activity layout
+
+    /// Seconds the camera may take to become ready before recovery buttons are offered.
+    private static let cameraRecoveryDelay = 3.0
+
+    private func revealCameraRecoveryAfterDelay() async {
+        showsCameraRecovery = false
+
+        guard model.snapshot.stage == .preparing else {
+            return
+        }
+
+        try? await Task.sleep(for: .seconds(Self.cameraRecoveryDelay))
+
+        guard !Task.isCancelled else {
+            return
+        }
+
+        showsCameraRecovery = true
+    }
+
+    /// One layout for every activity stage. The camera keeps the same position in the view tree
+    /// whichever bars surround it, so SwiftUI never rebuilds the preview when the layout mode or
+    /// a full-screen stage changes.
+    @ViewBuilder
+    private func activityLayout(in size: CGSize) -> some View {
+        if usesLightLayout {
+            lightLayout
+        } else {
+            darkLayout(in: size)
+        }
+    }
+
+    private func darkLayout(in size: CGSize) -> some View {
+        let cameraHeight = size.height * (dynamicTypeSize.isAccessibilitySize ? 0.45 : 0.6)
+        let barsHeight = max(0, size.height - cameraHeight - 40)
+
+        return VStack(spacing: 8) {
+            ScrollView { header.frame(maxWidth: .infinity) }
+                .frame(height: barsHeight * 0.4)
+
+            camera
+                .frame(height: cameraHeight)
+
+            ScrollView {
+                trackingStatus
+                footer
+                if let error = model.saveFailure { saveError(error) }
+            }
+            .frame(height: barsHeight * 0.6)
+        }
+        .padding(12)
+        .accessibilityHidden(hasFullScreenPresentation)
+    }
+
+    var trackingStatus: some View {
         Text("session.cameraWait")
             .typography(.body)
             .frame(maxWidth: .infinity)
@@ -201,7 +291,7 @@ struct TherapySessionView: View {
             recoveryPanel("therapy.session.cameraDenied")
         } else if model.snapshot.paused {
             ScrollView {
-                SessionPanel {
+                SessionPanel(light: usesLightTheme) {
                     VStack(spacing: 16) {
                         Text("session.paused").typography(.therapyPause)
                         Text("session.resumeHelp")
@@ -224,10 +314,12 @@ struct TherapySessionView: View {
                     }
                 }
             }
+        } else if model.isStarting {
+            startupWaiting
         } else if !model.voiceReady {
             controlChoice
         } else if model.snapshot.stage == .preparing {
-            recoveryPanel("session.cameraWait")
+            preparingContent
         } else if model.snapshot.stage == .preparationWait {
             VStack(spacing: 24) {
                 Text("parity.getReady").typography(.therapyPhase)
@@ -245,7 +337,7 @@ struct TherapySessionView: View {
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         } else if model.snapshot.stage == .feedback {
-            SessionPanel {
+            SessionPanel(light: usesLightTheme) {
                 Text(LocalizedStringKey(model.snapshot.instruction)).typography(.therapyPhase)
             }
         } else if model.snapshot.stage == .demonstration {
@@ -347,13 +439,18 @@ struct TherapySessionView: View {
         }
     }
 
-    private var camera: some View {
+    var camera: some View {
         GeometryReader { geometry in
             ZStack {
                 BodyCameraPreview(
                     session: model.tracking.session, front: model.frontCamera,
                     onReady: model.previewReady, onOrientation: model.orientationChanged)
                     .frame(width: geometry.size.width, height: geometry.size.height)
+                if usesLightLayout, !model.snapshot.cameraWaiting {
+                    // Soft scrim so the bubbles read clearly without hiding the patient. Left off
+                    // while waiting for the camera so the calm notice sits on an untinted view.
+                    Color.black.opacity(0.1).allowsHitTesting(false)
+                }
                 if !model.snapshot.paused, !model.snapshot.cameraWaiting,
                     model.snapshot.stage == .activity,
                     let guide = model.snapshot.presentation?.guide
@@ -372,7 +469,7 @@ struct TherapySessionView: View {
                    case .towel(let towel) = model.snapshot.presentation {
                     TowelWorkspaceView(snapshot: model.towelDisplay ?? towel, interpolates: model.towelInterpolates)
                 }
-                if !hasFullScreenPresentation, model.snapshot.stage == .activity,
+                if !usesLightLayout, !hasFullScreenPresentation, model.snapshot.stage == .activity,
                     let active = cornerExampleActive
                 {
                     let availableWidth = max(0, geometry.size.width - 24)
@@ -483,11 +580,11 @@ struct TherapySessionView: View {
         }
     }
 
-    private var guidancePhrase: String {
+    var guidancePhrase: String {
         String(localized: String.LocalizationValue(model.snapshot.instruction), bundle: model.sessionLanguage.resourceBundle, locale: model.sessionLocale)
     }
 
-    private func countdownPanel(_ seconds: Int) -> some View {
+    func countdownPanel(_ seconds: Int) -> some View {
         ScrollView {
             VStack(spacing: 0) {
                 Text("session.countdown").typography(.therapyPhase)
@@ -500,7 +597,7 @@ struct TherapySessionView: View {
         .background(.black.opacity(0.9))
     }
 
-    @ViewBuilder private var demonstration: some View {
+    @ViewBuilder var demonstration: some View {
         if model.snapshot.activity?.kind == .foldTowel {
             TowelDemonstrationView()
         }
@@ -529,7 +626,7 @@ struct TherapySessionView: View {
         }
     }
 
-    private var primaryMovementCue: String {
+    var primaryMovementCue: String {
         switch model.snapshot.presentation {
         case .towel(let value): return value.trackingMessage ?? value.instruction
         case .movement(let value): return value.trackingMessage ?? model.snapshot.instruction
@@ -659,9 +756,25 @@ struct TherapySessionView: View {
         }
     }
 
-    private var controlChoice: some View {
+    /// Camera startup takes a moment and is not an error: show calm waiting text and no retry
+    /// controls until a real failure is reported or the wait outlasts `cameraRecoveryDelay`.
+    @ViewBuilder
+    var preparingContent: some View {
+        if model.failure != nil || showsCameraRecovery {
+            recoveryPanel("session.cameraWait")
+        } else {
+            startupWaiting
+        }
+    }
+
+    var startupWaiting: some View {
+        TherapyCalmLoader(title: "session.preparing")
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    var controlChoice: some View {
         ScrollView {
-            SessionPanel {
+            SessionPanel(light: usesLightTheme) {
                 VStack(spacing: 16) {
                     Text("home.entryBlocked").typography(.title2)
                     Button("home.openSettings") {
@@ -675,7 +788,7 @@ struct TherapySessionView: View {
         }
     }
 
-    private var recoveryControls: some View {
+    var recoveryControls: some View {
         VStack(spacing: 12) {
             Button(model.snapshot.activity?.kind == .foldTowel ? "towel.restart" : "session.recalibrate") { model.command(.retryCalibration) }
                 .buttonStyle(SessionButtonStyle())
@@ -720,9 +833,9 @@ struct TherapySessionView: View {
         }
     }
 
-    private func recoveryPanel(_ key: LocalizedStringKey) -> some View {
+    func recoveryPanel(_ key: LocalizedStringKey) -> some View {
         ScrollView {
-            SessionPanel {
+            SessionPanel(light: usesLightTheme) {
                 VStack(spacing: 16) {
                     Text(key).typography(.therapyPhase)
                     if model.cameraDenied {
@@ -740,8 +853,8 @@ struct TherapySessionView: View {
         }
     }
 
-    private func saveError(_ message: String) -> some View {
-        SessionPanel {
+    func saveError(_ message: String) -> some View {
+        SessionPanel(light: usesLightTheme) {
             HStack {
                 VStack(alignment: .leading) {
                     Text("session.saveError")
@@ -754,7 +867,7 @@ struct TherapySessionView: View {
         }
     }
 
-    private func summaryContent(_ summary: SessionSummary) -> some View {
+    func summaryContent(_ summary: SessionSummary) -> some View {
         List {
             Section {
                 Text(
@@ -789,7 +902,7 @@ struct TherapySessionView: View {
         }
         .listStyle(.insetGrouped)
         .scrollContentBackground(.hidden)
-        .background(.black)
+        .background(usesLightTheme ? TherapyPalette.canvas : Color.black)
     }
 
     private func summaryRow(_ result: SessionActivityResult) -> some View {
@@ -848,7 +961,11 @@ struct TherapySessionView: View {
         }
     }
 
-    private func kindKey(_ kind: TherapyKind) -> LocalizedStringKey {
+    func kindKey(_ kind: TherapyKind) -> LocalizedStringKey {
+        LocalizedStringKey(kindKeyName(kind))
+    }
+
+    func kindKeyName(_ kind: TherapyKind) -> String {
         switch kind {
         case .armRaise: return "session.armRaise"
         case .elbowBend: return "session.elbowBend"
@@ -872,7 +989,7 @@ struct TherapySessionView: View {
             radius: guide.radius,
             activeZone: guide.targetActive ? .target : .start,
             trackedJointInside: inside,
-            dwellProgress: guide.progress
+            dwellProgress: guide.jointHold ? 0 : guide.progress
         )
         let direction = (guide.directionOnly || guide.directionTip != nil) ? SessionDirectionGuide(
             origin: normalized(guide.start),
@@ -886,7 +1003,7 @@ struct TherapySessionView: View {
             bubbleGuide: guide.capturing ? (guide.savedStart ? bubble : nil) : (guide.directionOnly ? nil : bubble),
             singleZone: guide.start == guide.target,
             settingUp: guide.capturing,
-            captureJoint: guide.capturing ? normalized(guide.tracked) : nil,
+            captureJoint: (guide.capturing || guide.jointHold) ? normalized(guide.tracked) : nil,
             holdProgress: guide.progress,
             directionGuide: direction,
             mirrored: model.frontCamera

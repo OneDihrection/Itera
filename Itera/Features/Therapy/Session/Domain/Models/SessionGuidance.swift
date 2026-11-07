@@ -40,7 +40,7 @@ struct SessionGuidance {
             return Self(cards: [Card(key: "sts.opening")], destination: .capture, quietDelay: 3)
         }
         if activity.kind == .directionalReach {
-            return Self(cards: [Card(key: "parity.reachOpening")], destination: .activity, quietDelay: 1, watchdog: 12)
+            return Self(cards: [Card(key: "parity.reachOpening")], destination: .capture, quietDelay: 1, watchdog: 12)
         }
         let positioning = includePositioning ? "positioning" : "ready"
         let key = "session.opening.\(activity.kind.rawValue).\(activity.side.rawValue).\(positioning)"

@@ -38,6 +38,9 @@ struct SessionSnapshot {
     var setNumber = 1
     var seconds = 0
     var paused = false
+    /// Whether the shown countdown's clock is running. Preparation and the pre-practice countdown
+    /// show their full value while the cue is still being spoken, before their deadline starts.
+    var countdownRunning = false
     var assistanceKey: String?
     var cameraWaiting = true
     var summary: SessionSummary?
@@ -77,6 +80,8 @@ struct SessionEngine {
     private var feedbackEnteredAt = 0.0
     private var pendingPrefix: SessionAudioCue?
     private var guidanceStartedAt = 0.0
+    /// Limits live towel speech to the first cue and a stuck reminder.
+    private var towelSpeech = TowelSpeechPolicy()
     private var awaitingCountdownGuidance = false
     private var announcedCountdown: Int?
     private var calibrationInvalidatedBetweenSets = false
@@ -158,6 +163,7 @@ struct SessionEngine {
             announcedCountdown = seconds
         }
         snapshot.guidanceID = guidance
+        snapshot.countdownRunning = countdownClockRunning
         snapshot.activity = progress.currentActivity
         snapshot.index = progress.index
         snapshot.setNumber = progress.setNumber
@@ -265,10 +271,7 @@ struct SessionEngine {
             return
         }
         if case .towel(let before) = old, case .towel(let after) = result.presentation {
-            // Live narration is replaceable feedback, never a practice advancement gate.
-            if before.instruction != after.instruction {
-                announce(after.instruction, timed: false)
-            }
+            // Live towel speech is limited by `towelSpeech` and runs from the tick, never from here.
             if after.count != before.count {
                 effects.append(.audio(UUID(), .towelCompleted))
             } else if after.foldIndex != before.foldIndex {
@@ -366,13 +369,15 @@ struct SessionEngine {
             let previous = snapshot.presentation
             _ = activity?.handle(.tick(now))
             snapshot.presentation = activity?.presentation
-            if case .towel(let before) = previous,
-               case .towel(let after) = snapshot.presentation,
-               before.instruction != after.instruction {
-                if before.phase == .countdown, after.phase == .practice {
+            if case .towel(let after) = snapshot.presentation {
+                if case .towel(let before) = previous,
+                   before.phase == .countdown, after.phase == .practice {
                     evidenceBoundary = now
                 }
-                announce(after.instruction, timed: false)
+                // Live narration is replaceable feedback, never a practice advancement gate.
+                if towelSpeech.shouldSpeak(after, now: now) {
+                    announce(after.instruction, timed: false)
+                }
             }
         }
         if let timeout = speechTimeout, now >= timeout, let guidance {
@@ -419,6 +424,22 @@ struct SessionEngine {
             }
         } else if let deadline {
             snapshot.seconds = max(0, Int(ceil(deadline - now)))
+        }
+    }
+
+    /// Preparation starts its deadline when its narration ends, and an activity countdown starts
+    /// when `countdownReady` is sent (`awaitingCountdownGuidance` covers the wait, including after a
+    /// resume). Rest has no wait.
+    private var countdownClockRunning: Bool {
+        switch snapshot.stage {
+        case .preparationWait:
+            return deadline != nil
+        case .activity:
+            return snapshot.presentation?.countdownSeconds != nil && !awaitingCountdownGuidance
+        case .rest:
+            return true
+        default:
+            return false
         }
     }
 
@@ -661,15 +682,12 @@ struct SessionEngine {
         }
     }
 
+    /// Help text exists only for the dark-layout therapies; the light-layout ones show no Help.
     private var currentAssistanceKey: String? {
         switch progress.currentActivity?.kind {
-        case .armRaise: return "session.assistance.armRaise"
-        case .elbowBend: return "session.assistance.elbowBend"
-        case .directionalReach: return "session.assistance.reach"
         case .cup: return "session.assistance.cup"
-        case .foldTowel: return "session.assistance.foldTowel"
         case .sitToStand: return "session.assistance.sitToStand"
-        case nil: return nil
+        case .armRaise, .elbowBend, .directionalReach, .foldTowel, nil: return nil
         }
     }
 

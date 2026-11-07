@@ -95,12 +95,7 @@ struct BalanceSessionView: View {
                     BalancePoseOverlay(state: overlay, mirrored: model.frontCamera)
                 }
                 if model.cameraWaiting {
-                    ProgressView("balance.cameraWaiting")
-                        .tint(.white)
-                        .typography(.headline)
-                        .padding(24)
-                        .foregroundStyle(.white)
-                        .background(.black.opacity(0.65), in: RoundedRectangle(cornerRadius: 24))
+                    TherapyFeedbackPill(text: "balance.cameraWaiting")
                 }
             }
             .background(TherapyPalette.cameraBackground)

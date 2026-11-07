@@ -67,6 +67,8 @@ struct TrackingObservation {
     var cup: CupEvidence? = nil
     var hand: HandEvidence? = nil
     var workspaceMirrored = false
+    /// Changes whenever a different person is locked as the patient, so smoothing can restart.
+    var subjectEpoch = 0
 
     var aspect: Double { Double(width) / Double(max(1, height)) }
 

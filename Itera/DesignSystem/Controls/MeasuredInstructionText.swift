@@ -16,11 +16,14 @@ struct MeasuredInstructionText: UIViewRepresentable {
     let fontSize: CGFloat
     let reduceMotion: Bool
     let voiceOver: Bool
+    /// White suits the dark session screens; light screens pass `.label`.
+    var textColor: UIColor = .white
     let onReadingChanged: (UUID, Bool) -> Void
 
     func makeUIView(context: Context) -> ReadingScrollView { ReadingScrollView() }
 
     func updateUIView(_ view: ReadingScrollView, context: Context) {
+        view.apply(textColor: textColor)
         view.configure(
             phrase: phrase, id: instructionID, fontSize: fontSize,
             reduceMotion: reduceMotion, voiceOver: voiceOver, onReadingChanged: onReadingChanged
@@ -45,6 +48,10 @@ struct MeasuredInstructionText: UIViewRepresentable {
         private var lastTick: Double?
         private var displayLink: CADisplayLink?
         private lazy var displayTarget = DisplayTarget(view: self)
+
+        func apply(textColor: UIColor) {
+            text.textColor = textColor
+        }
 
         override init(frame: CGRect) {
             super.init(frame: frame)

@@ -157,14 +157,11 @@ enum SessionPresentationFixtures {
         return fixtures
     }
 
-    private static func assistanceKey(for kind: TherapyKind) -> String {
+    private static func assistanceKey(for kind: TherapyKind) -> String? {
         switch kind {
-        case .armRaise: return "session.assistance.armRaise"
-        case .elbowBend: return "session.assistance.elbowBend"
-        case .directionalReach: return "session.assistance.reach"
         case .cup: return "session.assistance.cup"
-        case .foldTowel: return "session.assistance.foldTowel"
         case .sitToStand: return "session.assistance.sitToStand"
+        case .armRaise, .elbowBend, .directionalReach, .foldTowel: return nil
         }
     }
 
