@@ -28,14 +28,14 @@ extension HandEvidence {
         }
     }
 
-    /// Signed apparent palm width relative to palm length: positive when the palm faces the
-    /// camera, near zero with the thumb side toward the camera, and negative when the back
-    /// of the hand faces it. Needs the hand's side, because a palm and the back of the
-    /// opposite hand look alike in a 2D silhouette.
+    /// Signed apparent palm width relative to palm length: near zero with the thumb side toward
+    /// the camera, and positive or negative as the palm or the back of the hand turns toward it.
+    ///
+    /// The sign deliberately does not depend on which hand it is. A palm and the back of the
+    /// opposite hand look alike in a 2D silhouette, and Vision's chirality, a mirrored camera
+    /// buffer and the way the patient turns all flip it, so `FingerActivity` learns which sign
+    /// the patient's turn produces while calibrating the target pose.
     private func palmFacing() -> Double? {
-        guard let side else {
-            return nil
-        }
         let aspect = width / height
         let axisX = (points[9].x - points[0].x) * aspect
         let axisY = points[9].y - points[0].y
@@ -45,18 +45,20 @@ extension HandEvidence {
         }
         let knuckleX = (points[5].x - points[17].x) * aspect
         let knuckleY = points[5].y - points[17].y
-        // Component of the index-to-little knuckle line across the palm axis. For a right hand
-        // with the palm toward an unmirrored camera, the index knuckle lies on the right.
+        // Component of the index-to-little knuckle line across the palm axis.
         let across = (knuckleX * axisY - knuckleY * axisX) / palmLength
-        let sign: Double = side == .right ? 1 : -1
-        return sign * across / palmLength
+        return across / palmLength
     }
 
     /// Dimensionless visible-motion metrics; these are not grip force or clinical joint angles.
     func metric(for exercise: FingerExercise, finger: Int) -> Double? {
+        // A turning palm hides its outer knuckles briefly, so forearm rotation accepts them at a
+        // lower confidence instead of dropping the hand mid-turn.
+        let minimumConfidence: Float = exercise == .forearmRotation ? 0.3 : 0.5
+
         guard points.count == 21, (0..<4).contains(finger),
               requiredJoints(for: exercise, finger: finger).allSatisfy({
-                  points[$0].confidence >= 0.5 && points[$0].x.isFinite && points[$0].y.isFinite
+                  points[$0].confidence >= minimumConfidence && points[$0].x.isFinite && points[$0].y.isFinite
               }),
               width.isFinite, height.isFinite, width > 0, height > 0 else { return nil }
         let bases = [5, 9, 13, 17]

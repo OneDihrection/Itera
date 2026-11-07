@@ -2294,13 +2294,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Bend your elbow to 90° with your thumb up. Hold for 2 seconds."
+            "value" : "Palm to camera"
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Tekuk siku 90° dengan ibu jari menghadap atas. Tahan 2 detik."
+            "value" : "Telapak ke kamera"
           }
         }
       }
@@ -3341,13 +3341,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Watch: turn your palm toward the camera, then back."
+            "value" : "Turn, then return"
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Lihat: putar telapak tangan menghadap kamera, lalu kembali."
+            "value" : "Putar, lalu kembali"
           }
         }
       }
@@ -3459,13 +3459,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Keep your elbow bent at 90°, then turn your palm toward the camera as far as is comfortable."
+            "value" : "Turn your palm"
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Tekuk siku 90°, lalu putar telapak tangan menghadap kamera sejauh yang nyaman."
+            "value" : "Putar telapak tangan"
           }
         }
       }
@@ -5482,13 +5482,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Turn your palm toward the camera as far as is comfortable."
+            "value" : "Back of hand to camera"
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Putar telapak tangan menghadap kamera sejauh yang nyaman."
+            "value" : "Punggung telapak ke kamera"
           }
         }
       }
@@ -7223,6 +7223,22 @@
         }
       }
     },
+    "range.autoStart" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Practice starts automatically. Tap Measure again to redo the range."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Latihan dimulai otomatis. Ketuk Ukur ulang untuk mengulang rentang."
+          }
+        }
+      }
+    },
     "range.disclaimer" : {
       "localizations" : {
         "en" : {
@@ -8278,13 +8294,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Turn back slowly until your thumb points up."
+            "value" : "Turn back"
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Putar kembali perlahan sampai ibu jari menghadap atas."
+            "value" : "Kembali ke awal"
           }
         }
       }
@@ -12796,6 +12812,70 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Tekuk kembali, lalu lanjut ke jari berikutnya."
+          }
+        }
+      }
+    },
+    "steps.forearmRotation.1" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Face your palm toward the camera with your elbow against your body."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hadapkan telapak tangan ke kamera dengan siku menempel pada tubuh."
+          }
+        }
+      }
+    },
+    "steps.forearmRotation.2" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Slowly rotate your forearm 180 degrees."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Putar lengan bawah sebesar 180 derajat secara perlahan."
+          }
+        }
+      }
+    },
+    "steps.forearmRotation.3" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hold the position until the back of your hand faces the camera."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tahan posisi hingga punggung tangan menghadap kamera."
+          }
+        }
+      }
+    },
+    "steps.forearmRotation.4" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rotate your forearm back 180 degrees until your palm faces the camera."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Putar kembali lengan bawah sebesar 180 derajat hingga telapak tangan menghadap kamera."
           }
         }
       }
