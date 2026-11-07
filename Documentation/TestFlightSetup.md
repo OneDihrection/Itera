@@ -307,11 +307,13 @@ Use this path after first-time setup is complete. You do not need to recreate ce
 
 ### 1. Push a release tag
 
-From a clean Itera checkout, choose a new version accepted by App Store Connect:
+From a clean Itera checkout, run the script to choose a major, minor, or patch bump from the highest version tag in production history:
 
 ```sh
-./release-testflight.sh v1.2.3
+./release-testflight.sh
 ```
+
+For the first release, or to specify a version directly, run `./release-testflight.sh v1.2.3`. The selected version must be accepted by App Store Connect.
 
 Commit the script before using it. You need Git and permission to read production and push release tags to origin. No local Xcode, Ruby, or Apple credentials are required to trigger the workflow. Run `./release-testflight.sh --help` for usage.
 
