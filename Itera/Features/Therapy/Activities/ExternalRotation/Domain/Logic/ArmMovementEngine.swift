@@ -100,7 +100,7 @@ struct ArmMovementEngine: BalanceMovementEngine {
     }
 
     private struct Capture {
-        let startedAt: Double
+        var startedAt: Double
         let anchor: Geometry
         var count = 0.0
         var neck = TherapyPoint(x: 0, y: 0)
@@ -129,7 +129,7 @@ struct ArmMovementEngine: BalanceMovementEngine {
         }
 
         func remainsStable(_ geometry: Geometry) -> Bool {
-            let tolerance = anchor.shoulderWidth * 0.30
+            let tolerance = anchor.shoulderWidth * 0.40
             let widthChange = abs(geometry.shoulderWidth / anchor.shoulderWidth - 1)
             return (geometry.root - anchor.root).length <= tolerance
                 && (geometry.neck - anchor.neck).length <= tolerance
@@ -206,7 +206,18 @@ struct ArmMovementEngine: BalanceMovementEngine {
     private var rangeSum = 0.0
     private var rangeCount = 0.0
 
-    private let calibrationDuration = 1.0
+    /// How long evidence may be missing before holds and calibration are abandoned. Inside this
+    /// window everything freezes (the clock is paused, as the finger exercises do) instead of
+    /// resetting, so a brief dropout costs the patient nothing.
+    private let visionGrace = 1.2
+    /// When the last frame with a usable body arrived.
+    private var lastGeometryTime: Double?
+    /// When the current dropout began, while it is still inside `visionGrace`.
+    private var frozenSince: Double?
+    private var lastMissingLog = -Double.infinity
+    /// When the resting pose was last lost during calibration.
+    private var poseLostSince: Double?
+    private let calibrationDuration = 3.0
     private let targetHoldDuration: Double
     private let returnHoldDuration = 3.0
     private let exercise: BalanceExercise
@@ -216,8 +227,8 @@ struct ArmMovementEngine: BalanceMovementEngine {
     /// A turn smaller than this is treated as not turning yet.
     private var minimumTargetAngle: Double { isFlexion ? 30 : 12 }
     private var maximumTargetAngle: Double { isFlexion ? 170 : 90 }
-    private let rangeHoldDuration = 2.0
-    private var rangeTolerance: Double { isFlexion ? 8 : 6 }
+    private let rangeHoldDuration = 3.0
+    private var rangeTolerance: Double { isFlexion ? 12 : 10 }
     private let trackingGracePeriod = 0.40
     private var targetRadiusRatio: Double { isFlexion ? 0.15 : 0.28 }
     private let exitRadiusScale = 1.25
@@ -228,6 +239,9 @@ struct ArmMovementEngine: BalanceMovementEngine {
     private let compensationEntryDuration = 0.75
     private let compensationExitDuration = 0.50
     private let minimumConfidence: Float = 0.3
+    /// Elbow and wrist are foreshortened when the forearm points at the camera, so Vision
+    /// reports them with lower confidence than the shoulders even when they are clearly visible.
+    private let limbConfidence: Float = 0.1
 
     init(
         goal: Int = 6,
@@ -257,19 +271,16 @@ struct ArmMovementEngine: BalanceMovementEngine {
         generation = frame.generation
         let delta = lastTimestamp.map { frame.timestamp - $0 } ?? 0
         lastTimestamp = frame.timestamp
-        if delta > 0.3 {
+        if delta > visionGrace {
             clearTransientEvidence()
         }
         let filtered = smoother.consume(frame)
         guard let geometry = geometry(from: filtered) else {
-            snapshot.phase = torso == nil ? .findingBody : snapshot.phase
-            snapshot.instructionKey = exercise.key("tracking")
-            if frame.timestamp - (lastOverlayTimestamp ?? frame.timestamp) > 1.25 {
-                snapshot.overlay = nil
-            }
-            clearTransientEvidence()
+            handleMissingGeometry(for: filtered)
             return
         }
+        resumeAfterDropout(at: frame.timestamp)
+        lastGeometryTime = frame.timestamp
         if !scoringEnabled {
             publishOverlay(geometry, frame: frame)
             clearTransientEvidence()
@@ -286,7 +297,109 @@ struct ArmMovementEngine: BalanceMovementEngine {
         update(geometry, frame: frame, torso: torso, neutral: neutral, delta: delta)
     }
 
+    /// A short dropout freezes the exercise; a long one abandons what was in progress.
+    private mutating func handleMissingGeometry(for frame: TrackingObservation) {
+        let time = frame.timestamp
+
+        if let last = lastGeometryTime, time - last <= visionGrace, snapshot.phase != .complete {
+            if frozenSince == nil {
+                frozenSince = last
+            }
+
+            return
+        }
+
+        frozenSince = nil
+        poseLostSince = nil
+        capture = nil
+        resetRange()
+        snapshot.calibrationCountdown = nil
+        snapshot.phase = torso == nil ? .findingBody : snapshot.phase
+        snapshot.instructionKey = exercise.key(armOutOfView(in: frame) ? "armOutOfView" : "tracking")
+        logMissingBody(in: frame)
+
+        if time - (lastOverlayTimestamp ?? time) > 2.0 {
+            snapshot.overlay = nil
+        }
+
+        clearTransientEvidence()
+    }
+
+    /// The body is found but the elbow or wrist is not: usually the arm is cropped by the edge
+    /// of the picture, so the patient should sit back rather than adjust their posture.
+    private func armOutOfView(in frame: TrackingObservation) -> Bool {
+        guard frame.personCount == 1,
+              frame.point(.leftShoulder, minimumConfidence: minimumConfidence) != nil,
+              frame.point(.rightShoulder, minimumConfidence: minimumConfidence) != nil else {
+            return false
+        }
+
+        let right = snapshot.activeArm == .right
+
+        return limbPoint(right ? .rightElbow : .leftElbow, in: frame) == nil
+            || limbPoint(right ? .rightWrist : .leftWrist, in: frame) == nil
+    }
+
+    /// Reports why the body was dropped, at most every few seconds, to help tune tracking.
+    private mutating func logMissingBody(in frame: TrackingObservation) {
+        guard frame.timestamp - lastMissingLog >= 3 else {
+            return
+        }
+
+        lastMissingLog = frame.timestamp
+        let right = snapshot.activeArm == .right
+        let joints: [(String, BodyJoint)] = [
+            ("neck", .neck), ("lShoulder", .leftShoulder), ("rShoulder", .rightShoulder),
+            ("elbow", right ? .rightElbow : .leftElbow), ("wrist", right ? .rightWrist : .leftWrist),
+        ]
+        let detail = joints.map { name, joint in
+            let landmark = frame.joints[joint]
+            return "\(name)=" + (landmark.map { String(format: "%.2f", $0.confidence) } ?? "none")
+        }.joined(separator: " ")
+
+        NSLog("Arm tracking lost: people=%d %@", frame.personCount, detail)
+    }
+
+    /// Elbow and wrist, accepted at low confidence and slightly beyond the picture's edge, where
+    /// a forearm pointing at the camera often ends up.
+    private func limbPoint(_ joint: BodyJoint, in frame: TrackingObservation) -> TherapyPoint? {
+        guard frame.personCount == 1,
+              let landmark = frame.joints[joint],
+              landmark.confidence.isFinite,
+              landmark.confidence >= limbConfidence,
+              landmark.position.x.isFinite,
+              landmark.position.y.isFinite,
+              (-0.12...1.12).contains(landmark.position.x),
+              (-0.12...1.12).contains(landmark.position.y) else {
+            return nil
+        }
+
+        return TherapyPoint(x: landmark.position.x * frame.aspect, y: landmark.position.y)
+    }
+
+    /// Pushes every running clock forward by the time the body was missing, so a hold or a
+    /// calibration capture neither gains nor loses credit across a brief dropout.
+    private mutating func resumeAfterDropout(at time: Double) {
+        guard let frozenSince else {
+            return
+        }
+
+        self.frozenSince = nil
+        let gap = max(0, time - frozenSince)
+
+        capture?.startedAt += gap
+        rangeStartedAt += gap
+        targetHoldStartedAt = targetHoldStartedAt.map { $0 + gap }
+        returnHoldStartedAt = returnHoldStartedAt.map { $0 + gap }
+        targetOutsideSince = targetOutsideSince.map { $0 + gap }
+        returnOutsideSince = returnOutsideSince.map { $0 + gap }
+    }
+
     mutating func invalidateCalibration() {
+        snapshot.calibrationCountdown = nil
+        frozenSince = nil
+        lastGeometryTime = nil
+        poseLostSince = nil
         torso = nil
         capture = nil
         neutrals.removeAll()
@@ -321,21 +434,39 @@ struct ArmMovementEngine: BalanceMovementEngine {
         let alongBody = -hang.dotProduct(geometry.spineUnit)
         let armHang = (geometry.wrist - geometry.shoulder).scaled(1 / max((geometry.wrist - geometry.shoulder).length, 0.0001))
         let wholeArmAlongBody = -armHang.dotProduct(geometry.spineUnit)
-        guard alongBody > 0.65, !isFlexion || wholeArmAlongBody > 0.8 else {
-            capture = nil
-            snapshot.calibrationProgress = 0
-            snapshot.instructionKey = exercise.key("elbowAtSide")
+        let validPose = alongBody > 0.5 && (!isFlexion || wholeArmAlongBody > 0.75)
+
+        guard validPose else {
+            // A brief slip of the arm pauses the capture; only a lasting one restarts it.
+            if poseLostSince == nil {
+                poseLostSince = frame.timestamp
+            }
+
             publishOverlay(geometry, frame: frame)
+
+            if frame.timestamp - (poseLostSince ?? frame.timestamp) > 0.5 {
+                capture = nil
+                snapshot.calibrationProgress = 0
+                snapshot.calibrationCountdown = nil
+                snapshot.instructionKey = exercise.key("elbowAtSide")
+            }
+
             return
         }
+
+        if let lost = poseLostSince {
+            capture?.startedAt += frame.timestamp - lost
+            poseLostSince = nil
+        }
         snapshot.instructionKey = exercise.key("calibrating")
-        publishOverlay(geometry, frame: frame)
         if capture?.remainsStable(geometry) != true {
             capture = Capture(startedAt: frame.timestamp, anchor: geometry)
         }
         capture?.append(geometry)
         let elapsed = frame.timestamp - (capture?.startedAt ?? frame.timestamp)
         snapshot.calibrationProgress = min(1, elapsed / calibrationDuration)
+        snapshot.calibrationCountdown = max(1, Int(ceil(calibrationDuration - elapsed)))
+        publishOverlay(geometry, frame: frame)
         guard elapsed >= calibrationDuration, let captured = capture,
               let neutral = captured.neutral()
         else {
@@ -350,6 +481,7 @@ struct ArmMovementEngine: BalanceMovementEngine {
         }
         neutrals[snapshot.activeArm] = neutral
         capture = nil
+        snapshot.calibrationCountdown = nil
         beginRangeCalibration()
     }
 
@@ -358,6 +490,7 @@ struct ArmMovementEngine: BalanceMovementEngine {
         snapshot.phase = .calibratingRange
         snapshot.instructionKey = exercise.key("calibrateRange")
         snapshot.calibrationProgress = 0
+        snapshot.calibrationCountdown = nil
         snapshot.targetAngle = 0
     }
 
@@ -381,8 +514,10 @@ struct ArmMovementEngine: BalanceMovementEngine {
         guard angle >= minimumTargetAngle else {
             resetRange()
             snapshot.calibrationProgress = 0
+            snapshot.calibrationCountdown = nil
             return
         }
+        snapshot.instructionKey = exercise.key("calibrateHold")
         if let anchor = rangeAnchor, abs(angle - anchor) <= rangeTolerance {
             rangeSum += angle
             rangeCount += 1
@@ -396,6 +531,7 @@ struct ArmMovementEngine: BalanceMovementEngine {
         }
         let elapsed = frame.timestamp - rangeStartedAt
         snapshot.calibrationProgress = min(1, elapsed / rangeHoldDuration)
+        snapshot.calibrationCountdown = max(1, Int(ceil(rangeHoldDuration - elapsed)))
         guard elapsed >= rangeHoldDuration else {
             return
         }
@@ -404,6 +540,7 @@ struct ArmMovementEngine: BalanceMovementEngine {
         ends[snapshot.activeArm] = rangeOffsetSum.scaled(1 / rangeCount)
         snapshot.targetAngle = Int(held.rounded())
         snapshot.calibrationProgress = 1
+        snapshot.calibrationCountdown = nil
         resetRange()
         // The patient is still at the target; they return to the start before the first rotation.
         snapshot.phase = .returning
@@ -543,6 +680,7 @@ struct ArmMovementEngine: BalanceMovementEngine {
             capture = nil
             snapshot.phase = .calibrating
             snapshot.calibrationProgress = 0
+            snapshot.calibrationCountdown = nil
             snapshot.instructionKey = exercise.key("elbowAtSide")
         } else if targets[snapshot.activeArm] == nil {
             beginRangeCalibration()
@@ -737,8 +875,8 @@ struct ArmMovementEngine: BalanceMovementEngine {
               let rightShoulder = point(.rightShoulder),
               let shoulder = point(shoulderJoint),
               let otherShoulder = point(otherJoint),
-              let elbow = point(elbowJoint),
-              let wrist = point(wristJoint)
+              let elbow = limbPoint(elbowJoint, in: frame),
+              let wrist = limbPoint(wristJoint, in: frame)
         else {
             return nil
         }
@@ -774,17 +912,39 @@ struct ArmMovementEngine: BalanceMovementEngine {
     ) {
         var target: TherapyPoint?
         var isReturn = false
+        var calibrationHold = false
         var radius = 0.055
+
+        if snapshot.phase == .calibrating, snapshot.calibrationCountdown != nil {
+            // The starting pose is held under a blue marker on the wrist, like the return circle.
+            target = geometry.wrist
+            isReturn = true
+            calibrationHold = true
+            radius = max(0.05, geometry.upperArm * 0.28)
+        }
         if let neutral {
             radius = circleRadius(neutral)
             if snapshot.phase == .returning {
                 target = homeCenter(geometry, neutral: neutral)
                 isReturn = true
+            } else if snapshot.phase == .calibratingRange {
+                // While the end pose is held, the only marker is one on the wrist itself, with
+                // the countdown inside; nothing points back to the start until the patient is
+                // told to return.
+                if snapshot.calibrationCountdown != nil {
+                    target = geometry.wrist
+                    calibrationHold = true
+                }
             } else if snapshot.phase != .complete {
                 target = targetCenter(geometry, neutral: neutral)
             }
         }
-        let progress = isReturn ? returnProgress(at: frame.timestamp) : targetProgress(at: frame.timestamp)
+        let progress = calibrationHold
+            ? snapshot.calibrationProgress
+            : (isReturn ? returnProgress(at: frame.timestamp) : targetProgress(at: frame.timestamp))
+        let secondsRemaining = calibrationHold
+            ? snapshot.calibrationCountdown
+            : holdSecondsRemaining(at: frame.timestamp, visible: target != nil, isReturn: isReturn)
         snapshot.overlay = BalanceOverlay(
             aspect: frame.aspect,
             midlineBase: geometry.root,
@@ -799,10 +959,11 @@ struct ArmMovementEngine: BalanceMovementEngine {
             targetRadius: radius,
             crossedMidline: snapshot.phase == .holding,
             targetProgress: progress,
-            holdSecondsRemaining: holdSecondsRemaining(at: frame.timestamp, visible: target != nil, isReturn: isReturn),
+            holdSecondsRemaining: secondsRemaining,
             compensationWarning: snapshot.compensation.isCompensating,
             armChain: [geometry.shoulder, geometry.elbow, geometry.wrist],
-            showsMidline: false
+            showsMidline: false,
+            isCalibrationHold: calibrationHold
         )
         lastOverlayTimestamp = frame.timestamp
     }

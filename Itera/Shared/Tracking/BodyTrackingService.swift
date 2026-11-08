@@ -32,6 +32,9 @@ final class BodyTrackingService: NSObject, AVCaptureVideoDataOutputSampleBufferD
     private var configured = false
     private var hasInitialOrientation = false
     private var timestampOffset: Double?
+    private var lastStaleLog = 0.0
+    /// Oldest inference result still worth showing, in seconds.
+    private static let maximumFrameAge = 0.8
     private var lastPublished = 0.0
     /// Keeps tracking the patient while bystanders are in view. Confined to `queue`.
     private var subjects = BodySubjectSelector()
@@ -317,14 +320,17 @@ final class BodyTrackingService: NSObject, AVCaptureVideoDataOutputSampleBufferD
               let image = CMSampleBufferGetImageBuffer(sampleBuffer) else {
             return
         }
-        let rawTime = CMTimeGetSeconds(CMSampleBufferGetPresentationTimeStamp(sampleBuffer))
-        guard rawTime.isFinite else {
+        // The capture session's clock is not always the host clock on Mac, so a fixed offset
+        // measured at start skews every frame's age. Convert each timestamp to the host clock,
+        // as the hand pipeline does, so the freshness check below reflects real latency.
+        let time = CMSyncConvertTime(
+            CMSampleBufferGetPresentationTimeStamp(sampleBuffer),
+            from: session.synchronizationClock ?? CMClockGetHostTimeClock(),
+            to: CMClockGetHostTimeClock()
+        ).seconds
+        guard time.isFinite else {
             return
         }
-        guard let timestampOffset else {
-            return
-        }
-        let time = rawTime + timestampOffset
         if awaitingFirstFrame {
             awaitingFirstFrame = false
             NSLog("Body capture first frame delay=%.3f seconds generation=%@", ProcessInfo.processInfo.systemUptime - captureStartedAt, generation.uuidString)
@@ -425,8 +431,19 @@ final class BodyTrackingService: NSObject, AVCaptureVideoDataOutputSampleBufferD
 
     private func deliver(_ frame: TrackingObservation) {
         queue.async { [weak self] in
-            guard let self, self.wantsCapture, self.generation == frame.generation,
-                  ProcessInfo.processInfo.systemUptime - frame.timestamp <= 0.3 else { return }
+            guard let self, self.wantsCapture, self.generation == frame.generation else { return }
+            let age = ProcessInfo.processInfo.systemUptime - frame.timestamp
+
+            // Inference takes noticeable time on Mac; a frame slightly late is still far better
+            // than none, since a dropped frame looks to the patient like lost tracking.
+            guard age <= Self.maximumFrameAge else {
+                if ProcessInfo.processInfo.systemUptime - self.lastStaleLog >= 3 {
+                    self.lastStaleLog = ProcessInfo.processInfo.systemUptime
+                    NSLog("Body frame dropped as stale age=%.3f", age)
+                }
+                return
+            }
+
             self.enqueueDelivery(frame)
         }
     }
@@ -453,8 +470,12 @@ final class BodyTrackingService: NSObject, AVCaptureVideoDataOutputSampleBufferD
         }
     }
 
+    /// Joints that identify a person across frames. Hips and root are left out on purpose: a
+    /// seated patient close to the camera often has them out of frame or flickering, and each
+    /// appearance or loss shifted the identity point enough to drop the lock onto the patient,
+    /// so the skeleton vanished whenever someone else was in view.
     private static let torsoJoints: [VNHumanBodyPoseObservation.JointName] = [
-        .neck, .leftShoulder, .rightShoulder, .leftHip, .rightHip, .root,
+        .neck, .nose, .leftShoulder, .rightShoulder,
     ]
 
     private static func candidate(

@@ -26,6 +26,7 @@ enum BalanceExercise: String, Hashable {
         "title", "overview", "animationHint", "animationAccessibility", "step.touch",
         "step.touch.detail", "begin", "rotateRight", "rotateLeft", "voice.rightTarget",
         "voice.leftTarget",
+        "calibration.endHint", "calibrateRange",
     ]
 
     /// String-catalog key. Balancing keeps its original `balance.` keys; both rotations share the
@@ -144,6 +145,8 @@ struct BalanceOverlay: Equatable {
     /// Shoulder, elbow, and wrist of the working arm, drawn when the movement is an arm rotation.
     var armChain: [TherapyPoint] = []
     var showsMidline = true
+    /// The target marker is the patient's own wrist, held still during end-pose calibration.
+    var isCalibrationHold = false
 }
 
 struct BalanceSnapshot: Equatable {
@@ -161,6 +164,8 @@ struct BalanceSnapshot: Equatable {
     var phase: Phase = .findingBody
     var instructionKey = "balance.tracking"
     var calibrationProgress = 0.0
+    /// Seconds left of the end-pose hold during calibration; `nil` until the patient holds still.
+    var calibrationCountdown: Int?
     var activeArm: CrossingArm = .right
     var armSelection: BalanceArmSelection = .both
     var metrics = BalanceMetrics()

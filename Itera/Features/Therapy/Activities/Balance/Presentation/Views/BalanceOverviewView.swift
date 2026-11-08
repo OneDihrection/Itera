@@ -51,7 +51,11 @@ struct BalanceOverviewView: View {
                         .frame(maxWidth: .infinity, alignment: .leading)
 
                         ZStack(alignment: .bottomTrailing) {
-                            BalanceExerciseDemonstrationView(exercise: exercise, paused: animationPaused)
+                            BalanceExerciseDemonstrationView(
+                                exercise: exercise,
+                                paused: animationPaused,
+                                selection: BalanceArmSelection(rawValue: armSelectionRaw) ?? .both
+                            )
                                 .frame(width: 360, height: 260)
                             TherapyIconButton(
                                 title: animationPaused ? "action.resume" : "action.pause",

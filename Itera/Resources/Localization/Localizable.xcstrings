@@ -1,260 +1,9 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
-    "speak.session.opening.armRaise.left.positioning" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Lower your left arm."
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Turunkan lengan kiri."
-          }
-        }
-      }
+    "" : {
+
     },
-    "speak.session.opening.armRaise.left.ready" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Lower your left arm."
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Turunkan lengan kiri."
-          }
-        }
-      }
-    },
-    "speak.session.opening.armRaise.right.positioning" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Lower your right arm."
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Turunkan lengan kanan."
-          }
-        }
-      }
-    },
-    "speak.session.opening.armRaise.right.ready" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Lower your right arm."
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Turunkan lengan kanan."
-          }
-        }
-      }
-    },
-    "speak.session.opening.elbowBend.left.positioning" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Straighten your left elbow."
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Luruskan siku kiri."
-          }
-        }
-      }
-    },
-    "speak.session.opening.elbowBend.left.ready" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Straighten your left elbow."
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Luruskan siku kiri."
-          }
-        }
-      }
-    },
-    "speak.session.opening.elbowBend.right.positioning" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Straighten your right elbow."
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Luruskan siku kanan."
-          }
-        }
-      }
-    },
-    "speak.session.opening.elbowBend.right.ready" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Straighten your right elbow."
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Luruskan siku kanan."
-          }
-        }
-      }
-    },
-    "speak.session.reachRight" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Reach right."
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Jangkau ke kanan."
-          }
-        }
-      }
-    },
-    "speak.session.reachLeft" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Reach left."
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Jangkau ke kiri."
-          }
-        }
-      }
-    },
-    "speak.session.reachUp" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Reach up."
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Jangkau ke atas."
-          }
-        }
-      }
-    },
-    "speak.parity.reachOpening" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Hold still."
-          }
-        }
-      }
-    },
-    "speak.session.reachStart" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Hold still."
-          }
-        }
-      }
-    },
-    "speak.session.farther" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Reach a little further."
-          }
-        }
-      }
-    },
-    "speak.session.countdown" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Get ready. Three, two, one."
-          }
-        }
-      }
-    },
-    "speak.session.rest" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Rest."
-          }
-        }
-      }
-    },
-    "speak.session.timedPractice" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Timed practice."
-          }
-        }
-      }
-    },
-    "" : {},
     "%lld / %lld" : {
       "comment" : "A sublabel showing the number of completed repetitions and the total number of repetitions.",
       "isCommentAutoGenerated" : true,
@@ -5271,6 +5020,40 @@
         }
       }
     },
+    "internalRotation.calibrateRange" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Turn toward your belly as far as you can"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Putar ke arah perut sejauh mungkin"
+          }
+        }
+      }
+    },
+    "internalRotation.calibration.endHint" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Turn your forearm toward your belly as far as you can. Hold 3 seconds."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Putar lengan ke arah perut sejauh mungkin. Tahan 3 detik."
+          }
+        }
+      }
+    },
     "internalRotation.overview" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -8374,7 +8157,6 @@
       }
     },
     "rotation.animationAccessibility" : {
-      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -8407,6 +8189,23 @@
         }
       }
     },
+    "rotation.armOutOfView" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sit back to show your elbow"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mundur agar siku terlihat"
+          }
+        }
+      }
+    },
     "rotation.begin" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -8424,19 +8223,53 @@
         }
       }
     },
+    "rotation.calibrateHold" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hold this position"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tahan posisi ini"
+          }
+        }
+      }
+    },
+    "rotation.calibrateHoldLabel" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hold still"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tahan posisi"
+          }
+        }
+      }
+    },
     "rotation.calibrateRange" : {
       "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Turn as far as is comfortable, then hold still"
+            "value" : "Turn out as far as you can"
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Putar sejauh yang nyaman, lalu tahan posisi"
+            "value" : "Putar ke luar sejauh mungkin"
           }
         }
       }
@@ -8447,13 +8280,81 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Sit tall and hold still"
+            "value" : "Hold this position"
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Duduk tegak dan tahan posisi"
+            "value" : "Tahan posisi"
+          }
+        }
+      }
+    },
+    "rotation.calibration.endHint" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Turn your forearm out as far as you can. Hold 3 seconds."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Putar lengan ke luar sejauh mungkin. Tahan 3 detik."
+          }
+        }
+      }
+    },
+    "rotation.calibration.endStep" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Step 2: End position"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Langkah 2: Posisi akhir"
+          }
+        }
+      }
+    },
+    "rotation.calibration.startHint" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Elbow at your side, bent 90°. Hold 3 seconds."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Siku di sisi badan, tekuk 90°. Tahan 3 detik."
+          }
+        }
+      }
+    },
+    "rotation.calibration.startStep" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Step 1: Start position"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Langkah 1: Posisi awal"
           }
         }
       }
@@ -8564,13 +8465,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Bring your elbow to your side, bent about 90°"
+            "value" : "Elbow at your side, bent 90°"
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Letakkan siku di sisi badan, tertekuk sekitar 90°"
+            "value" : "Siku di sisi badan, tekuk 90°"
           }
         }
       }
@@ -8682,13 +8583,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Bring your hand back to the blue circle"
+            "value" : "Back to the blue circle"
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Kembalikan tangan ke lingkaran biru"
+            "value" : "Kembali ke lingkaran biru"
           }
         }
       }
@@ -8699,13 +8600,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Hold in the blue circle for 3 seconds"
+            "value" : "Hold for 3 seconds"
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Tahan di lingkaran biru selama 3 detik"
+            "value" : "Tahan 3 detik"
           }
         }
       }
@@ -8937,13 +8838,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Keep your shoulders and working arm visible"
+            "value" : "Keep shoulder and arm in view"
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Pastikan bahu dan lengan yang dilatih terlihat"
+            "value" : "Bahu dan lengan harus terlihat"
           }
         }
       }
@@ -9874,22 +9775,6 @@
       }
     },
     "session.cameraWait" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Take a breath, getting the camera ready…"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Tarik napas, kamera sedang disiapkan…"
-          }
-        }
-      }
-    },
-    "session.preparing" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -10881,6 +10766,22 @@
         }
       }
     },
+    "session.preparing" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Take a breath, getting the camera ready…"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tarik napas, kamera sedang disiapkan…"
+          }
+        }
+      }
+    },
     "session.rangeProgress" : {
       "localizations" : {
         "en" : {
@@ -10893,6 +10794,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Kemajuan kalibrasi"
+          }
+        }
+      }
+    },
+    "session.reachAcross" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Reach across, turn your body"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Jangkau ke seberang, putar badan"
           }
         }
       }
@@ -10944,6 +10862,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Jangkau ke kiri"
+          }
+        }
+      }
+    },
+    "session.reachLeftFar" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Reach left as far as you can"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Jangkau ke kiri sejauh mungkin"
           }
         }
       }
@@ -11075,6 +11010,23 @@
         }
       }
     },
+    "session.reachRightFar" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Reach right as far as you can"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Jangkau ke kanan sejauh mungkin"
+          }
+        }
+      }
+    },
     "session.reachRound %lld" : {
       "localizations" : {
         "en" : {
@@ -11138,6 +11090,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Jangkau ke atas"
+          }
+        }
+      }
+    },
+    "session.reachUpFar" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Reach up as high as you can"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Jangkau ke atas setinggi mungkin"
           }
         }
       }
@@ -12613,6 +12582,259 @@
         }
       }
     },
+    "speak.parity.reachOpening" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hold still."
+          }
+        }
+      }
+    },
+    "speak.session.countdown" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Get ready. Three, two, one."
+          }
+        }
+      }
+    },
+    "speak.session.farther" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Reach a little further."
+          }
+        }
+      }
+    },
+    "speak.session.opening.armRaise.left.positioning" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lower your left arm."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Turunkan lengan kiri."
+          }
+        }
+      }
+    },
+    "speak.session.opening.armRaise.left.ready" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lower your left arm."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Turunkan lengan kiri."
+          }
+        }
+      }
+    },
+    "speak.session.opening.armRaise.right.positioning" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lower your right arm."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Turunkan lengan kanan."
+          }
+        }
+      }
+    },
+    "speak.session.opening.armRaise.right.ready" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lower your right arm."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Turunkan lengan kanan."
+          }
+        }
+      }
+    },
+    "speak.session.opening.elbowBend.left.positioning" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Straighten your left elbow."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Luruskan siku kiri."
+          }
+        }
+      }
+    },
+    "speak.session.opening.elbowBend.left.ready" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Straighten your left elbow."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Luruskan siku kiri."
+          }
+        }
+      }
+    },
+    "speak.session.opening.elbowBend.right.positioning" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Straighten your right elbow."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Luruskan siku kanan."
+          }
+        }
+      }
+    },
+    "speak.session.opening.elbowBend.right.ready" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Straighten your right elbow."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Luruskan siku kanan."
+          }
+        }
+      }
+    },
+    "speak.session.reachLeft" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Reach left."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Jangkau ke kiri."
+          }
+        }
+      }
+    },
+    "speak.session.reachRight" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Reach right."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Jangkau ke kanan."
+          }
+        }
+      }
+    },
+    "speak.session.reachStart" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hold still."
+          }
+        }
+      }
+    },
+    "speak.session.reachUp" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Reach up."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Jangkau ke atas."
+          }
+        }
+      }
+    },
+    "speak.session.rest" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rest."
+          }
+        }
+      }
+    },
+    "speak.session.timedPractice" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Timed practice."
+          }
+        }
+      }
+    },
     "stage.calibration" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -12817,6 +13039,7 @@
       }
     },
     "steps.forearmRotation.1" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -12833,6 +13056,7 @@
       }
     },
     "steps.forearmRotation.2" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -12849,6 +13073,7 @@
       }
     },
     "steps.forearmRotation.3" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -12865,6 +13090,7 @@
       }
     },
     "steps.forearmRotation.4" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -13752,6 +13978,22 @@
         }
       }
     },
+    "towel.demo" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pinch your thumb and index finger together on the glowing circle, slide to the next circle, then open your hand.\nYou can begin after the countdown, even while guidance speaks."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Satukan ibu jari dan jari telunjuk (jepit) di lingkaran yang bersinar, geser ke lingkaran berikutnya, lalu buka tangan.\nMulai setelah hitungan mundur, meskipun panduan masih berbicara."
+          }
+        }
+      }
+    },
     "towel.fold" : {
       "localizations" : {
         "en" : {
@@ -13849,22 +14091,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Riwayat tidak dapat dimuat. Coba lagi."
-          }
-        }
-      }
-    },
-    "towel.demo" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Pinch your thumb and index finger together on the glowing circle, slide to the next circle, then open your hand.\nYou can begin after the countdown, even while guidance speaks."
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Satukan ibu jari dan jari telunjuk (jepit) di lingkaran yang bersinar, geser ke lingkaran berikutnya, lalu buka tangan.\nMulai setelah hitungan mundur, meskipun panduan masih berbicara."
           }
         }
       }
@@ -13986,19 +14212,19 @@
         }
       }
     },
-    "towel.trackingLost" : {
+    "towel.step.grab" : {
       "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Show your hand to the camera."
+            "value" : "Grab"
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Tampilkan tangan ke kamera."
+            "value" : "Pegang"
           }
         }
       }
@@ -14037,19 +14263,19 @@
         }
       }
     },
-    "towel.step.grab" : {
+    "towel.trackingLost" : {
       "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Grab"
+            "value" : "Show your hand to the camera."
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Pegang"
+            "value" : "Tampilkan tangan ke kamera."
           }
         }
       }
@@ -14247,74 +14473,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Gunakan tombol sentuh"
-          }
-        }
-      }
-    },
-    "session.reachRightFar" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Reach right as far as you can"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Jangkau ke kanan sejauh mungkin"
-          }
-        }
-      }
-    },
-    "session.reachLeftFar" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Reach left as far as you can"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Jangkau ke kiri sejauh mungkin"
-          }
-        }
-      }
-    },
-    "session.reachAcross" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Reach across, turn your body"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Jangkau ke seberang, putar badan"
-          }
-        }
-      }
-    },
-    "session.reachUpFar" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Reach up as high as you can"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Jangkau ke atas setinggi mungkin"
           }
         }
       }

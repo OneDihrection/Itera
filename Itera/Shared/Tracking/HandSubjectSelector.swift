@@ -9,13 +9,14 @@ import Foundation
 
 /// Chooses which detected hand belongs to the patient when more than one is visible.
 ///
-/// Selection never uses screen position alone. It prefers, in order:
-/// 1. **Continuity**: the hand nearest the patient's recently tracked hand, at a similar size.
-/// 2. **Requested side**: the only hand whose reported chirality matches the exercised side.
-/// 3. **Dominance**: a hand clearly larger (closer to the camera) than every other hand.
-///
-/// When none of these settles the choice, it reports no subject rather than guessing, so a
-/// bystander's hand is never scored as the patient's.
+/// Selection never uses screen position alone. The first hand seen is the **most dominant**
+/// one (the largest, so closest to the camera, preferring the exercised side), and the
+/// selector then **locks onto it**:
+/// 1. **Continuity**: while locked, only the hand nearest the locked hand, at a similar size,
+///    can be selected. A bystander never takes over, even if the locked hand is briefly lost;
+///    the selector reports no subject until the same hand returns or the lock expires.
+/// 2. **Acquisition**: with no lock, the largest hand on the requested side wins, else the
+///    largest hand overall.
 struct HandSubjectSelector {
     struct Candidate {
         /// Aspect-corrected wrist position in unmirrored image coordinates.
@@ -25,12 +26,11 @@ struct HandSubjectSelector {
         let side: HandSide?
     }
 
-    /// How long a lost hand remains the preferred subject. Matches the exercise hold grace.
-    static let continuityWindow = 1.5
-    /// A candidate this much larger than every other hand is treated as the patient's.
-    private static let dominanceRatio = 1.4
+    /// How long a lost hand stays locked. Long enough to survive a brief occlusion or a
+    /// fast turn without handing the exercise to someone else in the frame.
+    static let continuityWindow = 6.0
     /// Accepted size change between the tracked hand and a continuity candidate.
-    private static let sizeRange = 0.6...1.6
+    private static let sizeRange = 0.5...2.0
 
     var preferredSide: HandSide?
     private var lastWrist: TherapyPoint?
@@ -46,7 +46,7 @@ struct HandSubjectSelector {
         generation = nil
     }
 
-    /// - Returns: the index of the patient's hand in `candidates`, or `nil` when ambiguous.
+    /// - Returns: the index of the patient's hand in `candidates`, or `nil` when no hand is visible or the locked hand is out of sight.
     mutating func select(_ candidates: [Candidate], at time: Double, generation: UUID) -> Int? {
         if self.generation != generation {
             reset()
@@ -57,8 +57,17 @@ struct HandSubjectSelector {
             return nil
         }
 
-        guard let index = continuingIndex(in: candidates, at: time) ?? initialIndex(in: candidates) else {
-            return nil
+        let index: Int
+
+        if isLocked(at: time) {
+            // Locked: only the same hand qualifies; never fall back to another one.
+            guard let continuing = continuingIndex(in: candidates) else {
+                return nil
+            }
+
+            index = continuing
+        } else {
+            index = initialIndex(in: candidates)
         }
 
         let selected = candidates[index]
@@ -71,16 +80,22 @@ struct HandSubjectSelector {
 
     // MARK: - Rules
 
-    private func continuingIndex(in candidates: [Candidate], at time: Double) -> Int? {
-        guard let lastWrist,
-              let lastTime,
-              time - lastTime <= Self.continuityWindow,
-              lastSize > 0 else {
+    private func isLocked(at time: Double) -> Bool {
+        guard lastWrist != nil, let lastTime, lastSize > 0 else {
+            return false
+        }
+
+        return time - lastTime <= Self.continuityWindow
+    }
+
+    private func continuingIndex(in candidates: [Candidate]) -> Int? {
+        guard let lastWrist else {
             return nil
         }
 
-        // A hand moves at most a few hand-lengths between tracked frames.
-        let gate = max(0.12, lastSize * 3)
+        // A hand moves at most a few hand-lengths between tracked frames, and further
+        // the longer it has been out of sight.
+        let gate = max(0.2, lastSize * 4)
 
         let nearest = candidates.indices
             .filter { Self.sizeRange.contains(candidates[$0].size / lastSize) }
@@ -94,20 +109,19 @@ struct HandSubjectSelector {
         return nearest.index
     }
 
-    private func initialIndex(in candidates: [Candidate]) -> Int? {
-        if candidates.count == 1 {
-            return 0
-        }
+    /// The most dominant hand: the largest on the requested side, else the largest overall.
+    private func initialIndex(in candidates: [Candidate]) -> Int {
+        let all = Array(candidates.indices)
 
         if let preferredSide {
-            let matching = candidates.indices.filter { candidates[$0].side == preferredSide }
+            let matching = all.filter { candidates[$0].side == preferredSide }
 
-            if matching.count == 1 {
-                return matching[0]
+            if let largest = matching.max(by: { candidates[$0].size < candidates[$1].size }) {
+                return largest
             }
         }
 
-        return dominantSubjectIndex(sizes: candidates.map(\.size), ratio: Self.dominanceRatio)
+        return all.max { candidates[$0].size < candidates[$1].size } ?? 0
     }
 }
 
