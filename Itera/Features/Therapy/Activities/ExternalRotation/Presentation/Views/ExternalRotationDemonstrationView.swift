@@ -12,15 +12,60 @@ import SwiftUI
 struct BalanceExerciseDemonstrationView: View {
     let exercise: BalanceExercise
     let paused: Bool
+    /// The arm being exercised, which picks the recording for that arm.
+    var arm: CrossingArm?
+    /// The patient's arm choice; with both arms chosen, a single recording shows both arms.
+    var selection: BalanceArmSelection?
+
+    /// The bundled recording for this exercise and arm, if there is one.
+    private var movieResource: String? {
+        let side = (arm ?? selection?.initialArm) == .left ? "left" : "right"
+        let resource: String
+
+        switch exercise {
+        case .externalRotation:
+            resource = "shoulder_external_rotation_" + (selection == .both ? "both" : side)
+        case .internalRotation:
+            resource = "shoulder_internal_rotation_" + (selection == .both ? "both" : side)
+        case .sitToStand:
+            resource = "sit_to_stand"
+        case .crossMidline, .shoulderFlexion:
+            return nil
+        }
+
+        return ShoulderRotationMovieView.isAvailable(resource) ? resource : nil
+    }
 
     var body: some View {
         switch exercise {
         case .crossMidline:
             BalanceDemonstrationView(paused: paused)
         case .externalRotation, .internalRotation:
-            ExternalRotationDemonstrationView(direction: exercise.rotationDirection, paused: paused)
+            if let movieResource {
+                ShoulderRotationMovieView(
+                    resource: movieResource,
+                    paused: paused,
+                    accessibilityKey: LocalizedStringKey(
+                        exercise == .internalRotation
+                            ? "internalRotation.animationAccessibility"
+                            : "rotation.animationAccessibility"
+                    )
+                )
+            } else {
+                ExternalRotationDemonstrationView(direction: exercise.rotationDirection, paused: paused)
+            }
         case .shoulderFlexion:
             ShoulderFlexionDemonstrationView(paused: paused)
+        case .sitToStand:
+            if let movieResource {
+                ShoulderRotationMovieView(
+                    resource: movieResource,
+                    paused: paused,
+                    accessibilityKey: "sitToStand.animationAccessibility"
+                )
+            } else {
+                SitToStandDemonstrationView(paused: paused)
+            }
         }
     }
 }

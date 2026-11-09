@@ -17,13 +17,15 @@ enum TherapyKind: String, Codable, CaseIterable {
     case elbowBend
     case directionalReach
     case cup
+    /// No longer offered in routines: Trunk Control now runs on the Balancing screens. The case
+    /// stays so sessions and routines saved earlier still decode.
     case sitToStand
     case foldTowel
 
-    var category: TherapyCategory {
+    var category: TherapyCategory? {
         switch self {
         case .foldTowel: return .taskOriented
-        case .sitToStand: return .trunk
+        case .sitToStand: return nil
         case .armRaise, .elbowBend, .directionalReach, .cup: return .arm
         }
     }
@@ -31,12 +33,11 @@ enum TherapyKind: String, Codable, CaseIterable {
 
 /// A group of therapy kinds that share the guided-session flow and have their own routine.
 enum TherapyCategory: String, CaseIterable, Identifiable, Hashable {
-    case arm, trunk, taskOriented
+    case arm, taskOriented
     var id: String { rawValue }
     var title: String {
         switch self {
         case .arm: return "home.armPractice"
-        case .trunk: return "home.trunkPractice"
         case .taskOriented: return "task.category"
         }
     }
@@ -44,7 +45,6 @@ enum TherapyCategory: String, CaseIterable, Identifiable, Hashable {
     var artwork: String {
         switch self {
         case .arm: return "symbol:figure.arms.open"
-        case .trunk: return "symbol:figure.stand"
         case .taskOriented: return "symbol:square.stack.3d.up"
         }
     }
@@ -52,7 +52,6 @@ enum TherapyCategory: String, CaseIterable, Identifiable, Hashable {
     var positioningKey: String {
         switch self {
         case .arm: return "home.positioning"
-        case .trunk: return "trunk.positioning"
         case .taskOriented: return "towel.positioning"
         }
     }

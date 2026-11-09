@@ -35,11 +35,11 @@ enum FingerExercise: String, CaseIterable, Identifiable {
     }
     var isSequential: Bool { self == .opposition || self == .extensionSequence }
     var category: ExerciseCategory { self == .forearmRotation ? .forearm : .fingers }
-    /// Calibrates by sweeping the whole movement instead of holding two separate poses.
-    var calibratesRange: Bool { self == .forearmRotation }
-    var artwork: String {
-        self == .forearmRotation ? "symbol:arrow.triangle.2.circlepath" : "hand-" + rawValue
-    }
+    /// Sweeping the whole movement to measure a range is currently unused: every exercise,
+    /// forearm rotation included, calibrates by holding a start pose and then a target pose.
+    var calibratesRange: Bool { false }
+    /// The static hand picture in the asset catalog, named `hand-<exercise>`.
+    var artwork: String { "hand-" + rawValue }
 }
 
 /// A group of exercises that shares the finger-session flow but has its own plan, settings,
@@ -48,7 +48,7 @@ enum ExerciseCategory: String, CaseIterable, Identifiable, Hashable {
     case fingers, forearm
     var id: String { rawValue }
     var title: String { self == .fingers ? "plan.fingerTitle" : "exercise.forearmRotation" }
-    var artwork: String { self == .fingers ? "hand-hero" : "symbol:arrow.triangle.2.circlepath" }
+    var artwork: String { self == .fingers ? "hand-hero" : "hand-forearmRotation" }
     var exercises: [FingerExercise] {
         FingerExercise.allCases.filter { $0.category == self }
     }

@@ -22,8 +22,8 @@ import Foundation
 /// patient perform one sit-to-stand in their own way and records how far they lean and rise.
 /// Practice follows the live metrics against fractions of that personal range. A repetition counts
 /// only if some forward lean came before rising and the descent was not abrupt.
-struct SitToStandActivity: TherapyActivity {
-    private let configuration: SessionActivity
+struct SitToStandActivity {
+    private let goal: Int
     private var snapshot = SitToStandSnapshot()
     private var hold = StableHold()
     private var landmarkSmoother = MovementLandmarkSmoother()
@@ -55,6 +55,8 @@ struct SitToStandActivity: TherapyActivity {
         var peakLean = 0.0
         var bestPose: Pose?
         var reachedStand = false
+        /// The patient has held their standing pose for the full countdown.
+        var standHeld = false
     }
 
     private struct Pose {
@@ -70,6 +72,10 @@ struct SitToStandActivity: TherapyActivity {
         static let minimumLeg = 0.15
         static let minimumTrunk = 0.06
         static let seatedHold = 3.0
+        /// How long the patient holds the standing pose during the trial.
+        static let standingHold = 3.0
+        /// A pose this close to the best so far counts as the standing pose.
+        static let standingPeakFraction = 0.85
         /// Only rules out a patient who is already standing; any comfortable seat is accepted.
         static let seatedKnee = 45.0...145.0
         static let maximumSeatedLean = 45.0
@@ -93,10 +99,12 @@ struct SitToStandActivity: TherapyActivity {
         static let cueDuration = 3.0
     }
 
-    init(configuration: SessionActivity) { self.configuration = configuration }
+    init(goal: Int) { self.goal = goal }
 
-    var presentation: ActivityPresentation {
+    /// What the patient is doing and how far along they are, as the screens present it.
+    var presentation: SitToStandSnapshot {
         var value = snapshot
+
         if countdown != nil {
             value.phase = .countdown
         } else if standing != nil {
@@ -104,78 +112,63 @@ struct SitToStandActivity: TherapyActivity {
         } else {
             value.phase = seated == nil ? .seatedCapture : .trial
         }
-        return .sitToStand(value)
+
+        return value
     }
 
-    mutating func handle(_ event: ActivityEvent) -> ActivityTransition {
-        switch event {
-        case .guidanceCompleted, .viewport, .countdownReady, .nextSet:
-            break
-        case .suspend:
-            suspended = true
-            landmarkSmoother.reset()
-            interrupt()
-        case .resume:
-            suspended = false
-            if countdown != nil {
-                countdown = nil
-                returningBeforePractice = true
-                awaitingSeat = true
-            }
-        case .recalibrate:
-            seated = nil
-            standing = nil
-            trial = Trial()
-            countdown = nil
-            returningBeforePractice = false
-            snapshot.instruction = "sts.holdSeated"
-            interrupt()
-        case .command(let command, _):
-            handle(command)
-        case .tick(let time):
-            if let last, time - last > 0.15 {
-                hold.clear()
-                sustainedSince = nil
-                snapshot.progress = 0
-            }
-            if let lastValid, time - lastValid > 0.5 {
-                snapshot.joints = nil
-                snapshot.trackingMessage = "sts.trackingLost"
-                resetRepetition()
-                awaitingSeat = standing != nil
-            }
-        case .observation(let frame):
-            if !suspended {
-                consume(landmarkSmoother.consume(frame))
-            }
-        }
-        let finished = snapshot.count >= configuration.goal
-        return ActivityTransition(
-            status: finished ? .finished : (suspended ? .suspended : .running),
-            presentation: presentation
-        )
+    /// Whether the goal number of repetitions has been reached.
+    var isFinished: Bool { snapshot.count >= goal }
+
+    /// Stops following the patient, for example while the session is paused.
+    mutating func suspend() {
+        suspended = true
+        landmarkSmoother.reset()
+        interrupt()
     }
 
-    private mutating func handle(_ command: ActivityCommand) {
-        switch command {
-        case .redo:
-            self = SitToStandActivity(configuration: configuration)
-        case .adjustTarget:
-            guard seated != nil else { return }
-            standing = nil
-            trial = Trial()
+    mutating func resume() {
+        suspended = false
+
+        if countdown != nil {
             countdown = nil
-            returningBeforePractice = false
-            snapshot.instruction = "sts.trial"
-            interrupt()
-        case .retryStep:
-            guard standing != nil else { return }
-            returningBeforePractice = false
-            interrupt()
+            returningBeforePractice = true
             awaitingSeat = true
-        case .skipStep:
-            break
         }
+    }
+
+    /// Forgets the calibrated poses so the patient starts again from the seated hold.
+    mutating func recalibrate() {
+        seated = nil
+        standing = nil
+        trial = Trial()
+        countdown = nil
+        returningBeforePractice = false
+        snapshot.instruction = "sts.holdSeated"
+        interrupt()
+    }
+
+    /// Time moves on even when no usable frame arrives, so a lost patient is noticed.
+    mutating func tick(_ time: Double) {
+        if let last, time - last > 0.15 {
+            hold.clear()
+            sustainedSince = nil
+            snapshot.progress = 0
+        }
+
+        if let lastValid, time - lastValid > 0.5 {
+            snapshot.joints = nil
+            snapshot.trackingMessage = "sts.trackingLost"
+            resetRepetition()
+            awaitingSeat = standing != nil
+        }
+    }
+
+    mutating func observe(_ frame: TrackingObservation) {
+        guard !suspended else {
+            return
+        }
+
+        consume(landmarkSmoother.consume(frame))
     }
 
     private mutating func interrupt() {
@@ -361,7 +354,6 @@ struct SitToStandActivity: TherapyActivity {
     /// Watches one sit-to-stand done in the patient's own way and keeps how far they leaned and
     /// rose. It finishes once they have stood and settled back into the seat.
     private mutating func observeTrial(_ current: Pose, seated: Pose, time: Double) {
-        snapshot.instruction = "sts.trial"
         snapshot.progress = 0
         let kneeGain = current.knee - seated.knee
         let heightGain = current.height - seated.height
@@ -384,9 +376,12 @@ struct SitToStandActivity: TherapyActivity {
             trial.reachedStand = true
         }
         guard trial.reachedStand else {
+            snapshot.instruction = "sts.trial"
+            hold.clear()
             sustainedSince = nil
             return
         }
+        holdStandingPose(current, kneeGain: kneeGain, heightGain: heightGain, time: time)
         let settledKnee = kneeGain <= max(10, trial.maxKneeGain * Limits.trialSeatedFraction)
         let settledHeight = heightGain <= trial.maxHeightGain * Limits.trialSeatedFraction
         guard sustainedFor(settledKnee && settledHeight, at: time, seconds: Limits.trialSettle),
@@ -399,6 +394,39 @@ struct SitToStandActivity: TherapyActivity {
         returningBeforePractice = true
         awaitingSeat = true
         sustainedSince = nil
+        snapshot.instruction = "sts.sitDown"
+    }
+
+    /// Counts down while the patient stays still at the top of their stand, so the standing pose
+    /// is as deliberate as the seated one. It is guidance: sitting early still finishes the trial.
+    private mutating func holdStandingPose(_ current: Pose, kneeGain: Double, heightGain: Double, time: Double) {
+        guard !trial.standHeld else {
+            snapshot.instruction = "sts.sitDown"
+            return
+        }
+
+        let nearPeak = kneeGain >= trial.maxKneeGain * Limits.standingPeakFraction
+            && heightGain >= trial.maxHeightGain * Limits.standingPeakFraction
+
+        guard nearPeak else {
+            hold.clear()
+            snapshot.instruction = "sts.trial"
+            return
+        }
+
+        hold.consume(
+            current.joints.hip, time: time, duration: Limits.standingHold,
+            tolerance: current.leg * 0.12
+        )
+        publish(hold: Limits.standingHold, instruction: "sts.holdStanding")
+
+        guard hold.progress >= 1 else {
+            return
+        }
+
+        trial.standHeld = true
+        hold.clear()
+        snapshot.progress = 0
         snapshot.instruction = "sts.sitDown"
     }
 

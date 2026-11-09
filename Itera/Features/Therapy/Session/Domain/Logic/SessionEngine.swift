@@ -202,7 +202,10 @@ struct SessionEngine {
         case .elbowBend: activity = ElbowBendActivity(configuration: configuration)
         case .directionalReach: activity = DirectionalReachActivity(configuration: configuration)
         case .cup: activity = CupActivity(configuration: configuration)
-        case .sitToStand: activity = SitToStandActivity(configuration: configuration)
+        case .sitToStand:
+            // Kept only so routines and sessions saved before Trunk Control moved to the
+            // Balancing screens still decode; nothing offers it any more.
+            activity = nil
         }
         if let viewport { _ = activity?.handle(.viewport(viewport)) }
         evidenceBoundary = now
@@ -306,12 +309,6 @@ struct SessionEngine {
         } else if case .movement = result.presentation, old?.count != result.presentation.count {
             effects.append(.audio(UUID(), .count(result.presentation.count)))
 
-        } else if case .sitToStand(let after) = result.presentation,
-            old?.count != after.count {
-            effects.append(.audio(UUID(), .count(after.count)))
-        } else if case .sitToStand(let before) = old, case .sitToStand(let after) = result.presentation,
-            before.stage != after.stage, after.stage == .standing {
-            effects.append(.audio(UUID(), .target))
         } else if case .movement = result.presentation,
             let previous = old?.guide, let next = result.presentation.guide,
             previous.targetActive, !next.targetActive {
@@ -594,7 +591,7 @@ struct SessionEngine {
         feedbackEnteredAt = now
         var countsRepetitions = false
         switch presentation {
-        case .movement, .sitToStand, .towel: countsRepetitions = true
+        case .movement, .towel: countsRepetitions = true
         default: break
         }
         if outcome == .completed, countsRepetitions, let count = presentation?.count, count > 0 {

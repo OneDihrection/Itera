@@ -9,8 +9,8 @@ import Foundation
 
 /// Chooses which detected person is the patient when others are in view, and keeps following them.
 ///
-/// The first selection prefers a person clearly larger (closer to the camera) than everyone else.
-/// From then on the selector is **locked** to that person: a candidate is accepted only if its
+/// The first selection takes the most dominant person: the largest one (closest to the camera).
+/// Whoever is in view first, at calibration, becomes the patient. From then on the selector is **locked** to that person: a candidate is accepted only if its
 /// torso is near the patient's last torso and of a similar torso size, and a bystander is never
 /// adopted just because they look larger. While the patient is out of view nothing is reported
 /// (rather than switching people); only after `relockTimeout` without the patient may the
@@ -33,8 +33,7 @@ struct BodySubjectSelector {
     static let continuityWindow = 1.5
     /// How long a locked patient may be missing before another person may be adopted.
     static let relockTimeout = 5.0
-    private static let dominanceRatio = 1.4
-    private static let torsoSizeRange = 0.75...1.33
+    private static let torsoSizeRange = 0.5...2.0
     /// The second-nearest person must be this much farther than the nearest to count as unambiguous.
     private static let ambiguityMargin = 1.3
 
@@ -97,14 +96,23 @@ struct BodySubjectSelector {
             return nil
         }
 
-        // The gate grows with the time the patient was unseen, since they may have shifted.
+        // The torso centre is a mean of whichever joints are confident, so it jumps by up to half
+        // a torso when hips or shoulders drop out. The gate allows for that and grows with the
+        // time the patient was unseen, since they may also have shifted.
         let elapsed = max(0, time - lastTime)
-        let gate = max(0.05, lastTorsoSize * min(1.0, 0.25 + 0.15 * elapsed))
+        let gate = max(0.1, lastTorsoSize * min(2.0, 0.7 + 0.3 * elapsed))
 
+        // Identity combines position and apparent size, so a bystander of another size at a
+        // similar spot ranks behind the patient.
         let matches = candidates.indices
             .filter { candidates[$0].torsoSize > 0 }
             .filter { Self.torsoSizeRange.contains(candidates[$0].torsoSize / lastTorsoSize) }
-            .map { (index: $0, distance: (candidates[$0].torso - lastTorso).length) }
+            .map { index -> (index: Int, distance: Double) in
+                let distance = (candidates[index].torso - lastTorso).length
+                let sizePenalty = abs(log(candidates[index].torsoSize / lastTorsoSize)) * lastTorsoSize * 0.5
+
+                return (index, distance + sizePenalty)
+            }
             .sorted { $0.distance < $1.distance }
 
         guard let nearest = matches.first, nearest.distance <= gate else {
@@ -127,10 +135,11 @@ struct BodySubjectSelector {
         return nearest.index
     }
 
+    /// The largest person wins even by a small margin: requiring a clear margin left the
+    /// skeleton missing whenever two people sat at a similar distance.
     private func initialIndex(in candidates: [Candidate]) -> Int? {
-        dominantSubjectIndex(
-            sizes: candidates.map(\.size),
-            ratio: Self.dominanceRatio
-        )
+        candidates.indices
+            .filter { candidates[$0].torsoSize > 0 }
+            .max { candidates[$0].size < candidates[$1].size }
     }
 }

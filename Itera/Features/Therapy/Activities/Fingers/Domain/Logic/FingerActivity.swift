@@ -55,6 +55,17 @@ struct FingerActivity {
     private var rangeCandidateStart = 0.0
     private var rangeCandidateSum = 0.0
     private var rangeCandidateCount = 0
+    /// Sweep time at which the measured range last grew, so a settled range can finish early.
+    private var rangeGrowthElapsed = 0.0
+    /// Forearm rotation only: exponentially smoothed palm-facing signal.
+    private var smoothedValue: Double?
+    private var smoothedTime = 0.0
+    /// Forearm rotation only: +1 or -1, the sign the patient's turn produces. It is learned while
+    /// the target pose is calibrated and then fixed for the exercise.
+    private var forearmDirection = 1.0
+    private var forearmDirectionLocked = false
+    /// Change from the start pose that shows which way the patient turns.
+    private static let forearmTurnThreshold = 0.08
 
     init(kind: FingerExercise, routine: FingerRoutine, restAfterFinalSet: Bool = true) {
         self.kind = kind
@@ -75,10 +86,22 @@ struct FingerActivity {
     /// Narrowest sweep, in metric units, that still gives the repetitions a usable target.
     static let minimumRange = 0.15
     /// A stable pose must stay this close for this long to count toward the range.
-    private static let rangeTolerance = 0.05
-    private static let rangeStableSeconds = 0.3
+    private static let rangeTolerance = 0.07
+    private static let rangeStableSeconds = 0.2
+    /// The sweep may end early once the range is wide enough and has stopped growing.
+    private static let rangeMinimumSweepSeconds = 4.0
+    private static let rangeSettleSeconds = 3.0
+    private static let rangeGrowthStep = 0.03
+    /// The measured range is shown this long, after its narration, before practice begins.
+    static let rangeResultDuration = 5.0
+    /// Time constant of the forearm signal filter; small enough not to delay arrival detection.
+    private static let forearmSmoothingSeconds = 0.10
 
     var rangeProgress: Double { min(1, rangeElapsed / Self.rangeDuration) }
+    /// How far the automatic start of practice has advanced after the range is shown.
+    var rangeResultProgress: Double {
+        phase == .rangeResult ? min(1, max(0, 1 - remaining / Self.rangeResultDuration)) : 0
+    }
 
     var needsStart: Bool { awaitingStart }
     var holdDuration: Double { phase == .range ? Self.readyCountdown : 2 }
@@ -119,10 +142,12 @@ struct FingerActivity {
 
         peakStart = nil
         lastTimestamp = nil
+        smoothedValue = nil
     }
 
     mutating func breakEvidence() {
         resetHold()
+        smoothedValue = nil
         peakStart = nil
         rangeCandidate = nil
         awaitingStart = true
@@ -140,6 +165,8 @@ struct FingerActivity {
         phase = kind.calibratesRange ? .range : .baseline
         finger = 0
         initialized = [Bool](repeating: false, count: 4)
+        forearmDirection = 1
+        forearmDirectionLocked = false
         demonstrationSeconds = 0
         resetRange()
         rangeTooSmall = false
@@ -223,6 +250,15 @@ struct FingerActivity {
                     }
                 }
             }
+        case .rangeResult:
+            // The measured range is read aloud first; practice then starts without a tap.
+            guard narrationFinished else {
+                return
+            }
+            remaining -= delta
+            if remaining <= 0 {
+                confirmRange()
+            }
         case .countdown:
             remaining -= delta
             if remaining <= 0 {
@@ -249,10 +285,11 @@ struct FingerActivity {
     mutating func observe(_ evidence: HandEvidence, now: Double) {
         guard now - evidence.timestamp >= 0, now - evidence.timestamp <= 0.3,
               evidence.timestamp > (lastTimestamp ?? -.infinity),
-              let value = evidence.metric(for: kind, finger: finger), value.isFinite else {
+              let rawValue = evidence.metric(for: kind, finger: finger), rawValue.isFinite else {
             breakEvidence()
             return
         }
+        let value = smoothed(rawValue, at: evidence.timestamp) * (kind == .forearmRotation ? forearmDirection : 1)
         // A completed hold remains the current instruction until its full ring is presented.
         if holdCompletionID != nil {
             lastTimestamp = evidence.timestamp
@@ -271,13 +308,17 @@ struct FingerActivity {
             awaitingStart = true
         }
         lastTimestamp = evidence.timestamp
-        if !narrationFinished, [.baseline, .target, .active, .range].contains(phase) {
+        // The sweep is measured while its instruction is still being read, so the patient can
+        // start turning at once; every other stage waits for its narration.
+        let measuresDuringNarration = phase == .range && rangeReady
+
+        if !narrationFinished, !measuresDuringNarration, [.baseline, .target, .active, .range].contains(phase) {
             resetHold()
             return
         }
         switch phase {
         case .baseline, .target:
-            capture(value, time: evidence.timestamp)
+            capture(adoptingForearmDirection(value), time: evidence.timestamp)
         case .range:
             captureRange(value, time: evidence.timestamp, delta: delta)
         case .active:
@@ -357,11 +398,17 @@ struct FingerActivity {
         }
         if time - rangeCandidateStart >= Self.rangeStableSeconds {
             let mean = rangeCandidateSum / Double(rangeCandidateCount)
+            let previousLow = rangeLow
+            let previousHigh = rangeHigh
             rangeLow = min(rangeLow ?? mean, mean)
             rangeHigh = max(rangeHigh ?? mean, mean)
+
+            if rangeGrew(from: previousLow, and: previousHigh) {
+                rangeGrowthElapsed = rangeElapsed
+            }
         }
         progress = rangeProgress
-        guard rangeElapsed >= Self.rangeDuration else {
+        guard rangeElapsed >= Self.rangeDuration || rangeHasSettled else {
             return
         }
         guard let low = rangeLow, let high = rangeHigh, high - low >= Self.minimumRange else {
@@ -377,6 +424,73 @@ struct FingerActivity {
         rangeTooSmall = false
         progress = 0
         phase = .rangeResult
+        remaining = Self.rangeResultDuration
+        narrationFinished = false
+    }
+
+    private func rangeGrew(from previousLow: Double?, and previousHigh: Double?) -> Bool {
+        guard let previousLow, let previousHigh, let low = rangeLow, let high = rangeHigh else {
+            return true
+        }
+
+        return low < previousLow - Self.rangeGrowthStep || high > previousHigh + Self.rangeGrowthStep
+    }
+
+    /// A wide enough range that has stopped growing needs no further sweeping.
+    private var rangeHasSettled: Bool {
+        guard let low = rangeLow, let high = rangeHigh, high - low >= Self.minimumRange else {
+            return false
+        }
+
+        return rangeElapsed >= Self.rangeMinimumSweepSeconds
+            && rangeElapsed - rangeGrowthElapsed >= Self.rangeSettleSeconds
+    }
+
+    /// Locks the direction of a forearm turn the first time the patient turns clearly away from
+    /// the start pose. A turn that reads negative flips the sign, and the stored start pose with
+    /// it, so the target is always "farther" in the direction the patient demonstrated.
+    private mutating func adoptingForearmDirection(_ value: Double) -> Double {
+        guard kind == .forearmRotation, phase == .target, !forearmDirectionLocked else {
+            return value
+        }
+
+        let change = value - baselines[finger]
+
+        guard abs(change) > Self.forearmTurnThreshold else {
+            return value
+        }
+
+        forearmDirectionLocked = true
+
+        guard change < 0 else {
+            return value
+        }
+
+        forearmDirection = -forearmDirection
+        baselines[finger] = -baselines[finger]
+        resetHold()
+
+        return -value
+    }
+
+    /// Palm facing flickers when the palm turns edge-on to the camera, so forearm rotation
+    /// reads a lightly smoothed signal. Other exercises keep their raw measurements.
+    private mutating func smoothed(_ value: Double, at time: Double) -> Double {
+        guard kind == .forearmRotation else {
+            return value
+        }
+
+        defer { smoothedTime = time }
+
+        guard let previous = smoothedValue, time > smoothedTime, time - smoothedTime <= 0.3 else {
+            smoothedValue = value
+            return value
+        }
+
+        let blend = 1 - exp(-(time - smoothedTime) / Self.forearmSmoothingSeconds)
+        let result = previous + (value - previous) * blend
+        smoothedValue = result
+        return result
     }
 
     private mutating func resetRange(keepReady: Bool = false) {
@@ -387,6 +501,7 @@ struct FingerActivity {
         rangeCandidate = nil
         rangeCandidateSum = 0
         rangeCandidateCount = 0
+        rangeGrowthElapsed = 0
         progress = 0
     }
 
