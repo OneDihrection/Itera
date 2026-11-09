@@ -136,6 +136,16 @@ struct SitToStandActivity {
         }
     }
 
+    /// Starts another set with the same calibrated poses: the count restarts and the patient
+    /// sits back down for the three-second countdown, as before the first practice repetition.
+    mutating func startNextSet() {
+        snapshot.count = 0
+        countdown = nil
+        returningBeforePractice = true
+        awaitingSeat = true
+        interrupt()
+    }
+
     /// Forgets the calibrated poses so the patient starts again from the seated hold.
     mutating func recalibrate() {
         seated = nil

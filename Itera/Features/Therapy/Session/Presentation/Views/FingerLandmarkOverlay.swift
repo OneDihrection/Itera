@@ -15,7 +15,6 @@ import SwiftUI
 struct FingerLandmarkOverlay: View {
     let evidence: HandEvidence
     let progress: Double
-    let remaining: Double
     let exercise: FingerExercise
     let finger: Int
     let returning: Bool
@@ -27,10 +26,10 @@ struct FingerLandmarkOverlay: View {
     // MARK: - Sizing
 
     /// Fingertip circle diameters relative to the on-screen palm length (wrist to middle knuckle).
-    private static let activeCircleRatio = 0.55
-    private static let inactiveCircleRatio = 0.37
-    private static let activeCircleRange: ClosedRange<CGFloat> = 48...108
-    private static let inactiveCircleRange: ClosedRange<CGFloat> = 32...72
+    private static let activeCircleRatio = 0.46
+    private static let inactiveCircleRatio = 0.32
+    private static let activeCircleRange: ClosedRange<CGFloat> = 44...92
+    private static let inactiveCircleRange: ClosedRange<CGFloat> = 28...64
     /// Rounding step, so sizes do not shimmer with small tracking changes.
     private static let sizeStep: CGFloat = 4
     /// Palm length assumed when the wrist or middle knuckle is not visible.
@@ -50,10 +49,6 @@ struct FingerLandmarkOverlay: View {
 
             circles(palm: palm, width: width, height: height, origin: origin, viewport: geometry.size)
 
-            if showsTimer, let bounds = handBounds(width: width, height: height, origin: origin) {
-                TherapyHoldReadout(remaining: remaining)
-                    .position(readoutCenter(beside: bounds, gap: readoutGap(palm: palm), viewport: geometry.size))
-            }
         }
         .allowsHitTesting(false).accessibilityHidden(true)
     }
@@ -80,7 +75,7 @@ struct FingerLandmarkOverlay: View {
                 var path = Path()
                 path.move(to: point(pair.0, width: width, height: height, origin: origin))
                 path.addLine(to: point(pair.1, width: width, height: height, origin: origin))
-                context.stroke(path, with: .color(TherapyPalette.secondary), lineWidth: lineWidth)
+                context.stroke(path, with: .color(.white.opacity(0.8)), lineWidth: lineWidth)
             }
         }
 
@@ -96,7 +91,7 @@ struct FingerLandmarkOverlay: View {
                     var line = Path()
                     line.move(to: anchor)
                     line.addLine(to: center)
-                    context.stroke(line, with: .color(TherapyPalette.tertiary), lineWidth: max(2, lineWidth - 1))
+                    context.stroke(line, with: .color(TherapyPalette.guidanceBlue), lineWidth: max(2, lineWidth - 1))
                 }
             }
         }
@@ -104,7 +99,7 @@ struct FingerLandmarkOverlay: View {
         for index in evidence.points.indices where evidence.points[index].confidence >= 0.5 {
             let p = point(index, width: width, height: height, origin: origin)
             let dot = CGRect(x: p.x - dotRadius, y: p.y - dotRadius, width: dotRadius * 2, height: dotRadius * 2)
-            context.fill(Path(ellipseIn: dot), with: .color(.white))
+            context.fill(Path(ellipseIn: dot), with: .color(TherapyPalette.guidanceYellow))
         }
     }
 
@@ -113,10 +108,10 @@ struct FingerLandmarkOverlay: View {
         if usesWholeHandCircle {
             if let circle = handCircle(width: width, height: height, origin: origin, viewport: viewport) {
                 TherapyGuideBubble(
-                    label: "", remaining: remaining, progress: progress,
-                    active: guiding, reached: completionID != nil,
+                    progress: progress,
+                    active: guiding,
                     completionID: completionID, onCompletionPresented: onCompletionPresented,
-                    showsTimer: showsTimer, showsTimerText: false,
+                    showsTimer: showsTimer,
                     diameter: circle.diameter, outlineOnly: true
                 )
                 .position(circle.center)
@@ -126,12 +121,11 @@ struct FingerLandmarkOverlay: View {
                 if showsBubble(index + 1) && evidence.points[joint].confidence >= 0.5 {
                     TherapyGuideBubble(
                         // No finger numbers: the instruction names the finger to move.
-                        label: "", remaining: remaining, progress: progress,
-                        active: isActive(index + 1), reached: hasReached(index + 1),
+                        progress: progress,
+                        active: isActive(index + 1),
                         completionID: isActive(index + 1) ? completionID : nil,
                         onCompletionPresented: onCompletionPresented,
                         showsTimer: showsTimer && isActive(index + 1),
-                        showsTimerText: false,
                         diameter: fingertipDiameter(active: isActive(index + 1), palm: palm)
                     )
                     .position(fingertipCircleCenter(
@@ -186,55 +180,11 @@ struct FingerLandmarkOverlay: View {
         }
     }
 
-    /// Clearance past the hand's outline: circles extend up to their radius beyond a fingertip.
-    private func readoutGap(palm: CGFloat) -> CGFloat {
-        guard !usesWholeHandCircle else {
-            return 36
-        }
-
-        return fingertipDiameter(active: true, palm: palm) / 2 + 16
-    }
-
-    /// Beside the hand on whichever side has room, otherwise above or below it, always on screen.
-    private func readoutCenter(beside hand: CGRect, gap: CGFloat, viewport: CGSize) -> CGPoint {
-        let size = TherapyHoldReadout.size
-        let margin: CGFloat = 16
-        let halfWidth = size.width / 2
-        let halfHeight = size.height / 2
-
-        let rightX = hand.maxX + gap + halfWidth
-        let leftX = hand.minX - gap - halfWidth
-        var center = CGPoint(x: rightX, y: hand.midY)
-
-        if rightX + halfWidth > viewport.width - margin {
-            center.x = leftX
-        }
-        if center.x - halfWidth < margin {
-            // No room on either side: go above the hand, or below it near the top edge.
-            center.x = hand.midX
-            let above = hand.minY - gap - halfHeight
-            center.y = above - halfHeight >= margin ? above : hand.maxY + gap + halfHeight
-        }
-
-        return CGPoint(
-            x: min(viewport.width - margin - halfWidth, max(margin + halfWidth, center.x)),
-            y: min(viewport.height - margin - halfHeight, max(margin + halfHeight, center.y))
-        )
-    }
-
     /// A padded circle around the hand, sized from the hand itself and kept fully on screen.
     private func handCircle(width: Double, height: Double, origin: CGPoint, viewport: CGSize) -> (center: CGPoint, diameter: CGFloat)? {
-        let bases = [5, 9, 13, 17].filter { evidence.points[$0].confidence >= 0.5 }
-        guard !bases.isEmpty, let bounds = handBounds(width: width, height: height, origin: origin) else {
+        guard let bounds = handBounds(width: width, height: height, origin: origin) else {
             return nil
         }
-        let palm = bases.reduce(CGPoint.zero) { sum, joint in
-            let location = point(joint, width: width, height: height, origin: origin)
-            return CGPoint(x: sum.x + location.x, y: sum.y + location.y)
-        }
-        let knuckles = CGPoint(x: palm.x / Double(bases.count), y: palm.y / Double(bases.count))
-        let wrist = point(0, width: width, height: height, origin: origin)
-        let anchor = CGPoint(x: knuckles.x + (knuckles.x - wrist.x) * 0.25, y: knuckles.y + (knuckles.y - wrist.y) * 0.25)
         // Keep the complete stroke inside the preview, including on smaller windows.
         let available = min(viewport.width, viewport.height) - 40
         guard available > 0 else {
@@ -242,11 +192,11 @@ struct FingerLandmarkOverlay: View {
         }
         // Wide enough to enclose an open hand, never larger than before.
         let span = hypot(bounds.width, bounds.height)
-        let diameter = Self.stepped(min(available * 0.75, max(140, span * 1.15)))
+        let diameter = Self.stepped(min(available * 0.75, max(100, span * 1.03)))
         let inset = diameter / 2 + 20
         let center = CGPoint(
-            x: min(viewport.width - inset, max(inset, anchor.x)),
-            y: min(viewport.height - inset, max(inset, anchor.y))
+            x: min(viewport.width - inset, max(inset, bounds.midX)),
+            y: min(viewport.height - inset, max(inset, bounds.midY))
         )
         return (center, diameter)
     }
@@ -289,16 +239,6 @@ struct FingerLandmarkOverlay: View {
             return true
         }
         return number == finger + 2 || number == 1 && exercise == .opposition
-    }
-
-    private func hasReached(_ number: Int) -> Bool {
-        guard guiding else {
-            return false
-        }
-        if !exercise.isSequential || number == 1 && exercise == .opposition {
-            return completionID != nil
-        }
-        return number >= 2 && (number < finger + 2 || number == finger + 2 && completionID != nil)
     }
 
     private func point(_ index: Int, width: Double, height: Double, origin: CGPoint) -> CGPoint {

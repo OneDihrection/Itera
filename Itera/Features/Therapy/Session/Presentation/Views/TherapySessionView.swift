@@ -17,12 +17,15 @@ struct TherapySessionView: View {
     @ScaledMetric(relativeTo: .largeTitle) var instructionSize = 96.0
     @Environment(PermissionManager.self) var permissions
     @Environment(NavigationRouter.self) var router
+    @Environment(AppDependencies.self) var dependencies
     @Environment(\.scenePhase) private var scenePhase
     @AppStorage(PracticePreferences.calmMode) private var calmMode = false
     @State private var celebrationStart: Date?
     @State private var showsCameraRecovery = false
     /// Rest length as first shown, so the light rest ring has a total to count down from.
     @State var restTotal = 0.0
+    /// Set when End was tapped on the live screen, so the pause dialog opens on its confirmation.
+    @State var endRequested = false
     @State var model: TherapySessionViewModel
 
     private var presentationOnly = false
@@ -57,10 +60,12 @@ struct TherapySessionView: View {
                     .buttonStyle(SessionButtonStyle())
                     Button("home.openSettings") { model.openSettings() }
                         .buttonStyle(SessionButtonStyle())
-                    Button("home.back") { router.popToRoot() }
+                    Button("home.back") { leaveWithoutResult() }
                         .buttonStyle(SessionButtonStyle())
                 }
                 .padding(32)
+            } else if let summary = model.snapshot.summary, usesLightTheme {
+                lightAllDone(summary)
             } else if let summary = model.snapshot.summary {
                 VStack(spacing: 12) {
                     header
@@ -75,6 +80,12 @@ struct TherapySessionView: View {
         .overlay {
             if model.snapshot.summary == nil, !model.entryFailure, hasFullScreenPresentation {
                 fullScreenPresentation
+            }
+        }
+        .overlay {
+            // Light sessions pause over the screen they were on, which stays mounted beneath.
+            if usesLightLayout, model.snapshot.paused, model.snapshot.summary == nil, !model.entryFailure {
+                lightPauseDialog
             }
         }
         .overlay {
@@ -108,10 +119,10 @@ struct TherapySessionView: View {
         .environment(\.locale, model.sessionLocale)
         .background(usesLightTheme ? TherapyPalette.canvas : Color.black)
         .foregroundStyle(usesLightTheme ? TherapyPalette.ink : Color.white)
-        .toolbar(model.snapshot.summary == nil ? .hidden : .visible, for: .navigationBar)
+        .toolbar(model.snapshot.summary == nil || usesLightTheme ? .hidden : .visible, for: .navigationBar)
         .navigationTitle(model.snapshot.summary == nil ? "" : "session.summaryTitle")
         .statusBarHidden(model.snapshot.summary == nil)
-        .navigationBarBackButtonHidden(model.snapshot.summary == nil)
+        .navigationBarBackButtonHidden(model.snapshot.summary == nil || usesLightTheme)
         .task {
             if !presentationOnly { await model.start(permissions: permissions) }
         }
@@ -157,7 +168,7 @@ struct TherapySessionView: View {
     }
 
     var hasFullScreenPresentation: Bool {
-        model.cameraDenied || !model.voiceReady || model.snapshot.paused
+        model.cameraDenied || !model.voiceReady || (model.snapshot.paused && !usesLightLayout)
             || model.snapshot.stage == .preparing || model.snapshot.stage == .instruction
             || model.snapshot.stage == .demonstration || model.snapshot.stage == .preparationWait || model.snapshot.stage == .rest
             || model.snapshot.stage == .feedback
@@ -308,8 +319,7 @@ struct TherapySessionView: View {
                             Button("session.repeat") { model.command(.repeatInstruction) }
                                 .buttonStyle(SessionButtonStyle())
                             recoveryControls
-                            Button("session.camera") { model.switchCamera() }
-                                .buttonStyle(SessionButtonStyle())
+
                         }
                     }
                 }
@@ -371,8 +381,7 @@ struct TherapySessionView: View {
                         },
                         size: 44
                     )
-                    Button("session.camera") { model.switchCamera() }
-                        .buttonStyle(SessionButtonStyle(compact: true))
+
                     Button("session.help") { model.command(.help) }
                         .buttonStyle(SessionButtonStyle(compact: true))
                     Button("session.pause") { model.command(.pause) }
@@ -440,7 +449,7 @@ struct TherapySessionView: View {
         GeometryReader { geometry in
             ZStack {
                 BodyCameraPreview(
-                    session: model.tracking.session, front: model.frontCamera,
+                    session: model.tracking.session, front: true,
                     onReady: model.previewReady, onOrientation: model.orientationChanged)
                     .frame(width: geometry.size.width, height: geometry.size.height)
                 if usesLightLayout, !model.snapshot.cameraWaiting {
@@ -765,8 +774,7 @@ struct TherapySessionView: View {
                     Button("session.retryCamera") {
                         Task { await model.retryCamera(permissions: permissions) }
                     }.buttonStyle(SessionButtonStyle())
-                    Button("session.camera") { model.switchCamera() }
-                        .buttonStyle(SessionButtonStyle())
+
                     recoveryControls
                 }
             }
@@ -815,7 +823,7 @@ struct TherapySessionView: View {
                 }
                 Text("session.summaryCaution")
                 if model.saving { ProgressView("session.saving") }
-                Button("session.restart") { router.pop() }
+                Button(summaryExitTitle) { leaveSummary(summary) }
                     .buttonStyle(SessionButtonStyle())
                     .disabled(model.saving || model.saveFailure != nil)
             }
@@ -823,6 +831,32 @@ struct TherapySessionView: View {
         .listStyle(.insetGrouped)
         .scrollContentBackground(.hidden)
         .background(usesLightTheme ? TherapyPalette.canvas : Color.black)
+    }
+
+    // MARK: - Leaving
+
+    /// While today's plan runs, the summary leads on to the next exercise.
+    var summaryExitTitle: LocalizedStringKey {
+        dependencies.dailyPlan.isRunning ? "plan.nextContinue" : "session.restart"
+    }
+
+    func leaveSummary(_ summary: SessionSummary) {
+        guard dependencies.dailyPlan.isRunning else {
+            router.pop()
+            return
+        }
+
+        dependencies.dailyPlan.finish(completed: !summary.stopped, router: router)
+    }
+
+    /// Leaving before the session could start ends a running plan instead of skipping ahead.
+    private func leaveWithoutResult() {
+        guard dependencies.dailyPlan.isRunning else {
+            router.popToRoot()
+            return
+        }
+
+        dependencies.dailyPlan.end(router: router)
     }
 
     private func summaryRow(_ result: SessionActivityResult) -> some View {
@@ -926,7 +960,7 @@ struct TherapySessionView: View {
             captureJoint: (guide.capturing || guide.jointHold) ? normalized(guide.tracked) : nil,
             holdProgress: guide.progress,
             directionGuide: direction,
-            mirrored: model.frontCamera
+            mirrored: true
         )
     }
 }

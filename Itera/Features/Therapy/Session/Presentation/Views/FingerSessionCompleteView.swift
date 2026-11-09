@@ -7,10 +7,11 @@
 
 import SwiftUI
 
-/// The closing page after the feeling question: thanks, and a way to see progress.
+/// Saves the finished session and offers a way to see progress or continue today’s plan.
 struct FingerSessionCompleteView: View {
     @Environment(AppDependencies.self) private var dependencies
     @Environment(NavigationRouter.self) private var router
+    @State private var savingFinished = false
 
     private var summary: FingerSessionSummary? {
         dependencies.session?.finalSummary
@@ -21,8 +22,8 @@ struct FingerSessionCompleteView: View {
             Spacer(minLength: 40)
 
             VStack(spacing: 18) {
-                TherapyCompletionMark()
-                Text(completed ? "done.title" : "done.titlePartial")
+                TherapyCompletionMark(tint: TherapyPalette.brand)
+                Text(completed ? "session.allDoneTitle" : "done.titlePartial")
                     .typography(size: 52, weight: .bold, relativeTo: .largeTitle)
                     .accessibilityAddTraits(.isHeader)
                 message
@@ -34,8 +35,7 @@ struct FingerSessionCompleteView: View {
 
             Spacer(minLength: 40)
 
-            TherapyButton(title: "done.viewProgress", pill: true, action: showProgress)
-                .frame(maxWidth: 360)
+            closingAction
 
             Spacer(minLength: 40)
         }
@@ -44,6 +44,31 @@ struct FingerSessionCompleteView: View {
         .background(TherapyPalette.canvas)
         .environment(\.locale, dependencies.session?.sessionLanguage.locale ?? AppLanguage.selected.locale)
         .interactiveDismissDisabled()
+        .task { await saveSummary() }
+    }
+
+    @ViewBuilder
+    private var closingAction: some View {
+        // The way on appears once saving has finished, whether or not it succeeded, so the
+        // patient is never stuck on this page.
+        if savingFinished {
+            TherapyButton(
+                title: closingTitle,
+                symbol: dependencies.dailyPlan.isRunning ? "play.fill" : nil,
+                prominent: true,
+                action: close
+            )
+        } else {
+            ProgressView()
+        }
+    }
+
+    private func saveSummary() async {
+        await dependencies.session?.saveFinalSummary()
+        if dependencies.session?.finalSummarySaved == true {
+            await dependencies.home.refresh()
+        }
+        savingFinished = true
     }
 
     private var completed: Bool {
@@ -67,7 +92,17 @@ struct FingerSessionCompleteView: View {
         }
     }
 
-    private func showProgress() {
+    /// While today's plan runs, this page leads on to the next exercise instead of Progress.
+    private var closingTitle: LocalizedStringKey {
+        dependencies.dailyPlan.isRunning ? "plan.nextContinue" : "done.viewProgress"
+    }
+
+    private func close() {
+        guard !dependencies.dailyPlan.isRunning else {
+            dependencies.dailyPlan.finish(completed: completed, router: router)
+            return
+        }
+
         router.dismissFullScreenCover()
         router.push(.reports)
     }

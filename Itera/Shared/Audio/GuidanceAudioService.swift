@@ -10,7 +10,11 @@ import Combine
 import Speech
 
 // Service vocabulary is independent of exercise progression.
-enum GuidanceSound { case countdown, setCompleted }
+enum GuidanceSound {
+    case countdown
+    case holdCompleted
+    case setCompleted
+}
 
 enum GuidanceAudioEvent {
     case completed(UUID)
@@ -223,7 +227,12 @@ final class GuidanceAudioService: NSObject, AVSpeechSynthesizerDelegate {
     }
 
     func playCue(_ cue: GuidanceSound) {
-        let name = cue == .setCompleted ? "set-complete" : "countdown"
+        let name: String
+        switch cue {
+        case .countdown: name = "countdown"
+        case .holdCompleted: name = "target-reached"
+        case .setCompleted: name = "set-complete"
+        }
         guard let url = Bundle.main.url(forResource: name, withExtension: "wav") else {
             return
         }
@@ -237,6 +246,57 @@ final class GuidanceAudioService: NSObject, AVSpeechSynthesizerDelegate {
             // Optional reinforcement never blocks readable guidance or progression.
             cuePlayer = nil
         }
+    }
+
+    /// True when recorded countdown numbers are bundled for the session language.
+    var hasRecordedCounts: Bool {
+        NarrationClips.countURL(1, language: narrationLanguage) != nil
+    }
+
+    /// Speaks a countdown number ("tiga") in the recorded voice, on the cue channel so it
+    /// never cancels narration. Returns false when no recording exists, so the caller can
+    /// fall back to the beep.
+    func playCount(_ number: Int) -> Bool {
+        guard let url = NarrationClips.countURL(number, language: narrationLanguage) else {
+            return false
+        }
+
+        do {
+            cuePlayer?.stop()
+            let player = try AVAudioPlayer(contentsOf: url)
+            // Spoken numbers are guidance, so they play at full narration level, not cue level.
+            player.volume = 1
+            player.prepareToPlay()
+            cuePlayer = player
+            return player.play()
+        } catch {
+            cuePlayer = nil
+            return false
+        }
+    }
+
+    /// Speaks the number in the hold readout, only while no instruction is being spoken,
+    /// so a number never talks over or cuts off guidance.
+    ///
+    /// - Returns: false only while an instruction is playing, so the caller can try again
+    ///   once it ends with whatever number is shown then. True when the number was spoken,
+    ///   or when there is nothing to retry (no number, or no recording).
+    @discardableResult
+    func playHoldSecond(_ number: Int) -> Bool {
+        guard number > 0 else {
+            return true
+        }
+
+        guard narrationID == nil, !synthesizer.isSpeaking else {
+            return false
+        }
+
+        _ = playCount(number)
+        return true
+    }
+
+    private var narrationLanguage: AppLanguage {
+        locale.hasPrefix("id") ? .indonesian : .english
     }
 
     func cancelSpeech() {

@@ -9,104 +9,99 @@ import SwiftUI
 
 // These pages cover the session while a set ends and during rest. They are overlays,
 // so the camera preview underneath stays mounted for the whole session, as the system
-// design requires. Each page keeps a close action that pauses, so pause and stop remain
-// reachable by touch at every stage.
+// design requires. Each page keeps a pause action, so pause and stop remain reachable by
+// touch at every stage.
 
-// MARK: - Set complete
+// MARK: - Set summary
 
-struct FingerSetCompletePage: View {
+/// After each set, and through the rest that follows: what was done and what comes next.
+/// The last set of a movement shows the all-done wording.
+struct FingerSetSummaryPage: View {
     let model: FingerSessionViewModel
 
+    @Environment(AppDependencies.self) private var dependencies
+
     var body: some View {
-        VStack(spacing: 0) {
-            FingerSessionCloseHeader(model: model, title: LocalizedStringKey(model.activity.kind.title))
-
-            Spacer(minLength: 24)
-
-            VStack(spacing: 16) {
-                TherapyCompletionMark()
-                Text("session.setDone \(model.activity.set)")
-                    .typography(size: 44, weight: .bold, relativeTo: .largeTitle)
-                    .accessibilityAddTraits(.isHeader)
-                Text("session.setDoneDetail \(model.activity.repetitions) \(model.routine.repetitions)")
-                    .typography(size: 26, weight: .regular, relativeTo: .title3)
-            }
-            .multilineTextAlignment(.center)
-
-            setList
-                .frame(maxWidth: 380)
-                .padding(.top, 44)
-
-            Spacer(minLength: 24)
-        }
-        .foregroundStyle(TherapyPalette.ink)
-        .padding(40)
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(TherapyPalette.canvas)
-    }
-
-    private var setList: some View {
-        VStack(spacing: 16) {
-            ForEach(1...max(1, model.routine.sets), id: \.self) { number in
-                TherapySetRow(
-                    title: "session.setNumber \(number)",
-                    detail: detail(for: number),
-                    state: state(for: number)
-                )
-            }
+        TherapySetSummary(
+            heading: TherapyExerciseHeading(
+                eyebrow: dependencies.dailyPlan.currentNumber.map { Text("plan.exerciseNumber \($0)") },
+                title: Text(verbatim: model.exerciseTitle)
+            ),
+            headline: allSetsDone
+                ? Text("session.allDoneTitle")
+                : Text("session.setDone \(model.activity.completedSets)"),
+            message: message,
+            results: results,
+            total: allSetsDone
+                ? Text("session.total \(repetitionsDone)")
+                : Text("session.totalOf \(repetitionsDone) \(model.routine.repetitions * model.routine.sets)"),
+            footer: restLine
+        ) {
+            actions
         }
     }
 
-    private func state(for number: Int) -> TherapySetRow.State {
-        if number <= model.activity.completedSets {
-            return .done
-        }
-
-        return number == model.activity.completedSets + 1 ? .next : .upcoming
+    private var allSetsDone: Bool {
+        model.activity.completedSets >= model.routine.sets
     }
 
-    private func detail(for number: Int) -> LocalizedStringKey? {
-        switch state(for: number) {
-        case .done:
-            return "session.setRepetitions \(model.routine.repetitions) \(model.routine.repetitions)"
-        case .next:
-            return "session.nextUp"
-        case .upcoming:
+    /// Another movement of the finger program follows this one.
+    private var moreMovements: Bool {
+        model.engine.summary.exerciseIndex < model.routine.exercises.count - 1
+    }
+
+    /// Finger sets end only when the goal is reached, so every finished set is goal/goal.
+    private var results: [TherapySetResult] {
+        (1...max(1, model.routine.sets)).map { number in
+            let finished = number <= model.activity.completedSets
+
+            return TherapySetResult(
+                number: number,
+                done: finished ? model.routine.repetitions : 0,
+                goal: model.routine.repetitions,
+                state: finished ? .done : .upcoming
+            )
+        }
+    }
+
+    private var repetitionsDone: Int {
+        model.activity.completedSets * model.routine.repetitions
+    }
+
+    private var message: Text {
+        guard allSetsDone else {
+            return Text("session.setRest \(model.activity.completedSets + 1)")
+        }
+
+        return moreMovements ? Text("session.nextMovementRest") : Text("session.allDoneMessage")
+    }
+
+    private var restLine: Text? {
+        guard model.activity.phase == .rest else {
             return nil
         }
+
+        let seconds = Int(model.activity.remaining.rounded(.up))
+
+        guard !allSetsDone else {
+            return Text("session.nextMovementIn \(seconds)")
+        }
+
+        return Text("session.nextSetIn \(model.activity.completedSets + 1) \(seconds)")
     }
-}
 
-// MARK: - Rest
-
-struct FingerRestPage: View {
-    let model: FingerSessionViewModel
-
-    var body: some View {
-        VStack(spacing: 0) {
-            FingerSessionCloseHeader(model: model, title: nil)
-
-            Spacer(minLength: 16)
-
-            VStack(spacing: 52) {
-                Text("rest.title")
-                    .typography(size: 44, weight: .bold, relativeTo: .largeTitle)
-                    .accessibilityAddTraits(.isHeader)
-                TherapyRestCountdown(
-                    remaining: model.activity.remaining,
-                    total: Double(model.routine.restSeconds),
-                    unit: "rest.seconds"
-                )
-                TherapyButton(title: "rest.skip", pill: true, action: model.skipRest)
-                    .frame(maxWidth: 360)
+    /// Pause stays reachable by touch; during the rest the caregiver may also skip it.
+    private var actions: some View {
+        HStack(spacing: 16) {
+            TherapyButton(title: "session.pauseAction", symbol: "pause.fill", pill: true, brand: true) {
+                model.handleCommand(.pause)
             }
 
-            Spacer(minLength: 16)
+            if model.activity.phase == .rest {
+                TherapyButton(title: "rest.skip", symbol: "forward.fill", secondary: true, pill: true, action: model.skipRest)
+            }
         }
-        .foregroundStyle(TherapyPalette.ink)
-        .padding(40)
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(TherapyPalette.canvas)
+        .frame(maxWidth: 640)
     }
 }
 

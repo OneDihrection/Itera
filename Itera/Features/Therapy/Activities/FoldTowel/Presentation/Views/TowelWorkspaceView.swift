@@ -82,7 +82,7 @@ struct TowelWorkspaceView: View {
 
         return ZStack {
             TherapyGuideZone(
-                tint: TherapyPalette.calmTeal,
+                tint: TherapyPalette.guidanceBlue,
                 symbol: "hand.pinch.fill",
                 emphasized: step == 0
             )
@@ -90,7 +90,7 @@ struct TowelWorkspaceView: View {
             .position(screen(snapshot.grabPoint, geometry))
 
             TherapyGuideZone(
-                tint: TherapyPalette.calmBlue,
+                tint: TherapyPalette.guidanceYellow,
                 symbol: destinationSymbol,
                 progress: snapshot.interaction == .readyToRelease ? snapshot.holdProgress : 0,
                 emphasized: step > 0

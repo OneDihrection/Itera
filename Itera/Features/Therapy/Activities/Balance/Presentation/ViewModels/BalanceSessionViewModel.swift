@@ -16,7 +16,6 @@ final class BalanceSessionViewModel {
     private(set) var permissionDenied = false
     private(set) var cameraWaiting = true
     private(set) var failure: String?
-    private(set) var frontCamera = true
     private(set) var paused = false
     private(set) var voiceListening = false
     private(set) var voiceAvailable = true
@@ -24,29 +23,51 @@ final class BalanceSessionViewModel {
     let holdSeconds: Int
     let exercise: BalanceExercise
 
+    // MARK: Sets
+
+    /// The set being practiced, from 1.
+    private(set) var setNumber = 1
+    let totalSets: Int
+    let restSeconds: Int
+    /// Repetitions of every finished set, in order.
+    private(set) var setResults: [Int] = []
+    /// Seconds left before the next set while resting between sets, otherwise `nil`.
+    private(set) var restRemaining: Int?
+
+    /// True once the last set is finished.
+    var allSetsDone: Bool {
+        setResults.count >= totalSets
+    }
+
     @ObservationIgnored let tracking: BodyTrackingService
     @ObservationIgnored private let audio: SessionAudioService
     @ObservationIgnored private var engine: any BalanceMovementEngine
     @ObservationIgnored private var subscriptions = Set<AnyCancellable>()
     @ObservationIgnored private var started = false
-    @ObservationIgnored private var landscapeRight = false
     @ObservationIgnored private var wasIdleTimerDisabled = false
     @ObservationIgnored private var lastSpokenCountdown: Int?
     /// The calibration pose already explained aloud, so each is spoken once per calibration.
     @ObservationIgnored private var spokenCalibrationKey: String?
+    /// Practice time shown on the pause dialog; explicit pauses do not count.
+    @ObservationIgnored private var clock = SessionDurationClock()
+    @ObservationIgnored private var restTask: Task<Void, Never>?
 
     init(
         tracking: BodyTrackingService,
         audio: SessionAudioService,
-        repetitions: Int,
-        holdSeconds: Int,
-        armSelection: BalanceArmSelection,
+        settings: BalancePracticeSettings,
         exercise: BalanceExercise = .crossMidline
     ) {
+        let repetitions = settings.repetitions
+        let holdSeconds = settings.holdSeconds
+        let armSelection = settings.armSelection
+
         self.tracking = tracking
         self.audio = audio
         self.holdSeconds = min(20, max(3, holdSeconds))
         self.exercise = exercise
+        totalSets = settings.sets
+        restSeconds = settings.restSeconds
         switch exercise {
         case .crossMidline:
             engine = CrossMidlineBalanceEngine(
@@ -90,8 +111,7 @@ final class BalanceSessionViewModel {
                 self.snapshot = self.engine.snapshot
                 self.updateAudio(from: previous, to: self.snapshot)
                 if previous.phase != .complete, self.snapshot.phase == .complete {
-                    self.tracking.stop()
-                    self.audio.stopMusic()
+                    self.finishSet()
                 }
             }
             .store(in: &subscriptions)
@@ -129,6 +149,7 @@ final class BalanceSessionViewModel {
             .store(in: &subscriptions)
 
         tracking.start()
+        clock.resume(at: Self.now)
         audio.prepare()
         let microphone = await permissions.request(.microphone)
         let speech = await permissions.request(.speechRecognition)
@@ -137,9 +158,70 @@ final class BalanceSessionViewModel {
         } else {
             voiceAvailable = false
         }
-        if !paused, snapshot.phase != .complete {
+        if !paused, !allSetsDone {
             audio.startMusic()
         }
+    }
+
+    // MARK: - Sets and rest
+
+    /// Practice time so far, for the pause dialog.
+    var elapsedSeconds: Int {
+        Int(clock.elapsed(at: Self.now))
+    }
+
+    private static var now: Double {
+        ProcessInfo.processInfo.systemUptime
+    }
+
+    /// Records the finished set, then rests before the next one, or ends after the last.
+    private func finishSet() {
+        setResults.append(snapshot.metrics.completedTouches)
+
+        guard !allSetsDone else {
+            clock.pause(at: Self.now)
+            tracking.stop()
+            audio.stopMusic()
+            return
+        }
+
+        restRemaining = restSeconds
+        restTask?.cancel()
+        restTask = Task { [weak self] in
+            await self?.runRest()
+        }
+    }
+
+    /// Counts the rest down once a second; a pause freezes it.
+    private func runRest() async {
+        while let remaining = restRemaining, remaining > 0 {
+            do {
+                try await Task.sleep(for: .seconds(1))
+            } catch {
+                return
+            }
+
+            guard !paused else {
+                continue
+            }
+
+            restRemaining = remaining - 1
+        }
+
+        startNextSet()
+    }
+
+    /// Keeps the calibration: the patient starts the next set from the usual return to start.
+    private func startNextSet() {
+        guard restRemaining != nil, !allSetsDone else {
+            return
+        }
+
+        restRemaining = nil
+        setNumber += 1
+        lastSpokenCountdown = nil
+        engine.nextSet()
+        snapshot = engine.snapshot
     }
 
     func previewReady(_ ready: Bool) {
@@ -147,19 +229,17 @@ final class BalanceSessionViewModel {
     }
 
     func orientationChanged(right: Bool) {
-        landscapeRight = right
-        tracking.configure(front: frontCamera, landscapeRight: right)
-    }
-
-    func switchCamera() {
-        frontCamera.toggle()
-        cameraWaiting = true
-        engine.invalidateCalibration()
-        snapshot = engine.snapshot
-        tracking.configure(front: frontCamera, landscapeRight: landscapeRight)
+        tracking.configure(landscapeRight: right)
     }
 
     func restart() {
+        restTask?.cancel()
+        restTask = nil
+        restRemaining = nil
+        setNumber = 1
+        setResults = []
+        clock = SessionDurationClock()
+        clock.resume(at: Self.now)
         paused = false
         requestedExit = false
         cameraWaiting = true
@@ -178,14 +258,16 @@ final class BalanceSessionViewModel {
     func pause() {
         guard !paused else { return }
         paused = true
+        clock.pause(at: Self.now)
         audio.pauseMusic()
         audio.cancelSpeech()
         lastSpokenCountdown = nil
     }
 
     func resume() {
-        guard paused, snapshot.phase != .complete else { return }
+        guard paused, !allSetsDone else { return }
         paused = false
+        clock.resume(at: Self.now)
         audio.resumeMusic()
     }
 
@@ -196,7 +278,7 @@ final class BalanceSessionViewModel {
             return
         }
         permissionDenied = false
-        if snapshot.phase != .complete {
+        if !allSetsDone {
             tracking.start()
         }
         if permissions.status(for: .microphone) == .authorized,
@@ -208,8 +290,9 @@ final class BalanceSessionViewModel {
 
     func background() {
         paused = true
+        clock.pause(at: Self.now)
         cameraWaiting = true
-        if snapshot.phase != .complete {
+        if !allSetsDone, restRemaining == nil {
             engine.invalidateCalibration()
             snapshot = engine.snapshot
         }
@@ -224,6 +307,9 @@ final class BalanceSessionViewModel {
     }
 
     func stop() {
+        restTask?.cancel()
+        restTask = nil
+        clock.pause(at: Self.now)
         tracking.stop()
         audio.stop()
         subscriptions.removeAll()
@@ -292,7 +378,7 @@ final class BalanceSessionViewModel {
             let key = current.activeArm == .right
                 ? exercise.key("voice.rightTarget")
                 : exercise.key("voice.leftTarget")
-            audio.play(id: UUID(), cue: .guidance(prefix: .target, key: key))
+            audio.speak(id: UUID(), key: key)
             return
         }
 
@@ -302,28 +388,13 @@ final class BalanceSessionViewModel {
             let key = current.activeArm == .right
                 ? exercise.key("voice.rightTarget")
                 : exercise.key("voice.leftTarget")
-            audio.play(id: UUID(), cue: .guidance(prefix: .target, key: key))
+            audio.speak(id: UUID(), key: key)
             return
         }
 
-        if !paused, current.phase == .calibrating || current.phase == .calibratingRange,
-            let remaining = current.calibrationCountdown {
-            guard remaining != lastSpokenCountdown else { return }
-            lastSpokenCountdown = remaining
-            audio.play(id: UUID(), cue: .count(remaining))
-            return
-        }
-
-        guard !paused,
-            current.phase == .holding,
-            let remaining = current.overlay?.holdSecondsRemaining
-        else {
-            lastSpokenCountdown = nil
-            return
-        }
-        guard remaining != lastSpokenCountdown else { return }
-        lastSpokenCountdown = remaining
-        audio.play(id: UUID(), cue: .count(remaining))
+        // Holds are not counted aloud, during calibration or practice: the bubble and its
+        // timer show the seconds, and the voice stays for instructions.
+        lastSpokenCountdown = nil
     }
 
     /// Reads each new instruction aloud and counts the calibration and countdown seconds, so the
@@ -335,14 +406,13 @@ final class BalanceSessionViewModel {
 
         if current.metrics.completedTouches > previous.metrics.completedTouches {
             lastSpokenCountdown = nil
-            let key = current.phase == .complete
-                ? exercise.key("voice.complete")
-                : exercise.key("voice.returnSameSide")
+            let key = completionGuidanceKey(for: current)
             audio.play(id: UUID(), cue: .guidance(prefix: .target, key: key))
             return
         }
 
-        if let remaining = current.calibrationCountdown {
+        // Only the countdown before practice is counted aloud; the seated hold is shown, not spoken.
+        if let remaining = current.calibrationCountdown, current.instructionKey == "session.countdown" {
             guard remaining != lastSpokenCountdown else {
                 return
             }
@@ -396,7 +466,12 @@ final class BalanceSessionViewModel {
 
     private func completionGuidanceKey(for snapshot: BalanceSnapshot) -> String {
         if snapshot.phase == .complete {
-            return exercise.key("voice.complete")
+            // Between sets the patient rests; only the last set is announced as complete.
+            return setNumber < totalSets ? "session.rest" : exercise.key("voice.complete")
+        }
+        // Sit to stand has no arms to switch.
+        guard !exercise.isSitToStand else {
+            return exercise.key("voice.returnSameSide")
         }
         return snapshot.armSelection == .both
             ? exercise.key("voice.returnAndSwitch")

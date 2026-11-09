@@ -53,11 +53,12 @@ final class AudioInputWorker: @unchecked Sendable {
 
     func stop(deactivate: Bool = false) {
         replaceRequest(nil)
+        // Taken now, not on the queue: an activation in between means the session is wanted again.
+        let token = NarrationAudioSession.activationToken
         queue.async {
             self.stopEngine()
             if deactivate {
-                try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
-                NarrationAudioSession.noteDeactivated()
+                NarrationAudioSession.deactivate(ifUnchangedSince: token)
             }
         }
     }

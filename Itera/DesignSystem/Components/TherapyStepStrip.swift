@@ -58,10 +58,10 @@ struct TherapyStepStrip: View {
                     .lineLimit(1)
             }
         }
-        .foregroundStyle(active ? Color.black : (done ? TherapyPalette.calmTeal : Color.white.opacity(0.7)))
+        .foregroundStyle(active ? Color.black : (done ? TherapyPalette.guidanceBlue : Color.white.opacity(0.7)))
         .padding(.horizontal, 12)
         .frame(minWidth: 44, minHeight: 44)
-        .background(active ? TherapyPalette.calmTeal : Color.clear, in: Capsule())
+        .background(active ? TherapyPalette.guidanceBlue : Color.clear, in: Capsule())
     }
 }
 
