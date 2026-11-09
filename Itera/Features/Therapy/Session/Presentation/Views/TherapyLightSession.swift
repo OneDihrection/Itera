@@ -14,18 +14,24 @@ import SwiftUI
 
 // MARK: - Practice layout
 
-extension TherapySessionView {
+extension TMTherapySessionView {
     /// Heading, the camera with its cue bubble, the demonstration, counters, Pause and End.
     var lightLayout: some View {
-        TherapyExerciseLiveLayout(
-            heading: lightHeading,
-            cue: lightCue,
+        TMTherapyExerciseLiveLayout(
+            heading: isCalibrationLayout
+                ? TMTherapyExerciseHeading(
+                    eyebrow: dependencies.dailyPlan.currentNumber.map { Text("plan.exerciseNumber \($0)") },
+                    title: Text("stage.calibration")
+                )
+                : lightHeading,
+            cue: showsCalibrationCard ? nil : lightCue,
             demoTitle: "session.followMovement",
             repetitions: (model.snapshot.presentation?.count ?? 0, model.snapshot.activity?.goal ?? 0),
             sets: (model.snapshot.setNumber, model.snapshot.activity?.sets ?? 1),
             pauseTitle: "session.pauseAction",
             endTitle: "session.endAction",
             pauseDisabled: model.snapshot.paused,
+            calibrating: isCalibrationLayout,
             onPause: { model.command(.pause) },
             onEnd: requestEnd
         ) {
@@ -39,10 +45,45 @@ extension TherapySessionView {
         .accessibilityHidden(hasFullScreenPresentation || model.snapshot.paused)
     }
 
+    private var usesCalibrationOpening: Bool {
+        switch model.snapshot.activity?.kind {
+        case .armRaise, .elbowBend, .directionalReach: return true
+        default: return false
+        }
+    }
+
+    private var showsCalibrationCard: Bool {
+        usesCalibrationOpening
+            && (model.snapshot.stage == .instruction || model.snapshot.stage == .demonstration)
+    }
+
+    var isCalibrationLayout: Bool {
+        if showsCalibrationCard || (usesCalibrationOpening && model.snapshot.stage == .preparing) {
+            return true
+        }
+        if model.snapshot.stage == .preparationWait || model.snapshot.instruction == "calibration.complete" {
+            return true
+        }
+
+        guard model.snapshot.stage == .activity else {
+            return false
+        }
+
+        switch model.snapshot.presentation {
+        case .movement(let movement):
+            return movement.phase == .startCapture || movement.phase == .targetCapture
+                || movement.phase == .returnToStart
+        case .reach(let reach):
+            return reach.phase == .setup || reach.phase == .assessment
+        default:
+            return false
+        }
+    }
+
     /// "Latihan N" while today's plan runs, over the exercise and side.
-    var lightHeading: TherapyExerciseHeading {
+    var lightHeading: TMTherapyExerciseHeading {
         let eyebrow = dependencies.dailyPlan.currentNumber.map { Text("plan.exerciseNumber \($0)") }
-        return TherapyExerciseHeading(eyebrow: eyebrow, title: Text(verbatim: lightTitle))
+        return TMTherapyExerciseHeading(eyebrow: eyebrow, title: Text(verbatim: lightTitle))
     }
 
     private var lightTitle: String {
@@ -61,6 +102,17 @@ extension TherapySessionView {
 
     /// The live cue, with the towel fold, reach round or timed seconds after it when relevant.
     private var lightCue: Text {
+        if usesCalibrationOpening, model.snapshot.stage == .preparing {
+            return Text("calibration.intro")
+        }
+        if model.snapshot.instruction.hasPrefix("calibration.") {
+            return Text(LocalizedStringKey(model.snapshot.instruction))
+        }
+        if isCalibrationLayout {
+            return Text("calibration.try") + Text(verbatim: "\n")
+                + Text(verbatim: lightString(primaryMovementCue))
+        }
+
         let copy = SessionGuidanceCopy(phrase: lightString(primaryMovementCue))
         var lines = [copy.main]
 
@@ -95,10 +147,27 @@ extension TherapySessionView {
     /// The shared preview with camera-wait and failure notices at its top edge, clear of the cue.
     private var lightCamera: some View {
         camera
+            .overlay(alignment: .bottom) {
+                if showsCalibrationCard, !model.snapshot.cameraWaiting {
+                    VStack(spacing: 12) {
+                        lightGuidanceText(demonstrating: true)
+
+                        if voiceOver, let id = model.snapshot.guidanceID {
+                            TMTherapyButton(title: "session.readingComplete", pill: true, brand: true) {
+                                model.readingChanged(id, complete: true)
+                            }
+                        }
+                    }
+                    .padding(16)
+                    .frame(maxHeight: 180)
+                    .background(TherapyPalette.canvas, in: RoundedRectangle(cornerRadius: 24))
+                    .padding(24)
+                }
+            }
             .overlay(alignment: .top) {
                 VStack(spacing: 10) {
                     if model.snapshot.cameraWaiting {
-                        TherapyFeedbackPill(text: "session.cameraWait")
+                        TMTherapyFeedbackPill(text: "session.cameraWait")
                     }
 
                     if let failure = model.failure {
@@ -119,14 +188,14 @@ extension TherapySessionView {
 
     @ViewBuilder
     private var lightAccessories: some View {
-        TherapyMusicMenu(
+        TMTherapyMusicMenu(
             selection: $musicTrack,
             options: ExerciseMusicTrack.allCases.map {
                 TherapyMusicOption(id: $0.rawValue, title: LocalizedStringKey($0.titleKey))
             },
             size: 44
         )
-        TherapyIconButton(title: "session.repeat", symbol: "speaker.wave.2.fill", size: 44, circle: true) {
+        TMTherapyIconButton(title: "session.repeat", symbol: "speaker.wave.2.fill", size: 44, circle: true) {
             model.command(.repeatInstruction)
         }
         Image(systemName: model.listening ? "mic.fill" : "mic.slash")
@@ -135,7 +204,7 @@ extension TherapySessionView {
             .accessibilityLabel(Text(model.listening ? "session.listening" : "home.voiceUnavailable"))
     }
 
-    private func requestEnd() {
+    func requestEnd() {
         endRequested = true
         model.command(.pause)
     }
@@ -151,7 +220,7 @@ extension TherapySessionView {
 
 // MARK: - Stage pages
 
-extension TherapySessionView {
+extension TMTherapySessionView {
     /// Instruction, demonstration, countdowns, set summaries and recovery, light.
     @ViewBuilder
     var lightStagePage: some View {
@@ -192,22 +261,6 @@ extension TherapySessionView {
             controlChoice
         } else if model.snapshot.stage == .preparing {
             preparingContent
-        } else if model.snapshot.stage == .preparationWait {
-            lightCountdown(
-                "parity.getReady",
-                seconds: model.snapshot.seconds,
-                total: 5,
-                running: model.snapshot.countdownRunning
-            )
-        } else if model.snapshot.stage == .activity,
-            let seconds = model.snapshot.presentation?.countdownSeconds
-        {
-            lightCountdown(
-                "stage.countdown",
-                seconds: seconds,
-                total: 3,
-                running: model.snapshot.countdownRunning
-            )
         } else if model.snapshot.stage == .instruction {
             lightGuidance(demonstrating: false)
         } else if model.snapshot.stage == .demonstration {
@@ -217,29 +270,6 @@ extension TherapySessionView {
         }
     }
 
-    /// A title over a dial that fills the free height: the number is the page.
-    private func lightCountdown(
-        _ title: LocalizedStringKey,
-        seconds: Int,
-        total: Int,
-        running: Bool
-    ) -> some View {
-        VStack(spacing: 20) {
-            Text(title)
-                .typography(size: 52, weight: .bold, relativeTo: .largeTitle)
-                .multilineTextAlignment(.center)
-                .accessibilityAddTraits(.isHeader)
-
-            TherapyCountdownDial(
-                secondsLeft: seconds,
-                total: total,
-                running: running,
-                tint: TherapyPalette.brand,
-                track: TherapyPalette.planPanel
-            )
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-    }
 
     // MARK: Guidance
 
@@ -248,7 +278,7 @@ extension TherapySessionView {
             lightGuidanceBody(demonstrating: demonstrating)
 
             if voiceOver, let id = model.snapshot.guidanceID {
-                TherapyButton(title: "session.readingComplete", pill: true, brand: true) {
+                TMTherapyButton(title: "session.readingComplete", pill: true, brand: true) {
                     model.readingChanged(id, complete: true)
                 }
                 .frame(maxWidth: 420)
@@ -279,7 +309,7 @@ extension TherapySessionView {
     @ViewBuilder
     private func lightGuidanceText(demonstrating: Bool) -> some View {
         if let id = model.snapshot.guidanceID {
-            MeasuredInstructionText(
+            TMMeasuredInstructionText(
                 phrase: guidancePhrase,
                 instructionID: id,
                 fontSize: demonstrating ? instructionSize / 2 : instructionSize * 2 / 3,
@@ -323,7 +353,7 @@ extension TherapySessionView {
             let lastActivity = model.snapshot.index >= model.snapshot.activityCount - 1
             let done = results.reduce(0) { $0 + $1.done }
 
-            TherapySetSummary(
+            TMTherapySetSummary(
                 heading: lightHeading,
                 headline: lastSet && lastActivity
                     ? Text("session.allDoneTitle")
@@ -377,7 +407,7 @@ extension TherapySessionView {
         }
         let finished = !summary.stopped && !summary.interrupted
 
-        return TherapySetSummary(
+        return TMTherapySetSummary(
             heading: lightHeading,
             headline: finished
                 ? Text("session.allDoneTitle")
@@ -395,7 +425,7 @@ extension TherapySessionView {
                     saveError(error)
                 }
 
-                TherapyButton(
+                TMTherapyButton(
                     title: summaryExitTitle,
                     symbol: "play.fill",
                     disabled: model.saving || model.saveFailure != nil,
@@ -412,7 +442,7 @@ extension TherapySessionView {
 
     /// "Latihan dijeda" over the current screen.
     var lightPauseDialog: some View {
-        TherapyPauseDialog(
+        TMTherapyPauseDialog(
             setLabel: Text("session.setNumber \(model.snapshot.setNumber)"),
             title: Text(verbatim: lightTitle),
             elapsedSeconds: model.elapsedSeconds,
@@ -428,7 +458,7 @@ extension TherapySessionView {
                 Button("session.retryCamera") {
                     Task { await model.retryCamera(permissions: permissions) }
                 }
-                .buttonStyle(SessionButtonStyle())
+                .buttonStyle(TMSessionButtonStyle())
             }
         }
         .environment(\.colorScheme, .light)
@@ -444,7 +474,7 @@ extension TherapySessionView {
                 : AnyLayout(HStackLayout(spacing: 16))
 
             layout {
-                TherapyButton(
+                TMTherapyButton(
                     title: "session.pauseAction",
                     symbol: "pause.fill",
                     disabled: model.snapshot.paused,
@@ -454,7 +484,7 @@ extension TherapySessionView {
                     model.command(.pause)
                 }
 
-                TherapyButton(title: "session.endAction", symbol: "stop.fill", secondary: true, pill: true) {
+                TMTherapyButton(title: "session.endAction", symbol: "stop.fill", secondary: true, pill: true) {
                     requestEnd()
                 }
             }

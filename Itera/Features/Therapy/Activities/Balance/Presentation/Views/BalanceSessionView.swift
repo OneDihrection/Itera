@@ -7,7 +7,7 @@
 
 import SwiftUI
 
-struct BalanceSessionView: View {
+struct TMBalanceSessionView: View {
     @AppStorage(ExerciseMusicTrack.storageKey) private var musicTrack = ExerciseMusicTrack.defaultValue
     @Environment(NavigationRouter.self) private var router
     @Environment(AppDependencies.self) private var dependencies
@@ -28,13 +28,27 @@ struct BalanceSessionView: View {
                 permissionPanel
             } else {
                 live
+                    .accessibilityHidden(model.countdownOverlaySeconds != nil || model.paused)
             }
 
             if model.allSetsDone {
                 allDonePage
                     .zIndex(2)
-            } else if let rest = model.restRemaining {
-                setDonePage(rest: rest)
+            } else if let breath = model.restBreath {
+                TMTherapyBreathingRest(
+                    cue: LocalizedStringKey(breath.phase.key),
+                    intensity: breath.intensity,
+                    animationDuration: 1,
+                    pause: model.pause,
+                    stop: requestEnd
+                )
+                .zIndex(2)
+            }
+
+            if let seconds = model.countdownOverlaySeconds, !model.permissionDenied,
+               !model.allSetsDone, model.restRemaining == nil {
+                TMPracticeCountdown(seconds: seconds, pause: model.pause, stop: requestEnd)
+                    .ignoresSafeArea()
                     .zIndex(2)
             }
 
@@ -67,8 +81,8 @@ struct BalanceSessionView: View {
 
     // MARK: - Heading
 
-    private var heading: TherapyExerciseHeading {
-        TherapyExerciseHeading(eyebrow: eyebrow, title: title)
+    private var heading: TMTherapyExerciseHeading {
+        TMTherapyExerciseHeading(eyebrow: eyebrow, title: title)
     }
 
     /// "Latihan N" while today's plan runs; a program started on its own has no number.
@@ -87,21 +101,24 @@ struct BalanceSessionView: View {
     // MARK: - Live
 
     private var live: some View {
-        TherapyExerciseLiveLayout(
-            heading: heading,
-            cue: Text(LocalizedStringKey(cueKey)),
+        TMTherapyExerciseLiveLayout(
+            heading: model.calibrationMessage == nil
+                ? heading
+                : TMTherapyExerciseHeading(eyebrow: eyebrow, title: Text("stage.calibration")),
+            cue: practiceCue,
             demoTitle: "session.followMovement",
             repetitions: (model.snapshot.metrics.completedTouches, model.snapshot.goal),
             sets: (model.setNumber, model.totalSets),
             pauseTitle: "session.pauseAction",
             endTitle: "session.endAction",
             pauseDisabled: model.paused,
+            calibrating: model.calibrationMessage != nil,
             onPause: model.pause,
             onEnd: requestEnd
         ) {
             camera
         } demo: {
-            BalanceExerciseDemonstrationView(
+            TMBalanceExerciseDemonstrationView(
                 exercise: model.exercise,
                 paused: model.paused || model.cameraWaiting,
                 arm: model.snapshot.activeArm,
@@ -110,6 +127,15 @@ struct BalanceSessionView: View {
         } accessories: {
             accessories
         }
+    }
+
+    private var practiceCue: Text {
+        let cue = Text(LocalizedStringKey(cueKey))
+        guard let message = model.calibrationMessage else {
+            return cue
+        }
+        let text = Text(LocalizedStringKey(message))
+        return message == "calibration.try" ? text + Text(verbatim: "\n") + cue : text
     }
 
     /// The one cue line under the camera: a compensation warning first, then a rotation's
@@ -135,7 +161,7 @@ struct BalanceSessionView: View {
 
     private var camera: some View {
         ZStack(alignment: .top) {
-            BodyCameraPreview(
+            TMBodyCameraPreview(
                 session: model.tracking.session,
                 front: true,
                 onReady: model.previewReady,
@@ -143,11 +169,11 @@ struct BalanceSessionView: View {
             )
 
             if let overlay = model.snapshot.overlay {
-                BalancePoseOverlay(state: overlay, mirrored: true)
+                TMBalancePoseOverlay(state: overlay, mirrored: true)
             }
 
             if model.cameraWaiting {
-                TherapyFeedbackPill(text: "balance.cameraWaiting")
+                TMTherapyFeedbackPill(text: "balance.cameraWaiting")
                     .padding(20)
             }
         }
@@ -162,7 +188,7 @@ struct BalanceSessionView: View {
             .frame(width: 44, height: 44)
             .accessibilityLabel(Text(model.voiceListening ? "balance.voiceListening" : "balance.voiceTouchFallback"))
 
-        TherapyMusicMenu(
+        TMTherapyMusicMenu(
             selection: $musicTrack,
             options: ExerciseMusicTrack.allCases.map {
                 TherapyMusicOption(id: $0.rawValue, title: LocalizedStringKey($0.titleKey))
@@ -179,7 +205,7 @@ struct BalanceSessionView: View {
     // MARK: - Pause
 
     private var pauseDialog: some View {
-        TherapyPauseDialog(
+        TMTherapyPauseDialog(
             setLabel: Text("session.setNumber \(model.setNumber)"),
             title: title,
             elapsedSeconds: model.elapsedSeconds,
@@ -213,23 +239,8 @@ struct BalanceSessionView: View {
         model.setResults.reduce(0, +)
     }
 
-    private func setDonePage(rest: Int) -> some View {
-        let next = model.setNumber + 1
-
-        return TherapySetSummary(
-            heading: heading,
-            headline: Text("session.setDone \(model.setNumber)"),
-            message: Text("session.setRest \(next)"),
-            results: results,
-            total: Text("session.totalOf \(repetitionsDone) \(model.snapshot.goal * model.totalSets)"),
-            footer: Text("session.nextSetIn \(next) \(rest)")
-        ) {
-            EmptyView()
-        }
-    }
-
     private var allDonePage: some View {
-        TherapySetSummary(
+        TMTherapySetSummary(
             heading: heading,
             headline: Text("session.allDoneTitle"),
             message: Text("session.allDoneMessage"),
@@ -237,13 +248,13 @@ struct BalanceSessionView: View {
             total: Text("session.total \(repetitionsDone)")
         ) {
             VStack(spacing: 12) {
-                TherapyButton(
+                TMTherapyButton(
                     title: dependencies.dailyPlan.isRunning ? "plan.nextContinue" : "balance.completion.end",
                     symbol: dependencies.dailyPlan.isRunning ? "play.fill" : nil,
                     prominent: true,
                     action: endPractice
                 )
-                TherapyTextButton(title: "balance.completion.repeat", symbol: "arrow.clockwise") {
+                TMTherapyTextButton(title: "balance.completion.repeat", symbol: "arrow.clockwise") {
                     model.restart()
                 }
             }
@@ -256,8 +267,8 @@ struct BalanceSessionView: View {
                 .typography(size: 64, weight: .bold)
                 .foregroundStyle(TherapyPalette.warning)
             Text("balance.cameraRequired").typography(.title).multilineTextAlignment(.center)
-            TherapyButton(title: "home.openSettings", symbol: "gear") { model.openSettings() }
-            TherapyButton(title: "home.back", symbol: "chevron.left", secondary: true) { leaveWithoutResult() }
+            TMTherapyButton(title: "home.openSettings", symbol: "gear") { model.openSettings() }
+            TMTherapyButton(title: "home.back", symbol: "chevron.left", secondary: true) { leaveWithoutResult() }
         }
         .padding(32)
         .frame(maxWidth: 700, maxHeight: .infinity)
@@ -293,7 +304,7 @@ struct BalanceSessionView: View {
     }
 }
 
-private struct BalancePoseOverlay: View {
+private struct TMBalancePoseOverlay: View {
     let state: BalanceOverlay
     let mirrored: Bool
 

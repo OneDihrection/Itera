@@ -13,7 +13,7 @@ import SwiftUI
 ///
 /// It is a 68 pt marker (about 60 pt while pinched) so it stays readable on any video. The caller places it
 /// and supplies the state; it does not interpret tracking.
-struct TherapyHandCursor: View {
+struct TMTherapyHandCursor: View {
     let closed: Bool
     let holding: Bool
 
@@ -35,9 +35,9 @@ struct TherapyHandCursor: View {
 #if DEBUG
 #Preview("Hand cursor") {
     HStack(spacing: 30) {
-        TherapyHandCursor(closed: false, holding: false)
-        TherapyHandCursor(closed: true, holding: false)
-        TherapyHandCursor(closed: true, holding: true)
+        TMTherapyHandCursor(closed: false, holding: false)
+        TMTherapyHandCursor(closed: true, holding: false)
+        TMTherapyHandCursor(closed: true, holding: true)
     }
     .padding(40)
     .background(.gray)

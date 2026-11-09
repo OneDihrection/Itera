@@ -10,7 +10,7 @@ import SwiftUI
 import UIKit
 
 /// Native text measurement keeps the reading gate tied to the text actually on screen.
-struct MeasuredInstructionText: UIViewRepresentable {
+struct TMMeasuredInstructionText: UIViewRepresentable {
     let phrase: String
     let instructionID: UUID
     let fontSize: CGFloat
@@ -20,9 +20,9 @@ struct MeasuredInstructionText: UIViewRepresentable {
     var textColor: UIColor = .white
     let onReadingChanged: (UUID, Bool) -> Void
 
-    func makeUIView(context: Context) -> ReadingScrollView { ReadingScrollView() }
+    func makeUIView(context: Context) -> TMReadingScrollView { TMReadingScrollView() }
 
-    func updateUIView(_ view: ReadingScrollView, context: Context) {
+    func updateUIView(_ view: TMReadingScrollView, context: Context) {
         view.apply(textColor: textColor)
         view.configure(
             phrase: phrase, id: instructionID, fontSize: fontSize,
@@ -30,9 +30,9 @@ struct MeasuredInstructionText: UIViewRepresentable {
         )
     }
 
-    static func dismantleUIView(_ view: ReadingScrollView, coordinator: ()) { view.stop() }
+    static func dismantleUIView(_ view: TMReadingScrollView, coordinator: ()) { view.stop() }
 
-    final class ReadingScrollView: UIScrollView, UIScrollViewDelegate {
+    final class TMReadingScrollView: UIScrollView, UIScrollViewDelegate {
         private let text = UILabel()
         private var instructionID: UUID?
         private var configuredPhrase = ""
@@ -199,8 +199,8 @@ struct MeasuredInstructionText: UIViewRepresentable {
         func scrollViewDidEndDecelerating(_ scrollView: UIScrollView) { manualInteraction() }
 
         private final class DisplayTarget: NSObject {
-            weak var view: ReadingScrollView?
-            init(view: ReadingScrollView) { self.view = view }
+            weak var view: TMReadingScrollView?
+            init(view: TMReadingScrollView) { self.view = view }
             @objc func tick(_ link: CADisplayLink) { view?.tick(link.timestamp) }
         }
     }

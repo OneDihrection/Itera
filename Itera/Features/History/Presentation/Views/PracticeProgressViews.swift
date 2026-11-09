@@ -7,7 +7,7 @@
 
 import SwiftUI
 
-struct PracticeProgressSection: View {
+struct TMPracticeProgressSection: View {
     @Environment(AppDependencies.self) private var dependencies
     @Environment(NavigationRouter.self) private var router
     @Environment(\.dynamicTypeSize) private var typeSize
@@ -28,14 +28,14 @@ struct PracticeProgressSection: View {
             }
             badgePreview
             if let key = model.errorKey {
-                TherapyError(key: key)
-                TherapyButton(title: "action.retry", secondary: true) { Task { await model.refresh() } }
+                TMTherapyError(key: key)
+                TMTherapyButton(title: "action.retry", secondary: true) { Task { await model.refresh() } }
             }
         }
     }
 
     private var streak: some View {
-        TherapyCard(color: TherapyPalette.secondary) {
+        TMTherapyCard(color: TherapyPalette.secondary) {
             if typeSize.isAccessibilitySize {
                 VStack(alignment: .leading, spacing: 20) {
                     streakHeading
@@ -62,8 +62,8 @@ struct PracticeProgressSection: View {
 
     private var streakMetrics: some View {
         HStack(spacing: 22) {
-            TherapyMetric(title: "progress.currentDays", value: String(model.progress.currentStreak))
-            TherapyMetric(title: "progress.bestDays", value: String(model.progress.bestStreak))
+            TMTherapyMetric(title: "progress.currentDays", value: String(model.progress.currentStreak))
+            TMTherapyMetric(title: "progress.bestDays", value: String(model.progress.bestStreak))
         }
     }
 
@@ -86,17 +86,17 @@ struct PracticeProgressSection: View {
             .accessibilityLabel("progress.nextWeek")
             .disabled(model.weekOffset == 0)
         }
-        .buttonStyle(TherapySoundButtonStyle())
+        .buttonStyle(TMTherapySoundButtonStyle())
     }
 
     private var repetitionsChart: some View {
-        TherapyProgressChart(title: "progress.repetitions", points: model.week.map {
+        TMTherapyProgressChart(title: "progress.repetitions", points: model.week.map {
             TherapyChartPoint(date: $0.date, value: Double($0.repetitions))
         })
     }
 
     private var minutesChart: some View {
-        TherapyProgressChart(title: "progress.minutes", points: model.week.map {
+        TMTherapyProgressChart(title: "progress.minutes", points: model.week.map {
             TherapyChartPoint(date: $0.date, value: $0.seconds / 60)
         }, line: true)
     }
@@ -109,11 +109,11 @@ struct PracticeProgressSection: View {
                 Button("achievement.seeAll") { router.push(.achievements) }
                     .typography(.headline).frame(minHeight: 64)
             }
-            .buttonStyle(TherapySoundButtonStyle())
+            .buttonStyle(TMTherapySoundButtonStyle())
             ScrollView(.horizontal) {
                 HStack(alignment: .top, spacing: 20) {
                     ForEach(previewBadges) { badge in
-                        PracticeBadgeTile(badge: badge)
+                        TMPracticeBadgeTile(badge: badge)
                             .frame(width: 170)
                     }
                 }.padding(.vertical, 8)
@@ -138,7 +138,7 @@ struct PracticeProgressSection: View {
     }
 }
 
-struct PracticeBadgeTile: View {
+struct TMPracticeBadgeTile: View {
     let badge: PracticeAchievement
     @Environment(AppDependencies.self) private var dependencies
     @Environment(NavigationRouter.self) private var router
@@ -148,7 +148,7 @@ struct PracticeBadgeTile: View {
         let earned = model.award(for: badge) != nil
         Button { router.presentSheet(.achievement(badge.id)) } label: {
             VStack(spacing: 14) {
-                TherapyBadge(symbol: badge.symbol, value: String(badge.target), earned: earned)
+                TMTherapyBadge(symbol: badge.symbol, value: String(badge.target), earned: earned)
                 Text(verbatim: model.title(for: badge)).typography(.headline)
                     .multilineTextAlignment(.center)
                 Text(earned ? "achievement.earned" : "achievement.locked").typography(.footnote)
@@ -159,12 +159,12 @@ struct PracticeBadgeTile: View {
             .padding(14)
             .background(TherapyPalette.surface, in: RoundedRectangle(cornerRadius: 24))
         }
-        .buttonStyle(TherapySoundButtonStyle())
+        .buttonStyle(TMTherapySoundButtonStyle())
         .accessibilityElement(children: .combine)
     }
 }
 
-struct PracticeAchievementsView: View {
+struct TMPracticeAchievementsView: View {
     @Environment(AppDependencies.self) private var dependencies
 
     var body: some View {
@@ -177,7 +177,7 @@ struct PracticeAchievementsView: View {
                         Text(LocalizedStringKey(family.title)).typography(.title2)
                         LazyVGrid(columns: [GridItem(.adaptive(minimum: 190), spacing: 20)], spacing: 20) {
                             ForEach(PracticeAchievement.catalog.filter { $0.family == family }) { badge in
-                                PracticeBadgeTile(badge: badge)
+                                TMPracticeBadgeTile(badge: badge)
                             }
                         }
                     }
@@ -191,7 +191,7 @@ struct PracticeAchievementsView: View {
     }
 }
 
-struct PracticeAchievementDetailView: View {
+struct TMPracticeAchievementDetailView: View {
     let id: String
     @Environment(AppDependencies.self) private var dependencies
     @Environment(NavigationRouter.self) private var router
@@ -210,13 +210,13 @@ struct PracticeAchievementDetailView: View {
         let model = dependencies.progress
         let award = model.award(for: badge)
         return VStack(spacing: 26) {
-            TherapyBadge(symbol: badge.symbol, value: String(badge.target), earned: award != nil, size: 190)
+            TMTherapyBadge(symbol: badge.symbol, value: String(badge.target), earned: award != nil, size: 190)
             Text(verbatim: model.title(for: badge)).typography(.largeTitle).multilineTextAlignment(.center)
             if let award {
                 Text("achievement.earned").typography(.headline)
                 Text(award.earned, format: .dateTime.day().month(.wide).year()).typography(.body)
                 Text("achievement.encouragement").typography(.title2).multilineTextAlignment(.center)
-                TherapyButton(title: "achievement.share", symbol: "square.and.arrow.up") {
+                TMTherapyButton(title: "achievement.share", symbol: "square.and.arrow.up") {
                     dependencies.progress.clearShareError()
                     router.presentSheet(.achievementShare(badge.id))
                 }
@@ -226,13 +226,13 @@ struct PracticeAchievementDetailView: View {
                     .typography(.largeTitle).monospacedDigit()
                 Text("achievement.smallSteps").typography(.body).multilineTextAlignment(.center)
             }
-            if let error = model.shareErrorKey { TherapyError(key: error) }
-            TherapyButton(title: "action.done") { router.dismissSheet() }
+            if let error = model.shareErrorKey { TMTherapyError(key: error) }
+            TMTherapyButton(title: "action.done") { router.dismissSheet() }
         }.padding(40).frame(maxWidth: 650).frame(maxWidth: .infinity)
     }
 }
 
-struct AchievementCelebrationView: View {
+struct TMAchievementCelebrationView: View {
     @Environment(AppDependencies.self) private var dependencies
     @Environment(NavigationRouter.self) private var router
     @AppStorage(PracticePreferences.calmMode) private var calmMode = false
@@ -242,18 +242,18 @@ struct AchievementCelebrationView: View {
             if let badge = dependencies.progress.pending.first {
                 VStack(spacing: 26) {
                     Text("achievement.new").typography(.largeTitle).multilineTextAlignment(.center)
-                    TherapyAwardReveal(symbol: badge.symbol, value: String(badge.target), animated: !calmMode)
+                    TMTherapyAwardReveal(symbol: badge.symbol, value: String(badge.target), animated: !calmMode)
                         .id(badge.id)
                     Text(verbatim: dependencies.progress.title(for: badge))
                         .typography(.title).multilineTextAlignment(.center)
                     Text("achievement.encouragement").typography(.body).multilineTextAlignment(.center)
                     if dependencies.progress.award(for: badge) != nil {
-                        TherapyButton(title: "achievement.share", symbol: "square.and.arrow.up", secondary: true) {
+                        TMTherapyButton(title: "achievement.share", symbol: "square.and.arrow.up", secondary: true) {
                             dependencies.progress.clearShareError()
                             router.presentSheet(.achievementShare(badge.id))
                         }
                     }
-                    if let error = dependencies.progress.shareErrorKey ?? dependencies.progress.errorKey { TherapyError(key: error) }
+                    if let error = dependencies.progress.shareErrorKey ?? dependencies.progress.errorKey { TMTherapyError(key: error) }
                 }
                 .padding(36)
                 .frame(maxWidth: .infinity)
@@ -262,7 +262,7 @@ struct AchievementCelebrationView: View {
         }
         .foregroundStyle(TherapyPalette.ink).background(TherapyPalette.cream)
         .safeAreaInset(edge: .bottom) {
-            TherapyButton(
+            TMTherapyButton(
                 title: dependencies.progress.pending.count > 1 ? "achievement.nextAward" : "achievement.keepGoing",
                 symbol: "checkmark", disabled: dependencies.progress.acknowledging
             ) {
@@ -283,7 +283,7 @@ struct AchievementCelebrationView: View {
 }
 
 
-struct AchievementShareDestination: View {
+struct TMAchievementShareDestination: View {
     let id: String
     @Environment(AppDependencies.self) private var dependencies
     @Environment(NavigationRouter.self) private var router
@@ -292,7 +292,7 @@ struct AchievementShareDestination: View {
     var body: some View {
         if let badge = PracticeAchievement.catalog.first(where: { $0.id == id }),
            let award = dependencies.progress.award(for: badge) {
-            TherapyAchievementShareSheet(
+            TMTherapyAchievementShareSheet(
                 symbol: badge.symbol,
                 value: String(badge.target),
                 title: dependencies.progress.title(for: badge),
@@ -310,7 +310,7 @@ struct AchievementShareDestination: View {
                 router.dismissSheet()
             }
         } else {
-            TherapyButton(title: "action.done") {
+            TMTherapyButton(title: "action.done") {
                 router.dismissSheet()
             }
             .padding(24)

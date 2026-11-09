@@ -8,15 +8,15 @@
 import AVFoundation
 import SwiftUI
 
-struct BodyCameraPreview: UIViewRepresentable {
+struct TMBodyCameraPreview: UIViewRepresentable {
     let session: AVCaptureSession
     let front: Bool
     let onReady: (Bool) -> Void
     let onOrientation: (Bool) -> Void
 
-    func makeUIView(context: Context) -> PreviewView {
-        let view = PreviewView()
-        PreviewView.active = view
+    func makeUIView(context: Context) -> TMPreviewView {
+        let view = TMPreviewView()
+        TMPreviewView.active = view
         view.previewLayer.videoGravity = .resizeAspect
         view.previewLayer.session = session
         view.onReady = onReady
@@ -31,14 +31,14 @@ struct BodyCameraPreview: UIViewRepresentable {
         return view
     }
 
-    func updateUIView(_ view: PreviewView, context: Context) {
+    func updateUIView(_ view: TMPreviewView, context: Context) {
         view.front = front
         view.setNeedsLayout()
     }
 
-    static func dismantleUIView(_ view: PreviewView, coordinator: ()) {
+    static func dismantleUIView(_ view: TMPreviewView, coordinator: ()) {
         // A replaced view must not clear readiness that its successor already reported.
-        if PreviewView.active === view || PreviewView.active == nil {
+        if TMPreviewView.active === view || TMPreviewView.active == nil {
             view.onReady?(false)
         }
         view.observation = nil
@@ -47,9 +47,9 @@ struct BodyCameraPreview: UIViewRepresentable {
         view.previewLayer.session = nil
     }
 
-    final class PreviewView: UIView {
+    final class TMPreviewView: UIView {
         /// The most recently created preview, the only one allowed to report "not ready" on teardown.
-        static weak var active: PreviewView?
+        static weak var active: TMPreviewView?
 
         var observation: NSKeyValueObservation?
         var onReady: ((Bool) -> Void)?

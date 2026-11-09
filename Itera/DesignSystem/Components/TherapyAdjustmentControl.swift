@@ -8,7 +8,7 @@
 import SwiftUI
 
 /// A large, explicit value control for settings where both directions must remain easy to target.
-struct TherapyAdjustmentControl: View {
+struct TMTherapyAdjustmentControl: View {
     let title: LocalizedStringKey
     @Binding var value: Int
     let range: ClosedRange<Int>
@@ -70,7 +70,7 @@ struct TherapyAdjustmentControl: View {
                 .background(TherapyPalette.mint, in: RoundedRectangle(cornerRadius: 20))
                 .contentShape(RoundedRectangle(cornerRadius: 20))
         }
-        .buttonStyle(TherapySoundButtonStyle())
+        .buttonStyle(TMTherapySoundButtonStyle())
         .disabled(disabled)
         .opacity(disabled ? 0.4 : 1)
         .accessibilityLabel(title)

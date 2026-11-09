@@ -48,6 +48,9 @@ final class DailyPlanViewModel {
     private(set) var currentIndex: Int?
     private(set) var isRunning = false
     private(set) var errorKey: String?
+    var sidePreference = UserDefaults.standard.string(forKey: PracticePreferences.dailyPlanSide) ?? "" {
+        didSet { UserDefaults.standard.set(sidePreference, forKey: PracticePreferences.dailyPlanSide) }
+    }
 
     @ObservationIgnored private let repository: any DailyPlanProgressRepository
     @ObservationIgnored private var loadFailed = false
@@ -143,7 +146,7 @@ final class DailyPlanViewModel {
             return [.sets(routine.sets), .repetitions(routine.repetitions)]
 
         case .therapy(let kind):
-            let exercise = Self.routineExercise(for: kind, in: dependencies)
+            let exercise = routineExercise(for: kind, in: dependencies)
             let goal = exercise.activities.first?.goal ?? 1
             return [.sets(exercise.sets), .repetitions(goal)]
 
@@ -154,14 +157,34 @@ final class DailyPlanViewModel {
         }
     }
 
-    /// The caregiver's saved settings for this activity kind, or the kind's defaults.
-    private static func routineExercise(for kind: TherapyKind, in dependencies: AppDependencies) -> RoutineExercise {
+    private var selectedSide: HandSide? {
+        HandSide(rawValue: sidePreference)
+    }
+
+    func fingerSide(for exercise: FingerExercise, in dependencies: AppDependencies) -> HandSide {
+        selectedSide ?? dependencies.homeModel(for: exercise.category).routine.side
+    }
+
+    func balanceSettings(for exercise: BalanceExercise) -> BalancePracticeSettings {
+        var settings = BalancePracticeSettings(exercise: exercise)
+        if !exercise.isSitToStand, let side = selectedSide {
+            settings.armSelection = side == .left ? .left : .right
+        }
+        return settings
+    }
+
+    /// Applies the daily-plan side to the saved exercise configuration for this session.
+    func routineExercise(for kind: TherapyKind, in dependencies: AppDependencies) -> RoutineExercise {
         guard let category = kind.category else {
             return RoutineExercise(kind: kind)
         }
 
         let configuration = dependencies.routineModel(for: category).configuration
-        return configuration.exercises.first { $0.kind == kind } ?? RoutineExercise(kind: kind)
+        var exercise = configuration.exercises.first { $0.kind == kind } ?? RoutineExercise(kind: kind)
+        if let side = selectedSide {
+            exercise.sides = side == .left ? .left : .right
+        }
+        return exercise
     }
 
     // MARK: - Running
@@ -254,17 +277,19 @@ final class DailyPlanViewModel {
 
         switch items[index].exercise {
         case .finger(let exercise):
-            // Resume only a session saved for later from this same exercise.
             let checkpoint = dependencies.homeModel(for: exercise.category).checkpoint
+            let side = selectedSide
+            let matchesSide = side.map { checkpoint?.routine.side == $0 } ?? true
             dependencies.prepareSession(
                 category: exercise.category,
-                continuing: checkpoint?.routine.only == exercise,
-                only: exercise
+                continuing: checkpoint?.routine.only == exercise && matchesSide,
+                only: exercise,
+                side: side
             )
             router.presentFullScreenCover(.fingerSession)
 
         case .therapy(let kind):
-            let exercise = Self.routineExercise(for: kind, in: dependencies)
+            let exercise = routineExercise(for: kind, in: dependencies)
             let configuration = kind.category.map { dependencies.routineModel(for: $0).configuration }
                 ?? RoutineConfiguration()
             dependencies.selectedRoutine = Routine(
@@ -275,7 +300,7 @@ final class DailyPlanViewModel {
             router.push(.therapySession)
 
         case .balance(let exercise):
-            let settings = BalancePracticeSettings(exercise: exercise)
+            let settings = balanceSettings(for: exercise)
             router.push(.balanceSession(exercise: exercise, settings: settings))
         }
     }

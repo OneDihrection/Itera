@@ -33,7 +33,7 @@ struct SessionDirectionGuide {
 /// Shape, not color alone, tells the zones apart (filled and breathing versus outline), and the
 /// overlay never uses red. Breathing animates only a halo outside the zone, so the accepted
 /// boundary is always the drawn outline. Reduce Motion freezes the halo.
-struct SessionTargetOverlay: View {
+struct TMSessionTargetOverlay: View {
     let imageSize: CGSize?
     let bubbleGuide: SessionBubbleGuide?
     var singleZone = false

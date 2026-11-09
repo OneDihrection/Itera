@@ -12,7 +12,7 @@ import SwiftUI
 /// A black headline band above a row of seven day cells, inside one outlined container.
 ///
 /// The caller supplies already-formatted text; this view decides nothing about history.
-struct TherapyWeekSummary: View {
+struct TMTherapyWeekSummary: View {
     struct Day: Identifiable {
         let id: Date
         let label: String
@@ -93,7 +93,7 @@ struct TherapyWeekSummary: View {
 // MARK: - Challenge card
 
 /// The current goal: name, progress text, a status pill and a segmented progress bar.
-struct TherapyChallengeCard: View {
+struct TMTherapyChallengeCard: View {
     let title: LocalizedStringKey
     let progressText: LocalizedStringKey
     let status: LocalizedStringKey
@@ -163,7 +163,7 @@ struct TherapyChallengeCard: View {
 // MARK: - Achievement row
 
 /// A compact earned-badge summary: medal icon, title, subtitle and a trailing count.
-struct TherapyAchievementRow: View {
+struct TMTherapyAchievementRow: View {
     let title: String
     let subtitle: String
     let count: LocalizedStringKey

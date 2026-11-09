@@ -16,14 +16,14 @@ import SwiftUI
 
 /// After each set, and through the rest that follows: what was done and what comes next.
 /// The last set of a movement shows the all-done wording.
-struct FingerSetSummaryPage: View {
+struct TMFingerSetSummaryPage: View {
     let model: FingerSessionViewModel
 
     @Environment(AppDependencies.self) private var dependencies
 
     var body: some View {
-        TherapySetSummary(
-            heading: TherapyExerciseHeading(
+        TMTherapySetSummary(
+            heading: TMTherapyExerciseHeading(
                 eyebrow: dependencies.dailyPlan.currentNumber.map { Text("plan.exerciseNumber \($0)") },
                 title: Text(verbatim: model.exerciseTitle)
             ),
@@ -93,12 +93,12 @@ struct FingerSetSummaryPage: View {
     /// Pause stays reachable by touch; during the rest the caregiver may also skip it.
     private var actions: some View {
         HStack(spacing: 16) {
-            TherapyButton(title: "session.pauseAction", symbol: "pause.fill", pill: true, brand: true) {
+            TMTherapyButton(title: "session.pauseAction", symbol: "pause.fill", pill: true, brand: true) {
                 model.handleCommand(.pause)
             }
 
             if model.activity.phase == .rest {
-                TherapyButton(title: "rest.skip", symbol: "forward.fill", secondary: true, pill: true, action: model.skipRest)
+                TMTherapyButton(title: "rest.skip", symbol: "forward.fill", secondary: true, pill: true, action: model.skipRest)
             }
         }
         .frame(maxWidth: 640)
@@ -108,19 +108,19 @@ struct FingerSetSummaryPage: View {
 // MARK: - Next up
 
 /// Shown at the end of a rest, with the next movement's demonstration playing.
-struct FingerUpcomingPage: View {
+struct TMFingerUpcomingPage: View {
     let model: FingerSessionViewModel
 
     var body: some View {
         VStack(spacing: 0) {
-            FingerSessionCloseHeader(model: model, title: nil)
+            TMFingerSessionCloseHeader(model: model, title: nil)
 
             Spacer(minLength: 16)
 
             if let upcoming = model.upcoming {
                 VStack(spacing: 44) {
-                    TherapyMediaPanel(padding: 14) {
-                        FingerExampleView(
+                    TMTherapyMediaPanel(padding: 14) {
+                        TMFingerExampleView(
                             exercise: upcoming.exercise,
                             phase: .demonstration,
                             returning: false,
@@ -177,13 +177,13 @@ struct FingerUpcomingPage: View {
 // MARK: - Shared header
 
 /// The page header used across session pages: a close circle that pauses the session.
-struct FingerSessionCloseHeader: View {
+struct TMFingerSessionCloseHeader: View {
     let model: FingerSessionViewModel
     let title: LocalizedStringKey?
     var trailingContentWidth: CGFloat = 0
 
     var body: some View {
-        TherapyPageHeader(
+        TMTherapyPageHeader(
             title: title ?? "",
             leadingTitle: "session.close",
             leadingSymbol: "xmark",

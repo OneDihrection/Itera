@@ -19,7 +19,7 @@ extension EnvironmentValues {
 }
 
 /// Feedback follows activation, including accessibility activation, rather than a competing tap gesture.
-struct TherapySoundButtonStyle: PrimitiveButtonStyle {
+struct TMTherapySoundButtonStyle: PrimitiveButtonStyle {
     @Environment(\.buttonFeedback) private var feedback
 
     func makeBody(configuration: Configuration) -> some View {
@@ -29,11 +29,11 @@ struct TherapySoundButtonStyle: PrimitiveButtonStyle {
         } label: {
             configuration.label
         }
-        .buttonStyle(TherapyPressFeedbackStyle())
+        .buttonStyle(TMTherapyPressFeedbackStyle())
     }
 }
 
-private struct TherapyPressFeedbackStyle: ButtonStyle {
+private struct TMTherapyPressFeedbackStyle: ButtonStyle {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     func makeBody(configuration: Configuration) -> some View {

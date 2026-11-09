@@ -7,7 +7,7 @@
 
 import SwiftUI
 
-struct ExerciseIllustration: View {
+struct TMExerciseIllustration: View {
     let title: LocalizedStringKey
     let symbol: String
 

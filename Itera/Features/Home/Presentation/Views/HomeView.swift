@@ -9,7 +9,7 @@ import SwiftUI
 
 /// Beranda shows today's plan as a timeline. The start button floats at the bottom
 /// once the inline button scrolls away.
-struct HomeView: View {
+struct TMHomeView: View {
     @Environment(AppDependencies.self) private var dependencies
     @Environment(NavigationRouter.self) private var router
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -101,7 +101,7 @@ struct HomeView: View {
     @ViewBuilder
     private var statusMessages: some View {
         if let error = dependencies.dailyPlan.errorKey {
-            TherapyError(key: error)
+            TMTherapyError(key: error)
         }
 
     }
@@ -109,7 +109,7 @@ struct HomeView: View {
     // MARK: - Start
 
     private var startButton: some View {
-        TherapyButton(
+        TMTherapyButton(
             title: startTitle,
             symbol: dependencies.dailyPlan.isFinishedToday ? "checkmark" : "play.fill",
             prominent: true
@@ -135,7 +135,7 @@ struct HomeView: View {
     @ViewBuilder
     private var floatingStart: some View {
         if startButtonHidden {
-            TherapyFloatingActionDock {
+            TMTherapyFloatingActionDock {
                 startButton
             }
             .transition(reduceMotion ? .opacity : .move(edge: .bottom).combined(with: .opacity))
@@ -157,13 +157,13 @@ struct HomeView: View {
             ForEach(rows.indices, id: \.self) { index in
                 let row = rows[index]
 
-                TherapyTimelineRow(
+                TMTherapyTimelineRow(
                     state: Self.timelineState(row.status),
                     previousIsDone: index > rows.startIndex && rows[index - 1].status == .done,
                     isFirst: index == rows.startIndex,
                     isLast: index == rows.index(before: rows.endIndex)
                 ) {
-                    TherapyPlanCard(
+                    TMTherapyPlanCard(
                         title: LocalizedStringKey(row.titleKey),
                         details: row.details.map(Self.planDetail),
                         artwork: row.item.artwork,

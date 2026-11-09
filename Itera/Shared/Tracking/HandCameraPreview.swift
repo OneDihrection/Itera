@@ -8,12 +8,12 @@
 import AVFoundation
 import SwiftUI
 
-struct HandCameraPreview: UIViewRepresentable {
+struct TMHandCameraPreview: UIViewRepresentable {
     let camera: HandCameraService
     let ready: (Bool) -> Void
 
-    func makeUIView(context: Context) -> CameraPreviewView {
-        let view = CameraPreviewView()
+    func makeUIView(context: Context) -> TMCameraPreviewView {
+        let view = TMCameraPreviewView()
         view.preview.session = camera.session
         view.preview.videoGravity = .resizeAspect
         view.camera = camera
@@ -21,17 +21,17 @@ struct HandCameraPreview: UIViewRepresentable {
         return view
     }
 
-    func updateUIView(_ view: CameraPreviewView, context: Context) {
+    func updateUIView(_ view: TMCameraPreviewView, context: Context) {
         view.ready = ready
     }
 
-    static func dismantleUIView(_ view: CameraPreviewView, coordinator: ()) {
+    static func dismantleUIView(_ view: TMCameraPreviewView, coordinator: ()) {
         view.ready?(false)
         view.preview.session = nil
     }
 }
 
-final class CameraPreviewView: UIView {
+final class TMCameraPreviewView: UIView {
     override class var layerClass: AnyClass { AVCaptureVideoPreviewLayer.self }
     var preview: AVCaptureVideoPreviewLayer { layer as! AVCaptureVideoPreviewLayer }
     weak var camera: HandCameraService?

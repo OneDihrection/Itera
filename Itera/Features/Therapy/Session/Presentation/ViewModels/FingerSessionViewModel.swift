@@ -50,6 +50,23 @@ final class FingerSessionViewModel {
     @ObservationIgnored private var hasPresentedCamera = false
     @ObservationIgnored private var lastHandFrame = 0.0
     private(set) var lastGuideEvidence: HandEvidence?
+    private var announcedCalibrationIndex: Int?
+    private(set) var practiceCountdownReady = false
+    @ObservationIgnored private var spokenFlowKey: String?
+
+    var calibrationMessage: String? {
+        switch activity.phase {
+        case .baseline, .target, .range:
+            return announcedCalibrationIndex == engine.summary.exerciseIndex ? "calibration.try" : "calibration.intro"
+        case .rangeResult, .demonstration:
+            return "calibration.complete"
+        default:
+            return nil
+        }
+    }
+
+    var isCalibrating: Bool { calibrationMessage != nil }
+
     @ObservationIgnored private var speechID: UUID?
     @ObservationIgnored private var speechDeadline: Double?
     @ObservationIgnored private var previousInstruction = ""
@@ -116,17 +133,24 @@ final class FingerSessionViewModel {
     }
 
     var fingerKey: String { "finger." + String(activity.finger) }
+    var restBreath: RestBreath? {
+        guard activity.phase == .rest, activity.completedSets < routine.sets else {
+            return nil
+        }
+        return RestBreath(elapsed: Double(routine.restSeconds) - activity.remaining)
+    }
+
     var instructionKey: String {
         switch activity.phase {
         case .baseline: return "baseline." + activity.kind.rawValue
         case .target: return "move." + activity.kind.rawValue
         case .range: return activity.rangeReady ? "range.instruction" : "range.ready"
-        case .rangeResult: return "range.resultSpoken"
-        case .demonstration: return "demo." + activity.kind.rawValue
+        case .rangeResult: return "calibration.complete"
+        case .demonstration: return "calibration.complete"
         case .active: return (activity.returning || activity.needsStart) ? "return." + activity.kind.rawValue : "move." + activity.kind.rawValue
-        case .countdown: return "session.ready"
+        case .countdown: return "calibration.countdown"
         case .feedback: return "session.good"
-        case .rest: return "session.restInstruction"
+        case .rest: return restBreath?.phase.key ?? "session.restInstruction"
         case .finished: return "session.complete"
         }
     }
@@ -145,10 +169,6 @@ final class FingerSessionViewModel {
     var timeText: String {
         let value = Int(sessionElapsedSeconds)
         return String(format: "%02d:%02d", value / 60, value % 60)
-    }
-    var demonstrationTimeText: String {
-        let seconds = max(0, Int(ceil(activity.demonstrationRemaining)))
-        return String(format: "%02d:%02d", seconds / 60, seconds % 60)
     }
     var countdown: Int { max(0, Int(ceil(activity.remaining))) }
 
@@ -228,13 +248,13 @@ final class FingerSessionViewModel {
             celebratedSets[index] = sets
             celebrationID += 1
         }
-        if activity.phase == .countdown, !paused {
+        if activity.phase == .countdown, practiceCountdownReady {
             let cue = "\(index)-\(activity.set)-\(countdown)"
             if cue != lastCountdownCue {
                 lastCountdownCue = cue
                 // Marizka says "tiga, dua, satu" when recorded; otherwise the beep as before.
-                if countdown <= 0 || !audio.playCount(countdown) {
-                    audio.playCue(.countdown)
+                if countdown > 0, !audio.playCount(countdown) {
+                    _ = audio.speak(String(countdown))
                 }
             }
         }
@@ -308,7 +328,7 @@ final class FingerSessionViewModel {
                 }
                 self.speechID = nil
                 self.speechDeadline = nil
-                self.engine.guidanceCompleted()
+                self.completeNarration()
             case .narrationUnavailable(let id):
                 guard id == self.speechID else {
                     return
@@ -316,7 +336,7 @@ final class FingerSessionViewModel {
                 self.speechID = nil
                 self.speechDeadline = nil
                 self.errorKey = "audio.unavailable"
-                self.engine.guidanceCompleted()
+                self.completeNarration()
             case .command(let command):
                 self.handleCommand(command)
             case .voiceUnavailable:
@@ -368,6 +388,7 @@ final class FingerSessionViewModel {
                 lastGuideEvidence = nil
                 overlaySmoother.reset()
                 engine.recalibrate()
+                announcedCalibrationIndex = nil
                 trackingRecovery.reset()
                 trackingRecovery.missing(.position, at: now)
                 calibrationNeedsHelp = false
@@ -423,7 +444,7 @@ final class FingerSessionViewModel {
             if errorKey?.hasPrefix("camera.") == true {
                 errorKey = nil
             }
-            if trackingReady {
+            if trackingReady, calibrationMessage != "calibration.intro" {
                 let previousCompletion = activity.holdCompletionID
                 engine.observe(hand, now: now)
                 if previousCompletion == nil, activity.holdCompletionID != nil {
@@ -464,7 +485,7 @@ final class FingerSessionViewModel {
             speechDeadline = nil
             speechID = nil
             audio.cancelSpeech()
-            engine.guidanceCompleted()
+            completeNarration()
             errorKey = "audio.unavailable"
         }
         if now - lastFrame > 0.3 {
@@ -482,12 +503,18 @@ final class FingerSessionViewModel {
         if !frameReady, speechID != nil {
             speechID = nil
             speechDeadline = nil
+            spokenFlowKey = nil
             audio.cancelSpeech()
             previousInstruction = ""
         }
         updateRecovery(now: now, frameReady: frameReady)
         speakRecoveryIfNeeded()
-        engine.tick(now, ready: frameReady)
+        if activity.phase != .countdown {
+            practiceCountdownReady = false
+        }
+        if activity.phase != .countdown || practiceCountdownReady {
+            engine.tick(now, ready: frameReady)
+        }
         updateRewards()
         updateGuidance()
         let progress = engine.summary.exerciseIndex * 1000 + activity.totalRepetitions
@@ -545,7 +572,8 @@ final class FingerSessionViewModel {
     }
 
     private func speakRecoveryIfNeeded() {
-        guard !paused else {
+        guard !paused, calibrationMessage != "calibration.intro",
+              calibrationMessage != "calibration.complete", activity.phase != .countdown else {
             return
         }
         guard let key = recoveryGuidanceKey else {
@@ -568,42 +596,67 @@ final class FingerSessionViewModel {
 
     private func updateGuidance() {
         guard !paused, previewAttached,
-              !trackingRecovery.showsGuidance(at: ProcessInfo.processInfo.systemUptime),
               ProcessInfo.processInfo.systemUptime - lastFrame <= 0.3 else { return }
-        let key = instructionKey + (activity.kind.isSequential ? fingerKey : "") + String(engine.summary.exerciseIndex)
+
+        let flow = calibrationMessage
+        if flow == nil, activity.phase != .countdown,
+           trackingRecovery.showsGuidance(at: ProcessInfo.processInfo.systemUptime) {
+            return
+        }
+        if activity.phase == .countdown, practiceCountdownReady {
+            return
+        }
+
+        let key = (flow ?? instructionKey) + instructionKey
+            + (activity.kind.isSequential ? fingerKey : "") + String(engine.summary.exerciseIndex)
         guard key != previousInstruction else {
             return
         }
         previousInstruction = key
         instructionSince = ProcessInfo.processInfo.systemUptime
         calibrationNeedsHelp = false
-
-        // The spoken numbers carry the countdown; narrating "Bersiap…" at the same time
-        // would talk over "tiga". The countdown never waits on narration, so nothing stalls.
-        if activity.phase == .countdown && audio.hasRecordedCounts {
-            engine.guidanceCompleted()
-            return
-        }
-
         narrate()
+    }
+
+    private func completeNarration() {
+        if spokenFlowKey == "calibration.intro" {
+            announcedCalibrationIndex = engine.summary.exerciseIndex
+        } else if spokenFlowKey == "calibration.countdown" {
+            practiceCountdownReady = true
+            lastCountdownCue = ""
+        }
+        spokenFlowKey = nil
+        engine.guidanceCompleted()
     }
 
     func narrate() {
         guard !paused, !hasFinished else {
             return
         }
-        var text = String(localized: String.LocalizationValue(instructionKey), bundle: sessionLanguage.resourceBundle)
-        if activity.kind.isSequential && [.baseline, .target, .active].contains(activity.phase) {
-            text += ". " + String(localized: String.LocalizationValue(fingerKey), bundle: sessionLanguage.resourceBundle)
+
+        let flow = calibrationMessage
+        let key = flow ?? instructionKey
+        var lines: [NarrationLine]
+        if flow == "calibration.try" {
+            lines = [NarrationLine(key: key)] + narrationLines
+        } else if flow != nil || activity.phase == .countdown {
+            lines = [NarrationLine(key: key)]
+        } else {
+            lines = narrationLines
         }
-        if narratesHoldDuration {
-            text += ". " + String.localizedStringWithFormat(
-                String(localized: "guide.holdDuration %lld", bundle: sessionLanguage.resourceBundle), Int64(activity.holdDuration)
-            )
-        }
+
+        let bundle = sessionLanguage.resourceBundle
+        let text = lines.map { line in
+            let value = String(localized: String.LocalizationValue(line.key), bundle: bundle)
+            if let argument = line.argument {
+                return String.localizedStringWithFormat(value, Int64(argument))
+            }
+            return value
+        }.joined(separator: ". ")
+        spokenFlowKey = key
         engine.guidanceStarted()
         speechDeadline = ProcessInfo.processInfo.systemUptime + max(15, Double(text.count) * 0.25)
-        speechID = audio.speak(text, lines: narrationLines)
+        speechID = audio.speak(text, lines: lines)
     }
 
     /// The String Catalog keys behind `narrate()`'s text, in the same order, so a bundled
@@ -760,12 +813,6 @@ final class FingerSessionViewModel {
         else { Task { await saveCheckpoint() } }
     }
 
-    func confirmRange() {
-        engine.confirmRange()
-        previousInstruction = ""
-        updateGuidance()
-    }
-
     func remeasureRange() {
         engine.remeasureRange()
         previousInstruction = ""
@@ -773,6 +820,7 @@ final class FingerSessionViewModel {
     }
 
     func retryCalibration() {
+        announcedCalibrationIndex = nil
         calibrationNeedsHelp = false
         trackingRecoveryPaused = false
         trackingRecovery.reset()

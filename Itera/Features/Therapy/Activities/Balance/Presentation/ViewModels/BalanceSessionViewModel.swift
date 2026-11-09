@@ -23,6 +23,31 @@ final class BalanceSessionViewModel {
     let holdSeconds: Int
     let exercise: BalanceExercise
 
+    private enum OpeningCue: String {
+        case intro = "calibration.intro"
+        case tryMovement = "calibration.try"
+        case complete = "calibration.complete"
+        case countdown = "calibration.countdown"
+    }
+
+    private var openingCue: OpeningCue? = .intro
+    private var calibrationFinished = false
+    private(set) var practiceCountdown: Int?
+    @ObservationIgnored private var openingSpeechID: UUID?
+    @ObservationIgnored private var openingSpeechDeadline: Double?
+    @ObservationIgnored private var countdownDeadline: Double?
+
+    var calibrationMessage: String? {
+        if let openingCue, openingCue != .countdown {
+            return openingCue.rawValue
+        }
+        return calibrationFinished ? nil : "calibration.try"
+    }
+
+    var countdownOverlaySeconds: Int? {
+        openingCue == .countdown ? 3 : practiceCountdown
+    }
+
     // MARK: Sets
 
     /// The set being practiced, from 1.
@@ -33,6 +58,10 @@ final class BalanceSessionViewModel {
     private(set) var setResults: [Int] = []
     /// Seconds left before the next set while resting between sets, otherwise `nil`.
     private(set) var restRemaining: Int?
+
+    var restBreath: RestBreath? {
+        restRemaining.map { RestBreath(elapsed: Double(restSeconds - $0)) }
+    }
 
     /// True once the last set is finished.
     var allSetsDone: Bool {
@@ -106,9 +135,18 @@ final class BalanceSessionViewModel {
             .receive(on: DispatchQueue.main)
             .sink { [weak self] frame in
                 guard let self else { return }
+                guard self.advanceOpeningIfReady(at: frame.timestamp) else {
+                    if self.paused {
+                        self.engine.consume(frame, scoringEnabled: false)
+                    }
+                    return
+                }
                 let previous = self.snapshot
                 self.engine.consume(frame, scoringEnabled: !self.paused)
                 self.snapshot = self.engine.snapshot
+                if self.updateCalibrationTransition(frame) {
+                    return
+                }
                 self.updateAudio(from: previous, to: self.snapshot)
                 if previous.phase != .complete, self.snapshot.phase == .complete {
                     self.finishSet()
@@ -125,8 +163,10 @@ final class BalanceSessionViewModel {
                     self.cameraWaiting = false
                 case .waiting:
                     self.cameraWaiting = true
+                    self.interruptOpening()
                 case .discontinuity:
                     self.cameraWaiting = true
+                    self.resetOpening()
                     self.engine.invalidateCalibration()
                     self.snapshot = self.engine.snapshot
                 }
@@ -186,6 +226,7 @@ final class BalanceSessionViewModel {
         }
 
         restRemaining = restSeconds
+        speakRestBreath()
         restTask?.cancel()
         restTask = Task { [weak self] in
             await self?.runRest()
@@ -205,10 +246,22 @@ final class BalanceSessionViewModel {
                 continue
             }
 
+            let previousPhase = restBreath?.phase
             restRemaining = remaining - 1
+            if remaining > 1, restBreath?.phase != previousPhase {
+                speakRestBreath()
+            }
         }
 
         startNextSet()
+    }
+
+    private func speakRestBreath() {
+        guard !paused, let phase = restBreath?.phase else {
+            return
+        }
+        audio.cancelSpeech()
+        audio.speak(id: UUID(), key: phase.key)
     }
 
     /// Keeps the calibration: the patient starts the next set from the usual return to start.
@@ -218,10 +271,12 @@ final class BalanceSessionViewModel {
         }
 
         restRemaining = nil
+        audio.cancelSpeech()
         setNumber += 1
         lastSpokenCountdown = nil
         engine.nextSet()
         snapshot = engine.snapshot
+        openingCue = .countdown
     }
 
     func previewReady(_ ready: Bool) {
@@ -247,6 +302,7 @@ final class BalanceSessionViewModel {
         audio.cancelSpeech()
         audio.startMusic()
         engine.restart()
+        resetOpening()
         snapshot = engine.snapshot
         tracking.start()
     }
@@ -260,6 +316,7 @@ final class BalanceSessionViewModel {
         paused = true
         clock.pause(at: Self.now)
         audio.pauseMusic()
+        interruptOpening()
         audio.cancelSpeech()
         lastSpokenCountdown = nil
     }
@@ -269,6 +326,7 @@ final class BalanceSessionViewModel {
         paused = false
         clock.resume(at: Self.now)
         audio.resumeMusic()
+        speakRestBreath()
     }
 
     func foreground(permissions: any PermissionManaging) {
@@ -294,6 +352,7 @@ final class BalanceSessionViewModel {
         cameraWaiting = true
         if !allSetsDone, restRemaining == nil {
             engine.invalidateCalibration()
+            resetOpening()
             snapshot = engine.snapshot
         }
         tracking.stop()
@@ -349,9 +408,127 @@ final class BalanceSessionViewModel {
             voiceListening = false
         case .interrupted:
             pause()
-        case .completed, .cancelled, .feedbackUnavailable, .command:
+        case .completed(let id, _):
+            if id == openingSpeechID {
+                completeOpeningCue()
+            }
+        case .cancelled, .feedbackUnavailable, .command:
             break
         }
+    }
+
+    /// Calibration guidance gates the start of capture, and the countdown gates practice.
+    private func advanceOpeningIfReady(at timestamp: Double) -> Bool {
+        guard !paused, !cameraWaiting else {
+            return paused && openingCue == nil && practiceCountdown == nil
+        }
+
+        if let openingCue {
+            if let deadline = openingSpeechDeadline, timestamp >= deadline {
+                interruptOpening()
+                audio.cancelSpeech()
+                completeOpeningCue()
+            } else if openingSpeechID == nil {
+                let id = UUID()
+                openingSpeechID = id
+                openingSpeechDeadline = timestamp + 8
+                audio.speak(id: id, key: openingCue.rawValue)
+            }
+            return false
+        }
+
+        guard !exercise.isSitToStand, practiceCountdown != nil else {
+            return true
+        }
+
+        let deadline = countdownDeadline ?? timestamp + 3
+        countdownDeadline = deadline
+        let remaining = Int(ceil(deadline - timestamp))
+        guard remaining > 0 else {
+            practiceCountdown = nil
+            countdownDeadline = nil
+            lastSpokenCountdown = nil
+            audio.speak(id: UUID(), key: snapshot.instructionKey)
+            return true
+        }
+
+        practiceCountdown = remaining
+        speakCountdown(remaining)
+        return false
+    }
+
+    private func updateCalibrationTransition(_ frame: TrackingObservation) -> Bool {
+        guard !paused else {
+            return true
+        }
+
+        let sittingCountdown = exercise.isSitToStand && snapshot.instructionKey == "session.countdown"
+        if !calibrationFinished {
+            let reachedPracticeStart = exercise.isSitToStand
+                ? sittingCountdown
+                : snapshot.phase == .reaching || snapshot.phase == .holding || snapshot.phase == .returning
+            guard reachedPracticeStart else {
+                return false
+            }
+
+            calibrationFinished = true
+            openingCue = .complete
+            audio.cancelSpeech()
+            if exercise.isSitToStand {
+                // Restart the seated countdown after both announcements finish.
+                engine.consume(frame, scoringEnabled: false)
+            }
+            return true
+        }
+
+        if exercise.isSitToStand {
+            practiceCountdown = sittingCountdown ? snapshot.calibrationCountdown : nil
+        }
+        return false
+    }
+
+    private func completeOpeningCue() {
+        guard !paused, !cameraWaiting else {
+            interruptOpening()
+            return
+        }
+
+        openingSpeechID = nil
+        openingSpeechDeadline = nil
+        switch openingCue {
+        case .intro:
+            openingCue = .tryMovement
+        case .complete:
+            openingCue = .countdown
+        case .countdown:
+            openingCue = nil
+            if !exercise.isSitToStand {
+                practiceCountdown = 3
+            }
+        case .tryMovement, nil:
+            openingCue = nil
+        }
+    }
+
+    private func interruptOpening() {
+        openingSpeechID = nil
+        openingSpeechDeadline = nil
+        countdownDeadline = nil
+    }
+
+    private func resetOpening() {
+        interruptOpening()
+        openingCue = .intro
+        calibrationFinished = false
+        practiceCountdown = nil
+    }
+
+    private func speakCountdown(_ remaining: Int) {
+        guard remaining != lastSpokenCountdown else {
+            return
+        }
+        lastSpokenCountdown = remaining
+        audio.play(id: UUID(), cue: .countdown(remaining))
     }
 
     private func updateAudio(from previous: BalanceSnapshot, to current: BalanceSnapshot) {
@@ -413,12 +590,7 @@ final class BalanceSessionViewModel {
 
         // Only the countdown before practice is counted aloud; the seated hold is shown, not spoken.
         if let remaining = current.calibrationCountdown, current.instructionKey == "session.countdown" {
-            guard remaining != lastSpokenCountdown else {
-                return
-            }
-
-            lastSpokenCountdown = remaining
-            audio.play(id: UUID(), cue: .count(remaining))
+            speakCountdown(remaining)
             return
         }
 

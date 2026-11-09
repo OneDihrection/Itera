@@ -8,7 +8,7 @@
 import SwiftUI
 
 /// A screen-sized shower driven by the controller's single celebration clock.
-struct SessionCelebration: View {
+struct TMSessionCelebration: View {
     let start: Date
     @State private var finished = false
 

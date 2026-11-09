@@ -10,7 +10,7 @@ import SwiftUI
 // MARK: - Page header
 
 /// A centered page title with an optional leading circle action (back or close).
-struct TherapyPageHeader: View {
+struct TMTherapyPageHeader: View {
     let title: LocalizedStringKey
     var leadingTitle: LocalizedStringKey? = nil
     var leadingSymbol = "chevron.left"
@@ -28,7 +28,7 @@ struct TherapyPageHeader: View {
 
             if let leadingAction, let leadingTitle {
                 HStack {
-                    TherapyIconButton(
+                    TMTherapyIconButton(
                         title: leadingTitle,
                         symbol: leadingSymbol,
                         size: 44,
@@ -47,7 +47,7 @@ struct TherapyPageHeader: View {
 // MARK: - Hero card
 
 /// The black "today's exercise" card with a large circular action on the trailing side.
-struct TherapyHeroCard: View {
+struct TMTherapyHeroCard: View {
     let eyebrow: LocalizedStringKey
     let title: LocalizedStringKey
     let detail: LocalizedStringKey
@@ -99,14 +99,14 @@ struct TherapyHeroCard: View {
             }
             .contentShape(Rectangle())
         }
-        .buttonStyle(TherapySoundButtonStyle())
+        .buttonStyle(TMTherapySoundButtonStyle())
     }
 }
 
 // MARK: - Program card
 
 /// A black list card with a white thumbnail tile, a title and a one-line detail.
-struct TherapyProgramCard: View {
+struct TMTherapyProgramCard: View {
     let title: LocalizedStringKey
     let detail: LocalizedStringKey
     let artwork: String
@@ -116,7 +116,7 @@ struct TherapyProgramCard: View {
     var body: some View {
         Button(action: action) {
             HStack(spacing: 18) {
-                TherapyArtwork(name: artwork, mirrored: mirrored)
+                TMTherapyArtwork(name: artwork, mirrored: mirrored)
                     .foregroundStyle(Color.black)
                     .padding(14)
                     .frame(width: 100, height: 94)
@@ -139,7 +139,7 @@ struct TherapyProgramCard: View {
             .background(TherapyPalette.heroCard, in: RoundedRectangle(cornerRadius: 30))
             .contentShape(RoundedRectangle(cornerRadius: 30))
         }
-        .buttonStyle(TherapySoundButtonStyle())
+        .buttonStyle(TMTherapySoundButtonStyle())
     }
 }
 
@@ -147,7 +147,7 @@ struct TherapyProgramCard: View {
 
 /// A soft grey rounded panel that frames an illustration or demonstration,
 /// with an optional heading such as "Animasi".
-struct TherapyMediaPanel<Content: View>: View {
+struct TMTherapyMediaPanel<Content: View>: View {
     var title: LocalizedStringKey? = nil
     var padding: CGFloat = 22
     @ViewBuilder let content: Content

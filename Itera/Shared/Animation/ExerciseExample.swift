@@ -8,7 +8,7 @@
 import RealityKit
 import SwiftUI
 
-struct ExerciseExample: View {
+struct TMExerciseExample: View {
     let asset: ExerciseAnimationAsset
     let mirrored: Bool
     let mode: TherapyAnimationPlayback
@@ -19,7 +19,7 @@ struct ExerciseExample: View {
     var body: some View {
         ZStack {
             if !failed {
-                AnimationViewport(asset: asset, mode: mode, reducedMotion: reducedMotion) { event in
+                TMAnimationViewport(asset: asset, mode: mode, reducedMotion: reducedMotion) { event in
                     switch event {
                     case .ready: ready = true
                     case .failed: failed = true
@@ -38,7 +38,7 @@ struct ExerciseExample: View {
     }
 }
 
-private struct AnimationViewport: UIViewRepresentable {
+private struct TMAnimationViewport: UIViewRepresentable {
     let asset: ExerciseAnimationAsset
     let mode: TherapyAnimationPlayback
     let reducedMotion: Bool

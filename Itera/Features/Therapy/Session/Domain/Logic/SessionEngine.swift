@@ -37,6 +37,7 @@ struct SessionSnapshot {
     var index = 0
     var setNumber = 1
     var seconds = 0
+    var restBreath: RestBreath?
     var paused = false
     /// Whether the shown countdown's clock is running. Preparation and the pre-practice countdown
     /// show their full value while the cue is still being spoken, before their deadline starts.
@@ -85,6 +86,7 @@ struct SessionEngine {
     /// Limits live towel speech to the first cue and a stuck reminder.
     private var towelSpeech = TowelSpeechPolicy()
     private var awaitingCountdownGuidance = false
+    private var calibrationCompletionPending = false
     private var announcedCountdown: Int?
     private var calibrationInvalidatedBetweenSets = false
 
@@ -140,25 +142,13 @@ struct SessionEngine {
             tick()
         }
         if canProgress, snapshot.stage == .activity,
-           case .towel(let towel) = snapshot.presentation, towel.phase == .countdown {
-            // Towel readiness comes from opening/demo and capture, never live speech.
-            awaitingCountdownGuidance = false
-            _ = activity?.handle(.countdownReady(now))
-            snapshot.presentation = activity?.presentation
-        }
-        if canProgress, snapshot.stage == .activity,
-           progress.currentActivity?.kind != .foldTowel,
            snapshot.presentation?.countdownSeconds != nil,
            previousCountdown == nil, !awaitingCountdownGuidance {
-            awaitingCountdownGuidance = true
-            announcedCountdown = nil
-            announce("parity.getReady", timed: false)
+            announcePracticeCountdown()
         }
         if canProgress {
-            let seconds = snapshot.stage == .preparationWait
-                ? (deadline == nil ? nil : snapshot.seconds)
-                : (snapshot.stage == .activity && !awaitingCountdownGuidance
-                    ? snapshot.presentation?.countdownSeconds : nil)
+            let seconds = snapshot.stage == .activity && !awaitingCountdownGuidance
+                ? snapshot.presentation?.countdownSeconds : nil
             if let seconds, seconds > 0, seconds != announcedCountdown {
                 effects.append(.audio(UUID(), .countdown(seconds)))
             }
@@ -194,6 +184,7 @@ struct SessionEngine {
 
     private mutating func selectActivity() {
         calibrationInvalidatedBetweenSets = false
+        calibrationCompletionPending = false
         awaitingCountdownGuidance = false
         announcedCountdown = nil
         guard let configuration = progress.currentActivity else {
@@ -237,9 +228,7 @@ struct SessionEngine {
         snapshot.stage = .activity
         evidenceBoundary = now
         deadline = nil
-        awaitingCountdownGuidance = true
-        announcedCountdown = nil
-        announce("parity.getReady", timed: false)
+        announcePracticeCountdown()
     }
 
     private mutating func observation(_ frame: TrackingObservation) {
@@ -291,10 +280,9 @@ struct SessionEngine {
             before.phase != after.phase {
             if after.phase == .targetCapture {
                 snapshot.stage = .preparationWait
-                snapshot.instruction = "parity.getReady"
-                snapshot.seconds = 5
+                snapshot.seconds = 0
                 deadline = nil
-                announce("parity.getReady", timed: false)
+                announce("calibration.try", timed: false)
                 return
             }
             if after.phase == .returnToStart, before.phase == .targetCapture {
@@ -305,9 +293,7 @@ struct SessionEngine {
         }
         if result.presentation.countdownSeconds != nil {
             if old?.countdownSeconds == nil {
-                awaitingCountdownGuidance = true
-                announcedCountdown = nil
-                announce("parity.getReady", timed: false)
+                announcePracticeCountdown()
             }
         } else if case .movement = result.presentation, old?.count != result.presentation.count {
             // Each accepted repetition is counted aloud.
@@ -347,7 +333,9 @@ struct SessionEngine {
                     || snapshot.stage == .feedback || snapshot.stage == .activity
                     || snapshot.stage == .preparationWait
                 {
-                    announce(snapshot.instruction, timed: snapshot.stage != .activity)
+                    let key = awaitingCountdownGuidance && snapshot.instruction != "calibration.complete"
+                        ? "calibration.countdown" : snapshot.instruction
+                    announce(key, timed: snapshot.stage != .activity)
                 }
             }
         }
@@ -356,7 +344,15 @@ struct SessionEngine {
             endSuspension()
             _ = activity?.handle(.resume)
             if let configuration = progress.currentActivity {
-                beginCards(.opening(configuration, includePositioning: positioningPending))
+                let plan = SessionGuidance.opening(configuration, includePositioning: positioningPending)
+                if plan.destination == .capture {
+                    calibrationCompletionPending = true
+                    snapshot.stage = .preparationWait
+                    snapshot.seconds = 0
+                    announce("calibration.intro", timed: false)
+                } else {
+                    beginCards(plan)
+                }
             }
         }
     }
@@ -401,7 +397,9 @@ struct SessionEngine {
                     if case .rest = progress.stage {
                         snapshot.stage = .rest
                         snapshot.instruction = "session.rest"
-                        announce("session.rest", timed: false)
+                        if !progress.hasNextSet {
+                            announce("session.rest", timed: false)
+                        }
                     }
                 }
             default: break
@@ -411,10 +409,22 @@ struct SessionEngine {
             snapshot.seconds = max(0, Int(ceil(deadline - now)))
         }
         if case .rest(let deadline) = progress.stage {
-            snapshot.seconds = max(0, Int(ceil(deadline - now)))
+            let remaining = max(0, deadline - now)
+            snapshot.seconds = Int(ceil(remaining))
+            if progress.hasNextSet, remaining > 0 {
+                let breath = RestBreath(elapsed: progress.routine.restSeconds - remaining)
+                if snapshot.restBreath?.phase != breath.phase {
+                    announce(breath.phase.key, timed: false)
+                }
+                snapshot.restBreath = breath
+            }
             let previousIndex = progress.index
             progress.tick(at: now)
             if progress.stage == .activity {
+                if snapshot.restBreath != nil {
+                    snapshot.restBreath = nil
+                    effects.append(.cancelSpeech)
+                }
                 if progress.index == previousIndex {
                     beginNextSet()
                 } else {
@@ -464,6 +474,17 @@ struct SessionEngine {
         }
     }
 
+    private mutating func announcePracticeCountdown() {
+        awaitingCountdownGuidance = true
+        announcedCountdown = nil
+        if calibrationCompletionPending {
+            calibrationCompletionPending = false
+            announce("calibration.complete", timed: false)
+        } else {
+            announce("calibration.countdown", timed: false)
+        }
+    }
+
     private mutating func completeGuidance(_ id: UUID, available: Bool = true) {
         guard canProgress, guidance == id, !narrationComplete else {
             return
@@ -471,9 +492,11 @@ struct SessionEngine {
         narrationComplete = true
         speechTimeout = nil
         if snapshot.stage == .preparationWait {
-            deadline = now + 5
-            snapshot.seconds = 5
-            announcedCountdown = nil
+            if snapshot.instruction == "calibration.intro", let configuration = progress.currentActivity {
+                beginCards(.opening(configuration, includePositioning: positioningPending))
+                return
+            }
+            deadline = now
         }
         if snapshot.stage == .activity {
             // A live towel cue may finish late, fail, or never finish. None changes mechanics.
@@ -481,6 +504,10 @@ struct SessionEngine {
                 return
             }
             if awaitingCountdownGuidance {
+                if snapshot.instruction == "calibration.complete" {
+                    announce("calibration.countdown", timed: false)
+                    return
+                }
                 awaitingCountdownGuidance = false
                 _ = activity?.handle(.countdownReady(now))
                 snapshot.presentation = activity?.presentation
@@ -534,10 +561,9 @@ struct SessionEngine {
         switch plan.destination {
         case .capture:
             snapshot.stage = .preparationWait
-            snapshot.instruction = "parity.getReady"
-            snapshot.seconds = 5
+            snapshot.seconds = 0
             deadline = nil
-            announce("parity.getReady", timed: false)
+            announce("calibration.try", timed: false)
         case .activity, .returnToStart:
             enterActivity()
         }
@@ -622,8 +648,10 @@ struct SessionEngine {
                 awaitingCountdownGuidance = snapshot.presentation?.countdownSeconds != nil
             }
             if canProgress {
+                let key = awaitingCountdownGuidance && snapshot.instruction != "calibration.complete"
+                    ? "calibration.countdown" : snapshot.instruction
                 announce(
-                    snapshot.instruction,
+                    key,
                     timed: snapshot.stage == .instruction || snapshot.stage == .demonstration
                         || snapshot.stage == .feedback)
             }

@@ -14,7 +14,7 @@ import SwiftUI
 /// matches a normalized acceptance region. It displays supplied values only; holds and timing stay
 /// with the caller. An emphasized zone breathes with a halo outside its outline (frozen under
 /// Reduce Motion); a quiet zone recedes so only the current step stands out.
-struct TherapyGuideZone: View {
+struct TMTherapyGuideZone: View {
     let tint: Color
     let symbol: String
     /// Hold progress, 0...1. Nothing is drawn at 0.
@@ -94,9 +94,9 @@ struct TherapyGuideZone: View {
 #if DEBUG
 #Preview("Guide zones") {
     HStack(spacing: 40) {
-        TherapyGuideZone(tint: TherapyPalette.guidanceBlue, symbol: "hand.raised.fill", progress: 0.6)
+        TMTherapyGuideZone(tint: TherapyPalette.guidanceBlue, symbol: "hand.raised.fill", progress: 0.6)
             .frame(width: 180, height: 180)
-        TherapyGuideZone(tint: TherapyPalette.guidanceYellow, symbol: "arrow.left", emphasized: false)
+        TMTherapyGuideZone(tint: TherapyPalette.guidanceYellow, symbol: "arrow.left", emphasized: false)
             .frame(width: 180, height: 180)
     }
     .padding(40)

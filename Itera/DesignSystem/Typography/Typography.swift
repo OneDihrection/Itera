@@ -243,7 +243,7 @@ enum AppFont {
 // MARK: - Typography View Modifier
 
 /// A ViewModifier that applies the PlusJakartaSans typography system with accessibility scaling.
-public struct TypographyModifier: ViewModifier {
+public struct TMTypographyModifier: ViewModifier {
     public let font: Font
 
     public init(font: Font) {
@@ -285,7 +285,7 @@ public extension View {
         weight: AppFontWeight? = nil,
         isItalic: Bool = false
     ) -> some View {
-        modifier(TypographyModifier(style, weight: weight, isItalic: isItalic))
+        modifier(TMTypographyModifier(style, weight: weight, isItalic: isItalic))
     }
 
     /// Applies custom PlusJakartaSans typography with explicit size and weight.
@@ -300,7 +300,7 @@ public extension View {
         isItalic: Bool = false,
         relativeTo: Font.TextStyle = .body
     ) -> some View {
-        modifier(TypographyModifier(size: size, weight: weight, isItalic: isItalic, relativeTo: relativeTo))
+        modifier(TMTypographyModifier(size: size, weight: weight, isItalic: isItalic, relativeTo: relativeTo))
     }
 }
 

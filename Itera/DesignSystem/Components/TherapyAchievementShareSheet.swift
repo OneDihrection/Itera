@@ -9,7 +9,7 @@ import SwiftUI
 import UIKit
 
 /// Exports a badge card on demand; the caller owns presentation and dismissal.
-struct TherapyAchievementShareSheet: UIViewControllerRepresentable {
+struct TMTherapyAchievementShareSheet: UIViewControllerRepresentable {
     let symbol: String
     let value: String
     let title: String
@@ -19,7 +19,7 @@ struct TherapyAchievementShareSheet: UIViewControllerRepresentable {
     let onComplete: (Bool) -> Void
 
     func makeUIViewController(context: Context) -> UIActivityViewController {
-        let card = TherapyAchievementShareCard(
+        let card = TMTherapyAchievementShareCard(
             symbol: symbol,
             value: value,
             title: title,
@@ -55,7 +55,7 @@ struct TherapyAchievementShareSheet: UIViewControllerRepresentable {
     func updateUIViewController(_ controller: UIActivityViewController, context: Context) {}
 }
 
-private struct TherapyAchievementShareCard: View {
+private struct TMTherapyAchievementShareCard: View {
     let symbol: String
     let value: String
     let title: String
@@ -66,7 +66,7 @@ private struct TherapyAchievementShareCard: View {
             Text(verbatim: "Itera")
                 .typography(.title2)
                 .foregroundStyle(TherapyPalette.primary)
-            TherapyBadge(symbol: symbol, value: value, earned: true, size: 200)
+            TMTherapyBadge(symbol: symbol, value: value, earned: true, size: 200)
             Text(verbatim: title)
                 .typography(.largeTitle)
                 .multilineTextAlignment(.center)

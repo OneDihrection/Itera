@@ -8,7 +8,7 @@
 import SwiftUI
 
 /// The page shown before starting: a looping demonstration, numbered steps and the targets.
-struct FingerExercisePreviewView: View {
+struct TMFingerExercisePreviewView: View {
     let exercise: FingerExercise
     @Environment(AppDependencies.self) private var dependencies
     @Environment(NavigationRouter.self) private var router
@@ -50,8 +50,8 @@ struct FingerExercisePreviewView: View {
     // MARK: - Sections
 
     private var demonstration: some View {
-        TherapyMediaPanel {
-            FingerExampleView(
+        TMTherapyMediaPanel {
+            TMFingerExampleView(
                 exercise: exercise,
                 phase: .demonstration,
                 returning: false,
@@ -72,7 +72,7 @@ struct FingerExercisePreviewView: View {
             Text("exercise.instructions")
                 .typography(size: 24, weight: .semiBold, relativeTo: .title2)
                 .accessibilityAddTraits(.isHeader)
-            TherapyNumberedSteps(steps: exercise.steps.map { LocalizedStringKey($0) })
+            TMTherapyNumberedSteps(steps: exercise.steps.map { LocalizedStringKey($0) })
 
             Text("exercise.target")
                 .typography(size: 24, weight: .semiBold, relativeTo: .title2)
@@ -81,10 +81,10 @@ struct FingerExercisePreviewView: View {
             targets
 
             if let error = home.errorKey {
-                TherapyError(key: error)
+                TMTherapyError(key: error)
             }
 
-            TherapyButton(title: "exercise.start", disabled: starting, pill: true, action: start)
+            TMTherapyButton(title: "exercise.start", disabled: starting, pill: true, action: start)
                 .padding(.top, 18)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -96,8 +96,8 @@ struct FingerExercisePreviewView: View {
             : AnyLayout(HStackLayout(spacing: 16))
 
         return layout {
-            TherapyTargetTile(value: home.routine.sets, unit: "exercise.setsUnit")
-            TherapyTargetTile(
+            TMTherapyTargetTile(value: home.routine.sets, unit: "exercise.setsUnit")
+            TMTherapyTargetTile(
                 value: home.routine.repetitions,
                 unit: "exercise.repetitionsUnit",
                 suffix: "x"

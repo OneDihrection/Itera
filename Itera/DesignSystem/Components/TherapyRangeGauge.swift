@@ -9,7 +9,7 @@ import SwiftUI
 
 /// A measured movement range split into a start zone and a target zone, with labels at each end.
 /// It accepts only values and labels; callers decide what the range means.
-struct TherapyRangeGauge: View {
+struct TMTherapyRangeGauge: View {
     let startLabel: LocalizedStringKey
     let endLabel: LocalizedStringKey
     /// Fraction of the range, from the start end, that counts as back at the start.

@@ -11,7 +11,7 @@ import SwiftUI
 
 /// A large circle with a white check, for a finished set or session. Green by default; the
 /// shared exercise screens pass `TherapyPalette.brand`.
-struct TherapyCompletionMark: View {
+struct TMTherapyCompletionMark: View {
     var size: CGFloat = 128
     var tint: Color = TherapyPalette.success
 
@@ -28,7 +28,7 @@ struct TherapyCompletionMark: View {
 // MARK: - Target tile
 
 /// A grey tile with one large number and its unit, such as "3 Set" or "8x Repetisi".
-struct TherapyTargetTile: View {
+struct TMTherapyTargetTile: View {
     let value: Int
     let unit: LocalizedStringKey
     /// A small mark after the number, such as "x".
@@ -61,7 +61,7 @@ struct TherapyTargetTile: View {
 // MARK: - Numbered steps
 
 /// An ordered list of short instructions with hanging numbers.
-struct TherapyNumberedSteps: View {
+struct TMTherapyNumberedSteps: View {
     let steps: [LocalizedStringKey]
 
     var body: some View {
@@ -85,7 +85,7 @@ struct TherapyNumberedSteps: View {
 // MARK: - Set row
 
 /// One set in a set checklist: done, next, or still to come.
-struct TherapySetRow: View {
+struct TMTherapySetRow: View {
     enum State {
         case done, next, upcoming
     }
@@ -145,7 +145,7 @@ struct TherapySetRow: View {
 // MARK: - Rest countdown
 
 /// A large blue ring with the remaining whole seconds and a unit underneath.
-struct TherapyRestCountdown: View {
+struct TMTherapyRestCountdown: View {
     let remaining: Double
     let total: Double
     let unit: LocalizedStringKey
@@ -153,7 +153,7 @@ struct TherapyRestCountdown: View {
 
     var body: some View {
         ZStack {
-            TherapyProgressRing(
+            TMTherapyProgressRing(
                 progress: total > 0 ? remaining / total : 0,
                 lineWidth: diameter * 0.09,
                 animationDuration: 0.25,
@@ -181,7 +181,7 @@ struct TherapyRestCountdown: View {
 // MARK: - Repetition panel
 
 /// "Repetisi" with a large "done/total" count and one dot per repetition in the current set.
-struct TherapyRepetitionPanel: View {
+struct TMTherapyRepetitionPanel: View {
     let title: LocalizedStringKey
     let unit: LocalizedStringKey
     let completed: Int
@@ -236,7 +236,7 @@ struct TherapyRepetitionPanel: View {
 // MARK: - Feedback pill
 
 /// A short live cue drawn over the camera, such as "Bagus! Gerakan sudah sesuai".
-struct TherapyFeedbackPill: View {
+struct TMTherapyFeedbackPill: View {
     let text: LocalizedStringKey
 
     var body: some View {
