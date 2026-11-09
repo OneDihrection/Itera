@@ -34,7 +34,7 @@ private struct HomeContent: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 28) {
-                Text(LocalizedStringKey(category == .taskOriented ? "task.category" : (category == .arm ? "therapy.overview.title" : "trunk.overview.title")))
+                Text(LocalizedStringKey(category == .taskOriented ? "task.category" : "therapy.overview.title"))
                     .typography(.largeTitle)
                     .accessibilityAddTraits(.isHeader)
                 LanguageSelector(language: $language)

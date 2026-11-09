@@ -220,6 +220,11 @@ struct TherapyStatus: View {
     }
 }
 
+/// A labeled number with decrease and increase controls.
+///
+/// The two controls are tap targets rather than `Button`s. Inside a `Form` row, SwiftUI treats
+/// several buttons as one row-wide button and fires all of them for any tap, so a decrease and an
+/// increase cancel each other or only the increase seems to work.
 struct TherapyNumberControl: View {
     let title: LocalizedStringKey
     @Binding var value: Int
@@ -231,21 +236,68 @@ struct TherapyNumberControl: View {
         HStack {
             Text(title).typography(.body)
             Spacer()
-            Button { value = max(range.lowerBound, value - step) } label: {
-                Image(systemName: "minus").frame(width: 64, height: 64)
+            stepControl(
+                symbol: "minus",
+                label: "action.decrease",
+                isEnabled: value > range.lowerBound
+            ) {
+                value = max(range.lowerBound, value - step)
             }
-            .accessibilityLabel(Text("action.decrease") + Text(title))
-            .disabled(value <= range.lowerBound)
             Text(verbatim: String(value)).typography(.title2).frame(minWidth: 55)
-            Button { value = min(range.upperBound, value + step) } label: {
-                Image(systemName: "plus").frame(width: 64, height: 64)
+            stepControl(
+                symbol: "plus",
+                label: "action.increase",
+                isEnabled: value < range.upperBound
+            ) {
+                value = min(range.upperBound, value + step)
             }
-            .accessibilityLabel(Text("action.increase") + Text(title))
-            .disabled(value >= range.upperBound)
         }
         .foregroundStyle(TherapyPalette.ink)
         .background(showsBackground ? TherapyPalette.cream : .clear, in: RoundedRectangle(cornerRadius: 20))
-        .buttonStyle(TherapySoundButtonStyle())
+    }
+
+    private func stepControl(
+        symbol: String,
+        label: LocalizedStringKey,
+        isEnabled: Bool,
+        action: @escaping () -> Void
+    ) -> some View {
+        TherapyStepControl(
+            symbol: symbol,
+            label: Text(label) + Text(title),
+            isEnabled: isEnabled,
+            action: action
+        )
+    }
+}
+
+/// One decrease or increase target that works inside a list row.
+private struct TherapyStepControl: View {
+    let symbol: String
+    let label: Text
+    let isEnabled: Bool
+    let action: () -> Void
+    @Environment(\.buttonFeedback) private var feedback
+
+    var body: some View {
+        Image(systemName: symbol)
+            .frame(width: 64, height: 64)
+            .contentShape(Rectangle())
+            .opacity(isEnabled ? 1 : 0.3)
+            .onTapGesture(perform: activate)
+            .accessibilityElement()
+            .accessibilityLabel(label)
+            .accessibilityAddTraits(.isButton)
+            .accessibilityAction(.default, activate)
+    }
+
+    private func activate() {
+        guard isEnabled else {
+            return
+        }
+
+        feedback()
+        action()
     }
 }
 

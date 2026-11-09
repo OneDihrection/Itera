@@ -14,9 +14,18 @@ enum BalanceExercise: String, Hashable {
     case internalRotation
     /// Arm raised forward with the palm turned up and the arm rotated outward (Arm Rotation).
     case shoulderFlexion
+    /// Sit-to-stand with a controlled forward trunk lean (Trunk Control), seen from the side.
+    case sitToStand
 
     /// True for the arm movements measured as an estimated angle rather than a midline crossing.
-    var isRotation: Bool { self != .crossMidline }
+    var isRotation: Bool {
+        switch self {
+        case .externalRotation, .internalRotation, .shoulderFlexion: return true
+        case .crossMidline, .sitToStand: return false
+        }
+    }
+
+    var isSitToStand: Bool { self == .sitToStand }
 
     /// The direction the forearm travels from the resting pose.
     var rotationDirection: RotationDirection { self == .internalRotation ? .inward : .outward }
@@ -26,6 +35,7 @@ enum BalanceExercise: String, Hashable {
         "title", "overview", "animationHint", "animationAccessibility", "step.touch",
         "step.touch.detail", "begin", "rotateRight", "rotateLeft", "voice.rightTarget",
         "voice.leftTarget",
+        "calibration.endHint", "calibrateRange",
     ]
 
     /// String-catalog key. Balancing keeps its original `balance.` keys; both rotations share the
@@ -39,9 +49,20 @@ enum BalanceExercise: String, Hashable {
         "voice.leftTarget", "voice.complete", "voice.returnAndSwitch", "voice.returnSameSide",
     ]
 
+    /// Strings written for sit-to-stand; any other name falls back to the shared `balance.` text.
+    private static let sitToStandSpecific: Set<String> = [
+        "title", "subtitle", "overview", "animationHint", "animationAccessibility", "cameraAccessibility",
+        "step.posture", "step.posture.detail", "step.touch", "step.touch.detail", "step.balance",
+        "step.balance.detail", "begin", "repetitions", "repetitionsHint", "touchUnit", "metric.touches",
+        "completion.subtitle", "tracking", "voice.complete", "voice.returnSameSide", "voice.rightTarget",
+        "voice.leftTarget",
+    ]
+
     func key(_ name: String) -> String {
         switch self {
         case .crossMidline: return "balance." + name
+        case .sitToStand:
+            return (Self.sitToStandSpecific.contains(name) ? "sitToStand." : "balance.") + name
         case .externalRotation: return "rotation." + name
         case .shoulderFlexion:
             return (Self.flexionSpecific.contains(name) ? "shoulderFlexion." : "rotation.") + name
@@ -144,6 +165,10 @@ struct BalanceOverlay: Equatable {
     /// Shoulder, elbow, and wrist of the working arm, drawn when the movement is an arm rotation.
     var armChain: [TherapyPoint] = []
     var showsMidline = true
+    /// The target marker is the patient's own wrist, held still during end-pose calibration.
+    var isCalibrationHold = false
+    /// Whether the shoulder-hip box is drawn; a side-on chain of joints does not use it.
+    var showsTorso = true
 }
 
 struct BalanceSnapshot: Equatable {
@@ -161,6 +186,8 @@ struct BalanceSnapshot: Equatable {
     var phase: Phase = .findingBody
     var instructionKey = "balance.tracking"
     var calibrationProgress = 0.0
+    /// Seconds left of the end-pose hold during calibration; `nil` until the patient holds still.
+    var calibrationCountdown: Int?
     var activeArm: CrossingArm = .right
     var armSelection: BalanceArmSelection = .both
     var metrics = BalanceMetrics()
@@ -172,4 +199,7 @@ struct BalanceSnapshot: Equatable {
     var rotationDegrees = 0.0
     /// The patient's own calibrated target for the working arm, in degrees (rotations only).
     var targetAngle = 0
+    /// Live knee angle and forward trunk lean, in degrees (sit-to-stand only).
+    var kneeAngle = 0.0
+    var trunkLean = 0.0
 }

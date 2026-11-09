@@ -97,7 +97,6 @@ enum ActivityPresentation {
     case reach(ReachSnapshot)
     case cup(CupSnapshot)
     case timed(TimedPracticeSnapshot)
-    case sitToStand(SitToStandSnapshot)
 
     var countdownSeconds: Int? {
         switch self {
@@ -106,7 +105,6 @@ enum ActivityPresentation {
         case .reach(let value): return value.phase == .countdown ? value.seconds : nil
         case .cup(let value): return value.phase == .countdown ? value.seconds : nil
         case .timed(let value): return value.countdownSeconds
-        case .sitToStand(let value): return value.phase == .countdown ? value.seconds : nil
         }
     }
 
@@ -117,7 +115,6 @@ enum ActivityPresentation {
         case .reach(let value): return value.instruction
         case .cup(let value): return value.instruction
         case .timed: return "session.timedPractice"
-        case .sitToStand(let value): return value.instruction
         }
     }
     var count: Int {
@@ -127,7 +124,6 @@ enum ActivityPresentation {
         case .reach(let value): return value.count
         case .cup(let value): return value.count
         case .timed: return 0
-        case .sitToStand(let value): return value.count
         }
     }
     var progress: Double {
@@ -137,7 +133,6 @@ enum ActivityPresentation {
         case .reach(let value): return value.progress
         case .cup(let value): return value.progress
         case .timed(let value): return value.seconds / value.goal
-        case .sitToStand(let value): return value.progress
         }
     }
     var guide: TargetGuide? {
@@ -146,7 +141,7 @@ enum ActivityPresentation {
         case .movement(let value): return value.guide
         case .reach(let value): return value.guide
         case .cup(let value): return value.guide
-        case .timed, .sitToStand: return nil
+        case .timed: return nil
         }
     }
 }

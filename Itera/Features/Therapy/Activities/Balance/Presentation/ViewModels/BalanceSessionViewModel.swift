@@ -32,6 +32,8 @@ final class BalanceSessionViewModel {
     @ObservationIgnored private var landscapeRight = false
     @ObservationIgnored private var wasIdleTimerDisabled = false
     @ObservationIgnored private var lastSpokenCountdown: Int?
+    /// The calibration pose already explained aloud, so each is spoken once per calibration.
+    @ObservationIgnored private var spokenCalibrationKey: String?
 
     init(
         tracking: BodyTrackingService,
@@ -52,6 +54,8 @@ final class BalanceSessionViewModel {
                 holdDuration: Double(holdSeconds),
                 armSelection: armSelection
             )
+        case .sitToStand:
+            engine = SitToStandBalanceEngine(goal: repetitions)
         case .externalRotation, .internalRotation, .shoulderFlexion:
             engine = ArmMovementEngine(
                 goal: repetitions,
@@ -265,6 +269,15 @@ final class BalanceSessionViewModel {
     }
 
     private func updateAudio(from previous: BalanceSnapshot, to current: BalanceSnapshot) {
+        if exercise.isSitToStand {
+            updateSitToStandAudio(from: previous, to: current)
+            return
+        }
+
+        if speakCalibrationGuidanceIfNeeded(current) {
+            return
+        }
+
         if current.metrics.completedTouches > previous.metrics.completedTouches {
             lastSpokenCountdown = nil
             let key = completionGuidanceKey(for: current)
@@ -293,6 +306,14 @@ final class BalanceSessionViewModel {
             return
         }
 
+        if !paused, current.phase == .calibrating || current.phase == .calibratingRange,
+            let remaining = current.calibrationCountdown {
+            guard remaining != lastSpokenCountdown else { return }
+            lastSpokenCountdown = remaining
+            audio.play(id: UUID(), cue: .count(remaining))
+            return
+        }
+
         guard !paused,
             current.phase == .holding,
             let remaining = current.overlay?.holdSecondsRemaining
@@ -303,6 +324,74 @@ final class BalanceSessionViewModel {
         guard remaining != lastSpokenCountdown else { return }
         lastSpokenCountdown = remaining
         audio.play(id: UUID(), cue: .count(remaining))
+    }
+
+    /// Reads each new instruction aloud and counts the calibration and countdown seconds, so the
+    /// patient can follow without looking at the screen. Repetitions are confirmed with a chime.
+    private func updateSitToStandAudio(from previous: BalanceSnapshot, to current: BalanceSnapshot) {
+        guard !paused, !cameraWaiting else {
+            return
+        }
+
+        if current.metrics.completedTouches > previous.metrics.completedTouches {
+            lastSpokenCountdown = nil
+            let key = current.phase == .complete
+                ? exercise.key("voice.complete")
+                : exercise.key("voice.returnSameSide")
+            audio.play(id: UUID(), cue: .guidance(prefix: .target, key: key))
+            return
+        }
+
+        if let remaining = current.calibrationCountdown {
+            guard remaining != lastSpokenCountdown else {
+                return
+            }
+
+            lastSpokenCountdown = remaining
+            audio.play(id: UUID(), cue: .count(remaining))
+            return
+        }
+
+        lastSpokenCountdown = nil
+
+        guard current.phase != .complete,
+              current.instructionKey != previous.instructionKey else {
+            return
+        }
+
+        // Any prefix other than the target chime speaks the line directly.
+        audio.play(id: UUID(), cue: .guidance(prefix: .towelGrab, key: current.instructionKey))
+    }
+
+    /// Explains the starting pose, then the end pose, aloud as each calibration step begins,
+    /// the way the finger exercises narrate their instructions.
+    /// - Returns: whether guidance was spoken this frame.
+    private func speakCalibrationGuidanceIfNeeded(_ current: BalanceSnapshot) -> Bool {
+        guard exercise.isRotation, exercise != .shoulderFlexion else {
+            return false
+        }
+
+        let key: String
+
+        switch current.phase {
+        case .findingBody, .calibrating:
+            key = exercise.key("calibration.startHint")
+        case .calibratingRange:
+            key = exercise.key("calibration.endHint")
+        default:
+            spokenCalibrationKey = nil
+            return false
+        }
+
+        guard !paused, !cameraWaiting, key != spokenCalibrationKey else {
+            return false
+        }
+
+        spokenCalibrationKey = key
+        // Any prefix other than the target chime speaks the line directly.
+        audio.play(id: UUID(), cue: .guidance(prefix: .towelGrab, key: key))
+
+        return true
     }
 
     private func completionGuidanceKey(for snapshot: BalanceSnapshot) -> String {

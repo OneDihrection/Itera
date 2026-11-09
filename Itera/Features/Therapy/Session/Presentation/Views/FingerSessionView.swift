@@ -169,6 +169,12 @@ struct FingerSessionView: View {
                     .foregroundStyle(TherapyPalette.muted)
                 Text("range.disclaimer").typography(.footnote)
                     .foregroundStyle(TherapyPalette.muted)
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("range.autoStart").typography(.footnote)
+                        .foregroundStyle(TherapyPalette.muted)
+                    ProgressView(value: model.activity.rangeResultProgress)
+                        .accessibilityHidden(true)
+                }
                 HStack(spacing: 16) {
                     TherapyButton(title: "range.start", symbol: "play.fill", action: model.confirmRange)
                     TherapyButton(title: "range.remeasure", symbol: "arrow.clockwise", secondary: true, action: model.remeasureRange)

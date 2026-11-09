@@ -132,11 +132,16 @@ struct HomeView: View {
                 ) {
                     router.push(.balanceOverview(.crossMidline))
                 }
-                TherapyProgramCard(title: "exercise.forearmRotation", detail: "home.viewShort", artwork: "symbol:hand.raised") {
+                TherapyProgramCard(
+                    title: "exercise.forearmRotation",
+                    detail: "home.viewShort",
+                    artwork: "hand-forearmRotation",
+                    mirrored: dependencies.homeModel(for: .forearm).routine.side == .left
+                ) {
                     router.push(.fingerHome(.forearm))
                 }
                 TherapyProgramCard(title: "home.trunkPractice", detail: "home.viewShort", artwork: "symbol:figure.seated.side") {
-                    router.push(.therapyOverview(.trunk))
+                    router.push(.balanceOverview(.sitToStand))
                 }
                 TherapyProgramCard(title: "rotation.category", detail: "home.viewShort", artwork: "symbol:arrow.triangle.2.circlepath") {
                     router.push(.armRotationHome)

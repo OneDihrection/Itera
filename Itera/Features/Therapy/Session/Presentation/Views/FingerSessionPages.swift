@@ -125,7 +125,7 @@ struct FingerUpcomingPage: View {
             if let upcoming = model.upcoming {
                 VStack(spacing: 44) {
                     TherapyMediaPanel(padding: 14) {
-                        FingerDemonstrationView(
+                        FingerExampleView(
                             exercise: upcoming.exercise,
                             phase: .demonstration,
                             returning: false,
