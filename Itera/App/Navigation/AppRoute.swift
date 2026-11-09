@@ -37,8 +37,10 @@ enum AppRoute: Hashable {
     case practicePreferences
     case routineSettings(ExerciseCategory)
     case exercisePreview(FingerExercise)
-    /// The "Selanjutnya" page between daily-plan exercises.
+    /// The page after the last daily-plan exercise.
     case planNext
+    /// The intro page of one daily-plan item, by item id.
+    case planIntro(String)
 }
 
 enum AppTab: Hashable {

@@ -35,10 +35,10 @@ struct DailyPlanRow: Identifiable, Equatable {
 
 /// Runs today's plan: exercises from different programs, one after another.
 ///
-/// Each session keeps its own flow. While a plan is running, a session's finishing action
-/// calls `finish(completed:router:)` instead of its usual exit, and this model shows the
-/// "Selanjutnya" page before starting the next item. Settings are read from each program's
-/// own storage at launch, so the cards and the session always agree.
+/// Each item opens with its intro page; its Start validates readiness and opens the session.
+/// While a plan is running, a session's finishing action calls `finish(completed:router:)`
+/// instead of its usual exit, which opens the next item's intro. Settings are read from each
+/// program's own storage at launch, so the cards and the session always agree.
 @MainActor
 @Observable
 final class DailyPlanViewModel {
@@ -51,10 +51,6 @@ final class DailyPlanViewModel {
 
     @ObservationIgnored private let repository: any DailyPlanProgressRepository
     @ObservationIgnored private var loadFailed = false
-
-    /// Time for the previous session's `onDisappear` cleanup to release the shared camera and
-    /// audio before the next session's `.task` starts them again.
-    private static let handoverDelay = Duration.milliseconds(500)
 
     init(items: [DailyPlanItem] = DailyPlan.standard, repository: any DailyPlanProgressRepository) {
         self.items = items
@@ -177,18 +173,14 @@ final class DailyPlanViewModel {
 
     // MARK: - Running
 
-    /// Validates readiness once (permissions and listening, as an explicit Start requires),
-    /// then opens the first undone item, or `itemID` when the caregiver tapped a card.
-    func start(
-        from itemID: String? = nil,
-        readiness: HomeViewModel,
-        dependencies: AppDependencies,
-        router: NavigationRouter
-    ) async {
-        guard await readiness.performAction() else {
-            return
-        }
+    /// Position of an item in the plan, shown as "Latihan N".
+    func number(of itemID: String) -> Int {
+        (items.firstIndex { $0.id == itemID } ?? 0) + 1
+    }
 
+    /// Opens the intro of the first undone item, or of `itemID` when a card was tapped.
+    /// Nothing starts yet: the intro's own Start is the explicit start.
+    func begin(from itemID: String? = nil, router: NavigationRouter) {
         let chosen = itemID.flatMap { id in items.firstIndex { $0.id == id } }
 
         guard let index = chosen ?? nextIndex ?? items.indices.first else {
@@ -196,11 +188,31 @@ final class DailyPlanViewModel {
         }
 
         isRunning = true
-        launch(index, dependencies: dependencies, router: router)
+        currentIndex = index
+        router.push(.planIntro(items[index].id))
+    }
+
+    /// "Mulai Latihan" on an intro: validates permissions and listening once, as an explicit
+    /// start requires, then opens that item's session.
+    func startCurrent(
+        readiness: HomeViewModel,
+        dependencies: AppDependencies,
+        router: NavigationRouter
+    ) async {
+        guard isRunning, let currentIndex else {
+            return
+        }
+
+        guard await readiness.performAction() else {
+            return
+        }
+
+        launch(currentIndex, dependencies: dependencies, router: router)
     }
 
     /// Called by a session's finishing action while the plan runs. Only a session that reached
-    /// its goal counts as done; a stopped one stays open for later.
+    /// its goal counts as done; a stopped one stays open for later. The next undone item's
+    /// intro follows, or the day-complete page after the last one.
     func finish(completed: Bool, router: NavigationRouter) {
         guard isRunning, let currentIndex else {
             return
@@ -212,29 +224,22 @@ final class DailyPlanViewModel {
             Task { await saveProgress() }
         }
 
+        let next = upcomingIndex
         router.dismiss()
         router.popToRoot()
-        router.presentFullScreenCover(.planNext)
-    }
 
-    /// "Lanjut" on the Selanjutnya page.
-    func continueToNext(dependencies: AppDependencies, router: NavigationRouter) async {
-        guard let index = upcomingIndex else {
-            end(router: router)
+        guard let next else {
+            self.currentIndex = nil
+            router.presentFullScreenCover(.planNext)
             return
         }
 
-        router.dismissFullScreenCover()
-        try? await Task.sleep(for: Self.handoverDelay)
-
-        guard isRunning else {
-            return
-        }
-
-        launch(index, dependencies: dependencies, router: router)
+        self.currentIndex = next
+        router.push(.planIntro(items[next].id))
     }
 
-    /// "Selesai untuk hari ini", or leaving a session without continuing.
+    /// "Kembali" on an intro, "Kembali ke Beranda" after the last item, or leaving a session
+    /// without continuing.
     func end(router: NavigationRouter) {
         isRunning = false
         currentIndex = nil

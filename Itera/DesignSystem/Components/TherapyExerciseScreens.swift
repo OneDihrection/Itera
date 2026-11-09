@@ -402,8 +402,18 @@ struct TherapyPauseDialog<Extra: View>: View {
         }
     }
 
+    /// Hugs its content; scrolls only when it does not fit, such as at very large text sizes.
     private var card: some View {
-        ScrollView {
+        ViewThatFits(in: .vertical) {
+            cardContent
+            ScrollView {
+                cardContent
+            }
+        }
+        .background(TherapyPalette.canvas, in: RoundedRectangle(cornerRadius: 32))
+    }
+
+    private var cardContent: some View {
             VStack(spacing: 18) {
                 HStack(spacing: 16) {
                     Image(systemName: "pause.fill")
@@ -445,9 +455,6 @@ struct TherapyPauseDialog<Extra: View>: View {
             .multilineTextAlignment(.center)
             .foregroundStyle(TherapyPalette.ink)
             .padding(40)
-        }
-        .scrollBounceBehavior(.basedOnSize)
-        .background(TherapyPalette.canvas, in: RoundedRectangle(cornerRadius: 32))
     }
 
     @ViewBuilder

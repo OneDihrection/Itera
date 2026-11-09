@@ -79,6 +79,8 @@ enum AppRouterView {
             FingerExercisePreviewView(exercise: exercise)
         case .planNext:
             DailyPlanNextView()
+        case .planIntro(let itemID):
+            DailyPlanIntroView(itemID: itemID)
         }
     }
 }

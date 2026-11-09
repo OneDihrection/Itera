@@ -12,16 +12,12 @@ import SwiftUI
 struct HomeView: View {
     @Environment(AppDependencies.self) private var dependencies
     @Environment(NavigationRouter.self) private var router
-    @Environment(PermissionManager.self) private var permissions
     @Environment(\.dynamicTypeSize) private var typeSize
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @AppStorage(PracticePreferences.patientName) private var patientName = ""
 
-    /// Permission and listening check run by an explicit Start, created once per screen.
-    @State private var readiness: HomeViewModel?
     /// True once the inline start button has scrolled under the top edge.
     @State private var startButtonHidden = false
-    @State private var starting = false
 
     var body: some View {
         ScrollView {
@@ -60,15 +56,6 @@ struct HomeView: View {
     private static let scrollSpace = "home.scroll"
 
     private func refresh() async {
-        if readiness == nil {
-            readiness = HomeViewModel(
-                permissions: permissions,
-                audio: dependencies.audio,
-                history: dependencies
-            )
-        }
-
-        readiness?.refresh()
         await dependencies.home.refresh()
         await dependencies.routine.load()
         await dependencies.taskRoutine.load()
@@ -115,12 +102,6 @@ struct HomeView: View {
 
     @ViewBuilder
     private var statusMessages: some View {
-        if let readiness, !readiness.ready, readiness.message != "home.setup" {
-            Text(LocalizedStringKey(readiness.message))
-                .typography(.footnote)
-                .foregroundStyle(TherapyPalette.muted)
-        }
-
         if let error = dependencies.dailyPlan.errorKey {
             TherapyError(key: error)
         }
@@ -140,7 +121,6 @@ struct HomeView: View {
         TherapyButton(
             title: startTitle,
             symbol: dependencies.dailyPlan.isFinishedToday ? "checkmark" : "play.fill",
-            disabled: starting,
             prominent: true
         ) {
             startPlan(from: nil)
@@ -171,21 +151,10 @@ struct HomeView: View {
         }
     }
 
+    /// Opens the intro of the next exercise (or the tapped one); the intro's own Start is the
+    /// explicit start that validates permissions and listening.
     private func startPlan(from itemID: String?) {
-        guard let readiness, !starting else {
-            return
-        }
-
-        starting = true
-        Task {
-            await dependencies.dailyPlan.start(
-                from: itemID,
-                readiness: readiness,
-                dependencies: dependencies,
-                router: router
-            )
-            starting = false
-        }
+        dependencies.dailyPlan.begin(from: itemID, router: router)
     }
 
     // MARK: - Timeline
