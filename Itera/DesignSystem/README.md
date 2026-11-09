@@ -80,7 +80,7 @@ Top-level navigation uses the system `TabView` (a top tab bar on iPadOS 18, a bo
 
 ## Light session layout
 
-Arm raise, elbow bend, directional reach and fold towel use the finger-exercise look instead of the black session screen (`TherapySessionView` chooses it by activity kind, never by stage, so the preview stays mounted). Practice shows `TherapyPageHeader` (pause on the leading side; music, repeat, listening icon and stop on the trailing side), one cue line, and the camera beside a 300-point column holding a `TherapyMediaPanel` with the animation (arm raise and elbow bend only) and a `TherapyRepetitionPanel`. Nothing is drawn over the camera except its guidance and a camera-wait `TherapyFeedbackPill`. Instruction, demonstration, rest, feedback and pause are light pages over the mounted preview; the countdown is `TherapyCountdown`.
+Arm raise, elbow bend, directional reach and fold towel use the finger-exercise look instead of the black session screen (`TherapySessionView` chooses it by activity kind, never by stage, so the preview stays mounted). Practice now uses `TherapyExerciseLiveLayout` (see "Shared exercise screens"); the earlier header, 380-point side column and `TherapyRepetitionPanel` are replaced. Instruction, demonstration and countdowns are light pages over the mounted preview; countdowns use `TherapyCountdownDial`.
 
 `TherapyCalmLoader(title:)` is the quiet startup state (breathing circle and a single calm line; static under Reduce Motion) shown while the camera gets ready. The light stage pages force the light color scheme, so they stay light in system dark mode.
 
@@ -99,3 +99,19 @@ Compatible additions: `MeasuredInstructionText(textColor:)` defaults to white fo
 Components/TherapyTimeline.swift owns `TherapyTimelineRow` (a marker on an unbroken dashed line beside any card), `TherapyTimelineMarker` (`.current` filled yellow, `.done` check, `.upcoming` hollow ring; shape as well as color), `TherapyPlanCard` (title, icon-and-value lines, trailing illustration, one button and one accessibility element whose value names the state) and `TherapyFloatingActionDock` (bottom content over a gradient-masked material fade that never takes taps; solid under Reduce Transparency). They take values and actions only; plan order, progress and session launching stay in Features/Home.
 
 `TherapyArtwork(fallback:)` shows another asset or `symbol:` image when the named asset is not in the catalog, so a card can reference an illustration that is still being drawn. Plan illustrations are named `plan-<item id>` in Assets.xcassets; they are original artwork drawn for Itera (2026-11-09), not third-party assets.
+
+## Shared exercise screens (2026-11-09)
+
+Components/TherapyExerciseScreens.swift owns the five screens every exercise shares. All take values, content and actions; sessions keep their own timing, counting and navigation.
+
+- `TherapyExerciseHeading`: grey "Latihan N" eyebrow over a bold centred title.
+- `TherapyTargetStat` ("8 Repetisi", rust number) and `TherapyProgressStat` ("Repetisi 3 / 8"), laid out with `TherapyStatRow` and `TherapyStatDivider`.
+- `TherapyInstructionBubble`: the white cue bubble at the bottom of the camera.
+- `TherapyBackButton`: the rust "‹ Kembali" text action.
+- `TherapyExerciseIntro`: heading, a media slot (the exercise's own demonstration), focus text, a target slot, the safety note and the prominent start.
+- `TherapyExerciseLiveLayout`: heading with trailing accessories, the camera slot with the cue bubble, the "Ikuti gerakan ini" demonstration column, repetition and set counters, and Pause (`TherapyButton(pill:brand:)`) and End. The camera keeps one position, so callers layer stage pages and dialogs over it without remounting the preview.
+- `TherapyPauseDialog`: a frosted backdrop with the paused card (set, title, practice time mm:ss, end with an inline confirmation, resume) and an `Extra` slot for caregiver recovery. `confirmingEndInitially` opens it on the confirmation when it came from an End button. It hugs its content and scrolls only when it does not fit.
+- `TherapySetSummary` with `TherapySetResult`: the set-done and all-done page (rust check, headline, message, results panel, total, optional rest line and actions).
+- `TherapyDemoCaption`: the "Ikuti gerakan ini" / paused pill drawn by the Balancing demonstrations, now one shared view. The `therapyDemoCaptionHidden` environment value hides it where a heading already says it; the intro and live layouts set it.
+
+Compatible additions: `TherapyCompletionMark(tint:)` (the screens pass `brand`), `TherapyButton(brand:)` for a rust pill, and `TherapyPalette.planPanel`, the warm grey behind demonstration media and the results panel.
