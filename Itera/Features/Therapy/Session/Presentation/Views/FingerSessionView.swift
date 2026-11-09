@@ -29,9 +29,9 @@ struct FingerSessionView: View {
                             model.background()
                         }
                     }
-                    .onChange(of: model.needsReflection) { _, finished in
+                    .onChange(of: model.hasFinished) { _, finished in
                         if finished {
-                            router.replaceFullScreenCover(with: .reflection)
+                            router.replaceFullScreenCover(with: .sessionComplete)
                         }
                     }
             }
@@ -52,6 +52,7 @@ struct FingerSessionView: View {
             pauseTitle: "session.pauseAction",
             endTitle: "session.endAction",
             pauseDisabled: model.paused,
+            demoWidthFraction: 0.76,
             onPause: { model.handleCommand(.pause) },
             onEnd: {
                 endRequested = true

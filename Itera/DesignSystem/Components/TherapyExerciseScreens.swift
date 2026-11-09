@@ -205,12 +205,16 @@ struct TherapyExerciseIntro<Media: View, Targets: View>: View {
             : AnyLayout(HStackLayout(alignment: .center, spacing: 56))
 
         layout {
-            media
-                .environment(\.therapyDemoCaptionHidden, true)
-                .frame(maxWidth: 420, minHeight: 340, maxHeight: 400)
-                .frame(maxWidth: .infinity)
-                .background(TherapyPalette.planPanel, in: RoundedRectangle(cornerRadius: 32))
+            TherapyPalette.planPanel
+                .aspectRatio(1, contentMode: .fit)
+                .frame(maxWidth: 400)
+                .overlay {
+                    media
+                        .environment(\.therapyDemoCaptionHidden, true)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                }
                 .clipShape(RoundedRectangle(cornerRadius: 32))
+                .frame(maxWidth: .infinity)
 
             details
         }
@@ -273,6 +277,7 @@ struct TherapyExerciseLiveLayout<Camera: View, Demo: View, Accessories: View>: V
     let pauseTitle: LocalizedStringKey
     let endTitle: LocalizedStringKey
     var pauseDisabled = false
+    var demoWidthFraction: CGFloat = 0.66
     let onPause: () -> Void
     let onEnd: () -> Void
     @ViewBuilder let camera: Camera
@@ -281,31 +286,47 @@ struct TherapyExerciseLiveLayout<Camera: View, Demo: View, Accessories: View>: V
     @ViewBuilder let accessories: Accessories
 
     var body: some View {
-        VStack(spacing: 24) {
-            heading
-                .overlay(alignment: .trailing) {
-                    HStack(spacing: 12) {
-                        accessories
-                    }
+        GeometryReader { geometry in
+            let width = geometry.size.width
+            let inset = min(32, width * 0.024)
+            let columnSpacing = min(24, width * 0.018)
+            let availableWidth = max(0, width - 2 * inset - columnSpacing)
+            let sideWidth = min(420, availableWidth * 0.367)
+            let cameraWidth = availableWidth - sideWidth
+
+            VStack(spacing: columnSpacing) {
+                liveHeader
+
+                HStack(alignment: .top, spacing: columnSpacing) {
+                    cameraArea
+                        .frame(width: cameraWidth)
+                    demoColumn(maxMediaWidth: sideWidth * demoWidthFraction)
+                        .frame(width: sideWidth)
                 }
+                .frame(maxHeight: .infinity)
 
-            HStack(alignment: .top, spacing: 32) {
-                cameraArea
-                demoColumn
-                    .frame(width: 380)
+                HStack(alignment: .center, spacing: columnSpacing) {
+                    stats
+                        .frame(width: cameraWidth)
+                    controls
+                        .frame(width: sideWidth)
+                }
             }
-            .frame(maxHeight: .infinity)
-
-            HStack(alignment: .center, spacing: 32) {
-                stats
-                Spacer(minLength: 0)
-                controls
-                    .frame(width: 380)
-            }
+            .padding(.horizontal, inset)
+            .padding(.vertical, min(20, geometry.size.height * 0.025))
         }
-        .padding(.horizontal, 32)
-        .padding(.vertical, 20)
         .background(TherapyPalette.canvas)
+    }
+
+    private var liveHeader: some View {
+        HStack(spacing: 12) {
+            heading
+
+            HStack(spacing: 12) {
+                accessories
+            }
+            .layoutPriority(1)
+        }
     }
 
     private var cameraArea: some View {
@@ -320,36 +341,61 @@ struct TherapyExerciseLiveLayout<Camera: View, Demo: View, Accessories: View>: V
             }
     }
 
-    private var demoColumn: some View {
+    private func demoColumn(maxMediaWidth: CGFloat) -> some View {
         VStack(spacing: 16) {
             Text(demoTitle)
                 .typography(size: 24, weight: .bold, relativeTo: .title3)
                 .foregroundStyle(TherapyPalette.ink)
 
-            demo
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            Color.clear
+                .aspectRatio(1, contentMode: .fit)
+                .frame(maxWidth: maxMediaWidth)
+                .overlay {
+                    demo
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        .environment(\.therapyDemoCaptionHidden, true)
+                }
                 .clipShape(RoundedRectangle(cornerRadius: 24))
-                .environment(\.therapyDemoCaptionHidden, true)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
     }
 
     private var stats: some View {
-        TherapyStatRow {
-            TherapyProgressStat(
-                label: Text("exercise.repetitionsUnit"),
-                value: repetitions.done,
-                total: repetitions.goal
-            )
+        ViewThatFits(in: .horizontal) {
+            TherapyStatRow {
+                repetitionStat
 
-            if let sets {
-                TherapyStatDivider()
-                TherapyProgressStat(
-                    label: Text("exercise.setsUnit"),
-                    value: sets.number,
-                    total: sets.total
-                )
+                if let sets {
+                    TherapyStatDivider()
+                    setStat(sets)
+                }
+            }
+            .fixedSize(horizontal: true, vertical: false)
+
+            VStack(spacing: 4) {
+                repetitionStat
+
+                if let sets {
+                    setStat(sets)
+                }
             }
         }
+    }
+
+    private var repetitionStat: some View {
+        TherapyProgressStat(
+            label: Text("exercise.repetitionsUnit"),
+            value: repetitions.done,
+            total: repetitions.goal
+        )
+    }
+
+    private func setStat(_ sets: (number: Int, total: Int)) -> some View {
+        TherapyProgressStat(
+            label: Text("exercise.setsUnit"),
+            value: sets.number,
+            total: sets.total
+        )
     }
 
     private var controls: some View {
@@ -382,12 +428,11 @@ struct TherapyPauseDialog<Extra: View>: View {
     let title: Text
     let elapsedSeconds: Int
     var resumeDisabled = false
-    var status: Text? = nil
     /// Opens straight on the end confirmation, when the dialog came from an End button.
     var confirmingEndInitially = false
     let onEnd: () -> Void
     let onResume: () -> Void
-    /// Caregiver recovery actions, shown under a disclosure so the dialog stays calm.
+    /// Recovery controls outside the pause card, only when resuming is blocked.
     @ViewBuilder let extra: Extra
 
     @State private var confirmingEnd = false
@@ -400,9 +445,12 @@ struct TherapyPauseDialog<Extra: View>: View {
                 .ignoresSafeArea()
                 .accessibilityHidden(true)
 
-            card
-                .frame(maxWidth: 680)
-                .padding(40)
+            VStack(spacing: 16) {
+                card
+                extra
+            }
+            .frame(maxWidth: 800)
+            .padding(32)
         }
         .onAppear {
             confirmingEnd = confirmingEndInitially
@@ -449,15 +497,8 @@ struct TherapyPauseDialog<Extra: View>: View {
                     .monospacedDigit()
                     .accessibilityLabel(Text("session.elapsedTime \(elapsedSeconds / 60) \(elapsedSeconds % 60)"))
 
-                if let status {
-                    status
-                        .typography(.footnote)
-                        .foregroundStyle(TherapyPalette.muted)
-                }
-
                 actions
-
-                extra
+                    .padding(.top, 16)
             }
             .multilineTextAlignment(.center)
             .foregroundStyle(TherapyPalette.ink)

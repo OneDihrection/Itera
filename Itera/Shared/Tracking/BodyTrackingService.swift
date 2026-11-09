@@ -25,7 +25,6 @@ final class BodyTrackingService: NSObject, AVCaptureVideoDataOutputSampleBufferD
     private var pending: TrackingObservation?
     private var deliveryScheduled = false
     private var generation = UUID()
-    private var position: AVCaptureDevice.Position = .front
     private var orientation: AVCaptureVideoOrientation = .landscapeLeft
     private var previousCenterStage: (mode: AVCaptureDevice.CenterStageControlMode, enabled: Bool)?
     private var wantsCapture = false
@@ -217,16 +216,15 @@ final class BodyTrackingService: NSObject, AVCaptureVideoDataOutputSampleBufferD
         }
     }
 
-    func configure(front: Bool, landscapeRight: Bool) {
+    func configure(landscapeRight: Bool) {
         queue.async { [weak self] in
             guard let self else {
                 return
             }
-            let position: AVCaptureDevice.Position = front ? .front : .back
             let orientation: AVCaptureVideoOrientation = landscapeRight ? .landscapeRight : .landscapeLeft
             let initialConfiguration = !self.hasInitialOrientation
             self.hasInitialOrientation = true
-            guard initialConfiguration || self.position != position || self.orientation != orientation else {
+            guard initialConfiguration || self.orientation != orientation else {
                 return
             }
             // Establishing preview orientation is setup, not lost capture evidence.
@@ -240,7 +238,6 @@ final class BodyTrackingService: NSObject, AVCaptureVideoDataOutputSampleBufferD
             for output in self.session.outputs { self.session.removeOutput(output) }
             self.session.commitConfiguration()
             self.configured = false
-            self.position = position
             self.orientation = orientation
             self.invalidateGeneration()
             self.startIfRequested()
@@ -261,16 +258,20 @@ final class BodyTrackingService: NSObject, AVCaptureVideoDataOutputSampleBufferD
         guard !configured else {
             return
         }
-        let selectedCamera = (normalLens ? nil : AVCaptureDevice.default(
-            .builtInUltraWideCamera, for: .video, position: position
+        var selectedCamera = (normalLens ? nil : AVCaptureDevice.default(
+            .builtInUltraWideCamera, for: .video, position: .front
         )) ?? AVCaptureDevice.default(
-            .builtInWideAngleCamera, for: .video, position: position
-        ) ?? AVCaptureDevice.default(for: .video)
-        guard let camera = selectedCamera else {
+            .builtInWideAngleCamera, for: .video, position: .front
+        )
+        #if targetEnvironment(macCatalyst)
+        // A Mac’s user-facing webcam can report an unspecified position.
+        selectedCamera = selectedCamera ?? AVCaptureDevice.default(for: .video)
+        #endif
+        guard let camera = selectedCamera, camera.position != .back else {
             throw TrackingError.cameraUnavailable
         }
         let input = try AVCaptureDeviceInput(device: camera)
-        NSLog("Body capture selected device=%@ type=%@ position=%ld", camera.localizedName, camera.deviceType.rawValue, position.rawValue)
+        NSLog("Body capture selected device=%@ type=%@ position=%ld", camera.localizedName, camera.deviceType.rawValue, camera.position.rawValue)
         let output = AVCaptureVideoDataOutput()
         output.alwaysDiscardsLateVideoFrames = true
         output.setSampleBufferDelegate(self, queue: queue)

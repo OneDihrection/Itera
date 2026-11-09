@@ -7,12 +7,11 @@
 
 import SwiftUI
 
-/// Beranda: a greeting, the button that starts today's plan, the plan as a timeline, and
-/// every program below it. Once the start button scrolls away, it floats at the bottom.
+/// Beranda shows today's plan as a timeline. The start button floats at the bottom
+/// once the inline button scrolls away.
 struct HomeView: View {
     @Environment(AppDependencies.self) private var dependencies
     @Environment(NavigationRouter.self) private var router
-    @Environment(\.dynamicTypeSize) private var typeSize
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @AppStorage(PracticePreferences.patientName) private var patientName = ""
 
@@ -24,7 +23,6 @@ struct HomeView: View {
             VStack(spacing: 56) {
                 header
                 timeline
-                allPrograms
             }
             .frame(maxWidth: 1000)
             .frame(maxWidth: .infinity)
@@ -106,13 +104,6 @@ struct HomeView: View {
             TherapyError(key: error)
         }
 
-        if let error = dependencies.home.errorKey {
-            TherapyError(key: error)
-            TherapyButton(title: "action.retry", secondary: true) {
-                Task { await dependencies.home.refresh() }
-            }
-            .frame(maxWidth: 360)
-        }
     }
 
     // MARK: - Start
@@ -205,62 +196,5 @@ struct HomeView: View {
         case .holdSeconds(let seconds):
             return TherapyPlanDetail(symbol: "timer", text: "plan.holdSeconds \(seconds)")
         }
-    }
-
-    // MARK: - All programs
-
-    private var allPrograms: some View {
-        VStack(alignment: .leading, spacing: 20) {
-            Text("home.allPrograms")
-                .typography(size: 28, weight: .semiBold, relativeTo: .title2)
-                .accessibilityAddTraits(.isHeader)
-
-            LazyVGrid(columns: programColumns, alignment: .leading, spacing: 24) {
-                TherapyProgramCard(
-                    title: "home.program.finger",
-                    detail: "home.setsReps \(dependencies.home.routine.sets) \(dependencies.home.routine.repetitions)",
-                    artwork: "hand-hero",
-                    mirrored: dependencies.home.routine.side == .left
-                ) {
-                    router.push(.fingerHome(.fingers))
-                }
-                TherapyProgramCard(
-                    title: "home.armPractice",
-                    detail: "home.program.armDetail",
-                    artwork: "symbol:figure.arms.open"
-                ) {
-                    router.push(.therapyOverview(.arm))
-                }
-                TherapyProgramCard(
-                    title: "balance.title",
-                    detail: "home.program.balanceDetail",
-                    artwork: "symbol:figure.stand"
-                ) {
-                    router.push(.balanceOverview(.crossMidline))
-                }
-                TherapyProgramCard(
-                    title: "exercise.forearmRotation",
-                    detail: "home.viewShort",
-                    artwork: "hand-forearmRotation",
-                    mirrored: dependencies.homeModel(for: .forearm).routine.side == .left
-                ) {
-                    router.push(.fingerHome(.forearm))
-                }
-                TherapyProgramCard(title: "home.trunkPractice", detail: "home.viewShort", artwork: "symbol:figure.seated.side") {
-                    router.push(.balanceOverview(.sitToStand))
-                }
-                TherapyProgramCard(title: "rotation.category", detail: "home.viewShort", artwork: "symbol:arrow.triangle.2.circlepath") {
-                    router.push(.armRotationHome)
-                }
-                TherapyProgramCard(title: "task.category", detail: "home.viewShort", artwork: "symbol:square.stack.3d.up") {
-                    router.push(.therapyOverview(.taskOriented))
-                }
-            }
-        }
-    }
-
-    private var programColumns: [GridItem] {
-        let count = typeSize.isAccessibilitySize ? 1 : 2
-        return Array(repeating: GridItem(.flexible(), spacing: 24, alignment: .top), count: count)
     }
 }

@@ -137,13 +137,13 @@ struct BalanceSessionView: View {
         ZStack(alignment: .top) {
             BodyCameraPreview(
                 session: model.tracking.session,
-                front: model.frontCamera,
+                front: true,
                 onReady: model.previewReady,
                 onOrientation: model.orientationChanged
             )
 
             if let overlay = model.snapshot.overlay {
-                BalancePoseOverlay(state: overlay, mirrored: model.frontCamera)
+                BalancePoseOverlay(state: overlay, mirrored: true)
             }
 
             if model.cameraWaiting {
@@ -183,7 +183,6 @@ struct BalanceSessionView: View {
             setLabel: Text("session.setNumber \(model.setNumber)"),
             title: title,
             elapsedSeconds: model.elapsedSeconds,
-            status: model.failure.map { Text(verbatim: $0) },
             confirmingEndInitially: endRequested,
             onEnd: leave,
             onResume: {
@@ -191,9 +190,7 @@ struct BalanceSessionView: View {
                 model.resume()
             }
         ) {
-            TherapyTextButton(title: "session.camera", symbol: "arrow.triangle.2.circlepath.camera") {
-                model.switchCamera()
-            }
+            EmptyView()
         }
     }
 

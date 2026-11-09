@@ -310,8 +310,8 @@ struct SessionEngine {
                 announce("parity.getReady", timed: false)
             }
         } else if case .movement = result.presentation, old?.count != result.presentation.count {
+            // Each accepted repetition is counted aloud.
             effects.append(.audio(UUID(), .count(result.presentation.count)))
-
         } else if case .movement = result.presentation,
             let previous = old?.guide, let next = result.presentation.guide,
             previous.targetActive, !next.targetActive {

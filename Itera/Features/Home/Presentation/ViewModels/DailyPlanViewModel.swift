@@ -124,11 +124,8 @@ final class DailyPlanViewModel {
 
     private static func titleKey(for exercise: DailyPlanItem.Exercise) -> String {
         switch exercise {
-        case .finger(.fingers):
-            // `plan.fingerTitle` carries a deliberate line break for its own page.
-            return "home.program.finger"
-        case .finger(let category):
-            return category.title
+        case .finger(let exercise):
+            return exercise.title
         case .therapy(let kind):
             return "session." + kind.rawValue
         case .balance(let exercise):
@@ -141,8 +138,8 @@ final class DailyPlanViewModel {
         in dependencies: AppDependencies
     ) -> [DailyPlanRow.Detail] {
         switch exercise {
-        case .finger(let category):
-            let routine = dependencies.homeModel(for: category).routine
+        case .finger(let exercise):
+            let routine = dependencies.homeModel(for: exercise.category).routine
             return [.sets(routine.sets), .repetitions(routine.repetitions)]
 
         case .therapy(let kind):
@@ -256,9 +253,14 @@ final class DailyPlanViewModel {
         currentIndex = index
 
         switch items[index].exercise {
-        case .finger(let category):
-            let continuing = dependencies.homeModel(for: category).checkpoint != nil
-            dependencies.prepareSession(category: category, continuing: continuing)
+        case .finger(let exercise):
+            // Resume only a session saved for later from this same exercise.
+            let checkpoint = dependencies.homeModel(for: exercise.category).checkpoint
+            dependencies.prepareSession(
+                category: exercise.category,
+                continuing: checkpoint?.routine.only == exercise,
+                only: exercise
+            )
             router.presentFullScreenCover(.fingerSession)
 
         case .therapy(let kind):

@@ -19,8 +19,6 @@ final class TherapySessionViewModel {
     /// Practice time shown on the pause dialog. It runs while the session is live and stops
     /// for explicit pauses, camera waits and the summary.
     @ObservationIgnored private var clock = SessionDurationClock()
-    /// The capture-hold number last spoken, so each shown second is said once.
-    @ObservationIgnored private var lastHoldSecond: Int?
     private(set) var towelDisplay: TowelSnapshot?
     private(set) var towelInterpolates = false
     @ObservationIgnored private var towelSmoother = TowelPresentationSmoother()
@@ -30,7 +28,6 @@ final class TherapySessionViewModel {
     private(set) var saveFailure: String?
     private(set) var voiceReady = false
     private(set) var listening = false
-    private(set) var frontCamera = true
 
     @ObservationIgnored let tracking: BodyTrackingService
     @ObservationIgnored private let audio: SessionAudioService
@@ -50,7 +47,6 @@ final class TherapySessionViewModel {
     var isStarting: Bool { !started && !entryFailure }
     @ObservationIgnored private var exited = false
     @ObservationIgnored private var lastPermissionCheck = 0.0
-    @ObservationIgnored private var landscapeRight = false
     @ObservationIgnored private var pendingSaves: [SessionEffect] = []
     private(set) var saving = false
     @ObservationIgnored private var keepAwakeBeforeSession = false
@@ -122,7 +118,7 @@ final class TherapySessionViewModel {
             }
             self.personVisible = frame.personCount == 1
             var observation = frame
-            observation.workspaceMirrored = self.frontCamera
+            observation.workspaceMirrored = true
             self.send(.observation(observation))
         }.store(in: &subscriptions)
         tracking.cupFailures.receive(on: DispatchQueue.main).sink { [weak self] error in
@@ -147,10 +143,8 @@ final class TherapySessionViewModel {
         let orientation = UIApplication.shared.connectedScenes
             .compactMap { ($0 as? UIWindowScene)?.interfaceOrientation }
             .first { $0 == .landscapeLeft || $0 == .landscapeRight }
-        landscapeRight = orientation == .landscapeRight
-        frontCamera = true
         updateHandRequirement()
-        tracking.configure(front: true, landscapeRight: landscapeRight)
+        tracking.configure(landscapeRight: orientation == .landscapeRight)
         tracking.start()
         send(.command(.resume))
     }
@@ -245,15 +239,7 @@ final class TherapySessionViewModel {
     }
 
     func orientationChanged(right: Bool) {
-        landscapeRight = right
-        tracking.configure(front: frontCamera, landscapeRight: right)
-    }
-
-    func switchCamera() {
-        command(.pause)
-        frontCamera.toggle()
-        send(.previewReady(false))
-        tracking.configure(front: frontCamera, landscapeRight: landscapeRight)
+        tracking.configure(landscapeRight: right)
     }
 
     private var isBackgrounded = false
@@ -339,31 +325,6 @@ final class TherapySessionViewModel {
         }
     }
 
-    /// Says the "Tersisa N detik" number of a movement capture hold as it counts down,
-    /// matching what is shown. Only while the hold is actually running.
-    private func speakHoldSecondIfNeeded() {
-        guard !snapshot.paused,
-              case .movement(let movement)? = snapshot.presentation,
-              movement.phase == .startCapture || movement.phase == .targetCapture,
-              movement.progress > 0,
-              movement.seconds > 0 else {
-            lastHoldSecond = nil
-            return
-        }
-
-        guard movement.seconds != lastHoldSecond else {
-            return
-        }
-
-        // While guidance plays, leave it unspoken; the next update says the number shown then.
-        guard audio.canSpeakHoldNumber else {
-            return
-        }
-
-        lastHoldSecond = movement.seconds
-        audio.play(id: UUID(), cue: .holdSecond(movement.seconds))
-    }
-
     private func send(_ event: SessionEvent) {
         guard live else {
             return
@@ -382,7 +343,6 @@ final class TherapySessionViewModel {
         let wasPaused = snapshot.paused
         snapshot = transition.snapshot
         updateClock()
-        speakHoldSecondIfNeeded()
         if snapshot.summary != nil {
             audio.stopMusic()
         } else if wasPaused != snapshot.paused {

@@ -25,11 +25,12 @@ final class FingerSessionViewModel {
     private(set) var errorKey: String?
     private(set) var voiceEnabled = false
     private(set) var voiceNeedsAcknowledgment = false
-    private(set) var needsReflection = false
     private(set) var saving = false
     private(set) var recovering = false
     private(set) var storageNeedsRetry = false
     private(set) var finalSummary: FingerSessionSummary?
+    private(set) var finalSummarySaved = false
+    var hasFinished: Bool { finalSummary != nil }
     private(set) var hasStarted = false
     private(set) var celebrationID = 0
     private(set) var trackingRecovery = FingerTrackingRecovery()
@@ -38,8 +39,6 @@ final class FingerSessionViewModel {
     @ObservationIgnored private var instructionSince = 0.0
     @ObservationIgnored private var celebratedSets: [Int: Int] = [:]
     @ObservationIgnored private var lastCountdownCue = ""
-    /// The hold-readout number last spoken, so each shown second is said once.
-    @ObservationIgnored private var lastHoldSecond: Int?
     let camera: HandCameraService
     @ObservationIgnored private let audio: GuidanceAudioService
     @ObservationIgnored private let permissions: any PermissionManaging
@@ -219,20 +218,8 @@ final class FingerSessionViewModel {
         return instructionKey
     }
 
-    func readReflection() {
-        do {
-            try audio.configure(language: language)
-            audio.speak(
-            String(localized: "reflection.title", bundle: sessionLanguage.resourceBundle),
-            lines: [NarrationLine(key: "reflection.title")]
-        )
-        } catch {
-            errorKey = "audio.unavailable"
-        }
-    }
-
     private func updateRewards() {
-        guard !paused, !needsReflection else {
+        guard !paused, !hasFinished else {
             return
         }
         let index = engine.summary.exerciseIndex
@@ -240,9 +227,7 @@ final class FingerSessionViewModel {
         if sets > celebratedSets[index, default: 0] {
             celebratedSets[index] = sets
             celebrationID += 1
-            audio.playCue(.setCompleted)
         }
-        speakHoldSecondIfNeeded()
         if activity.phase == .countdown, !paused {
             let cue = "\(index)-\(activity.set)-\(countdown)"
             if cue != lastCountdownCue {
@@ -252,27 +237,6 @@ final class FingerSessionViewModel {
                     audio.playCue(.countdown)
                 }
             }
-        }
-    }
-
-    /// Says the number shown in the "Tahan N detik" readout as it counts down, using the
-    /// readout's own rounding, so the voice and the screen always agree.
-    private func speakHoldSecondIfNeeded() {
-        guard !paused, showsGuideTimer, activity.holdCompletionID == nil else {
-            lastHoldSecond = nil
-            return
-        }
-
-        let shown = Int(ceil(max(0, activity.holdRemaining)))
-
-        guard shown > 0, shown != lastHoldSecond else {
-            return
-        }
-
-        // While an instruction plays, leave the number unspoken; the next frame retries and,
-        // once the instruction ends, says whatever number the readout shows then.
-        if audio.playHoldSecond(shown) {
-            lastHoldSecond = shown
         }
     }
 
@@ -290,7 +254,7 @@ final class FingerSessionViewModel {
         language = sessionLanguage.speechIdentifier
         subscribe()
         let cameraStatus = await permissions.request(.camera)
-        guard !needsReflection else {
+        guard !hasFinished else {
             return
         }
         guard cameraStatus == .authorized else {
@@ -307,7 +271,7 @@ final class FingerSessionViewModel {
         if routine.voiceControl {
             await setVoice(true)
         }
-        guard !needsReflection else {
+        guard !hasFinished else {
             return
         }
         camera.track(side: routine.side)
@@ -379,7 +343,7 @@ final class FingerSessionViewModel {
     func previewReady(_ ready: Bool) { previewAttached = ready }
 
     private func receive(_ event: HandCameraEvent) {
-        guard !needsReflection else {
+        guard !hasFinished else {
             return
         }
         switch event {
@@ -487,7 +451,7 @@ final class FingerSessionViewModel {
     }
 
     private func tick() {
-        guard !needsReflection else {
+        guard !hasFinished else {
             return
         }
         let now = ProcessInfo.processInfo.systemUptime
@@ -519,7 +483,11 @@ final class FingerSessionViewModel {
         }
         updateRecovery(now: now, frameReady: frameReady)
         speakRecoveryIfNeeded()
+        let repetitionsBeforeTick = activity.totalRepetitions
         engine.tick(now, ready: frameReady)
+        if activity.totalRepetitions > repetitionsBeforeTick {
+            audio.playCue(.repetitionCompleted)
+        }
         updateRewards()
         updateGuidance()
         let progress = engine.summary.exerciseIndex * 1000 + activity.totalRepetitions
@@ -621,7 +589,7 @@ final class FingerSessionViewModel {
     }
 
     func narrate() {
-        guard !paused, !needsReflection else {
+        guard !paused, !hasFinished else {
             return
         }
         var text = String(localized: String.LocalizationValue(instructionKey), bundle: sessionLanguage.resourceBundle)
@@ -683,12 +651,12 @@ final class FingerSessionViewModel {
         return errorKey ?? recoveryGuidanceKey
     }
 
+    /// Hand evidence gates movement scoring, while camera readiness gates recovery from a pause.
     var canResume: Bool {
-        paused && !needsReflection && !voiceNeedsAcknowledgment && !saving && !recovering && !storageNeedsRetry
+        paused && !hasFinished && !voiceNeedsAcknowledgment && !saving && !recovering && !storageNeedsRetry
             && errorKey != "storage.error"
             && errorKey?.hasPrefix("camera.") != true
-            && (!trackingRecoveryPaused || (previewAttached && !waitingForCamera &&
-                (!requiresHandTracking || trackingReady)))
+            && (!trackingRecoveryPaused || (previewAttached && !waitingForCamera))
     }
 
     /// Touch and recognized speech enter the same actions and presentation state.
@@ -702,7 +670,7 @@ final class FingerSessionViewModel {
     }
 
     func pause() {
-        guard !needsReflection else {
+        guard !hasFinished else {
             return
         }
         engine.pause()
@@ -823,11 +791,11 @@ final class FingerSessionViewModel {
             return
         }
         let microphone = await permissions.request(.microphone)
-        guard !needsReflection else {
+        guard !hasFinished else {
             return
         }
         let speech = await permissions.request(.speechRecognition)
-        guard !needsReflection else {
+        guard !hasFinished else {
             return
         }
         guard microphone == .authorized, speech == .authorized else {
@@ -856,7 +824,7 @@ final class FingerSessionViewModel {
 
 
     func background() {
-        guard hasStarted, !needsReflection else {
+        guard hasStarted, !hasFinished else {
             return
         }
         voiceNeedsAcknowledgment = voiceEnabled || routine.voiceControl
@@ -871,7 +839,7 @@ final class FingerSessionViewModel {
     }
 
     func foreground() {
-        guard hasStarted, !needsReflection else {
+        guard hasStarted, !hasFinished else {
             return
         }
         permissions.refresh()
@@ -884,12 +852,11 @@ final class FingerSessionViewModel {
     }
 
     func finish(completed: Bool = false) {
-        guard !needsReflection else {
+        guard !hasFinished else {
             return
         }
         errorKey = nil
         finalSummary = engine.snapshot(outcome: completed ? .completed : .stopped)
-        needsReflection = true
         cleanup()
     }
 
@@ -913,38 +880,43 @@ final class FingerSessionViewModel {
         }
     }
 
-    func recordFeeling(_ feeling: SessionFeeling) async -> FingerSessionSummary? {
-        guard !saving, var summary = finalSummary else {
-            return nil
+    func saveFinalSummary() async {
+        guard !saving, !finalSummarySaved, let summary = finalSummary else {
+            return
         }
+
         saving = true
         defer { saving = false }
-        summary.feeling = feeling
+
         do {
             try await repository.finalize(summary)
             storageNeedsRetry = false
-            finalSummary = summary
-            audio.stop()
-            return summary
+            errorKey = nil
+            finalSummarySaved = true
         } catch {
             storageNeedsRetry = true
             errorKey = "storage.error"
-            return nil
         }
     }
 
     func saveCheckpoint() async {
-        guard hasStarted, !needsReflection else {
+        guard hasStarted, !hasFinished else {
             return
         }
         let snapshot = engine.snapshot(outcome: .interrupted)
         do {
             try await repository.checkpoint(snapshot)
+            guard !hasFinished else {
+                return
+            }
             storageNeedsRetry = false
             if errorKey == "storage.error" {
                 errorKey = nil
             }
         } catch {
+            guard !hasFinished else {
+                return
+            }
             storageNeedsRetry = true
             errorKey = "storage.error"
             pause()

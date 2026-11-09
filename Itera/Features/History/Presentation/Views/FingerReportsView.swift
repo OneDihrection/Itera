@@ -211,16 +211,14 @@ private struct FingerHistoryCard: View {
                     Divider()
                 }
 
-                HStack(spacing: 6) {
-                    Text("progress.feeling")
-                    if let feeling = summary.feeling {
+                if let feeling = summary.feeling {
+                    HStack(spacing: 6) {
+                        Text("progress.feeling")
                         Text(LocalizedStringKey(feeling.title))
-                    } else {
-                        Text("progress.notRecorded")
                     }
+                    .typography(size: 20, weight: .regular, relativeTo: .subheadline)
+                    .foregroundStyle(TherapyPalette.muted)
                 }
-                .typography(size: 20, weight: .regular, relativeTo: .subheadline)
-                .foregroundStyle(TherapyPalette.muted)
             }
             .foregroundStyle(TherapyPalette.ink)
             .multilineTextAlignment(.leading)
@@ -291,65 +289,6 @@ private struct FingerHistoryCard: View {
         }
 
         return max(1, Int((seconds / 60).rounded()))
-    }
-}
-
-struct FingerReflectionView: View {
-    @Environment(AppDependencies.self) private var dependencies
-    @Environment(NavigationRouter.self) private var router
-    @State private var selected: SessionFeeling?
-
-    var body: some View {
-        ScrollView {
-            VStack(spacing: 38) {
-                HStack {
-                    Spacer()
-                    Button { dependencies.session?.readReflection() } label: {
-                        Image(systemName: "speaker.wave.2.fill").typography(.title2)
-                            .foregroundStyle(TherapyPalette.onAccent)
-                            .frame(width: 68, height: 68)
-                            .background(TherapyPalette.primary, in: Circle())
-                    }
-                    .buttonStyle(TherapySoundButtonStyle()).accessibilityLabel("action.repeat")
-                }
-                Text("reflection.title").typography(.largeTitle).multilineTextAlignment(.center)
-                HStack(spacing: 28) {
-                    ForEach(Array(SessionFeeling.exerciseChoices.enumerated()), id: \.element.id) { index, feeling in
-                        TherapyFeelingChoice(title: LocalizedStringKey(feeling.title),
-                                             expression: index - 1, selected: selected == feeling) {
-                            selected = feeling
-                        }
-                    }
-                }
-                .disabled(dependencies.session?.saving == true)
-                TherapyButton(title: "action.next", disabled: selected == nil || dependencies.session?.saving == true) {
-                    save()
-                }.frame(maxWidth: 360)
-                if dependencies.session?.saving == true {
-                    ProgressView()
-                }
-                if let key = dependencies.session?.errorKey {
-                    TherapyError(key: key)
-                }
-            }
-            .padding(40).frame(maxWidth: 1150).frame(maxWidth: .infinity)
-        }
-        .foregroundStyle(TherapyPalette.ink)
-        .frame(maxHeight: .infinity).background(TherapyPalette.cream)
-        .environment(\.locale, dependencies.session?.sessionLanguage.locale ?? AppLanguage.selected.locale)
-        .interactiveDismissDisabled()
-    }
-
-    private func save() {
-        guard let selected else {
-            return
-        }
-        Task {
-            if await dependencies.session?.recordFeeling(selected) != nil {
-                await dependencies.home.refresh()
-                router.replaceFullScreenCover(with: .sessionComplete)
-            }
-        }
     }
 }
 

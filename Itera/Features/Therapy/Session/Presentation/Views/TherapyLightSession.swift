@@ -410,14 +410,13 @@ extension TherapySessionView {
 
     // MARK: Pause
 
-    /// "Latihan dijeda" over the current screen, with caregiver recovery under a disclosure.
+    /// "Latihan dijeda" over the current screen.
     var lightPauseDialog: some View {
         TherapyPauseDialog(
             setLabel: Text("session.setNumber \(model.snapshot.setNumber)"),
             title: Text(verbatim: lightTitle),
             elapsedSeconds: model.elapsedSeconds,
             resumeDisabled: !model.voiceReady,
-            status: model.failure.map { Text(verbatim: $0) },
             confirmingEndInitially: endRequested,
             onEnd: { model.command(.stop) },
             onResume: {
@@ -425,17 +424,12 @@ extension TherapySessionView {
                 model.command(.resume)
             }
         ) {
-            DisclosureGroup("session.assistance") {
-                VStack(spacing: 12) {
-                    Button("session.repeat") { model.command(.repeatInstruction) }
-                        .buttonStyle(SessionButtonStyle())
-                    recoveryControls
-                    Button("session.camera") { model.switchCamera() }
-                        .buttonStyle(SessionButtonStyle())
+            if !model.voiceReady {
+                Button("session.retryCamera") {
+                    Task { await model.retryCamera(permissions: permissions) }
                 }
-                .padding(.top, 12)
+                .buttonStyle(SessionButtonStyle())
             }
-            .typography(.body)
         }
         .environment(\.colorScheme, .light)
     }

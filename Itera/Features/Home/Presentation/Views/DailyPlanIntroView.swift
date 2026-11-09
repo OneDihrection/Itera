@@ -65,13 +65,13 @@ struct DailyPlanIntroView: View {
     @ViewBuilder
     private func demonstration(for item: DailyPlanItem) -> some View {
         switch item.exercise {
-        case .finger(let category):
+        case .finger(let exercise):
             FingerExampleView(
-                exercise: category.exercises.first ?? .fullFist,
+                exercise: exercise,
                 phase: .demonstration,
                 returning: false,
                 finger: 0,
-                side: dependencies.homeModel(for: category).routine.side,
+                side: dependencies.homeModel(for: exercise.category).routine.side,
                 paused: false
             )
 
@@ -98,12 +98,20 @@ struct DailyPlanIntroView: View {
 
     @ViewBuilder
     private func targets(_ details: [DailyPlanRow.Detail]) -> some View {
+        let sets = details.filter { detail in
+            if case .sets = detail {
+                return true
+            }
+            return false
+        }
+        let orderedDetails = details.filter { !sets.contains($0) } + sets
+
         TherapyStatRow {
-            ForEach(details.indices, id: \.self) { index in
+            ForEach(orderedDetails.indices, id: \.self) { index in
                 if index > 0 {
                     TherapyStatDivider()
                 }
-                target(details[index])
+                target(orderedDetails[index])
             }
         }
     }

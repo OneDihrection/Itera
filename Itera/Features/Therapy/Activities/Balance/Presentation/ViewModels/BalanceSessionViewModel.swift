@@ -16,7 +16,6 @@ final class BalanceSessionViewModel {
     private(set) var permissionDenied = false
     private(set) var cameraWaiting = true
     private(set) var failure: String?
-    private(set) var frontCamera = true
     private(set) var paused = false
     private(set) var voiceListening = false
     private(set) var voiceAvailable = true
@@ -45,7 +44,6 @@ final class BalanceSessionViewModel {
     @ObservationIgnored private var engine: any BalanceMovementEngine
     @ObservationIgnored private var subscriptions = Set<AnyCancellable>()
     @ObservationIgnored private var started = false
-    @ObservationIgnored private var landscapeRight = false
     @ObservationIgnored private var wasIdleTimerDisabled = false
     @ObservationIgnored private var lastSpokenCountdown: Int?
     /// The calibration pose already explained aloud, so each is spoken once per calibration.
@@ -231,16 +229,7 @@ final class BalanceSessionViewModel {
     }
 
     func orientationChanged(right: Bool) {
-        landscapeRight = right
-        tracking.configure(front: frontCamera, landscapeRight: right)
-    }
-
-    func switchCamera() {
-        frontCamera.toggle()
-        cameraWaiting = true
-        engine.invalidateCalibration()
-        snapshot = engine.snapshot
-        tracking.configure(front: frontCamera, landscapeRight: landscapeRight)
+        tracking.configure(landscapeRight: right)
     }
 
     func restart() {
@@ -389,7 +378,7 @@ final class BalanceSessionViewModel {
             let key = current.activeArm == .right
                 ? exercise.key("voice.rightTarget")
                 : exercise.key("voice.leftTarget")
-            audio.play(id: UUID(), cue: .guidance(prefix: .target, key: key))
+            audio.speak(id: UUID(), key: key)
             return
         }
 
@@ -399,31 +388,13 @@ final class BalanceSessionViewModel {
             let key = current.activeArm == .right
                 ? exercise.key("voice.rightTarget")
                 : exercise.key("voice.leftTarget")
-            audio.play(id: UUID(), cue: .guidance(prefix: .target, key: key))
+            audio.speak(id: UUID(), key: key)
             return
         }
 
-        if !paused, current.phase == .calibrating || current.phase == .calibratingRange,
-            let remaining = current.calibrationCountdown {
-            guard remaining != lastSpokenCountdown else { return }
-            lastSpokenCountdown = remaining
-            audio.play(id: UUID(), cue: .count(remaining))
-            return
-        }
-
-        // Speak exactly the number drawn in the bubble, for the reach hold and the return hold.
-        guard !paused,
-            current.phase == .holding || current.phase == .returning,
-            let remaining = current.overlay?.holdSecondsRemaining
-        else {
-            lastSpokenCountdown = nil
-            return
-        }
-        guard remaining != lastSpokenCountdown else { return }
-        // While guidance plays, leave it unspoken; the next frame says whatever the bubble shows then.
-        guard audio.canSpeakHoldNumber else { return }
-        lastSpokenCountdown = remaining
-        audio.play(id: UUID(), cue: .holdSecond(remaining))
+        // Holds are not counted aloud, during calibration or practice: the bubble and its
+        // timer show the seconds, and the voice stays for instructions.
+        lastSpokenCountdown = nil
     }
 
     /// Reads each new instruction aloud and counts the calibration and countdown seconds, so the
@@ -440,7 +411,8 @@ final class BalanceSessionViewModel {
             return
         }
 
-        if let remaining = current.calibrationCountdown {
+        // Only the countdown before practice is counted aloud; the seated hold is shown, not spoken.
+        if let remaining = current.calibrationCountdown, current.instructionKey == "session.countdown" {
             guard remaining != lastSpokenCountdown else {
                 return
             }

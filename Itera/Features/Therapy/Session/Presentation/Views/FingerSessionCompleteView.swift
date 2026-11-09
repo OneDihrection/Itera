@@ -7,10 +7,11 @@
 
 import SwiftUI
 
-/// The closing page after the feeling question: thanks, and a way to see progress.
+/// Saves the finished session and offers a way to see progress or continue today’s plan.
 struct FingerSessionCompleteView: View {
     @Environment(AppDependencies.self) private var dependencies
     @Environment(NavigationRouter.self) private var router
+    @State private var savingFinished = false
 
     private var summary: FingerSessionSummary? {
         dependencies.session?.finalSummary
@@ -34,12 +35,7 @@ struct FingerSessionCompleteView: View {
 
             Spacer(minLength: 40)
 
-            TherapyButton(
-                title: closingTitle,
-                symbol: dependencies.dailyPlan.isRunning ? "play.fill" : nil,
-                prominent: true,
-                action: close
-            )
+            closingAction
 
             Spacer(minLength: 40)
         }
@@ -48,6 +44,31 @@ struct FingerSessionCompleteView: View {
         .background(TherapyPalette.canvas)
         .environment(\.locale, dependencies.session?.sessionLanguage.locale ?? AppLanguage.selected.locale)
         .interactiveDismissDisabled()
+        .task { await saveSummary() }
+    }
+
+    @ViewBuilder
+    private var closingAction: some View {
+        // The way on appears once saving has finished, whether or not it succeeded, so the
+        // patient is never stuck on this page.
+        if savingFinished {
+            TherapyButton(
+                title: closingTitle,
+                symbol: dependencies.dailyPlan.isRunning ? "play.fill" : nil,
+                prominent: true,
+                action: close
+            )
+        } else {
+            ProgressView()
+        }
+    }
+
+    private func saveSummary() async {
+        await dependencies.session?.saveFinalSummary()
+        if dependencies.session?.finalSummarySaved == true {
+            await dependencies.home.refresh()
+        }
+        savingFinished = true
     }
 
     private var completed: Bool {

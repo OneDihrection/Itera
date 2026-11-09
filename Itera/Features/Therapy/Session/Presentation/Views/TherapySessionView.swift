@@ -319,8 +319,7 @@ struct TherapySessionView: View {
                             Button("session.repeat") { model.command(.repeatInstruction) }
                                 .buttonStyle(SessionButtonStyle())
                             recoveryControls
-                            Button("session.camera") { model.switchCamera() }
-                                .buttonStyle(SessionButtonStyle())
+
                         }
                     }
                 }
@@ -382,8 +381,7 @@ struct TherapySessionView: View {
                         },
                         size: 44
                     )
-                    Button("session.camera") { model.switchCamera() }
-                        .buttonStyle(SessionButtonStyle(compact: true))
+
                     Button("session.help") { model.command(.help) }
                         .buttonStyle(SessionButtonStyle(compact: true))
                     Button("session.pause") { model.command(.pause) }
@@ -451,7 +449,7 @@ struct TherapySessionView: View {
         GeometryReader { geometry in
             ZStack {
                 BodyCameraPreview(
-                    session: model.tracking.session, front: model.frontCamera,
+                    session: model.tracking.session, front: true,
                     onReady: model.previewReady, onOrientation: model.orientationChanged)
                     .frame(width: geometry.size.width, height: geometry.size.height)
                 if usesLightLayout, !model.snapshot.cameraWaiting {
@@ -776,8 +774,7 @@ struct TherapySessionView: View {
                     Button("session.retryCamera") {
                         Task { await model.retryCamera(permissions: permissions) }
                     }.buttonStyle(SessionButtonStyle())
-                    Button("session.camera") { model.switchCamera() }
-                        .buttonStyle(SessionButtonStyle())
+
                     recoveryControls
                 }
             }
@@ -963,7 +960,7 @@ struct TherapySessionView: View {
             captureJoint: (guide.capturing || guide.jointHold) ? normalized(guide.tracked) : nil,
             holdProgress: guide.progress,
             directionGuide: direction,
-            mirrored: model.frontCamera
+            mirrored: true
         )
     }
 }

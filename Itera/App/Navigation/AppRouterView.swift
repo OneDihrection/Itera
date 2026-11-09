@@ -60,8 +60,6 @@ enum AppRouterView {
             FingerReportDetailView(id: id)
         case .fingerSession:
             FingerSessionView()
-        case .reflection:
-            FingerReflectionView()
         case .sessionComplete:
             FingerSessionCompleteView()
         case .practicePreferences:
