@@ -16,6 +16,9 @@ final class TherapySessionViewModel {
     let sessionLanguage = AppLanguage.selected
     var sessionLocale: Locale { sessionLanguage.locale }
     private(set) var snapshot = SessionSnapshot()
+    /// Practice time shown on the pause dialog. It runs while the session is live and stops
+    /// for explicit pauses, camera waits and the summary.
+    @ObservationIgnored private var clock = SessionDurationClock()
     /// The capture-hold number last spoken, so each shown second is said once.
     @ObservationIgnored private var lastHoldSecond: Int?
     private(set) var towelDisplay: TowelSnapshot?
@@ -378,6 +381,7 @@ final class TherapySessionViewModel {
         let previousSide = snapshot.activity?.side
         let wasPaused = snapshot.paused
         snapshot = transition.snapshot
+        updateClock()
         speakHoldSecondIfNeeded()
         if snapshot.summary != nil {
             audio.stopMusic()
@@ -481,6 +485,27 @@ final class TherapySessionViewModel {
         timer = nil
         subscriptions.removeAll()
         UIApplication.shared.isIdleTimerDisabled = keepAwakeBeforeSession
+    }
+
+    // MARK: - Practice clock
+
+    /// Practice time so far, for the pause dialog.
+    var elapsedSeconds: Int {
+        Int(clock.elapsed(at: ProcessInfo.processInfo.systemUptime))
+    }
+
+    private func updateClock() {
+        let now = ProcessInfo.processInfo.systemUptime
+        let running = !snapshot.paused
+            && !snapshot.cameraWaiting
+            && snapshot.summary == nil
+            && snapshot.stage != .preparing
+
+        if running {
+            clock.resume(at: now)
+        } else {
+            clock.pause(at: now)
+        }
     }
 }
 

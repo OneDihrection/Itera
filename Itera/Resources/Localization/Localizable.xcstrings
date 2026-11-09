@@ -11079,6 +11079,38 @@
         }
       }
     },
+    "session.nextSideIn %lld" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The other side starts in %lld s"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sisi berikutnya dimulai dalam %lld detik"
+          }
+        }
+      }
+    },
+    "session.nextSideRest" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rest a moment before the other side."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Istirahat dulu sebentar sebelum lanjut ke sisi berikutnya"
+          }
+        }
+      }
+    },
     "session.nextUp" : {
       "localizations" : {
         "en" : {
