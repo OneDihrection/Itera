@@ -65,11 +65,31 @@ BODY_KEYS = (
     "session.holdTarget", "session.moveTarget", "session.reachStart", "session.rest",
     "session.returnStart", "session.timedPractice",
     "session.reachRight", "session.reachLeft", "session.reachUp",
+    # Activity instructions announced by SessionEngine (CupActivity, DirectionalReachActivity,
+    # FoldTowelActivity, SitToStandActivity) and its stage cards.
+    "cup.ambiguous", "cup.evidenceMissing", "cup.trackingLost",
+    "session.assistance.cup", "session.assistance.sitToStand", "session.feedback", "session.skipped",
+    "session.reachAcross", "session.reachLeftFar", "session.reachRightFar", "session.reachUpFar",
+    "session.reachTrackingLost",
+    "sts.holdSeated", "sts.holdStanding", "sts.leanFirst", "sts.leanForward", "sts.sitDown",
+    "sts.slowDown", "sts.standUp", "sts.trackingLost", "sts.trial",
+    "towel.approach", "towel.fold", "towel.recover", "towel.release", "towel.trackingLost",
+    # Sit-to-stand in BalanceSessionViewModel speaks the engine's instruction key.
+    "sitToStand.tracking",
+    # Rotation exercises narrate each calibration step (speakCalibrationGuidanceIfNeeded).
+    "rotation.calibration.startHint", "rotation.calibration.endHint",
+    "internalRotation.calibration.endHint",
 ) + tuple(
     f"session.opening.{kind}.{side}.{part}"
     for kind in ("armRaise", "elbowBend")
     for side in ("left", "right")
     for part in ("positioning", "ready")
+) + tuple(
+    # BalanceExercise.key("voice.*") for the exercises added after Balancing. Keys an exercise
+    # shares with another prefix are absent from the catalog and skipped by collect_lines.
+    f"{prefix}.voice.{name}"
+    for prefix in ("rotation", "shoulderFlexion", "internalRotation", "sitToStand")
+    for name in ("complete", "leftTarget", "rightTarget", "returnAndSwitch", "returnSameSide")
 )
 
 # The app speaks `speak.<key>` when the catalog has one (shorter than the displayed text), so the
