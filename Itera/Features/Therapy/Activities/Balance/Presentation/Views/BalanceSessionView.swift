@@ -313,7 +313,7 @@ private struct BalancePoseOverlay: View {
             }
 
             let warning = state.compensationWarning
-            let torsoColor = warning ? Color.orange : Color.cyan
+            let torsoColor = warning ? Color.orange : TherapyPalette.guidanceYellow
 
             if state.showsTorso {
                 var torso = Path()
@@ -342,17 +342,17 @@ private struct BalancePoseOverlay: View {
                 arm.move(to: point(state.armChain[0]))
                 state.armChain.dropFirst().forEach { arm.addLine(to: point($0)) }
                 context.stroke(arm, with: .color(.black), style: StrokeStyle(lineWidth: 11, lineCap: .round, lineJoin: .round))
-                context.stroke(arm, with: .color(.cyan), style: StrokeStyle(lineWidth: 6, lineCap: .round, lineJoin: .round))
+                context.stroke(arm, with: .color(.white), style: StrokeStyle(lineWidth: 6, lineCap: .round, lineJoin: .round))
                 for joint in state.armChain {
                     let center = point(joint)
                     let rect = CGRect(x: center.x - 9, y: center.y - 9, width: 18, height: 18)
-                    context.fill(Path(ellipseIn: rect), with: .color(.white))
+                    context.fill(Path(ellipseIn: rect), with: .color(TherapyPalette.guidanceYellow))
                 }
             }
 
             if let target = state.target {
                 let radius = state.targetRadius * scale
-                let targetColor: Color = state.isReturnTarget ? .cyan : .orange
+                let targetColor: Color = TherapyPalette.guidanceBlue
                 let rect = CGRect(
                     x: point(target).x - radius,
                     y: point(target).y - radius,
@@ -414,7 +414,7 @@ private struct BalancePoseOverlay: View {
                     from: point(trackedWrist),
                     to: point(target),
                     targetRadius: state.targetRadius * scale,
-                    color: state.isReturnTarget ? .cyan : .orange
+                    color: .white
                 )
             }
 
@@ -430,7 +430,7 @@ private struct BalancePoseOverlay: View {
                 )
                 context.fill(
                     Path(ellipseIn: wristRect),
-                    with: .color(state.crossedMidline ? .green : .cyan)
+                    with: .color(TherapyPalette.guidanceYellow)
                 )
                 context.stroke(Path(ellipseIn: wristRect), with: .color(.white), lineWidth: 4)
             }

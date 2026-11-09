@@ -2083,13 +2083,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Bend this finger gently. Hold for 2 seconds."
+            "value" : "Bend this finger gently."
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Tekuk sedikit jari ini. Tahan 2 detik."
+            "value" : "Tekuk sedikit jari ini."
           }
         }
       }
@@ -2117,13 +2117,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Open your hand. Hold for 2 seconds."
+            "value" : "Open your hand."
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Buka tangan. Tahan 2 detik."
+            "value" : "Buka tangan."
           }
         }
       }
@@ -2134,13 +2134,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Straighten your fingers. Hold for 2 seconds."
+            "value" : "Straighten your fingers."
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Luruskan jari. Tahan 2 detik."
+            "value" : "Luruskan jari."
           }
         }
       }
@@ -2151,13 +2151,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Separate your thumb and finger. Hold for 2 seconds."
+            "value" : "Separate your thumb and finger."
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Jauhkan ibu jari. Tahan 2 detik."
+            "value" : "Jauhkan ibu jari."
           }
         }
       }
@@ -2168,13 +2168,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Bring fingers together. Hold for 2 seconds."
+            "value" : "Bring fingers together."
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Rapatkan jari. Tahan 2 detik."
+            "value" : "Rapatkan jari."
           }
         }
       }
@@ -3976,6 +3976,7 @@
       }
     },
     "guide.hold" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -4042,6 +4043,7 @@
       }
     },
     "guide.secondsUnit" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -8708,6 +8710,7 @@
       }
     },
     "rest.seconds" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {

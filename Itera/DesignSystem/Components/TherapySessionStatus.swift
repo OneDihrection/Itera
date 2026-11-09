@@ -250,35 +250,3 @@ struct TherapyFeedbackPill: View {
             .accessibilityAddTraits(.updatesFrequently)
     }
 }
-
-// MARK: - Hold readout
-
-/// A compact "Tahan 2 detik" readout placed beside the tracked hand, never on it.
-///
-/// Whole seconds only: the ring already shows fine progress, so the text stays glanceable.
-struct TherapyHoldReadout: View {
-    let remaining: Double
-    /// Approximate size, used by callers to keep the readout clear of the hand.
-    static let size = CGSize(width: 190, height: 64)
-
-    var body: some View {
-        HStack(alignment: .firstTextBaseline, spacing: 8) {
-            Text("guide.hold")
-                .typography(size: 22, weight: .medium, relativeTo: .headline)
-            Text(Int(ceil(max(0, remaining))), format: .number)
-                .typography(size: 34, weight: .bold, relativeTo: .title)
-                .monospacedDigit()
-                .contentTransition(.numericText(countsDown: true))
-            Text("rest.seconds")
-                .typography(size: 22, weight: .regular, relativeTo: .headline)
-        }
-        .foregroundStyle(TherapyPalette.ink)
-        .lineLimit(1)
-        .minimumScaleFactor(0.7)
-        .padding(.horizontal, 18)
-        .padding(.vertical, 8)
-        .background(.regularMaterial, in: Capsule())
-        .accessibilityElement(children: .combine)
-    }
-}
-

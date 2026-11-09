@@ -424,7 +424,11 @@ final class FingerSessionViewModel {
                 errorKey = nil
             }
             if trackingReady {
+                let previousCompletion = activity.holdCompletionID
                 engine.observe(hand, now: now)
+                if previousCompletion == nil, activity.holdCompletionID != nil {
+                    audio.playCue(.holdCompleted)
+                }
             }
             updateRewards()
             updateGuidance()
@@ -483,11 +487,7 @@ final class FingerSessionViewModel {
         }
         updateRecovery(now: now, frameReady: frameReady)
         speakRecoveryIfNeeded()
-        let repetitionsBeforeTick = activity.totalRepetitions
         engine.tick(now, ready: frameReady)
-        if activity.totalRepetitions > repetitionsBeforeTick {
-            audio.playCue(.repetitionCompleted)
-        }
         updateRewards()
         updateGuidance()
         let progress = engine.summary.exerciseIndex * 1000 + activity.totalRepetitions

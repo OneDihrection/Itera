@@ -78,11 +78,9 @@ enum TherapyPalette {
     /// Countdown ring shown while resting.
     static let restRing = Color(uiColor: .systemBlue)
     static let restTrack = Color(uiColor: .systemGray5)
-    /// Mint green and peach for camera guidance bubbles, rings and arrows, matching the finger
-    /// exercise identity (`secondary` and `tertiary`). Fixed rather than adaptive because they sit
-    /// on live video under a dark underlay. Guidance never uses red. The names are historical.
-    static let calmTeal = Color(red: 0.62, green: 0.90, blue: 0.76)
-    static let calmBlue = Color(red: 0.99, green: 0.80, blue: 0.60)
+    /// Fixed guidance colors for rings and landmarks over live video.
+    static let guidanceBlue = Color(red: 0.16, green: 0.65, blue: 0.98)
+    static let guidanceYellow = Color(red: 1.0, green: 0.72, blue: 0.0)
     /// Dark edge drawn under every guidance shape so it keeps contrast on light and dark video.
     static let calmUnderlay = Color.black.opacity(0.5)
     /// Challenge card fill and its bold green ink (custom pair, contrast above 7:1).
@@ -96,8 +94,8 @@ enum TherapyPalette {
     static let onBrand = Color.white
     /// Warm off-white card behind each exercise in the plan timeline.
     static let planCard = adaptive(light: (0.973, 0.957, 0.945), dark: (0.17, 0.155, 0.145))
-    /// Filled timeline dot of the exercise that comes next. Fixed: it is a marker, not text.
-    static let planMarker = Color(red: 1.0, green: 0.72, blue: 0.0)
+    /// Filled timeline dot and completed connector. Fixed: it is a marker, not text.
+    static let planMarker = guidanceYellow
     /// Dashed timeline line and the outline of upcoming dots.
     static let planTrack = Color(uiColor: .systemGray4)
     /// Slightly deeper warm grey behind demo media and the set results panel.

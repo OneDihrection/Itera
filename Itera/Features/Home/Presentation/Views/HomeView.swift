@@ -159,6 +159,7 @@ struct HomeView: View {
 
                 TherapyTimelineRow(
                     state: Self.timelineState(row.status),
+                    previousIsDone: index > rows.startIndex && rows[index - 1].status == .done,
                     isFirst: index == rows.startIndex,
                     isLast: index == rows.index(before: rows.endIndex)
                 ) {

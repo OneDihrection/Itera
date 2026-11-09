@@ -35,16 +35,16 @@ struct TherapyProgressDots: View {
             HStack(spacing: 12) {
                 ForEach(0..<max(0, total), id: \.self) { index in
                     Circle()
-                        .fill(index < done ? TherapyPalette.calmTeal : .clear)
+                        .fill(index < done ? TherapyPalette.guidanceBlue : .clear)
                         .overlay {
-                            Circle().strokeBorder(TherapyPalette.calmTeal, lineWidth: 3)
+                            Circle().strokeBorder(TherapyPalette.guidanceBlue, lineWidth: 3)
                         }
                         .frame(width: 24, height: 24)
                 }
             }
         } else {
             ProgressView(value: Double(done), total: Double(max(1, total)))
-                .tint(TherapyPalette.calmTeal)
+                .tint(TherapyPalette.guidanceBlue)
                 .frame(width: 200)
         }
     }

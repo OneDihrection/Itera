@@ -221,7 +221,6 @@ struct FingerSessionView: View {
                 FingerLandmarkOverlay(
                     evidence: evidence,
                     progress: model.activity.holdElapsed / model.activity.holdDuration,
-                    remaining: model.activity.holdRemaining,
                     exercise: model.activity.kind,
                     finger: model.activity.finger,
                     returning: model.activity.returning,

@@ -94,9 +94,9 @@ struct TherapyGuideZone: View {
 #if DEBUG
 #Preview("Guide zones") {
     HStack(spacing: 40) {
-        TherapyGuideZone(tint: TherapyPalette.calmTeal, symbol: "hand.raised.fill", progress: 0.6)
+        TherapyGuideZone(tint: TherapyPalette.guidanceBlue, symbol: "hand.raised.fill", progress: 0.6)
             .frame(width: 180, height: 180)
-        TherapyGuideZone(tint: TherapyPalette.calmBlue, symbol: "arrow.left", emphasized: false)
+        TherapyGuideZone(tint: TherapyPalette.guidanceYellow, symbol: "arrow.left", emphasized: false)
             .frame(width: 180, height: 180)
     }
     .padding(40)

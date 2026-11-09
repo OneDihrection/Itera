@@ -28,8 +28,7 @@ enum TherapyTimelineState: Equatable {
     }
 }
 
-/// The dot of a timeline row: filled yellow for the current item, a check for a done item,
-/// a hollow ring for later ones. Shape differs per state as well as color.
+/// A solid yellow dot for completed and current items, and a hollow ring for upcoming items.
 struct TherapyTimelineMarker: View {
     let state: TherapyTimelineState
     var diameter: CGFloat = 32
@@ -37,15 +36,9 @@ struct TherapyTimelineMarker: View {
     var body: some View {
         ZStack {
             switch state {
-            case .current:
+            case .current, .done:
                 Circle()
                     .fill(TherapyPalette.planMarker)
-            case .done:
-                Circle()
-                    .fill(TherapyPalette.setDone)
-                Image(systemName: "checkmark")
-                    .typography(size: diameter * 0.45, weight: .bold)
-                    .foregroundStyle(TherapyPalette.onHero)
             case .upcoming:
                 Circle()
                     .fill(TherapyPalette.canvas)
@@ -60,12 +53,12 @@ struct TherapyTimelineMarker: View {
 
 // MARK: - Row
 
-/// One timeline entry: a marker on a dashed vertical line, beside the supplied card.
+/// One timeline entry: a marker and its incoming and outgoing track segments.
 ///
-/// Rows stack with no spacing of their own; `spacing` is drawn inside each row so the dashed
-/// line runs unbroken from one marker to the next.
+/// Rows stack with no spacing of their own; the track spans the space between cards.
 struct TherapyTimelineRow<Card: View>: View {
     let state: TherapyTimelineState
+    var previousIsDone = false
     var isFirst = false
     var isLast = false
     var spacing: CGFloat = 32
@@ -84,24 +77,26 @@ struct TherapyTimelineRow<Card: View>: View {
     /// Equal flexible segments above and below keep the marker centred on the card.
     private var track: some View {
         VStack(spacing: 0) {
-            TherapyDashedLine()
+            TherapyTimelineLine(completed: previousIsDone)
                 .opacity(isFirst ? 0 : 1)
 
             TherapyTimelineMarker(state: state)
 
-            TherapyDashedLine()
+            TherapyTimelineLine(completed: state == .done)
                 .opacity(isLast ? 0 : 1)
 
             if !isLast {
-                TherapyDashedLine()
+                TherapyTimelineLine(completed: state == .done)
                     .frame(height: spacing)
             }
         }
     }
 }
 
-/// A vertical dashed line filling the height it is given.
-private struct TherapyDashedLine: View {
+/// A solid completed connector or a dashed upcoming connector.
+private struct TherapyTimelineLine: View {
+    let completed: Bool
+
     var body: some View {
         GeometryReader { geometry in
             Path { path in
@@ -109,8 +104,8 @@ private struct TherapyDashedLine: View {
                 path.addLine(to: CGPoint(x: geometry.size.width / 2, y: geometry.size.height))
             }
             .stroke(
-                TherapyPalette.planTrack,
-                style: StrokeStyle(lineWidth: 3, lineCap: .round, dash: [6, 9])
+                completed ? TherapyPalette.planMarker : TherapyPalette.planTrack,
+                style: StrokeStyle(lineWidth: 3, lineCap: .round, dash: completed ? [] : [6, 9])
             )
         }
         .frame(width: 4)

@@ -12,7 +12,7 @@ import Speech
 // Service vocabulary is independent of exercise progression.
 enum GuidanceSound {
     case countdown
-    case repetitionCompleted
+    case holdCompleted
     case setCompleted
 }
 
@@ -230,7 +230,7 @@ final class GuidanceAudioService: NSObject, AVSpeechSynthesizerDelegate {
         let name: String
         switch cue {
         case .countdown: name = "countdown"
-        case .repetitionCompleted: name = "target-reached"
+        case .holdCompleted: name = "target-reached"
         case .setCompleted: name = "set-complete"
         }
         guard let url = Bundle.main.url(forResource: name, withExtension: "wav") else {
