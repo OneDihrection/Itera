@@ -50,6 +50,8 @@ final class SessionAudioService: NSObject, VoiceReadinessProviding, AVSpeechSynt
     private var routeObserver: NSObjectProtocol?
     private let synthesizer = AVSpeechSynthesizer()
     private let music = ExerciseMusicPlayer()
+    /// The hold-bubble number currently playing, so the next second can replace it.
+    private var holdSecondID: UUID?
     private var narrationClips: [String: PreparedAudioClip] = [:]
     private let inputWorker = AudioInputWorker()
     private var starting: Task<VoiceStartupResult, Never>?
@@ -115,9 +117,8 @@ final class SessionAudioService: NSObject, VoiceReadinessProviding, AVSpeechSynt
         towelEffects = [:]
 
         // Count clips are preloaded so the first play of each number cannot glitch.
-        let countLanguage = synthesisLocale.hasPrefix("id") ? "id" : "en"
         for number in 1...20 {
-            prepareClip("count-\(countLanguage)-\(number)")
+            prepareClip(countClipName(number))
         }
 
         for name in ["button-click", "target-reached", "set-complete"] {
@@ -199,8 +200,24 @@ final class SessionAudioService: NSObject, VoiceReadinessProviding, AVSpeechSynt
     }
 
     private func prepareClip(_ name: String) {
-        guard let url = Bundle.main.url(forResource: name, withExtension: "wav") else { return }
+        guard let url = clipURL(name) else { return }
         clips[name] = try? PreparedAudioClip(url: url)
+    }
+
+    /// Effects and older count clips are WAV; recorded narration is AAC.
+    private func clipURL(_ name: String) -> URL? {
+        Bundle.main.url(forResource: name, withExtension: "wav")
+            ?? Bundle.main.url(forResource: name, withExtension: "m4a")
+    }
+
+    /// Marizka's recorded number when bundled, otherwise the older count clip.
+    private func countClipName(_ number: Int) -> String {
+        if NarrationClips.countURL(number, language: language) != nil {
+            return NarrationClips.resourceName(for: NarrationLine(key: "count", argument: number))
+        }
+
+        let code = synthesisLocale.hasPrefix("id") ? "id" : "en"
+        return "count-\(code)-\(number)"
     }
 
     func play(id: UUID, cue: SessionAudioCue) {
@@ -242,21 +259,23 @@ final class SessionAudioService: NSObject, VoiceReadinessProviding, AVSpeechSynt
                 pendingCounts.append((id, number))
                 return
             }
-            let language = synthesisLocale.hasPrefix("id") ? "id" : "en"
-            let name = "count-\(language)-\(number)"
-            if Bundle.main.url(forResource: name, withExtension: "wav") != nil {
+            let name = countClipName(number)
+            if clipURL(name) != nil {
                 playClip(name, id: id, timeout: 20, failure: { [weak self] in
                     self?.speak(id: id, text: String(number))
                 })
             } else {
                 speak(id: id, text: String(number))
             }
+        case .holdSecond(let number):
+            playHoldSecond(number, id: id)
         case .countdown(let number):
             // Countdown time is authoritative; never queue an expired number.
             cancelSpeech()
-            let language = synthesisLocale.hasPrefix("id") ? "id" : "en"
-            let name = "count-\(language)-\(number)"
-            if Bundle.main.url(forResource: name, withExtension: "wav") != nil {
+            let name = countClipName(number)
+            if clipURL(name) != nil {
+                // A spoken number can outlast one second with its natural pauses; the next
+                // number cancels this one first, so the longer watchdog never doubles it.
                 playClip(name, id: id, timeout: 2, failure: { [weak self] in
                     self?.speak(id: id, text: String(number))
                 })
@@ -276,25 +295,19 @@ final class SessionAudioService: NSObject, VoiceReadinessProviding, AVSpeechSynt
                 name = "count-\(language)-\(number)"
                 timeout = 20
             default:
-                speak(id: id, text: NarrationText.resolve(key, bundle: language.resourceBundle, locale: language.locale))
+                // Recorded Marizka narration when bundled, otherwise the system voice.
+                speak(id: id, key: key)
                 return
             }
             playClip(name, id: id, timeout: timeout, completion: { [weak self] in
-                self?.speak(
-                    id: id,
-                    text: NarrationText.resolve(
-                        key,
-                        bundle: self?.language.resourceBundle ?? AppLanguage.selected.resourceBundle,
-                        locale: self?.language.locale ?? AppLanguage.selected.locale
-                    )
-                )
+                self?.speak(id: id, key: key)
             })
         case .closing(let completed):
             cancelSpeech()
             let key = completed ? "parity.closingComplete" : "parity.closingPartial"
             let speakClosing = { [weak self] in
                 guard let self else { return }
-                self.speak(id: id, text: NarrationText.resolve(key, bundle: self.language.resourceBundle, locale: self.language.locale))
+                self.speak(id: id, key: key)
                 self.closingWatchdog = Task { [weak self] in
                     do { try await Task.sleep(for: .seconds(20)) } catch { return }
                     self?.cancelSpeech()
@@ -306,6 +319,39 @@ final class SessionAudioService: NSObject, VoiceReadinessProviding, AVSpeechSynt
                 speakClosing()
             }
         }
+    }
+
+    /// True when a hold number can be spoken now: nothing is playing or waiting except an
+    /// older hold number. Callers retry on their next update while this is false.
+    var canSpeakHoldNumber: Bool {
+        let onlyOlderHoldNumber = clipID != nil && clipID == holdSecondID
+        return utteranceIDs.isEmpty
+            && pendingSpeech == nil
+            && pendingCounts.isEmpty
+            && (clipID == nil || onlyOlderHoldNumber)
+    }
+
+    /// Speaks a hold-bubble number in the recorded voice when the narrator is otherwise quiet.
+    private func playHoldSecond(_ number: Int, id: UUID) {
+        // Replace an older hold number that is still playing; never touch anything else.
+        if let current = holdSecondID, clipID == current {
+            cancelSpeech()
+        }
+        holdSecondID = nil
+
+        let quiet = utteranceIDs.isEmpty && clipID == nil && pendingSpeech == nil && pendingCounts.isEmpty
+        guard number > 0, quiet else {
+            return
+        }
+
+        let name = countClipName(number)
+        guard clipURL(name) != nil else {
+            return
+        }
+
+        holdSecondID = id
+        // One second per number; a slightly longer watchdog lets the clip finish naturally.
+        playClip(name, id: id, timeout: 1.5)
     }
 
     func speak(id: UUID, key: String) {

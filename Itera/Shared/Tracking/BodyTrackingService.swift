@@ -492,27 +492,42 @@ final class BodyTrackingService: NSObject, AVCaptureVideoDataOutputSampleBufferD
 
         guard !torso.isEmpty, confident.count >= 2 else {
             // Without a torso this person cannot be followed, so they can never win continuity.
-            return BodySubjectSelector.Candidate(
-                torso: TherapyPoint(x: .infinity, y: .infinity), size: 0, torsoSize: 0)
+            return BodySubjectSelector.Candidate(torso: TherapyPoint(x: .infinity, y: .infinity), size: 0)
         }
 
-        let xs = confident.map(\.x)
-        let ys = confident.map(\.y)
+        let center = torso.reduce(TherapyPoint(x: 0, y: 0), +).scaled(1 / Double(torso.count))
+
+        return BodySubjectSelector.Candidate(
+            torso: center,
+            size: bodySize(points, torso: torso, aspect: aspect),
+            centerOffset: abs(center.x / max(aspect, 0.0001) - 0.5)
+        )
+    }
+
+    /// Shoulder width: visible for every upper-body exercise, unchanged by arm movement, and
+    /// steadier than a box that grows when hips appear or disappear behind a table. Falls
+    /// back to the torso box when a shoulder is not visible.
+    private static func bodySize(
+        _ points: [VNHumanBodyPoseObservation.JointName: VNRecognizedPoint],
+        torso: [TherapyPoint],
+        aspect: Double
+    ) -> Double {
+        if let left = points[.leftShoulder], let right = points[.rightShoulder],
+           left.confidence >= 0.3, right.confidence >= 0.3 {
+            let width = TherapyPoint(
+                x: (left.location.x - right.location.x) * aspect,
+                y: left.location.y - right.location.y
+            )
+            return width.length
+        }
+
+        let xs = torso.map(\.x)
+        let ys = torso.map(\.y)
         let diagonal = TherapyPoint(
             x: (xs.max() ?? 0) - (xs.min() ?? 0),
             y: (ys.max() ?? 0) - (ys.min() ?? 0)
         )
-        let center = torso.reduce(TherapyPoint(x: 0, y: 0), +).scaled(1 / Double(torso.count))
-
-        let torsoXs = torso.map(\.x)
-        let torsoYs = torso.map(\.y)
-        let torsoDiagonal = TherapyPoint(
-            x: (torsoXs.max() ?? 0) - (torsoXs.min() ?? 0),
-            y: (torsoYs.max() ?? 0) - (torsoYs.min() ?? 0)
-        )
-
-        return BodySubjectSelector.Candidate(
-            torso: center, size: diagonal.length, torsoSize: torsoDiagonal.length)
+        return diagonal.length
     }
 
     private func invalidateGeneration() {

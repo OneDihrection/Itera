@@ -38,6 +38,8 @@ final class FingerSessionViewModel {
     @ObservationIgnored private var instructionSince = 0.0
     @ObservationIgnored private var celebratedSets: [Int: Int] = [:]
     @ObservationIgnored private var lastCountdownCue = ""
+    /// The hold-readout number last spoken, so each shown second is said once.
+    @ObservationIgnored private var lastHoldSecond: Int?
     let camera: HandCameraService
     @ObservationIgnored private let audio: GuidanceAudioService
     @ObservationIgnored private let permissions: any PermissionManaging
@@ -240,12 +242,37 @@ final class FingerSessionViewModel {
             celebrationID += 1
             audio.playCue(.setCompleted)
         }
+        speakHoldSecondIfNeeded()
         if activity.phase == .countdown, !paused {
             let cue = "\(index)-\(activity.set)-\(countdown)"
             if cue != lastCountdownCue {
                 lastCountdownCue = cue
-                audio.playCue(.countdown)
+                // Marizka says "tiga, dua, satu" when recorded; otherwise the beep as before.
+                if countdown <= 0 || !audio.playCount(countdown) {
+                    audio.playCue(.countdown)
+                }
             }
+        }
+    }
+
+    /// Says the number shown in the "Tahan N detik" readout as it counts down, using the
+    /// readout's own rounding, so the voice and the screen always agree.
+    private func speakHoldSecondIfNeeded() {
+        guard !paused, showsGuideTimer, activity.holdCompletionID == nil else {
+            lastHoldSecond = nil
+            return
+        }
+
+        let shown = Int(ceil(max(0, activity.holdRemaining)))
+
+        guard shown > 0, shown != lastHoldSecond else {
+            return
+        }
+
+        // While an instruction plays, leave the number unspoken; the next frame retries and,
+        // once the instruction ends, says whatever number the readout shows then.
+        if audio.playHoldSecond(shown) {
+            lastHoldSecond = shown
         }
     }
 
@@ -582,6 +609,14 @@ final class FingerSessionViewModel {
         previousInstruction = key
         instructionSince = ProcessInfo.processInfo.systemUptime
         calibrationNeedsHelp = false
+
+        // The spoken numbers carry the countdown; narrating "Bersiap…" at the same time
+        // would talk over "tiga". The countdown never waits on narration, so nothing stalls.
+        if activity.phase == .countdown && audio.hasRecordedCounts {
+            engine.guidanceCompleted()
+            return
+        }
+
         narrate()
     }
 
@@ -593,7 +628,7 @@ final class FingerSessionViewModel {
         if activity.kind.isSequential && [.baseline, .target, .active].contains(activity.phase) {
             text += ". " + String(localized: String.LocalizationValue(fingerKey), bundle: sessionLanguage.resourceBundle)
         }
-        if activity.phase == .target || activity.phase == .active {
+        if narratesHoldDuration {
             text += ". " + String.localizedStringWithFormat(
                 String(localized: "guide.holdDuration %lld", bundle: sessionLanguage.resourceBundle), Int64(activity.holdDuration)
             )
@@ -612,11 +647,18 @@ final class FingerSessionViewModel {
             lines.append(NarrationLine(key: fingerKey))
         }
 
-        if activity.phase == .target || activity.phase == .active {
+        if narratesHoldDuration {
             lines.append(NarrationLine(key: "guide.holdDuration %lld", argument: Int(activity.holdDuration)))
         }
 
         return lines
+    }
+
+    /// "Tahan 2 detik" closes a hold instruction only when the numbers are not spoken live.
+    /// With recorded numbers, "dua, satu" says the same thing, and leaving the line out keeps
+    /// the instruction from still playing when the hold, and its first number, begins.
+    private var narratesHoldDuration: Bool {
+        (activity.phase == .target || activity.phase == .active) && !audio.hasRecordedCounts
     }
 
     var needsPermissionSettings: Bool {

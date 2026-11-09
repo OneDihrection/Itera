@@ -16,6 +16,8 @@ final class TherapySessionViewModel {
     let sessionLanguage = AppLanguage.selected
     var sessionLocale: Locale { sessionLanguage.locale }
     private(set) var snapshot = SessionSnapshot()
+    /// The capture-hold number last spoken, so each shown second is said once.
+    @ObservationIgnored private var lastHoldSecond: Int?
     private(set) var towelDisplay: TowelSnapshot?
     private(set) var towelInterpolates = false
     @ObservationIgnored private var towelSmoother = TowelPresentationSmoother()
@@ -334,6 +336,31 @@ final class TherapySessionViewModel {
         }
     }
 
+    /// Says the "Tersisa N detik" number of a movement capture hold as it counts down,
+    /// matching what is shown. Only while the hold is actually running.
+    private func speakHoldSecondIfNeeded() {
+        guard !snapshot.paused,
+              case .movement(let movement)? = snapshot.presentation,
+              movement.phase == .startCapture || movement.phase == .targetCapture,
+              movement.progress > 0,
+              movement.seconds > 0 else {
+            lastHoldSecond = nil
+            return
+        }
+
+        guard movement.seconds != lastHoldSecond else {
+            return
+        }
+
+        // While guidance plays, leave it unspoken; the next update says the number shown then.
+        guard audio.canSpeakHoldNumber else {
+            return
+        }
+
+        lastHoldSecond = movement.seconds
+        audio.play(id: UUID(), cue: .holdSecond(movement.seconds))
+    }
+
     private func send(_ event: SessionEvent) {
         guard live else {
             return
@@ -351,6 +378,7 @@ final class TherapySessionViewModel {
         let previousSide = snapshot.activity?.side
         let wasPaused = snapshot.paused
         snapshot = transition.snapshot
+        speakHoldSecondIfNeeded()
         if snapshot.summary != nil {
             audio.stopMusic()
         } else if wasPaused != snapshot.paused {

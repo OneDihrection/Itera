@@ -314,16 +314,19 @@ final class BalanceSessionViewModel {
             return
         }
 
+        // Speak exactly the number drawn in the bubble, for the reach hold and the return hold.
         guard !paused,
-            current.phase == .holding,
+            current.phase == .holding || current.phase == .returning,
             let remaining = current.overlay?.holdSecondsRemaining
         else {
             lastSpokenCountdown = nil
             return
         }
         guard remaining != lastSpokenCountdown else { return }
+        // While guidance plays, leave it unspoken; the next frame says whatever the bubble shows then.
+        guard audio.canSpeakHoldNumber else { return }
         lastSpokenCountdown = remaining
-        audio.play(id: UUID(), cue: .count(remaining))
+        audio.play(id: UUID(), cue: .holdSecond(remaining))
     }
 
     /// Reads each new instruction aloud and counts the calibration and countdown seconds, so the
