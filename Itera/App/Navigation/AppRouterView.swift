@@ -58,8 +58,6 @@ enum AppRouterView {
             AchievementShareDestination(id: id)
         case .report(let id):
             FingerReportDetailView(id: id)
-        case .fingerPause:
-            FingerPauseView()
         case .fingerSession:
             FingerSessionView()
         case .reflection:

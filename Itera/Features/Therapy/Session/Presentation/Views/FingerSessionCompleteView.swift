@@ -21,8 +21,8 @@ struct FingerSessionCompleteView: View {
             Spacer(minLength: 40)
 
             VStack(spacing: 18) {
-                TherapyCompletionMark()
-                Text(completed ? "done.title" : "done.titlePartial")
+                TherapyCompletionMark(tint: TherapyPalette.brand)
+                Text(completed ? "session.allDoneTitle" : "done.titlePartial")
                     .typography(size: 52, weight: .bold, relativeTo: .largeTitle)
                     .accessibilityAddTraits(.isHeader)
                 message
@@ -34,8 +34,12 @@ struct FingerSessionCompleteView: View {
 
             Spacer(minLength: 40)
 
-            TherapyButton(title: closingTitle, pill: true, action: close)
-                .frame(maxWidth: 360)
+            TherapyButton(
+                title: closingTitle,
+                symbol: dependencies.dailyPlan.isRunning ? "play.fill" : nil,
+                prominent: true,
+                action: close
+            )
 
             Spacer(minLength: 40)
         }

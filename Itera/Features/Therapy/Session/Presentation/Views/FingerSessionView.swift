@@ -12,6 +12,8 @@ struct FingerSessionView: View {
     @Environment(AppDependencies.self) private var dependencies
     @Environment(NavigationRouter.self) private var router
     @Environment(\.scenePhase) private var scenePhase
+    /// Set when End was tapped on the live screen, so the pause dialog opens on its confirmation.
+    @State private var endRequested = false
 
     var body: some View {
         Group {
@@ -27,20 +29,8 @@ struct FingerSessionView: View {
                             model.background()
                         }
                     }
-                    .onChange(of: model.paused, initial: true) { _, paused in
-                        if paused {
-                            if router.presentedSheets.last?.route != .fingerPause {
-                                router.presentSheet(.fingerPause)
-                            }
-                        } else if router.presentedSheets.last?.route == .fingerPause {
-                            router.dismissSheet()
-                        }
-                    }
                     .onChange(of: model.needsReflection) { _, finished in
                         if finished {
-                            if router.presentedSheets.last?.route == .fingerPause {
-                                router.dismissSheet()
-                            }
                             router.replaceFullScreenCover(with: .reflection)
                         }
                     }
@@ -51,18 +41,29 @@ struct FingerSessionView: View {
 
     // MARK: - Exercise layout
 
-    /// Header, one large instruction, then the camera beside the animation and repetition panels.
+    /// The shared live screen; stage pages, the countdown and the pause dialog lie over it.
     private func session(_ model: FingerSessionViewModel) -> some View {
-        VStack(spacing: 14) {
-            header(model)
-            instructionTitle(model)
-            mainRow(model)
+        TherapyExerciseLiveLayout(
+            heading: heading(model),
+            cue: cue(model),
+            demoTitle: "session.followMovement",
+            repetitions: (model.activity.repetitions, model.routine.repetitions),
+            sets: (model.activity.set, model.routine.sets),
+            pauseTitle: "session.pauseAction",
+            endTitle: "session.endAction",
+            pauseDisabled: model.paused,
+            onPause: { model.handleCommand(.pause) },
+            onEnd: {
+                endRequested = true
+                model.handleCommand(.pause)
+            }
+        ) {
+            camera(model)
+        } demo: {
+            example(model)
+        } accessories: {
+            accessories(model)
         }
-        .padding(.horizontal, 32)
-        .padding(.top, 12)
-        .padding(.bottom, 32)
-        .foregroundStyle(TherapyPalette.ink)
-        .background(TherapyPalette.canvas)
         .accessibilityHidden(coversSession(model) || model.activity.phase == .countdown || model.paused)
         .overlay {
             phasePage(model)
@@ -75,81 +76,54 @@ struct FingerSessionView: View {
                     .ignoresSafeArea()
             }
         }
+        .overlay {
+            if model.paused {
+                FingerPauseDialog(model: model, confirmingEndInitially: endRequested) {
+                    endRequested = false
+                }
+            }
+        }
+        .environment(\.colorScheme, .light)
         .statusBarHidden(true)
     }
 
-    /// Close (pause) on the leading side; repeat-instruction and voice on the trailing side.
-    private func header(_ model: FingerSessionViewModel) -> some View {
-        FingerSessionCloseHeader(
-            model: model,
-            title: "session.setTitle \(model.activity.set) \(model.exerciseTitle)",
-            trailingContentWidth: 140
+    private func heading(_ model: FingerSessionViewModel) -> TherapyExerciseHeading {
+        TherapyExerciseHeading(
+            eyebrow: dependencies.dailyPlan.currentNumber.map { Text("plan.exerciseNumber \($0)") },
+            title: Text(verbatim: model.exerciseTitle)
         )
-        .overlay(alignment: .trailing) {
-            HStack(spacing: 4) {
-                TherapyMusicMenu(
-                    selection: $musicTrack,
-                    options: ExerciseMusicTrack.allCases.map {
-                        TherapyMusicOption(id: $0.rawValue, title: LocalizedStringKey($0.titleKey))
-                    },
-                    size: 44
-                )
-                TherapyIconButton(title: "action.repeat", symbol: "speaker.wave.2.fill", size: 44, circle: true) {
-                    model.narrate()
-                }
-                TherapyIconButton(
-                    title: model.voiceEnabled ? "voice.on" : "voice.off",
-                    symbol: model.voiceEnabled ? "mic.fill" : "mic.slash",
-                    size: 44,
-                    circle: true
-                ) {
-                    Task { await model.setVoice(!model.voiceEnabled) }
-                }
-            }
-        }
     }
 
-    private func instructionTitle(_ model: FingerSessionViewModel) -> some View {
-        VStack(spacing: 6) {
-            Text(LocalizedStringKey(model.instructionKey))
-                .typography(size: 36, weight: .semiBold, relativeTo: .title)
-                .lineLimit(2)
-                .minimumScaleFactor(0.7)
-            if model.activity.phase == .range, model.activity.rangeReady {
-                ProgressView(value: model.activity.rangeProgress)
-                    .accessibilityLabel("session.rangeProgress")
-                    .frame(maxWidth: 420)
-            }
-            if model.activity.kind.isSequential && isTracking(model) {
-                Text(LocalizedStringKey(model.fingerKey))
-                    .typography(size: 22, weight: .medium, relativeTo: .title3)
-                    .foregroundStyle(TherapyPalette.muted)
-            }
+    /// Live feedback while tracking, otherwise the instruction; sequential movements add the finger.
+    private func cue(_ model: FingerSessionViewModel) -> Text {
+        let main = Text(LocalizedStringKey(liveCue(model) ?? model.instructionKey))
+
+        guard model.activity.kind.isSequential, isTracking(model) else {
+            return main
         }
-        .multilineTextAlignment(.center)
-        .frame(maxWidth: .infinity)
-        .accessibilityElement(children: .combine)
-        .accessibilityAddTraits(.updatesFrequently)
+
+        return main + Text(verbatim: "\n") + Text(LocalizedStringKey(model.fingerKey))
     }
 
-    private func mainRow(_ model: FingerSessionViewModel) -> some View {
-        HStack(spacing: 18) {
-            camera(model)
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-
-            VStack(spacing: 18) {
-                TherapyMediaPanel(title: "session.animation", padding: 18) {
-                    example(model)
-                        .clipShape(RoundedRectangle(cornerRadius: 16))
-                }
-                TherapyRepetitionPanel(
-                    title: "session.repetitionsTitle",
-                    unit: "session.repetitionsUnit",
-                    completed: model.activity.repetitions,
-                    total: model.routine.repetitions
-                )
-            }
-            .frame(width: 290)
+    @ViewBuilder
+    private func accessories(_ model: FingerSessionViewModel) -> some View {
+        TherapyMusicMenu(
+            selection: $musicTrack,
+            options: ExerciseMusicTrack.allCases.map {
+                TherapyMusicOption(id: $0.rawValue, title: LocalizedStringKey($0.titleKey))
+            },
+            size: 44
+        )
+        TherapyIconButton(title: "action.repeat", symbol: "speaker.wave.2.fill", size: 44, circle: true) {
+            model.narrate()
+        }
+        TherapyIconButton(
+            title: model.voiceEnabled ? "voice.on" : "voice.off",
+            symbol: model.voiceEnabled ? "mic.fill" : "mic.slash",
+            size: 44,
+            circle: true
+        ) {
+            Task { await model.setVoice(!model.voiceEnabled) }
         }
     }
 
@@ -200,12 +174,12 @@ struct FingerSessionView: View {
         case .demonstration:
             demonstration(model)
         case .feedback:
-            FingerSetCompletePage(model: model)
+            FingerSetSummaryPage(model: model)
         case .rest:
             if model.showsUpcomingPreview {
                 FingerUpcomingPage(model: model)
             } else {
-                FingerRestPage(model: model)
+                FingerSetSummaryPage(model: model)
             }
         default:
             EmptyView()
@@ -218,19 +192,11 @@ struct FingerSessionView: View {
 
     // MARK: - Camera
 
-    /// The live preview with the existing fingertip bubbles and their hold timer, a live cue
-    /// on top, and recovery actions at the bottom when needed.
+    /// The live preview with the existing fingertip bubbles and their hold timer; recovery
+    /// actions sit at the top, clear of the cue bubble at the bottom.
     private func camera(_ model: FingerSessionViewModel) -> some View {
         cameraPreview(model)
-            .clipShape(RoundedRectangle(cornerRadius: 34))
             .overlay(alignment: .top) {
-                if let cue = liveCue(model) {
-                    TherapyFeedbackPill(text: LocalizedStringKey(cue))
-                        .padding(.top, 22)
-                        .padding(.horizontal, 22)
-                }
-            }
-            .overlay(alignment: .bottom) {
                 recovery(model)
                     .padding(22)
             }
@@ -292,6 +258,7 @@ struct FingerSessionView: View {
             finger: model.activity.finger, side: model.routine.side, paused: model.paused || model.waitingForCamera
         )
         .background(TherapyPalette.mediaBackground)
+        .environment(\.therapyDemoCaptionHidden, true)
         .accessibilityLabel("session.example")
     }
 

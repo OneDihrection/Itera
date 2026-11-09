@@ -11063,6 +11063,38 @@
         }
       }
     },
+    "session.nextMovementIn %lld" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The next movement starts in %lld s"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gerakan berikutnya dimulai dalam %lld detik"
+          }
+        }
+      }
+    },
+    "session.nextMovementRest" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rest a moment before the next movement."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Istirahat dulu sebentar sebelum gerakan berikutnya"
+          }
+        }
+      }
+    },
     "session.nextSetIn %lld %lld" : {
       "localizations" : {
         "en" : {
