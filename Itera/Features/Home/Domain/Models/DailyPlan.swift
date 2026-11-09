@@ -66,7 +66,7 @@ struct DailyPlanItem: Identifiable, Hashable {
 }
 
 enum DailyPlan {
-    /// Every exercise the app offers, in practice order: hand and forearm first, then arm,
+    /// The daily exercises in practice order: hand and forearm first, then arm,
     /// shoulder, trunk and the task. The plan is fixed for now; change this list to change it.
     static let standard: [DailyPlanItem] = {
         let fingers = FingerExercise.allCases.map { DailyPlanItem(exercise: .finger($0)) }
@@ -75,7 +75,6 @@ enum DailyPlan {
             DailyPlanItem(exercise: .therapy(.armRaise)),
             DailyPlanItem(exercise: .therapy(.elbowBend)),
             DailyPlanItem(exercise: .therapy(.directionalReach)),
-            DailyPlanItem(exercise: .therapy(.cup)),
         ]
 
         let shoulderAndTrunk: [DailyPlanItem] = [
