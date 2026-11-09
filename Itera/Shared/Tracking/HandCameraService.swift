@@ -107,10 +107,13 @@ final class HandCameraService: NSObject, AVCaptureVideoDataOutputSampleBufferDel
     }
 
     private func configure() throws {
-        // Macs report their built-in camera as .unspecified, so fall back to the system default there.
+        var selectedCamera = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: .front)
+        #if targetEnvironment(macCatalyst)
+        // A Mac’s user-facing webcam can report an unspecified position.
+        selectedCamera = selectedCamera ?? AVCaptureDevice.default(for: .video)
+        #endif
         guard AVCaptureDevice.authorizationStatus(for: .video) == .authorized,
-              let camera = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: .front)
-                ?? AVCaptureDevice.default(for: .video) else {
+              let camera = selectedCamera, camera.position != .back else {
             throw CameraError.unavailable
         }
         let input = try AVCaptureDeviceInput(device: camera)

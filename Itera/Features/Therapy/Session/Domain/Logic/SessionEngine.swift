@@ -44,6 +44,8 @@ struct SessionSnapshot {
     var assistanceKey: String?
     var cameraWaiting = true
     var summary: SessionSummary?
+    /// Every set recorded so far, so set pages can show earlier sets before the summary exists.
+    var results: [SessionActivityResult] = []
 }
 
 struct SessionTransition {
@@ -169,6 +171,7 @@ struct SessionEngine {
         snapshot.setNumber = progress.setNumber
         snapshot.activityCount = progress.routine.activities.count
         snapshot.paused = pausedSince != nil
+        snapshot.results = progress.results
         snapshot.summary = progress.summary
         if let summary = progress.summary, snapshot.stage != .summary {
             snapshot.stage = .summary
@@ -307,8 +310,8 @@ struct SessionEngine {
                 announce("parity.getReady", timed: false)
             }
         } else if case .movement = result.presentation, old?.count != result.presentation.count {
+            // Each accepted repetition is counted aloud.
             effects.append(.audio(UUID(), .count(result.presentation.count)))
-
         } else if case .movement = result.presentation,
             let previous = old?.guide, let next = result.presentation.guide,
             previous.targetActive, !next.targetActive {

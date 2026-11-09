@@ -27,20 +27,7 @@ struct ShoulderRotationMovieView: View {
         ZStack {
             ShoulderRotationPlayer(resource: resource, paused: holdsPose)
 
-            VStack {
-                Spacer()
-
-                HStack(spacing: 8) {
-                    Image(systemName: holdsPose ? "pause.fill" : "waveform.path")
-                    Text(holdsPose ? "balance.animationPaused" : "balance.animationPlaying")
-                }
-                .typography(.footnote)
-                .foregroundStyle(TherapyPalette.ink)
-                .padding(.horizontal, 14)
-                .padding(.vertical, 8)
-                .background(.ultraThinMaterial, in: Capsule())
-                .padding(12)
-            }
+            TherapyDemoCaption(paused: holdsPose)
         }
         .background(TherapyPalette.mediaBackground)
         .clipShape(RoundedRectangle(cornerRadius: 24))

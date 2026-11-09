@@ -78,16 +78,28 @@ enum TherapyPalette {
     /// Countdown ring shown while resting.
     static let restRing = Color(uiColor: .systemBlue)
     static let restTrack = Color(uiColor: .systemGray5)
-    /// Mint green and peach for camera guidance bubbles, rings and arrows, matching the finger
-    /// exercise identity (`secondary` and `tertiary`). Fixed rather than adaptive because they sit
-    /// on live video under a dark underlay. Guidance never uses red. The names are historical.
-    static let calmTeal = Color(red: 0.62, green: 0.90, blue: 0.76)
-    static let calmBlue = Color(red: 0.99, green: 0.80, blue: 0.60)
+    /// Fixed guidance colors for rings and landmarks over live video.
+    static let guidanceBlue = Color(red: 0.16, green: 0.65, blue: 0.98)
+    static let guidanceYellow = Color(red: 1.0, green: 0.72, blue: 0.0)
     /// Dark edge drawn under every guidance shape so it keeps contrast on light and dark video.
     static let calmUnderlay = Color.black.opacity(0.5)
     /// Challenge card fill and its bold green ink (custom pair, contrast above 7:1).
     static let challengeFill = adaptive(light: (0.93, 0.96, 0.94), dark: (0.12, 0.18, 0.15))
     static let challengeInk = adaptive(light: (0.10, 0.27, 0.20), dark: (0.66, 0.86, 0.75))
+
+    // MARK: - Daily plan palette
+
+    /// Rust brand fill of the prominent "Mulai Latihan" capsule. White text on it is about 5.9:1.
+    static let brand = Color(red: 0.71, green: 0.22, blue: 0.10)
+    static let onBrand = Color.white
+    /// Warm off-white card behind each exercise in the plan timeline.
+    static let planCard = adaptive(light: (0.973, 0.957, 0.945), dark: (0.17, 0.155, 0.145))
+    /// Filled timeline dot and completed connector. Fixed: it is a marker, not text.
+    static let planMarker = guidanceYellow
+    /// Dashed timeline line and the outline of upcoming dots.
+    static let planTrack = Color(uiColor: .systemGray4)
+    /// Slightly deeper warm grey behind demo media and the set results panel.
+    static let planPanel = adaptive(light: (0.937, 0.918, 0.894), dark: (0.20, 0.185, 0.17))
 
     private static func adaptive(
         light: (Double, Double, Double),
@@ -118,9 +130,44 @@ struct TherapyButton: View {
     var disabled = false
     /// The monochrome pill appearance: dark when primary, grey when `secondary`.
     var pill = false
+    /// The large rust capsule that starts today's plan. It sizes to its label instead of
+    /// filling the width, and ignores `pill` and `secondary`.
+    var prominent = false
+    /// With `pill`, fills the pill with the rust brand color instead of the dark action color.
+    var brand = false
     let action: () -> Void
 
     var body: some View {
+        if prominent {
+            prominentButton
+        } else {
+            standardButton
+        }
+    }
+
+    private var prominentButton: some View {
+        Button(action: action) {
+            HStack(spacing: 20) {
+                if let symbol {
+                    Image(systemName: symbol)
+                }
+                Text(title)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
+            }
+            .typography(size: 36, weight: .semiBold, relativeTo: .title)
+            .frame(minHeight: 96)
+            .padding(.horizontal, 48)
+            .foregroundStyle(TherapyPalette.onBrand)
+            .background(TherapyPalette.brand, in: Capsule())
+            .contentShape(Capsule())
+        }
+        .buttonStyle(TherapySoundButtonStyle())
+        .disabled(disabled)
+        .opacity(disabled ? 0.5 : 1)
+    }
+
+    private var standardButton: some View {
         Button(role: destructive ? .destructive : nil, action: action) {
             HStack(spacing: 12) {
                 if let symbol {
@@ -145,6 +192,9 @@ struct TherapyButton: View {
             if destructive {
                 return .white
             }
+            if brand {
+                return TherapyPalette.onBrand
+            }
             return secondary ? TherapyPalette.ink : TherapyPalette.onAction
         }
         return secondary ? TherapyPalette.ink : TherapyPalette.onAccent
@@ -155,6 +205,9 @@ struct TherapyButton: View {
             return pill ? Color(uiColor: .systemRed) : TherapyPalette.warning
         }
         if pill {
+            if brand {
+                return TherapyPalette.brand
+            }
             return secondary ? TherapyPalette.actionMuted : TherapyPalette.action
         }
         return secondary ? TherapyPalette.mint : TherapyPalette.green

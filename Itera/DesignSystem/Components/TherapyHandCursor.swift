@@ -22,9 +22,9 @@ struct TherapyHandCursor: View {
             .typography(size: 34, weight: .bold)
             .foregroundStyle(closed ? TherapyPalette.calmUnderlay : .white)
             .frame(width: 68, height: 68)
-            .background(closed ? TherapyPalette.calmTeal : TherapyPalette.calmUnderlay, in: Circle())
+            .background(closed ? TherapyPalette.guidanceBlue : TherapyPalette.calmUnderlay, in: Circle())
             .overlay(
-                Circle().stroke(holding ? TherapyPalette.calmTeal : .white, lineWidth: holding ? 6 : 3)
+                Circle().stroke(holding ? TherapyPalette.guidanceBlue : .white, lineWidth: holding ? 6 : 3)
             )
             .scaleEffect(closed ? 0.88 : 1)
             .shadow(color: .black.opacity(0.4), radius: 4)

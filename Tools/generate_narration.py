@@ -65,17 +65,57 @@ BODY_KEYS = (
     "session.holdTarget", "session.moveTarget", "session.reachStart", "session.rest",
     "session.returnStart", "session.timedPractice",
     "session.reachRight", "session.reachLeft", "session.reachUp",
+    # Activity instructions announced by SessionEngine (CupActivity, DirectionalReachActivity,
+    # FoldTowelActivity, SitToStandActivity) and its stage cards.
+    "cup.ambiguous", "cup.evidenceMissing", "cup.trackingLost",
+    "session.assistance.cup", "session.assistance.sitToStand", "session.feedback", "session.skipped",
+    "session.reachAcross", "session.reachLeftFar", "session.reachRightFar", "session.reachUpFar",
+    "session.reachTrackingLost",
+    "sts.holdSeated", "sts.holdStanding", "sts.leanFirst", "sts.leanForward", "sts.sitDown",
+    "sts.slowDown", "sts.standUp", "sts.trackingLost", "sts.trial",
+    "towel.approach", "towel.fold", "towel.recover", "towel.release", "towel.trackingLost",
+    # Sit-to-stand in BalanceSessionViewModel speaks the engine's instruction key.
+    "sitToStand.tracking",
+    # Rotation exercises narrate each calibration step (speakCalibrationGuidanceIfNeeded).
+    "rotation.calibration.startHint", "rotation.calibration.endHint",
+    "internalRotation.calibration.endHint",
 ) + tuple(
     f"session.opening.{kind}.{side}.{part}"
     for kind in ("armRaise", "elbowBend")
     for side in ("left", "right")
     for part in ("positioning", "ready")
+) + tuple(
+    # BalanceExercise.key("voice.*") for the exercises added after Balancing. Keys an exercise
+    # shares with another prefix are absent from the catalog and skipped by collect_lines.
+    f"{prefix}.voice.{name}"
+    for prefix in ("rotation", "shoulderFlexion", "internalRotation", "sitToStand")
+    for name in ("complete", "leftTarget", "rightTarget", "returnAndSwitch", "returnSameSide")
 )
 
 # The app speaks `speak.<key>` when the catalog has one (shorter than the displayed text), so the
 # recording is rendered from it. Rendering a spoken variant for a key that already has a recording
 # replaces that recording on the next run, because the text fingerprint changes.
 SPOKEN_PREFIX = "speak."
+# Spoken numbers for countdowns and repetition counts, one clip each ("narration-id-count-3").
+NUMBER_RANGE = range(1, 101)
+UNITS = ["", "satu", "dua", "tiga", "empat", "lima", "enam", "tujuh", "delapan", "sembilan"]
+
+
+def indonesian_number(n):
+    """Indonesian words for 1-100: sebelas, dua belas, dua puluh satu, seratus."""
+    if n == 100:
+        return "seratus"
+    if n == 10:
+        return "sepuluh"
+    if n == 11:
+        return "sebelas"
+    if n < 10:
+        return UNITS[n]
+    if n < 20:
+        return f"{UNITS[n - 10]} belas"
+    tens, unit = divmod(n, 10)
+    return f"{UNITS[tens]} puluh" + (f" {UNITS[unit]}" if unit else "")
+
 
 # Calm, clear delivery for older patients. `speed` below 1 slows speech slightly.
 VOICE_SETTINGS = {
@@ -114,6 +154,13 @@ def collect_lines(groups):
         for key, values in FORMAT_KEYS.items():
             wanted.extend((key, value) for value in values)
 
+    numbers = []
+    if "numbers" in groups:
+        for n in NUMBER_RANGE:
+            # A full stop gives each number a clean, final ending.
+            text = indonesian_number(n).capitalize() + "."
+            numbers.append({"key": "count", "argument": n, "text": text, "name": clip_name("count", n)})
+
     lines = []
     for key, argument in wanted:
         text = indonesian_text(strings.get(SPOKEN_PREFIX + key, {})) or indonesian_text(strings.get(key, {}))
@@ -124,7 +171,7 @@ def collect_lines(groups):
             text = text.replace("%lld", str(argument))
         lines.append({"key": key, "argument": argument, "text": text, "name": clip_name(key, argument)})
 
-    return sorted(lines, key=lambda line: line["name"])
+    return sorted(lines + numbers, key=lambda line: line["name"])
 
 
 def tls_context():
@@ -198,7 +245,7 @@ def main():
     parser.add_argument("--voice-name", default="Marizka")
     parser.add_argument("--voice-id", help="Use this voice ID instead of searching by name.")
     parser.add_argument("--model", default="eleven_multilingual_v2")
-    parser.add_argument("--groups", default="finger,body", help="Comma-separated: finger, body.")
+    parser.add_argument("--groups", default="finger,body,numbers", help="Comma-separated: finger, body, numbers.")
     parser.add_argument("--dry-run", action="store_true", help="List sentences and characters only.")
     parser.add_argument("--force", action="store_true", help="Re-render every sentence.")
     parser.add_argument("--normalize-only", action="store_true", help="Re-level existing raw clips; no API calls.")

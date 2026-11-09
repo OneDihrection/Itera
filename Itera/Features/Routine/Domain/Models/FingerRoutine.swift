@@ -62,5 +62,15 @@ struct FingerRoutine: Equatable {
     var restSeconds = 20
     var voiceControl = false
     var ambientSound = false
-    var exercises: [FingerExercise] { category.exercises }
+    /// Runs just this exercise of the category, as a daily-plan item does; `nil` runs them all.
+    /// Not part of the saved settings: it is set for one session only.
+    var only: FingerExercise?
+
+    var exercises: [FingerExercise] {
+        guard let only, only.category == category else {
+            return category.exercises
+        }
+
+        return [only]
+    }
 }

@@ -25,7 +25,6 @@ final class BodyTrackingService: NSObject, AVCaptureVideoDataOutputSampleBufferD
     private var pending: TrackingObservation?
     private var deliveryScheduled = false
     private var generation = UUID()
-    private var position: AVCaptureDevice.Position = .front
     private var orientation: AVCaptureVideoOrientation = .landscapeLeft
     private var previousCenterStage: (mode: AVCaptureDevice.CenterStageControlMode, enabled: Bool)?
     private var wantsCapture = false
@@ -217,16 +216,15 @@ final class BodyTrackingService: NSObject, AVCaptureVideoDataOutputSampleBufferD
         }
     }
 
-    func configure(front: Bool, landscapeRight: Bool) {
+    func configure(landscapeRight: Bool) {
         queue.async { [weak self] in
             guard let self else {
                 return
             }
-            let position: AVCaptureDevice.Position = front ? .front : .back
             let orientation: AVCaptureVideoOrientation = landscapeRight ? .landscapeRight : .landscapeLeft
             let initialConfiguration = !self.hasInitialOrientation
             self.hasInitialOrientation = true
-            guard initialConfiguration || self.position != position || self.orientation != orientation else {
+            guard initialConfiguration || self.orientation != orientation else {
                 return
             }
             // Establishing preview orientation is setup, not lost capture evidence.
@@ -240,7 +238,6 @@ final class BodyTrackingService: NSObject, AVCaptureVideoDataOutputSampleBufferD
             for output in self.session.outputs { self.session.removeOutput(output) }
             self.session.commitConfiguration()
             self.configured = false
-            self.position = position
             self.orientation = orientation
             self.invalidateGeneration()
             self.startIfRequested()
@@ -261,16 +258,20 @@ final class BodyTrackingService: NSObject, AVCaptureVideoDataOutputSampleBufferD
         guard !configured else {
             return
         }
-        let selectedCamera = (normalLens ? nil : AVCaptureDevice.default(
-            .builtInUltraWideCamera, for: .video, position: position
+        var selectedCamera = (normalLens ? nil : AVCaptureDevice.default(
+            .builtInUltraWideCamera, for: .video, position: .front
         )) ?? AVCaptureDevice.default(
-            .builtInWideAngleCamera, for: .video, position: position
-        ) ?? AVCaptureDevice.default(for: .video)
-        guard let camera = selectedCamera else {
+            .builtInWideAngleCamera, for: .video, position: .front
+        )
+        #if targetEnvironment(macCatalyst)
+        // A Mac’s user-facing webcam can report an unspecified position.
+        selectedCamera = selectedCamera ?? AVCaptureDevice.default(for: .video)
+        #endif
+        guard let camera = selectedCamera, camera.position != .back else {
             throw TrackingError.cameraUnavailable
         }
         let input = try AVCaptureDeviceInput(device: camera)
-        NSLog("Body capture selected device=%@ type=%@ position=%ld", camera.localizedName, camera.deviceType.rawValue, position.rawValue)
+        NSLog("Body capture selected device=%@ type=%@ position=%ld", camera.localizedName, camera.deviceType.rawValue, camera.position.rawValue)
         let output = AVCaptureVideoDataOutput()
         output.alwaysDiscardsLateVideoFrames = true
         output.setSampleBufferDelegate(self, queue: queue)
@@ -492,27 +493,42 @@ final class BodyTrackingService: NSObject, AVCaptureVideoDataOutputSampleBufferD
 
         guard !torso.isEmpty, confident.count >= 2 else {
             // Without a torso this person cannot be followed, so they can never win continuity.
-            return BodySubjectSelector.Candidate(
-                torso: TherapyPoint(x: .infinity, y: .infinity), size: 0, torsoSize: 0)
+            return BodySubjectSelector.Candidate(torso: TherapyPoint(x: .infinity, y: .infinity), size: 0)
         }
 
-        let xs = confident.map(\.x)
-        let ys = confident.map(\.y)
+        let center = torso.reduce(TherapyPoint(x: 0, y: 0), +).scaled(1 / Double(torso.count))
+
+        return BodySubjectSelector.Candidate(
+            torso: center,
+            size: bodySize(points, torso: torso, aspect: aspect),
+            centerOffset: abs(center.x / max(aspect, 0.0001) - 0.5)
+        )
+    }
+
+    /// Shoulder width: visible for every upper-body exercise, unchanged by arm movement, and
+    /// steadier than a box that grows when hips appear or disappear behind a table. Falls
+    /// back to the torso box when a shoulder is not visible.
+    private static func bodySize(
+        _ points: [VNHumanBodyPoseObservation.JointName: VNRecognizedPoint],
+        torso: [TherapyPoint],
+        aspect: Double
+    ) -> Double {
+        if let left = points[.leftShoulder], let right = points[.rightShoulder],
+           left.confidence >= 0.3, right.confidence >= 0.3 {
+            let width = TherapyPoint(
+                x: (left.location.x - right.location.x) * aspect,
+                y: left.location.y - right.location.y
+            )
+            return width.length
+        }
+
+        let xs = torso.map(\.x)
+        let ys = torso.map(\.y)
         let diagonal = TherapyPoint(
             x: (xs.max() ?? 0) - (xs.min() ?? 0),
             y: (ys.max() ?? 0) - (ys.min() ?? 0)
         )
-        let center = torso.reduce(TherapyPoint(x: 0, y: 0), +).scaled(1 / Double(torso.count))
-
-        let torsoXs = torso.map(\.x)
-        let torsoYs = torso.map(\.y)
-        let torsoDiagonal = TherapyPoint(
-            x: (torsoXs.max() ?? 0) - (torsoXs.min() ?? 0),
-            y: (torsoYs.max() ?? 0) - (torsoYs.min() ?? 0)
-        )
-
-        return BodySubjectSelector.Candidate(
-            torso: center, size: diagonal.length, torsoSize: torsoDiagonal.length)
+        return diagonal.length
     }
 
     private func invalidateGeneration() {

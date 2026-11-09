@@ -16,12 +16,7 @@ enum AppRoute: Hashable {
     case therapyOverview(TherapyCategory)
     case balanceOverview(BalanceExercise)
     case armRotationHome
-    case balanceSession(
-        exercise: BalanceExercise,
-        repetitions: Int,
-        holdSeconds: Int,
-        armSelection: BalanceArmSelection
-    )
+    case balanceSession(exercise: BalanceExercise, settings: BalancePracticeSettings)
     case plan(ExerciseCategory)
     case reports
     case taskReports
@@ -30,13 +25,15 @@ enum AppRoute: Hashable {
     case achievement(String)
     case achievementShare(String)
     case report(UUID)
-    case fingerPause
     case fingerSession
-    case reflection
     case sessionComplete
     case practicePreferences
     case routineSettings(ExerciseCategory)
     case exercisePreview(FingerExercise)
+    /// The page after the last daily-plan exercise.
+    case planNext
+    /// The intro page of one daily-plan item, by item id.
+    case planIntro(String)
 }
 
 enum AppTab: Hashable {

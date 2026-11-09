@@ -25,6 +25,8 @@ final class AppDependencies: HistoryRecovering {
     let audio = SessionAudioService()
     let routine: RoutineViewModel
     let taskRoutine: RoutineViewModel
+    /// Today's plan across programs; Beranda shows it and finishing sessions report to it.
+    let dailyPlan = DailyPlanViewModel(repository: LocalDailyPlanProgressRepository())
     var selectedRoutine = Routine.demo()
     let sessions: any SessionRepository
     private(set) var recoveryFailure: String?
@@ -98,11 +100,22 @@ final class AppDependencies: HistoryRecovering {
         await forearm.refresh()
     }
 
-    func prepareSession(category: ExerciseCategory = .fingers, continuing: Bool = false) {
+    /// - Parameter only: one exercise of the category to run alone, as a daily-plan item does.
+    func prepareSession(
+        category: ExerciseCategory = .fingers,
+        continuing: Bool = false,
+        only: FingerExercise? = nil
+    ) {
         let model = homeModel(for: category)
         let checkpoint = continuing ? model.checkpoint : nil
+        var routine = checkpoint?.routine ?? model.routine
+
+        if checkpoint == nil {
+            routine.only = only
+        }
+
         session = FingerSessionViewModel(
-            routine: checkpoint?.routine ?? model.routine, checkpoint: checkpoint,
+            routine: routine, checkpoint: checkpoint,
             camera: camera, audio: fingerAudio, permissions: permissions,
             repository: category == .fingers ? repository : forearmRepository
         )

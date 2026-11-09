@@ -415,6 +415,26 @@ struct ArmMovementEngine: BalanceMovementEngine {
         clearTransientEvidence()
     }
 
+    mutating func nextSet() {
+        guard neutrals[snapshot.activeArm] != nil, targets[snapshot.activeArm] != nil else {
+            restart()
+            return
+        }
+
+        snapshot.metrics = BalanceMetrics()
+        targetHoldStartedAt = nil
+        targetOutsideSince = nil
+        returnHoldStartedAt = nil
+        returnOutsideSince = nil
+        kinematics = nil
+        jerkSquareSum = 0
+        jerkSampleCount = 0
+
+        // The set ended at the target, so the first step is the usual return to rest.
+        snapshot.phase = .returning
+        snapshot.instructionKey = exercise.key("return")
+    }
+
     mutating func restart() {
         self = ArmMovementEngine(
             goal: snapshot.goal,

@@ -23,6 +23,9 @@ struct FingerSessionRecord: Codable {
     let feeling: String?
     let exerciseIndex: Int
     let results: [ResultRecord]
+    /// The single exercise a daily-plan session ran; absent for whole-program sessions and in
+    /// records written before it existed.
+    let only: String?
 
     struct ResultRecord: Codable {
         let kind: String
@@ -49,6 +52,7 @@ struct FingerSessionRecord: Codable {
         outcome = summary.outcome.rawValue
         feeling = summary.feeling?.rawValue
         exerciseIndex = summary.exerciseIndex
+        only = summary.routine.only?.rawValue
         results = summary.results.map {
             ResultRecord(kind: $0.kind.rawValue, sets: $0.completedSets,
                          repetitions: $0.repetitions, seconds: $0.activeSeconds,
@@ -71,6 +75,7 @@ struct FingerSessionRecord: Codable {
         routine.restSeconds = rest
         routine.voiceControl = voice
         routine.ambientSound = ambient
+        routine.only = only.flatMap(FingerExercise.init(rawValue:))
         let mapped = try results.map { result -> FingerExerciseResult in
             guard let kind = FingerExercise(rawValue: result.kind),
                   result.sets >= 0, result.sets <= sets, result.repetitions >= 0,

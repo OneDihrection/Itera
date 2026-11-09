@@ -226,7 +226,7 @@ struct SessionTargetOverlay: View {
         diamond.addLine(to: CGPoint(x: point.x, y: point.y + 22))
         diamond.addLine(to: CGPoint(x: point.x - 22, y: point.y))
         diamond.closeSubpath()
-        context.fill(diamond, with: .color(TherapyPalette.calmTeal.opacity(0.7)))
+        context.fill(diamond, with: .color(TherapyPalette.guidanceBlue.opacity(0.7)))
         strokeWithUnderlay(diamond, color: .white, width: 4, context: &context)
 
         let text = context.resolve(AppTypography.overlayText("parity.farthest", size: 30, weight: .bold))
@@ -244,13 +244,13 @@ struct SessionTargetOverlay: View {
         context.draw(text, at: CGPoint(x: rect.midX, y: rect.midY))
     }
 
-    /// The tracked joint: a large white disc the patient can always find.
+    /// The tracked joint: a large yellow disc the patient can always find.
     private func drawJoint(_ point: CGPoint, context: inout GraphicsContext) {
         let rect = CGRect(x: point.x - 14, y: point.y - 14, width: 28, height: 28)
         let disc = Path(ellipseIn: rect)
         context.fill(Path(ellipseIn: rect.insetBy(dx: -7, dy: -7)), with: .color(TherapyPalette.calmUnderlay))
-        context.fill(disc, with: .color(.white))
-        context.stroke(disc, with: .color(TherapyPalette.calmBlue), lineWidth: 5)
+        context.fill(disc, with: .color(TherapyPalette.guidanceYellow))
+        context.stroke(disc, with: .color(.white), lineWidth: 5)
     }
 
     private func drawBubble(
@@ -270,11 +270,11 @@ struct SessionTargetOverlay: View {
         case .start:
             // Home: outline only, so it reads differently from the filled target.
             if active {
-                strokeWithUnderlay(outline, color: TherapyPalette.calmBlue, width: 7, context: &context)
+                strokeWithUnderlay(outline, color: TherapyPalette.guidanceYellow, width: 7, context: &context)
             } else {
                 strokeWithUnderlay(
                     outline,
-                    color: TherapyPalette.calmBlue.opacity(0.7),
+                    color: TherapyPalette.guidanceYellow.opacity(0.7),
                     width: 3.5,
                     style: StrokeStyle(lineWidth: 3.5, lineCap: .round, dash: [8, 10]),
                     context: &context
@@ -282,7 +282,7 @@ struct SessionTargetOverlay: View {
             }
         case .target:
             guard active else {
-                strokeWithUnderlay(outline, color: TherapyPalette.calmTeal.opacity(0.7), width: 3.5, context: &context)
+                strokeWithUnderlay(outline, color: TherapyPalette.guidanceBlue.opacity(0.7), width: 3.5, context: &context)
                 break
             }
 
@@ -291,22 +291,22 @@ struct SessionTargetOverlay: View {
             let haloRect = CGRect(x: center.x - halo, y: center.y - halo, width: halo * 2, height: halo * 2)
             context.stroke(
                 Path(ellipseIn: haloRect),
-                with: .color(TherapyPalette.calmTeal.opacity(0.4 + 0.3 * (1 - breath))),
+                with: .color(TherapyPalette.guidanceBlue.opacity(0.4 + 0.3 * (1 - breath))),
                 lineWidth: 10
             )
             context.fill(
                 outline,
                 with: .radialGradient(
                     Gradient(colors: [
-                        TherapyPalette.calmTeal.opacity(arrived ? 0.65 : 0.5),
-                        TherapyPalette.calmTeal.opacity(arrived ? 0.9 : 0.75)
+                        TherapyPalette.guidanceBlue.opacity(arrived ? 0.65 : 0.5),
+                        TherapyPalette.guidanceBlue.opacity(arrived ? 0.9 : 0.75)
                     ]),
                     center: center,
                     startRadius: 0,
                     endRadius: radius
                 )
             )
-            strokeWithUnderlay(outline, color: TherapyPalette.calmTeal, width: 10, context: &context)
+            strokeWithUnderlay(outline, color: TherapyPalette.guidanceBlue, width: 10, context: &context)
             context.stroke(
                 Path(ellipseIn: rect.insetBy(dx: 7, dy: 7)),
                 with: .color(.white.opacity(0.9)),
@@ -321,7 +321,7 @@ struct SessionTargetOverlay: View {
     }
 
     /// The hold around the tracked joint: a large ring that is visible from the first frame of the
-    /// hold, with a teal fill that grows as the hold completes. It carries no numbers.
+    /// hold, with a blue fill that grows as the hold completes. It carries no numbers.
     private func drawJointHold(center: CGPoint, progress: Double, context: inout GraphicsContext) {
         let radius = 60.0
         let clamped = min(1, max(0, progress))
@@ -335,7 +335,7 @@ struct SessionTargetOverlay: View {
             let fill = radius * clamped
             context.fill(
                 Path(ellipseIn: CGRect(x: center.x - fill, y: center.y - fill, width: fill * 2, height: fill * 2)),
-                with: .color(TherapyPalette.calmTeal.opacity(0.35))
+                with: .color(TherapyPalette.guidanceBlue.opacity(0.35))
             )
 
             var arc = Path()
@@ -345,7 +345,7 @@ struct SessionTargetOverlay: View {
                 clockwise: false
             )
             context.stroke(arc, with: .color(TherapyPalette.calmUnderlay), style: StrokeStyle(lineWidth: 22, lineCap: .round))
-            context.stroke(arc, with: .color(TherapyPalette.calmTeal), style: StrokeStyle(lineWidth: 14, lineCap: .round))
+            context.stroke(arc, with: .color(TherapyPalette.guidanceBlue), style: StrokeStyle(lineWidth: 14, lineCap: .round))
         }
 
         drawJoint(center, context: &context)
@@ -380,7 +380,7 @@ struct SessionTargetOverlay: View {
         let rect = CGRect(x: center.x - radius, y: center.y - radius, width: radius * 2, height: radius * 2)
         context.stroke(
             Path(ellipseIn: rect),
-            with: .color(TherapyPalette.calmTeal.opacity(0.85 * (1 - progress))),
+            with: .color(TherapyPalette.guidanceBlue.opacity(0.85 * (1 - progress))),
             lineWidth: 8 * (1 - progress) + 1
         )
     }

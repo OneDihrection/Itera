@@ -7,59 +7,74 @@
 
 import Foundation
 
-/// Chooses which detected person is the patient when others are in view, and keeps following them.
+/// Chooses which detected person is the patient when others are in view.
 ///
-/// The first selection takes the most dominant person: the largest one (closest to the camera).
-/// Whoever is in view first, at calibration, becomes the patient. From then on the selector is **locked** to that person: a candidate is accepted only if its
-/// torso is near the patient's last torso and of a similar torso size, and a bystander is never
-/// adopted just because they look larger. While the patient is out of view nothing is reported
-/// (rather than switching people); only after `relockTimeout` without the patient may the
-/// dominance rule pick again. Torso size, unlike the whole-body extent, does not change when the
-/// patient raises or extends an arm.
+/// The patient sits facing the iPad and stays in roughly one place, while bystanders walk
+/// through. Selection prefers, in order:
+/// 1. **Continuity**: the person whose torso is nearest the patient's recently tracked torso,
+///    at a similar size, and still near the patient's usual place.
+/// 2. **Usual place**: after a longer loss (someone walked in front), only a person back at
+///    the remembered seat and size is picked up again, never simply the largest person.
+/// 3. **First pick**: before any place is known, a person clearly larger than everyone else,
+///    or, among people of similar size, the one clearly nearest the centre of the frame,
+///    where setup places the patient. Position only breaks ties; it never decides alone.
 ///
-/// Anatomical sides always come from the selected person's own landmarks, never from screen
-/// position.
+/// When no rule settles it, no subject is reported, so exercises pause rather than follow a
+/// stranger. Anatomical sides always come from the selected person's own landmarks, never
+/// from screen position.
 struct BodySubjectSelector {
     struct Candidate {
         /// Aspect-corrected mean of the confident torso joints.
         let torso: TherapyPoint
-        /// Aspect-corrected diagonal of the confident joints' bounding box (for dominance).
+        /// Aspect-corrected shoulder width, or the torso box diagonal when a shoulder is hidden.
+        /// Arm movement does not change it, so it reliably tells a nearer bystander from the
+        /// seated patient.
         let size: Double
-        /// Aspect-corrected diagonal of the confident torso joints' bounding box (for identity).
-        let torsoSize: Double
+        /// Horizontal distance of the torso from the frame's centre, 0 to 0.5.
+        var centerOffset: Double = 0.5
     }
 
     /// How long a lost patient remains the preferred subject. Matches the exercise hold grace.
     static let continuityWindow = 1.5
-    /// How long a locked patient may be missing before another person may be adopted.
-    static let relockTimeout = 5.0
-    private static let torsoSizeRange = 0.5...2.0
-    /// The second-nearest person must be this much farther than the nearest to count as unambiguous.
-    private static let ambiguityMargin = 1.3
+    /// How long the patient's usual place is remembered after tracking is lost.
+    static let anchorMemory = 60.0
+    /// How much more centred the patient must be than everyone else to win a first-pick tie.
+    private static let centeringMargin = 0.12
+    private static let dominanceRatio = 1.4
+    private static let sizeRange = 0.7...1.45
+    /// Stricter size match when picking the patient up again at their usual place.
+    private static let anchorSizeRange = 0.75...1.33
+    /// How quickly the usual place follows the tracked patient. Slow, so reaching across the
+    /// body during an exercise does not drag the remembered seat with the arm.
+    private static let anchorFollowRate = 0.05
 
     private var lastTorso: TherapyPoint?
-    private var lastTorsoSize = 0.0
+    private var lastSize = 0.0
     private var lastTime: Double?
+    private var anchorTorso: TherapyPoint?
+    private var anchorSize = 0.0
+    private var anchorTime: Double?
     private var generation: UUID?
 
-    /// Increments whenever a patient is newly locked, so smoothing never blends two people.
+    /// Increments whenever the subject is picked without frame-to-frame continuity (first pick
+    /// or pick-up at the usual place), so landmark smoothing never blends two people.
     private(set) var epoch = 0
 
+    /// Forgets the patient. A new camera generation (restart, camera or orientation change)
+    /// means positions are no longer comparable.
     mutating func reset() {
         lastTorso = nil
-        lastTorsoSize = 0
+        lastSize = 0
         lastTime = nil
+        anchorTorso = nil
+        anchorSize = 0
+        anchorTime = nil
         generation = nil
     }
 
-    /// - Returns: the index of the patient in `candidates`, or `nil` when ambiguous or absent.
+    /// - Returns: the index of the patient in `candidates`, or `nil` when ambiguous.
     mutating func select(_ candidates: [Candidate], at time: Double, generation: UUID) -> Int? {
         if self.generation != generation {
-            reset()
-            self.generation = generation
-        }
-
-        if let lastTime, time - lastTime > Self.relockTimeout {
             reset()
             self.generation = generation
         }
@@ -68,78 +83,140 @@ struct BodySubjectSelector {
             return nil
         }
 
-        if lastTorso != nil {
-            return followLockedPatient(in: candidates, at: time)
+        if let continuing = continuingIndex(in: candidates, at: time) {
+            remember(candidates[continuing], at: time)
+            return continuing
         }
 
-        guard let index = initialIndex(in: candidates),
-              candidates[index].torsoSize > 0 else {
+        let found = anchoredIndex(in: candidates, at: time)
+            ?? initialIndex(in: candidates, at: time)
+
+        guard let index = found else {
             return nil
         }
 
-        lock(to: candidates[index], at: time)
-
+        // The track was broken, so earlier landmarks may belong to someone else.
+        epoch += 1
+        remember(candidates[index], at: time)
         return index
     }
 
     // MARK: - Rules
 
-    private mutating func lock(to candidate: Candidate, at time: Double) {
-        lastTorso = candidate.torso
-        lastTorsoSize = candidate.torsoSize
-        lastTime = time
-        epoch += 1
-    }
-
-    private mutating func followLockedPatient(in candidates: [Candidate], at time: Double) -> Int? {
-        guard let lastTorso, let lastTime, lastTorsoSize > 0 else {
+    private func continuingIndex(in candidates: [Candidate], at time: Double) -> Int? {
+        guard let lastTorso,
+              let lastTime,
+              time - lastTime <= Self.continuityWindow,
+              lastSize > 0 else {
             return nil
         }
 
-        // The torso centre is a mean of whichever joints are confident, so it jumps by up to half
-        // a torso when hips or shoulders drop out. The gate allows for that and grows with the
-        // time the patient was unseen, since they may also have shifted.
-        let elapsed = max(0, time - lastTime)
-        let gate = max(0.1, lastTorsoSize * min(2.0, 0.7 + 0.3 * elapsed))
+        // A seated patient's torso moves well under half a body-size between tracked frames.
+        let gate = max(0.08, lastSize * 0.5)
 
-        // Identity combines position and apparent size, so a bystander of another size at a
-        // similar spot ranks behind the patient.
-        let matches = candidates.indices
-            .filter { candidates[$0].torsoSize > 0 }
-            .filter { Self.torsoSizeRange.contains(candidates[$0].torsoSize / lastTorsoSize) }
-            .map { index -> (index: Int, distance: Double) in
-                let distance = (candidates[index].torso - lastTorso).length
-                let sizePenalty = abs(log(candidates[index].torsoSize / lastTorsoSize)) * lastTorsoSize * 0.5
+        let nearest = candidates.indices
+            .filter { Self.sizeRange.contains(candidates[$0].size / lastSize) }
+            .filter { matchesAnchorSize(candidates[$0], at: time) }
+            .filter { isNearAnchor(candidates[$0], at: time, gateScale: 1.5) }
+            .map { (index: $0, distance: (candidates[$0].torso - lastTorso).length) }
+            .min { $0.distance < $1.distance }
 
-                return (index, distance + sizePenalty)
-            }
-            .sorted { $0.distance < $1.distance }
-
-        guard let nearest = matches.first, nearest.distance <= gate else {
+        guard let nearest, nearest.distance <= gate else {
             return nil
-        }
-
-        let ambiguous = matches.count > 1
-            && matches[1].distance <= gate
-            && matches[1].distance < nearest.distance * Self.ambiguityMargin
-
-        self.lastTime = time
-
-        // When someone else is almost as close, keep following the old reference instead of
-        // letting it drift toward the bystander.
-        if !ambiguous {
-            self.lastTorso = candidates[nearest.index].torso
-            lastTorsoSize = lastTorsoSize * 0.9 + candidates[nearest.index].torsoSize * 0.1
         }
 
         return nearest.index
     }
 
-    /// The largest person wins even by a small margin: requiring a clear margin left the
-    /// skeleton missing whenever two people sat at a similar distance.
-    private func initialIndex(in candidates: [Candidate]) -> Int? {
-        candidates.indices
-            .filter { candidates[$0].torsoSize > 0 }
-            .max { candidates[$0].size < candidates[$1].size }
+    /// After a longer loss, only someone back at the patient's usual place and size.
+    private func anchoredIndex(in candidates: [Candidate], at time: Double) -> Int? {
+        guard let anchorTorso, hasAnchor(at: time) else {
+            return nil
+        }
+
+        let nearest = candidates.indices
+            .filter { matchesAnchorSize(candidates[$0], at: time) }
+            .filter { isNearAnchor(candidates[$0], at: time, gateScale: 1) }
+            .map { (index: $0, distance: (candidates[$0].torso - anchorTorso).length) }
+            .min { $0.distance < $1.distance }
+
+        return nearest?.index
+    }
+
+    /// Only before the patient's place is known; afterwards a stranger is never picked by size.
+    private func initialIndex(in candidates: [Candidate], at time: Double) -> Int? {
+        guard !hasAnchor(at: time) else {
+            return nil
+        }
+
+        if let dominant = dominantSubjectIndex(sizes: candidates.map(\.size), ratio: Self.dominanceRatio) {
+            return dominant
+        }
+
+        return centredIndex(in: candidates)
+    }
+
+    /// Among similarly sized people, the one clearly nearest the centre of the frame.
+    private func centredIndex(in candidates: [Candidate]) -> Int? {
+        let ranked = candidates.indices.sorted { candidates[$0].centerOffset < candidates[$1].centerOffset }
+
+        guard let best = ranked.first else {
+            return nil
+        }
+
+        guard ranked.count > 1 else {
+            return best
+        }
+
+        let runnerUp = candidates[ranked[1]].centerOffset
+        return runnerUp - candidates[best].centerOffset >= Self.centeringMargin ? best : nil
+    }
+
+    // MARK: - Usual place
+
+    private func hasAnchor(at time: Double) -> Bool {
+        guard anchorTorso != nil, let anchorTime, anchorSize > 0 else {
+            return false
+        }
+
+        return time - anchorTime <= Self.anchorMemory
+    }
+
+    /// True when there is no usual place yet, or the candidate's torso is the patient's size.
+    /// Someone walking in front of the patient is nearer the camera, so their torso is larger.
+    private func matchesAnchorSize(_ candidate: Candidate, at time: Double) -> Bool {
+        guard hasAnchor(at: time) else {
+            return true
+        }
+
+        return Self.anchorSizeRange.contains(candidate.size / anchorSize)
+    }
+
+    /// True when there is no usual place yet, or the candidate sits within it.
+    private func isNearAnchor(_ candidate: Candidate, at time: Double, gateScale: Double) -> Bool {
+        guard let anchorTorso, hasAnchor(at: time) else {
+            return true
+        }
+
+        let gate = max(0.1, anchorSize * 0.6) * gateScale
+        return (candidate.torso - anchorTorso).length <= gate
+    }
+
+    private mutating func remember(_ candidate: Candidate, at time: Double) {
+        lastTorso = candidate.torso
+        lastSize = candidate.size
+        lastTime = time
+
+        guard let anchorTorso, hasAnchor(at: time) else {
+            self.anchorTorso = candidate.torso
+            anchorSize = candidate.size
+            anchorTime = time
+            return
+        }
+
+        let rate = Self.anchorFollowRate
+        self.anchorTorso = anchorTorso + (candidate.torso - anchorTorso).scaled(rate)
+        anchorSize += (candidate.size - anchorSize) * rate
+        anchorTime = time
     }
 }

@@ -16,6 +16,9 @@ final class TherapySessionViewModel {
     let sessionLanguage = AppLanguage.selected
     var sessionLocale: Locale { sessionLanguage.locale }
     private(set) var snapshot = SessionSnapshot()
+    /// Practice time shown on the pause dialog. It runs while the session is live and stops
+    /// for explicit pauses, camera waits and the summary.
+    @ObservationIgnored private var clock = SessionDurationClock()
     private(set) var towelDisplay: TowelSnapshot?
     private(set) var towelInterpolates = false
     @ObservationIgnored private var towelSmoother = TowelPresentationSmoother()
@@ -25,7 +28,6 @@ final class TherapySessionViewModel {
     private(set) var saveFailure: String?
     private(set) var voiceReady = false
     private(set) var listening = false
-    private(set) var frontCamera = true
 
     @ObservationIgnored let tracking: BodyTrackingService
     @ObservationIgnored private let audio: SessionAudioService
@@ -45,7 +47,6 @@ final class TherapySessionViewModel {
     var isStarting: Bool { !started && !entryFailure }
     @ObservationIgnored private var exited = false
     @ObservationIgnored private var lastPermissionCheck = 0.0
-    @ObservationIgnored private var landscapeRight = false
     @ObservationIgnored private var pendingSaves: [SessionEffect] = []
     private(set) var saving = false
     @ObservationIgnored private var keepAwakeBeforeSession = false
@@ -117,7 +118,7 @@ final class TherapySessionViewModel {
             }
             self.personVisible = frame.personCount == 1
             var observation = frame
-            observation.workspaceMirrored = self.frontCamera
+            observation.workspaceMirrored = true
             self.send(.observation(observation))
         }.store(in: &subscriptions)
         tracking.cupFailures.receive(on: DispatchQueue.main).sink { [weak self] error in
@@ -142,10 +143,8 @@ final class TherapySessionViewModel {
         let orientation = UIApplication.shared.connectedScenes
             .compactMap { ($0 as? UIWindowScene)?.interfaceOrientation }
             .first { $0 == .landscapeLeft || $0 == .landscapeRight }
-        landscapeRight = orientation == .landscapeRight
-        frontCamera = true
         updateHandRequirement()
-        tracking.configure(front: true, landscapeRight: landscapeRight)
+        tracking.configure(landscapeRight: orientation == .landscapeRight)
         tracking.start()
         send(.command(.resume))
     }
@@ -240,15 +239,7 @@ final class TherapySessionViewModel {
     }
 
     func orientationChanged(right: Bool) {
-        landscapeRight = right
-        tracking.configure(front: frontCamera, landscapeRight: right)
-    }
-
-    func switchCamera() {
-        command(.pause)
-        frontCamera.toggle()
-        send(.previewReady(false))
-        tracking.configure(front: frontCamera, landscapeRight: landscapeRight)
+        tracking.configure(landscapeRight: right)
     }
 
     private var isBackgrounded = false
@@ -351,6 +342,7 @@ final class TherapySessionViewModel {
         let previousSide = snapshot.activity?.side
         let wasPaused = snapshot.paused
         snapshot = transition.snapshot
+        updateClock()
         if snapshot.summary != nil {
             audio.stopMusic()
         } else if wasPaused != snapshot.paused {
@@ -453,6 +445,27 @@ final class TherapySessionViewModel {
         timer = nil
         subscriptions.removeAll()
         UIApplication.shared.isIdleTimerDisabled = keepAwakeBeforeSession
+    }
+
+    // MARK: - Practice clock
+
+    /// Practice time so far, for the pause dialog.
+    var elapsedSeconds: Int {
+        Int(clock.elapsed(at: ProcessInfo.processInfo.systemUptime))
+    }
+
+    private func updateClock() {
+        let now = ProcessInfo.processInfo.systemUptime
+        let running = !snapshot.paused
+            && !snapshot.cameraWaiting
+            && snapshot.summary == nil
+            && snapshot.stage != .preparing
+
+        if running {
+            clock.resume(at: now)
+        } else {
+            clock.pause(at: now)
+        }
     }
 }
 

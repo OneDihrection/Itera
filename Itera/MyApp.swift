@@ -21,7 +21,7 @@ struct MyApp: App {
 
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            root
                 .typography(.body)
                 .withAppRouter()
                 // Applied outside the router so tab stacks, sheets and covers share the language.
@@ -31,11 +31,28 @@ struct MyApp: App {
                 .environment(dependencies.permissions)
                 .environment(\.buttonFeedback, dependencies.playButtonClick)
                 .buttonStyle(TherapySoundButtonStyle())
-                .task { await dependencies.recoverHistory() }
+                .task {
+                    #if DEBUG
+                    DebugScreenLauncher.openIntroIfRequested(dependencies: dependencies, router: router)
+                    #endif
+                    await dependencies.recoverHistory()
+                }
                 .onChange(of: scenePhase) { _, phase in
                     if phase == .active { dependencies.permissions.refresh() }
                 }
         }
     }
 
+    @ViewBuilder
+    private var root: some View {
+        #if DEBUG
+        if let screen = DebugScreenLauncher.galleryScreen {
+            DebugScreenGallery(screen: screen)
+        } else {
+            ContentView()
+        }
+        #else
+        ContentView()
+        #endif
+    }
 }

@@ -13,14 +13,34 @@ struct BalanceOverviewView: View {
     @AppStorage private var repetitions: Int
     @AppStorage private var holdSeconds: Int
     @AppStorage private var armSelectionRaw: String
+    @AppStorage private var sets: Int
+    @AppStorage private var restSeconds: Int
     @State private var animationPaused = false
 
     init(exercise: BalanceExercise = .crossMidline) {
         self.exercise = exercise
         // Each exercise remembers its own settings; Balancing keeps its original keys.
-        _repetitions = AppStorage(wrappedValue: 6, exercise.storageKey("repetitions"))
-        _holdSeconds = AppStorage(wrappedValue: 10, exercise.storageKey("holdSeconds"))
-        _armSelectionRaw = AppStorage(wrappedValue: BalanceArmSelection.both.rawValue, exercise.storageKey("armSelection"))
+        // The defaults are shared with BalancePracticeSettings, which the daily plan reads.
+        _repetitions = AppStorage(
+            wrappedValue: BalancePracticeSettings.defaultRepetitions,
+            exercise.storageKey("repetitions")
+        )
+        _holdSeconds = AppStorage(
+            wrappedValue: BalancePracticeSettings.defaultHoldSeconds,
+            exercise.storageKey("holdSeconds")
+        )
+        _armSelectionRaw = AppStorage(
+            wrappedValue: BalancePracticeSettings.defaultArmSelection.rawValue,
+            exercise.storageKey("armSelection")
+        )
+        _sets = AppStorage(
+            wrappedValue: BalancePracticeSettings.defaultSets,
+            exercise.storageKey("sets")
+        )
+        _restSeconds = AppStorage(
+            wrappedValue: BalancePracticeSettings.defaultRestSeconds,
+            exercise.storageKey("restSeconds")
+        )
     }
 
     var body: some View {
@@ -100,6 +120,20 @@ struct BalanceOverviewView: View {
                             range: 2...20,
                             suffix: exercise.localized("touchUnit")
                         )
+                        TherapyAdjustmentControl(
+                            title: "balance.sets",
+                            value: $sets,
+                            range: BalancePracticeSettings.setsRange,
+                            suffix: "exercise.setsUnit"
+                        )
+                        if sets > 1 {
+                            TherapyAdjustmentControl(
+                                title: "balance.restSeconds",
+                                value: $restSeconds,
+                                range: BalancePracticeSettings.restRange,
+                                suffix: "balance.secondsUnit"
+                            )
+                        }
                         if !exercise.isSitToStand {
                             TherapyAdjustmentControl(
                                 title: "balance.holdDuration",
@@ -145,9 +179,7 @@ struct BalanceOverviewView: View {
                 TherapyButton(title: exercise.localized("begin"), symbol: "camera.fill") {
                     router.push(.balanceSession(
                         exercise: exercise,
-                        repetitions: repetitions,
-                        holdSeconds: holdSeconds,
-                        armSelection: BalanceArmSelection(rawValue: armSelectionRaw) ?? .both
+                        settings: BalancePracticeSettings(exercise: exercise)
                     ))
                 }
             }

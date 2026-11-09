@@ -142,7 +142,8 @@ struct CrossMidlineBalanceEngine: BalanceMovementEngine {
     private let rotationThreshold = 0.40
     private let compensationEntryDuration = 0.75
     private let compensationExitDuration = 0.50
-    private let overlayGracePeriod = 1.25
+    /// Keeps the last body overlay drawn through a brief loss, like the finger bubbles.
+    private let overlayGracePeriod = InterruptibleHold.trackingGrace
     private let balanceConfidence: Float = 0.20
 
     init(
@@ -259,6 +260,26 @@ struct CrossMidlineBalanceEngine: BalanceMovementEngine {
         cachedJoints.removeAll()
         lastOverlayTimestamp = nil
         clearTransientEvidence()
+    }
+
+    mutating func nextSet() {
+        guard baseline != nil else {
+            restart()
+            return
+        }
+
+        let arm = snapshot.activeArm
+        snapshot.metrics = BalanceMetrics()
+        targetHold.reset()
+        returnHold.reset()
+        jerkSquareSum = 0
+        jerkSampleCount = 0
+        resetPath()
+
+        // The set ended with a touch, so the first step is the usual return to the start.
+        snapshot.activeArm = arm
+        snapshot.phase = .returning
+        snapshot.instructionKey = "balance.return"
     }
 
     mutating func restart() {
