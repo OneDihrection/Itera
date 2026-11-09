@@ -9,16 +9,18 @@ import SwiftUI
 
 // MARK: - Completion mark
 
-/// A large green circle with a white check, for a finished set or session.
+/// A large circle with a white check, for a finished set or session. Green by default; the
+/// shared exercise screens pass `TherapyPalette.brand`.
 struct TherapyCompletionMark: View {
     var size: CGFloat = 128
+    var tint: Color = TherapyPalette.success
 
     var body: some View {
         Image(systemName: "checkmark")
             .typography(size: size * 0.42, weight: .bold)
             .foregroundStyle(Color.white)
             .frame(width: size, height: size)
-            .background(TherapyPalette.success, in: Circle())
+            .background(tint, in: Circle())
             .accessibilityHidden(true)
     }
 }

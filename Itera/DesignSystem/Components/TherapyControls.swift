@@ -100,6 +100,8 @@ enum TherapyPalette {
     static let planMarker = Color(red: 1.0, green: 0.72, blue: 0.0)
     /// Dashed timeline line and the outline of upcoming dots.
     static let planTrack = Color(uiColor: .systemGray4)
+    /// Slightly deeper warm grey behind demo media and the set results panel.
+    static let planPanel = adaptive(light: (0.937, 0.918, 0.894), dark: (0.20, 0.185, 0.17))
 
     private static func adaptive(
         light: (Double, Double, Double),
@@ -133,6 +135,8 @@ struct TherapyButton: View {
     /// The large rust capsule that starts today's plan. It sizes to its label instead of
     /// filling the width, and ignores `pill` and `secondary`.
     var prominent = false
+    /// With `pill`, fills the pill with the rust brand color instead of the dark action color.
+    var brand = false
     let action: () -> Void
 
     var body: some View {
@@ -190,6 +194,9 @@ struct TherapyButton: View {
             if destructive {
                 return .white
             }
+            if brand {
+                return TherapyPalette.onBrand
+            }
             return secondary ? TherapyPalette.ink : TherapyPalette.onAction
         }
         return secondary ? TherapyPalette.ink : TherapyPalette.onAccent
@@ -200,6 +207,9 @@ struct TherapyButton: View {
             return pill ? Color(uiColor: .systemRed) : TherapyPalette.warning
         }
         if pill {
+            if brand {
+                return TherapyPalette.brand
+            }
             return secondary ? TherapyPalette.actionMuted : TherapyPalette.action
         }
         return secondary ? TherapyPalette.mint : TherapyPalette.green
