@@ -13,6 +13,8 @@ struct BalanceOverviewView: View {
     @AppStorage private var repetitions: Int
     @AppStorage private var holdSeconds: Int
     @AppStorage private var armSelectionRaw: String
+    @AppStorage private var sets: Int
+    @AppStorage private var restSeconds: Int
     @State private var animationPaused = false
 
     init(exercise: BalanceExercise = .crossMidline) {
@@ -30,6 +32,14 @@ struct BalanceOverviewView: View {
         _armSelectionRaw = AppStorage(
             wrappedValue: BalancePracticeSettings.defaultArmSelection.rawValue,
             exercise.storageKey("armSelection")
+        )
+        _sets = AppStorage(
+            wrappedValue: BalancePracticeSettings.defaultSets,
+            exercise.storageKey("sets")
+        )
+        _restSeconds = AppStorage(
+            wrappedValue: BalancePracticeSettings.defaultRestSeconds,
+            exercise.storageKey("restSeconds")
         )
     }
 
@@ -110,6 +120,20 @@ struct BalanceOverviewView: View {
                             range: 2...20,
                             suffix: exercise.localized("touchUnit")
                         )
+                        TherapyAdjustmentControl(
+                            title: "balance.sets",
+                            value: $sets,
+                            range: BalancePracticeSettings.setsRange,
+                            suffix: "exercise.setsUnit"
+                        )
+                        if sets > 1 {
+                            TherapyAdjustmentControl(
+                                title: "balance.restSeconds",
+                                value: $restSeconds,
+                                range: BalancePracticeSettings.restRange,
+                                suffix: "balance.secondsUnit"
+                            )
+                        }
                         if !exercise.isSitToStand {
                             TherapyAdjustmentControl(
                                 title: "balance.holdDuration",
@@ -155,9 +179,7 @@ struct BalanceOverviewView: View {
                 TherapyButton(title: exercise.localized("begin"), symbol: "camera.fill") {
                     router.push(.balanceSession(
                         exercise: exercise,
-                        repetitions: repetitions,
-                        holdSeconds: holdSeconds,
-                        armSelection: BalanceArmSelection(rawValue: armSelectionRaw) ?? .both
+                        settings: BalancePracticeSettings(exercise: exercise)
                     ))
                 }
             }

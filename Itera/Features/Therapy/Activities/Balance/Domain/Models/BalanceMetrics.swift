@@ -90,6 +90,9 @@ protocol BalanceMovementEngine {
     mutating func consume(_ frame: TrackingObservation, scoringEnabled: Bool)
     mutating func invalidateCalibration()
     mutating func restart()
+    /// Starts another set with the same calibration: the count and per-repetition state reset,
+    /// while the captured starting position and targets are kept.
+    mutating func nextSet()
 }
 
 struct BalanceMetrics: Codable, Equatable {

@@ -206,6 +206,7 @@ struct TherapyExerciseIntro<Media: View, Targets: View>: View {
 
         layout {
             media
+                .environment(\.therapyDemoCaptionHidden, true)
                 .frame(maxWidth: 420, minHeight: 340, maxHeight: 400)
                 .frame(maxWidth: .infinity)
                 .background(TherapyPalette.planPanel, in: RoundedRectangle(cornerRadius: 32))
@@ -328,6 +329,7 @@ struct TherapyExerciseLiveLayout<Camera: View, Demo: View, Accessories: View>: V
             demo
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .clipShape(RoundedRectangle(cornerRadius: 24))
+                .environment(\.therapyDemoCaptionHidden, true)
         }
     }
 
@@ -381,6 +383,8 @@ struct TherapyPauseDialog<Extra: View>: View {
     let elapsedSeconds: Int
     var resumeDisabled = false
     var status: Text? = nil
+    /// Opens straight on the end confirmation, when the dialog came from an End button.
+    var confirmingEndInitially = false
     let onEnd: () -> Void
     let onResume: () -> Void
     /// Caregiver recovery actions, shown under a disclosure so the dialog stays calm.
@@ -399,6 +403,9 @@ struct TherapyPauseDialog<Extra: View>: View {
             card
                 .frame(maxWidth: 680)
                 .padding(40)
+        }
+        .onAppear {
+            confirmingEnd = confirmingEndInitially
         }
     }
 
@@ -606,5 +613,45 @@ struct TherapySetSummary<Actions: View>: View {
                 .foregroundStyle(TherapyPalette.muted)
         }
         .accessibilityElement(children: .combine)
+    }
+}
+
+// MARK: - Demonstration caption
+
+private struct DemoCaptionHiddenKey: EnvironmentKey {
+    static let defaultValue = false
+}
+
+extension EnvironmentValues {
+    /// True where a heading already says "Ikuti gerakan ini", so demonstrations omit their own
+    /// caption pill. Set by the shared intro and live layouts.
+    var therapyDemoCaptionHidden: Bool {
+        get { self[DemoCaptionHiddenKey.self] }
+        set { self[DemoCaptionHiddenKey.self] = newValue }
+    }
+}
+
+/// The small "Ikuti gerakan ini" (or paused) pill at the bottom of a demonstration.
+struct TherapyDemoCaption: View {
+    let paused: Bool
+
+    @Environment(\.therapyDemoCaptionHidden) private var hidden
+
+    var body: some View {
+        if !hidden {
+            VStack {
+                Spacer()
+                HStack(spacing: 8) {
+                    Image(systemName: paused ? "pause.fill" : "waveform.path")
+                    Text(paused ? "balance.animationPaused" : "balance.animationPlaying")
+                }
+                .typography(.footnote)
+                .foregroundStyle(TherapyPalette.ink)
+                .padding(.horizontal, 14)
+                .padding(.vertical, 8)
+                .background(.ultraThinMaterial, in: Capsule())
+                .padding(12)
+            }
+        }
     }
 }

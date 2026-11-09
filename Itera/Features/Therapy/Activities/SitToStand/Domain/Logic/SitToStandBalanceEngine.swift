@@ -66,6 +66,14 @@ struct SitToStandBalanceEngine: BalanceMovementEngine {
         self = SitToStandBalanceEngine(goal: goal)
     }
 
+    mutating func nextSet() {
+        activity.startNextSet()
+        snapshot.metrics = BalanceMetrics()
+        snapshot.phase = .returning
+        snapshot.calibrationCountdown = nil
+        snapshot.instructionKey = "sts.sitDown"
+    }
+
     // MARK: - Presentation
 
     private mutating func present(_ value: SitToStandSnapshot) {

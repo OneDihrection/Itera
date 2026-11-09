@@ -16,12 +16,7 @@ enum AppRoute: Hashable {
     case therapyOverview(TherapyCategory)
     case balanceOverview(BalanceExercise)
     case armRotationHome
-    case balanceSession(
-        exercise: BalanceExercise,
-        repetitions: Int,
-        holdSeconds: Int,
-        armSelection: BalanceArmSelection
-    )
+    case balanceSession(exercise: BalanceExercise, settings: BalancePracticeSettings)
     case plan(ExerciseCategory)
     case reports
     case taskReports

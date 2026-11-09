@@ -38,19 +38,7 @@ struct BalanceDemonstrationView: View {
                 .foregroundStyle(TherapyPalette.muted)
             }
 
-            VStack {
-                Spacer()
-                HStack(spacing: 8) {
-                    Image(systemName: paused ? "pause.fill" : "waveform.path")
-                    Text(paused ? "balance.animationPaused" : "balance.animationPlaying")
-                }
-                .typography(.footnote)
-                .foregroundStyle(TherapyPalette.ink)
-                .padding(.horizontal, 14)
-                .padding(.vertical, 8)
-                .background(.ultraThinMaterial, in: Capsule())
-                .padding(12)
-            }
+            TherapyDemoCaption(paused: paused)
         }
         .background(TherapyPalette.mediaBackground)
         .clipShape(RoundedRectangle(cornerRadius: 24))

@@ -153,11 +153,7 @@ final class DailyPlanViewModel {
         case .balance(let exercise):
             let settings = BalancePracticeSettings(exercise: exercise)
 
-            guard !exercise.isSitToStand else {
-                return [.repetitions(settings.repetitions)]
-            }
-
-            return [.repetitions(settings.repetitions), .holdSeconds(settings.holdSeconds)]
+            return [.sets(settings.sets), .repetitions(settings.repetitions)]
         }
     }
 
@@ -172,6 +168,15 @@ final class DailyPlanViewModel {
     }
 
     // MARK: - Running
+
+    /// "Latihan N" of the exercise whose session is open, while the plan runs.
+    var currentNumber: Int? {
+        guard isRunning, let currentIndex else {
+            return nil
+        }
+
+        return currentIndex + 1
+    }
 
     /// Position of an item in the plan, shown as "Latihan N".
     func number(of itemID: String) -> Int {
@@ -269,12 +274,7 @@ final class DailyPlanViewModel {
 
         case .balance(let exercise):
             let settings = BalancePracticeSettings(exercise: exercise)
-            router.push(.balanceSession(
-                exercise: exercise,
-                repetitions: settings.repetitions,
-                holdSeconds: settings.holdSeconds,
-                armSelection: settings.armSelection
-            ))
+            router.push(.balanceSession(exercise: exercise, settings: settings))
         }
     }
 

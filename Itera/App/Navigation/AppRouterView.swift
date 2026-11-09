@@ -26,13 +26,8 @@ enum AppRouterView {
         case .balanceOverview(let exercise):
             BalanceOverviewView(exercise: exercise)
                 .environment(\.locale, AppLanguage.selected.locale)
-        case .balanceSession(let exercise, let repetitions, let holdSeconds, let armSelection):
-            BalanceSessionDestination(
-                exercise: exercise,
-                repetitions: repetitions,
-                holdSeconds: holdSeconds,
-                armSelection: armSelection
-            )
+        case .balanceSession(let exercise, let settings):
+            BalanceSessionDestination(exercise: exercise, settings: settings)
                 .environment(\.locale, AppLanguage.selected.locale)
         case .routineConfiguration(let category):
             RoutineConfigurationView(category: category)
@@ -138,17 +133,13 @@ private struct SessionDestination: View {
 private struct BalanceSessionDestination: View {
     @Environment(AppDependencies.self) private var dependencies
     let exercise: BalanceExercise
-    let repetitions: Int
-    let holdSeconds: Int
-    let armSelection: BalanceArmSelection
+    let settings: BalancePracticeSettings
 
     var body: some View {
         BalanceSessionView(model: BalanceSessionViewModel(
             tracking: dependencies.tracking,
             audio: dependencies.audio,
-            repetitions: repetitions,
-            holdSeconds: holdSeconds,
-            armSelection: armSelection,
+            settings: settings,
             exercise: exercise
         ))
     }

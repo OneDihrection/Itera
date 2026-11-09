@@ -262,6 +262,26 @@ struct CrossMidlineBalanceEngine: BalanceMovementEngine {
         clearTransientEvidence()
     }
 
+    mutating func nextSet() {
+        guard baseline != nil else {
+            restart()
+            return
+        }
+
+        let arm = snapshot.activeArm
+        snapshot.metrics = BalanceMetrics()
+        targetHold.reset()
+        returnHold.reset()
+        jerkSquareSum = 0
+        jerkSampleCount = 0
+        resetPath()
+
+        // The set ended with a touch, so the first step is the usual return to the start.
+        snapshot.activeArm = arm
+        snapshot.phase = .returning
+        snapshot.instructionKey = "balance.return"
+    }
+
     mutating func restart() {
         self = CrossMidlineBalanceEngine(
             goal: snapshot.goal,
