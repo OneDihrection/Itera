@@ -27,6 +27,8 @@ struct BalanceExerciseDemonstrationView: View {
             resource = "shoulder_external_rotation_" + (selection == .both ? "both" : side)
         case .internalRotation:
             resource = "shoulder_internal_rotation_" + (selection == .both ? "both" : side)
+        case .sitToStand:
+            resource = "sit_to_stand"
         case .crossMidline, .shoulderFlexion:
             return nil
         }
@@ -54,6 +56,16 @@ struct BalanceExerciseDemonstrationView: View {
             }
         case .shoulderFlexion:
             ShoulderFlexionDemonstrationView(paused: paused)
+        case .sitToStand:
+            if let movieResource {
+                ShoulderRotationMovieView(
+                    resource: movieResource,
+                    paused: paused,
+                    accessibilityKey: "sitToStand.animationAccessibility"
+                )
+            } else {
+                SitToStandDemonstrationView(paused: paused)
+            }
         }
     }
 }

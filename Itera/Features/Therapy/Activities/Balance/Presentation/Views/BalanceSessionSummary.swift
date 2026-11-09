@@ -66,7 +66,12 @@ struct BalanceSessionSummary: View {
             .accessibilityLabel("balance.summary.chartAccessibility")
 
             HStack(spacing: 12) {
-                if exercise.isRotation {
+                if exercise.isSitToStand {
+                    TherapyMetric(
+                        title: "sitToStand.summary.reps",
+                        value: "\(metrics.completedTouches)/\(goal)"
+                    )
+                } else if exercise.isRotation {
                     TherapyMetric(
                         title: exercise.localized("summary.peak"),
                         value: "\(Int(metrics.peakRotation.rounded()))°"
@@ -79,17 +84,21 @@ struct BalanceSessionSummary: View {
                         ) + "s"
                     )
                 }
-                TherapyMetric(
-                    title: "balance.summary.prescribedHold",
-                    value: prescribedHold.formatted(
-                        .number.precision(.fractionLength(0))
-                    ) + "s"
-                )
+                if !exercise.isSitToStand {
+                    TherapyMetric(
+                        title: "balance.summary.prescribedHold",
+                        value: prescribedHold.formatted(
+                            .number.precision(.fractionLength(0))
+                        ) + "s"
+                    )
+                }
             }
 
-            Label("balance.summary.lowerCompensation", systemImage: "arrow.down.circle.fill")
-                .foregroundStyle(TherapyPalette.warning)
-                .typography(.footnote)
+            if !exercise.isSitToStand {
+                Label("balance.summary.lowerCompensation", systemImage: "arrow.down.circle.fill")
+                    .foregroundStyle(TherapyPalette.warning)
+                    .typography(.footnote)
+            }
 
             Label("balance.summary.notClinical", systemImage: "info.circle.fill")
                 .foregroundStyle(TherapyPalette.muted)
@@ -111,14 +120,21 @@ struct BalanceSessionSummary: View {
             Double(metrics.compensationEventsCount) / Double(max(1, goal))
         )
 
+        let completionBar = SummaryBar(
+            id: "completion",
+            title: localized("balance.summary.completion"),
+            value: completion,
+            displayValue: "\(metrics.completedTouches)/\(goal)",
+            color: TherapyPalette.green
+        )
+
+        // Smoothness and compensation are measured from the wrist and torso, not from standing up.
+        guard !exercise.isSitToStand else {
+            return [completionBar]
+        }
+
         return [
-            SummaryBar(
-                id: "completion",
-                title: localized("balance.summary.completion"),
-                value: completion,
-                displayValue: "\(metrics.completedTouches)/\(goal)",
-                color: TherapyPalette.green
-            ),
+            completionBar,
             SummaryBar(
                 id: "smoothness",
                 title: localized("balance.summary.smoothness"),

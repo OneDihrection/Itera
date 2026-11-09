@@ -25,7 +25,6 @@ final class AppDependencies: HistoryRecovering {
     let audio = SessionAudioService()
     let routine: RoutineViewModel
     let taskRoutine: RoutineViewModel
-    let trunkRoutine: RoutineViewModel
     var selectedRoutine = Routine.demo()
     let sessions: any SessionRepository
     private(set) var recoveryFailure: String?
@@ -39,9 +38,6 @@ final class AppDependencies: HistoryRecovering {
         sessions = LocalSessionRepository(directory: directory)
         routine = RoutineViewModel(repository: LocalRoutineRepository(
             url: URL.applicationSupportDirectory.appendingPathComponent("routines.json")
-        ))
-        trunkRoutine = RoutineViewModel(repository: LocalRoutineRepository(
-            url: URL.applicationSupportDirectory.appendingPathComponent("routines-trunk.json")
         ))
 
         taskRoutine = RoutineViewModel(repository: LocalRoutineRepository(
@@ -89,7 +85,6 @@ final class AppDependencies: HistoryRecovering {
     func routineModel(for category: TherapyCategory) -> RoutineViewModel {
         switch category {
         case .arm: return routine
-        case .trunk: return trunkRoutine
         case .taskOriented: return taskRoutine
         }
     }

@@ -199,15 +199,17 @@ struct BalanceSessionView: View {
                 .padding(14)
                 .background(TherapyPalette.cream, in: RoundedRectangle(cornerRadius: 18))
 
-                Label(
-                    String(
-                        format: String(localized: "balance.holdConfigured"),
-                        model.holdSeconds
-                    ),
-                    systemImage: "timer"
-                )
-                .typography(.footnote)
-                .foregroundStyle(TherapyPalette.green)
+                if !model.exercise.isSitToStand {
+                    Label(
+                        String(
+                            format: String(localized: "balance.holdConfigured"),
+                            model.holdSeconds
+                        ),
+                        systemImage: "timer"
+                    )
+                    .typography(.footnote)
+                    .foregroundStyle(TherapyPalette.green)
+                }
 
                 if model.paused {
                     Label("balance.paused", systemImage: "pause.circle.fill")
@@ -279,7 +281,12 @@ struct BalanceSessionView: View {
                         title: model.exercise.localized("metric.touches"),
                         value: "\(model.snapshot.metrics.completedTouches) / \(model.snapshot.goal)"
                     )
-                    if model.exercise.isRotation {
+                    if model.exercise.isSitToStand {
+                        TherapyMetric(
+                            title: "sitToStand.metric.knee",
+                            value: "\(Int(model.snapshot.kneeAngle.rounded()))°"
+                        )
+                    } else if model.exercise.isRotation {
                         TherapyMetric(
                             title: model.exercise.localized("metric.angle"),
                             value: model.snapshot.targetAngle > 0
@@ -295,14 +302,21 @@ struct BalanceSessionView: View {
                 }
 
                 HStack(spacing: 12) {
-                    TherapyMetric(
-                        title: "balance.metric.compensation",
-                        value: "\(model.snapshot.metrics.compensationEventsCount)"
-                    )
-                    TherapyMetric(
-                        title: "balance.metric.smoothness",
-                        value: model.snapshot.metrics.pathSmoothness.formatted(.percent.precision(.fractionLength(0)))
-                    )
+                    if model.exercise.isSitToStand {
+                        TherapyMetric(
+                            title: "sitToStand.metric.lean",
+                            value: "\(Int(model.snapshot.trunkLean.rounded()))°"
+                        )
+                    } else {
+                        TherapyMetric(
+                            title: "balance.metric.compensation",
+                            value: "\(model.snapshot.metrics.compensationEventsCount)"
+                        )
+                        TherapyMetric(
+                            title: "balance.metric.smoothness",
+                            value: model.snapshot.metrics.pathSmoothness.formatted(.percent.precision(.fractionLength(0)))
+                        )
+                    }
                 }
 
                 if let failure = model.failure, !failure.isEmpty {
@@ -390,14 +404,17 @@ private struct BalancePoseOverlay: View {
 
             let warning = state.compensationWarning
             let torsoColor = warning ? Color.orange : Color.cyan
-            var torso = Path()
-            torso.move(to: point(state.leftShoulder))
-            torso.addLine(to: point(state.rightShoulder))
-            torso.addLine(to: point(state.rightHip))
-            torso.addLine(to: point(state.leftHip))
-            torso.closeSubpath()
-            context.fill(torso, with: .color(torsoColor.opacity(0.10)))
-            context.stroke(torso, with: .color(torsoColor.opacity(0.75)), lineWidth: 3)
+
+            if state.showsTorso {
+                var torso = Path()
+                torso.move(to: point(state.leftShoulder))
+                torso.addLine(to: point(state.rightShoulder))
+                torso.addLine(to: point(state.rightHip))
+                torso.addLine(to: point(state.leftHip))
+                torso.closeSubpath()
+                context.fill(torso, with: .color(torsoColor.opacity(0.10)))
+                context.stroke(torso, with: .color(torsoColor.opacity(0.75)), lineWidth: 3)
+            }
 
             if state.showsMidline {
                 var midline = Path()

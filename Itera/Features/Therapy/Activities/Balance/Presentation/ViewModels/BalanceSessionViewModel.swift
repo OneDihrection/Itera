@@ -54,6 +54,8 @@ final class BalanceSessionViewModel {
                 holdDuration: Double(holdSeconds),
                 armSelection: armSelection
             )
+        case .sitToStand:
+            engine = SitToStandBalanceEngine(goal: repetitions)
         case .externalRotation, .internalRotation, .shoulderFlexion:
             engine = ArmMovementEngine(
                 goal: repetitions,
@@ -267,6 +269,11 @@ final class BalanceSessionViewModel {
     }
 
     private func updateAudio(from previous: BalanceSnapshot, to current: BalanceSnapshot) {
+        if exercise.isSitToStand {
+            updateSitToStandAudio(from: previous, to: current)
+            return
+        }
+
         if speakCalibrationGuidanceIfNeeded(current) {
             return
         }
@@ -317,6 +324,43 @@ final class BalanceSessionViewModel {
         guard remaining != lastSpokenCountdown else { return }
         lastSpokenCountdown = remaining
         audio.play(id: UUID(), cue: .count(remaining))
+    }
+
+    /// Reads each new instruction aloud and counts the calibration and countdown seconds, so the
+    /// patient can follow without looking at the screen. Repetitions are confirmed with a chime.
+    private func updateSitToStandAudio(from previous: BalanceSnapshot, to current: BalanceSnapshot) {
+        guard !paused, !cameraWaiting else {
+            return
+        }
+
+        if current.metrics.completedTouches > previous.metrics.completedTouches {
+            lastSpokenCountdown = nil
+            let key = current.phase == .complete
+                ? exercise.key("voice.complete")
+                : exercise.key("voice.returnSameSide")
+            audio.play(id: UUID(), cue: .guidance(prefix: .target, key: key))
+            return
+        }
+
+        if let remaining = current.calibrationCountdown {
+            guard remaining != lastSpokenCountdown else {
+                return
+            }
+
+            lastSpokenCountdown = remaining
+            audio.play(id: UUID(), cue: .count(remaining))
+            return
+        }
+
+        lastSpokenCountdown = nil
+
+        guard current.phase != .complete,
+              current.instructionKey != previous.instructionKey else {
+            return
+        }
+
+        // Any prefix other than the target chime speaks the line directly.
+        audio.play(id: UUID(), cue: .guidance(prefix: .towelGrab, key: current.instructionKey))
     }
 
     /// Explains the starting pose, then the end pose, aloud as each calibration step begins,

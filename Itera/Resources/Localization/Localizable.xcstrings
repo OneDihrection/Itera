@@ -9273,6 +9273,7 @@
       }
     },
     "routine.repetitions %lld" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -9374,6 +9375,7 @@
       }
     },
     "routine.sitToStandDetail" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -12582,6 +12584,448 @@
         }
       }
     },
+    "sitToStand.animationAccessibility" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Animated demonstration of sit to stand with a forward lean"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Demonstrasi animasi duduk ke berdiri dengan badan condong ke depan"
+          }
+        }
+      }
+    },
+    "sitToStand.animationHint" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Watch the body lean forward before standing, then sit down slowly."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Perhatikan badan condong ke depan sebelum berdiri, lalu duduk perlahan."
+          }
+        }
+      }
+    },
+    "sitToStand.begin" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Start trunk control"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mulai kontrol trunk"
+          }
+        }
+      }
+    },
+    "sitToStand.cameraAccessibility" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Live camera with the shoulder, hip, knee, and ankle outline"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kamera langsung dengan garis bahu, pinggul, lutut, dan pergelangan kaki"
+          }
+        }
+      }
+    },
+    "sitToStand.completion.subtitle" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "See this session's result, then repeat or go back."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lihat hasil sesi ini, lalu ulangi atau kembali."
+          }
+        }
+      }
+    },
+    "sitToStand.metric.knee" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Knee angle"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sudut lutut"
+          }
+        }
+      }
+    },
+    "sitToStand.metric.lean" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Trunk lean"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Condong badan"
+          }
+        }
+      }
+    },
+    "sitToStand.metric.touches" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Repetitions"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Repetisi"
+          }
+        }
+      }
+    },
+    "sitToStand.overview" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lean slightly forward, stand as far as you can, then sit back down slowly. Itera counts a repetition when you lean before standing."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Condongkan badan sedikit ke depan, lalu berdiri sesuai kemampuan Anda dan duduk kembali perlahan. Itera menghitung repetisi saat Anda condong dulu sebelum berdiri."
+          }
+        }
+      }
+    },
+    "sitToStand.repetitions" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Repetitions"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Jumlah repetisi"
+          }
+        }
+      }
+    },
+    "sitToStand.repetitionsHint" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Each sit to stand with a forward lean counts."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Setiap duduk ke berdiri dengan condong ke depan dihitung."
+          }
+        }
+      }
+    },
+    "sitToStand.step.balance" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sit down slowly"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Duduk perlahan"
+          }
+        }
+      }
+    },
+    "sitToStand.step.balance.detail" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Control your body on the way down; sitting too fast is not counted."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kendalikan badan saat turun; duduk terlalu cepat tidak dihitung."
+          }
+        }
+      }
+    },
+    "sitToStand.step.posture" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sit sideways"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Duduk menyamping"
+          }
+        }
+      }
+    },
+    "sitToStand.step.posture.detail" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sit sideways to the camera with shoulder, hip, knee, and ankle in view."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Duduk menyamping ke kamera dengan bahu, pinggul, lutut, dan pergelangan kaki terlihat."
+          }
+        }
+      }
+    },
+    "sitToStand.step.touch" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lean, then stand"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Condong, lalu berdiri"
+          }
+        }
+      }
+    },
+    "sitToStand.step.touch.detail" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lean slightly forward, then stand as far as you can."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Condong sedikit ke depan, lalu berdiri sesuai kemampuan Anda."
+          }
+        }
+      }
+    },
+    "sitToStand.subtitle" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sit to stand with trunk control"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Duduk ke berdiri dengan kontrol trunk"
+          }
+        }
+      }
+    },
+    "sitToStand.summary.reps" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Repetitions done"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Repetisi selesai"
+          }
+        }
+      }
+    },
+    "sitToStand.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Trunk Control"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kontrol Trunk"
+          }
+        }
+      }
+    },
+    "sitToStand.touchUnit" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "reps"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "repetisi"
+          }
+        }
+      }
+    },
+    "sitToStand.tracking" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sit sideways and keep shoulder, hip, knee, and ankle in view"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Duduk menyamping dan pastikan bahu, pinggul, lutut, dan pergelangan kaki terlihat"
+          }
+        }
+      }
+    },
+    "sitToStand.voice.complete" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Well done. All repetitions are complete."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bagus. Semua repetisi selesai."
+          }
+        }
+      }
+    },
+    "sitToStand.voice.leftTarget" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lean forward, then stand."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Condong ke depan, lalu berdiri."
+          }
+        }
+      }
+    },
+    "sitToStand.voice.returnSameSide" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Good. Sit down, then go again."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bagus. Duduk lagi, lalu ulangi."
+          }
+        }
+      }
+    },
+    "sitToStand.voice.rightTarget" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lean forward, then stand."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Condong ke depan, lalu berdiri."
+          }
+        }
+      }
+    },
     "speak.parity.reachOpening" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -13412,6 +13856,23 @@
         }
       }
     },
+    "sts.holdStanding" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Stand and hold\nHold a comfortable standing pose."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Berdiri dan tahan\nTahan posisi berdiri yang nyaman."
+          }
+        }
+      }
+    },
     "sts.holdSeated" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -13515,6 +13976,7 @@
       }
     },
     "sts.riseProgress" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -13565,6 +14027,7 @@
       }
     },
     "sts.stage.lean" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -13581,6 +14044,7 @@
       }
     },
     "sts.stage.sit" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -13597,6 +14061,7 @@
       }
     },
     "sts.stage.stand" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {

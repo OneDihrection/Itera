@@ -73,45 +73,51 @@ struct BalanceOverviewView: View {
                     VStack(alignment: .leading, spacing: 12) {
                         Text("balance.settings")
                             .typography(.headline)
-                        VStack(alignment: .leading, spacing: 12) {
-                            Text("balance.armSelection")
-                                .typography(.body)
-                            Picker("balance.armSelection", selection: $armSelectionRaw) {
-                                Text("balance.arm.right")
-                                    .tag(BalanceArmSelection.right.rawValue)
-                                Text("balance.arm.left")
-                                    .tag(BalanceArmSelection.left.rawValue)
-                                Text("balance.arm.both")
-                                    .tag(BalanceArmSelection.both.rawValue)
+                        if !exercise.isSitToStand {
+                            VStack(alignment: .leading, spacing: 12) {
+                                Text("balance.armSelection")
+                                    .typography(.body)
+                                Picker("balance.armSelection", selection: $armSelectionRaw) {
+                                    Text("balance.arm.right")
+                                        .tag(BalanceArmSelection.right.rawValue)
+                                    Text("balance.arm.left")
+                                        .tag(BalanceArmSelection.left.rawValue)
+                                    Text("balance.arm.both")
+                                        .tag(BalanceArmSelection.both.rawValue)
+                                }
+                                .pickerStyle(.segmented)
+                                .accessibilityHint("balance.armSelectionHint")
+                                Text("balance.armSelectionHint")
+                                    .typography(.footnote)
+                                    .foregroundStyle(TherapyPalette.muted)
                             }
-                            .pickerStyle(.segmented)
-                            .accessibilityHint("balance.armSelectionHint")
-                            Text("balance.armSelectionHint")
-                                .typography(.footnote)
-                                .foregroundStyle(TherapyPalette.muted)
+                            .padding(18)
+                            .background(TherapyPalette.cream, in: RoundedRectangle(cornerRadius: 22))
                         }
-                        .padding(18)
-                        .background(TherapyPalette.cream, in: RoundedRectangle(cornerRadius: 22))
                         TherapyAdjustmentControl(
                             title: exercise.localized("repetitions"),
                             value: $repetitions,
                             range: 2...20,
                             suffix: exercise.localized("touchUnit")
                         )
-                        TherapyAdjustmentControl(
-                            title: "balance.holdDuration",
-                            value: $holdSeconds,
-                            range: 3...20,
-                            suffix: "balance.secondsUnit"
-                        )
+                        if !exercise.isSitToStand {
+                            TherapyAdjustmentControl(
+                                title: "balance.holdDuration",
+                                value: $holdSeconds,
+                                range: 3...20,
+                                suffix: "balance.secondsUnit"
+                            )
+                        }
                         if exercise.isRotation {
                             Label(exercise.localized("targetCalibrated"), systemImage: "scope")
                                 .typography(.footnote)
                                 .foregroundStyle(TherapyPalette.green)
                         }
-                        Text("balance.holdDurationHint")
-                            .typography(.footnote)
-                            .foregroundStyle(TherapyPalette.muted)
+                        if !exercise.isSitToStand {
+                            Text("balance.holdDurationHint")
+                                .typography(.footnote)
+                                .foregroundStyle(TherapyPalette.muted)
+                        }
                         Text(exercise.localized("repetitionsHint"))
                             .typography(.footnote)
                             .foregroundStyle(TherapyPalette.muted)
