@@ -9,3 +9,5 @@ The two unmodified USDZ assets were copied from the local VisionPoc proof of con
 Physical-device verification of static start/peak poses, playback, materials, and side reflection remains pending.
 
 `HandRotation/hand_rotation_left.mov` and `hand_rotation_right.mov` are the forearm-rotation examples (640 × 640, 6.459 s, one full cycle: palm, turned at the midpoint, palm). `HandRotationExample` shows the movie for the exercised side as the mirrored camera preview displays it (the left hand uses `hand_rotation_right.mov` and the right hand `hand_rotation_left.mov`), so no reflection is applied. Demonstration and range loop the full cycle; the turn plays the first half and the return the second. Reduce Motion and pause hold the turned pose. Physical-device checks of playback and side choice remain pending.
+
+`arm_raise_demonstration.mp4` is the muted arm raise example, copied from `/Users/mdimaswisodewo/Documents/Codex/2026-11-09/can-you-access-blender-mcp-and/outputs/Calm_Animated_Character_Soft_3D_Light_Gray_24fps.mp4`. It replaces the USDZ in demonstration and practice; the original USDZ remains bundled.
