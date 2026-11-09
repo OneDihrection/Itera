@@ -1,109 +1,9 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
-    "cup.trackingLost" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Show the cup again\nReturn to the starting circle."
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Perlihatkan kembali cangkir\nKembalikan ke lingkaran awal."
-          }
-        }
-      }
+    "" : {
+
     },
-    "cup.ambiguous" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Keep only one cup in view\nTracking is uncertain."
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Pastikan hanya satu cangkir terlihat\nPelacakan belum pasti."
-          }
-        }
-      }
-    },
-    "session.completedSets %lld" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Completed sets: %1$lld"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Set selesai: %1$lld"
-          }
-        }
-      }
-    },
-    "routine.sets %lld" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Sets: %1$lld"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Set: %1$lld"
-          }
-        }
-      }
-    },
-    "routine.perSet" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Repetitions and rounds are per set. Rest between sets uses your rest setting."
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Pengulangan dan putaran dihitung per set. Jeda antarset mengikuti pengaturan istirahat."
-          }
-        }
-      }
-    },
-    "session.setProgress %lld %lld" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Set %1$lld / %2$lld"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Set %1$lld / %2$lld"
-          }
-        }
-      }
-    },
-    "" : {},
     "achievement.earned" : {
       "localizations" : {
         "en" : {
@@ -2795,6 +2695,23 @@
         }
       }
     },
+    "cup.ambiguous" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Keep only one cup in view\nTracking is uncertain."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pastikan hanya satu cangkir terlihat\nPelacakan belum pasti."
+          }
+        }
+      }
+    },
     "cup.bodyTrackingLost" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -3088,6 +3005,23 @@
         }
       }
     },
+    "cup.trackingLost" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Show the cup again\nReturn to the starting circle."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Perlihatkan kembali cangkir\nKembalikan ke lingkaran awal."
+          }
+        }
+      }
+    },
     "cup.transfer" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -3341,6 +3275,134 @@
         }
       }
     },
+    "done.message.afternoon" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "You've finished all of this afternoon's exercises.\nThank you for your effort."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kamu sudah menyelesaikan semua latihan di siang hari.\nTerima kasih sudah berusaha."
+          }
+        }
+      }
+    },
+    "done.message.evening" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "You've finished all of this evening's exercises.\nThank you for your effort."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kamu sudah menyelesaikan semua latihan di sore hari.\nTerima kasih sudah berusaha."
+          }
+        }
+      }
+    },
+    "done.message.morning" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "You've finished all of this morning's exercises.\nThank you for your effort."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kamu sudah menyelesaikan semua latihan di pagi hari.\nTerima kasih sudah berusaha."
+          }
+        }
+      }
+    },
+    "done.message.night" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "You've finished all of tonight's exercises.\nThank you for your effort."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kamu sudah menyelesaikan semua latihan di malam hari.\nTerima kasih sudah berusaha."
+          }
+        }
+      }
+    },
+    "done.messagePartial" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The exercise you did has been saved.\nThank you for your effort."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Latihan yang sudah kamu lakukan sudah tersimpan.\nTerima kasih sudah berusaha."
+          }
+        }
+      }
+    },
+    "done.title" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Exercise complete!"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Latihan selesai!"
+          }
+        }
+      }
+    },
+    "done.titlePartial" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Exercise saved"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Latihan tersimpan"
+          }
+        }
+      }
+    },
+    "done.viewProgress" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "View progress"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lihat Progres"
+          }
+        }
+      }
+    },
     "exercise.extensionSequence" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -3359,7 +3421,6 @@
       }
     },
     "exercise.forearmRotation" : {
-      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -3405,6 +3466,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Tekuk seperti kait"
+          }
+        }
+      }
+    },
+    "exercise.instructions" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Instructions"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Petunjuk"
           }
         }
       }
@@ -3459,6 +3536,38 @@
         }
       }
     },
+    "exercise.repetitionsUnit" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Repetitions"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Repetisi"
+          }
+        }
+      }
+    },
+    "exercise.setsUnit" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sets"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Set"
+          }
+        }
+      }
+    },
     "exercise.spreading" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -3472,6 +3581,38 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Renggangkan jari"
+          }
+        }
+      }
+    },
+    "exercise.start" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Start exercise"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mulai Latihan"
+          }
+        }
+      }
+    },
+    "exercise.target" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Target"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Target"
           }
         }
       }
@@ -3996,6 +4137,22 @@
         }
       }
     },
+    "home.continueExercise" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Continue exercise"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lanjutkan latihan"
+          }
+        }
+      }
+    },
     "home.continueShort" : {
       "localizations" : {
         "en" : {
@@ -4092,6 +4249,54 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Halo, dunia!"
+          }
+        }
+      }
+    },
+    "home.greetingName %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hello, %@!"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Halo, %@!"
+          }
+        }
+      }
+    },
+    "home.greetingSubtitle" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Just a little today, okay?"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sedikit aja yuk hari ini"
+          }
+        }
+      }
+    },
+    "home.hello" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hello!"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Halo!"
           }
         }
       }
@@ -4277,6 +4482,70 @@
         }
       }
     },
+    "home.program.armDetail" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Arm raise, elbow bend, reaching and cup"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Angkat lengan, tekuk siku, menjangkau, dan gelas"
+          }
+        }
+      }
+    },
+    "home.program.balanceDetail" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Reach across your body"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Menjangkau melewati tengah tubuh"
+          }
+        }
+      }
+    },
+    "home.program.finger" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Finger exercises"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Latihan jari"
+          }
+        }
+      }
+    },
+    "home.programs" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Exercise programs"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Program Latihan"
+          }
+        }
+      }
+    },
     "home.ready" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -4376,6 +4645,22 @@
         }
       }
     },
+    "home.setsReps %lld %lld" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sets: %lld • Reps: %lld"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld set • %lld repetisi"
+          }
+        }
+      }
+    },
     "home.setup" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -4443,6 +4728,22 @@
         }
       }
     },
+    "home.startExercise" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Start exercise"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mulai latihan"
+          }
+        }
+      }
+    },
     "home.tagline" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -4477,6 +4778,22 @@
         }
       }
     },
+    "home.todayExercise" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Today's exercise"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Latihan hari ini"
+          }
+        }
+      }
+    },
     "home.todayShort" : {
       "localizations" : {
         "en" : {
@@ -4494,7 +4811,6 @@
       }
     },
     "home.trunkPractice" : {
-      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -4978,6 +5294,88 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Renggangkan jari perlahan."
+          }
+        }
+      }
+    },
+    "music.change" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Change music"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ganti musik"
+          }
+        }
+      }
+    },
+    "music.floats" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Floats — Swoop"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Floats — Swoop"
+          }
+        }
+      }
+    },
+    "music.homecoming" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Homecoming — Tranquilium"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Homecoming — Tranquilium"
+          }
+        }
+      }
+    },
+    "music.off" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No music"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tanpa musik"
+          }
+        }
+      }
+    },
+    "music.title" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Exercise music"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Musik latihan"
           }
         }
       }
@@ -5982,6 +6380,38 @@
         }
       }
     },
+    "progress.badgeCount %lld" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Badges: %lld"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld lencana"
+          }
+        }
+      }
+    },
+    "progress.badgeEarned %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Earned %@"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Diperoleh %@"
+          }
+        }
+      }
+    },
     "progress.bestDays" : {
       "localizations" : {
         "en" : {
@@ -5998,6 +6428,86 @@
         }
       }
     },
+    "progress.challenge.sessions" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Steady steps"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Langkah rutin"
+          }
+        }
+      }
+    },
+    "progress.challengeActive" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "In progress"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sedang diikuti"
+          }
+        }
+      }
+    },
+    "progress.challengeProgress %lld %lld" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld of %lld sessions"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld dari %lld sesi"
+          }
+        }
+      }
+    },
+    "progress.challenges" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Challenges"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tantangan"
+          }
+        }
+      }
+    },
+    "progress.challengeTarget %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Target: %@ badge"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Target: Lencana %@"
+          }
+        }
+      }
+    },
     "progress.currentDays" : {
       "localizations" : {
         "en" : {
@@ -6010,6 +6520,118 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Hari beruntun"
+          }
+        }
+      }
+    },
+    "progress.dayEmpty" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Not recorded"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Belum tercatat"
+          }
+        }
+      }
+    },
+    "progress.daySessions %lld" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sessions done: %lld"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld sesi selesai"
+          }
+        }
+      }
+    },
+    "progress.done" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Completed"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Diselesaikan"
+          }
+        }
+      }
+    },
+    "progress.doneRepetitions %lld" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Reps: %lld"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld repetisi"
+          }
+        }
+      }
+    },
+    "progress.doneValue %lld %lld %lld" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld × %lld = %lld reps"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld set × %lld repetisi = %lld repetisi"
+          }
+        }
+      }
+    },
+    "progress.duration %lld" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Exercise time: %lld min"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Durasi latihan: %lld menit"
+          }
+        }
+      }
+    },
+    "progress.feeling" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Feeling after exercise:"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Perasaan setelah latihan:"
           }
         }
       }
@@ -6042,6 +6664,122 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Minggu berikutnya"
+          }
+        }
+      }
+    },
+    "progress.notRecorded" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Not recorded"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Belum dicatat"
+          }
+        }
+      }
+    },
+    "progress.outcome.completed" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Done"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Selesai"
+          }
+        }
+      }
+    },
+    "progress.outcome.interrupted" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Interrupted"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Terhenti"
+          }
+        }
+      }
+    },
+    "progress.outcome.savedForLater" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Saved for later"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Disimpan"
+          }
+        }
+      }
+    },
+    "progress.outcome.stopped" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ended early"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Diakhiri"
+          }
+        }
+      }
+    },
+    "progress.plan" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Therapist's plan"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rencana dari terapis"
+          }
+        }
+      }
+    },
+    "progress.planValue %lld %lld" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld × %lld reps"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld set × %lld repetisi"
           }
         }
       }
@@ -6094,6 +6832,22 @@
         }
       }
     },
+    "progress.sessionsRecorded %lld" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sessions recorded: %lld"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld sesi tercatat"
+          }
+        }
+      }
+    },
     "progress.streak" : {
       "localizations" : {
         "en" : {
@@ -6126,6 +6880,38 @@
         }
       }
     },
+    "progress.title" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Progress"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Progres"
+          }
+        }
+      }
+    },
+    "progress.titleName %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@'s progress"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Progres %@"
+          }
+        }
+      }
+    },
     "progress.week" : {
       "localizations" : {
         "en" : {
@@ -6138,6 +6924,38 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Progres mingguan"
+          }
+        }
+      }
+    },
+    "progress.weekDays %lld" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Days practised this week: %lld"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Latihan %lld hari minggu ini"
+          }
+        }
+      }
+    },
+    "progress.weekDetail %lld %lld %lld" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sessions: %lld • Reps: %lld • Minutes: %lld"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld sesi • %lld repetisi • %lld menit"
           }
         }
       }
@@ -6317,6 +7135,292 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Target gerakan: 80% dari rentang Anda"
+          }
+        }
+      }
+    },
+    "recovery.calibration" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Let’s measure again with a comfortable movement."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mari ukur ulang dengan gerakan yang nyaman."
+          }
+        }
+      }
+    },
+    "recovery.camera" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The camera is unavailable. Practice is paused. Try again."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kamera belum tersedia. Latihan dijeda. Coba lagi."
+          }
+        }
+      }
+    },
+    "recovery.cameraPermission" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Allow camera access in Settings, then try again."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Izinkan kamera di Pengaturan, lalu coba lagi."
+          }
+        }
+      }
+    },
+    "recovery.checkAgain" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Check again"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Periksa lagi"
+          }
+        }
+      }
+    },
+    "recovery.fingers" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Face your palm toward the camera so the fingertips are visible."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hadapkan telapak ke kamera agar ujung jari terlihat."
+          }
+        }
+      }
+    },
+    "recovery.interrupted" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Practice was interrupted and is paused. Continue when you are ready."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Latihan terhenti dan sudah dijeda. Lanjutkan saat siap."
+          }
+        }
+      }
+    },
+    "recovery.left" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Use your left hand."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gunakan tangan kiri."
+          }
+        }
+      }
+    },
+    "recovery.oneHand" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Show only the hand you are training."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tampilkan satu tangan yang dilatih saja."
+          }
+        }
+      }
+    },
+    "recovery.openSettings" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Open Settings"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Buka Pengaturan"
+          }
+        }
+      }
+    },
+    "recovery.position" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Place your hand inside the camera view."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Posisikan tangan di dalam bingkai kamera."
+          }
+        }
+      }
+    },
+    "recovery.ready" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ready again. Continue when you are ready."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sudah siap kembali. Tekan Lanjutkan saat siap."
+          }
+        }
+      }
+    },
+    "recovery.right" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Use your right hand."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gunakan tangan kanan."
+          }
+        }
+      }
+    },
+    "recovery.sharing" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The badge could not be shared. Try again."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lencana belum berhasil dibagikan. Coba lagi."
+          }
+        }
+      }
+    },
+    "recovery.storage" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Progress has not been saved. Try saving again."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Progres belum tersimpan. Coba simpan lagi."
+          }
+        }
+      }
+    },
+    "recovery.tryAgainSlowly" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Let’s try again slowly."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mari coba lagi perlahan."
+          }
+        }
+      }
+    },
+    "recovery.voice" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Voice commands are unavailable. Practice is paused. Try again."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Perintah suara belum tersedia. Latihan dijeda. Coba lagi."
+          }
+        }
+      }
+    },
+    "recovery.voicePermission" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Allow microphone and speech recognition in Settings, then check again."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Izinkan mikrofon dan pengenalan suara di Pengaturan, lalu periksa lagi."
           }
         }
       }
@@ -6775,6 +7879,38 @@
         }
       }
     },
+    "rest.nextExercise %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Next up: %@…"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Selanjutnya: %@…"
+          }
+        }
+      }
+    },
+    "rest.nextSet %lld" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Next up: set %lld…"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Selanjutnya masuk ke set %lld…"
+          }
+        }
+      }
+    },
     "rest.reassurance" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -6788,6 +7924,70 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Nikmati jedanya. Latihan sesuai kemampuan."
+          }
+        }
+      }
+    },
+    "rest.seconds" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "seconds"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "detik"
+          }
+        }
+      }
+    },
+    "rest.skip" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Skip"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lewati"
+          }
+        }
+      }
+    },
+    "rest.startsIn %lld" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Starts in %lld s"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dimulai dalam %lld detik"
+          }
+        }
+      }
+    },
+    "rest.title" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Time to rest!"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Waktunya istirahat!"
           }
         }
       }
@@ -7841,6 +9041,23 @@
         }
       }
     },
+    "routine.perSet" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Repetitions and rounds are per set. Rest between sets uses your rest setting."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pengulangan dan putaran dihitung per set. Jeda antarset mengikuti pengaturan istirahat."
+          }
+        }
+      }
+    },
     "routine.phases" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -7938,6 +9155,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "%lld putaran"
+          }
+        }
+      }
+    },
+    "routine.sets %lld" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sets: %1$lld"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Set: %1$lld"
           }
         }
       }
@@ -8228,6 +9462,22 @@
         }
       }
     },
+    "session.animation" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Animation"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Animasi"
+          }
+        }
+      }
+    },
     "session.animationFallback" : {
       "localizations" : {
         "en" : {
@@ -8324,6 +9574,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Hadapkan sisi yang dilatih ke kamera. Pastikan bahu, siku, dan pergelangan tangan terlihat. Tekuk dan luruskan dengan nyaman."
+          }
+        }
+      }
+    },
+    "session.assistance.foldTowel" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Use an empty hand. Close inside yellow for a brief hold, move toward green, hold there, then open. Four folds make one repetition. You can move while guidance is speaking."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gunakan tangan kosong. Kepalkan sebentar di kuning, gerakkan ke hijau, tahan, lalu buka. Empat lipatan dihitung satu pengulangan. Anda dapat bergerak saat panduan berbicara."
           }
         }
       }
@@ -8443,6 +9709,22 @@
         }
       }
     },
+    "session.close" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Close"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tutup"
+          }
+        }
+      }
+    },
     "session.complete" : {
       "localizations" : {
         "en" : {
@@ -8455,6 +9737,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Terima kasih sudah bergerak hari ini."
+          }
+        }
+      }
+    },
+    "session.completedSets %lld" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Completed sets: %1$lld"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Set selesai: %1$lld"
           }
         }
       }
@@ -8691,6 +9990,54 @@
         }
       }
     },
+    "session.endCancel" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cancel"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Batal"
+          }
+        }
+      }
+    },
+    "session.endConfirm" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Yes, end"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ya, akhiri"
+          }
+        }
+      }
+    },
+    "session.endConfirmMessage" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "End this session? Finished exercises stay saved."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Akhiri sesi latihan? Latihan yang sudah selesai tetap tersimpan."
+          }
+        }
+      }
+    },
     "session.endNote" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -8704,6 +10051,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Mengakhiri sesi menyimpan latihan yang sudah teramati. Melanjutkan nanti perlu cek gerakan lagi."
+          }
+        }
+      }
+    },
+    "session.endSession" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "End session"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Akhiri Sesi Latihan"
           }
         }
       }
@@ -8753,6 +10116,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Latihan selesai. Bagus"
+          }
+        }
+      }
+    },
+    "session.foldTowel" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fold Towel"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Melipat Handuk"
           }
         }
       }
@@ -8988,6 +10368,22 @@
         }
       }
     },
+    "session.nextUp" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Next"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Berikutnya"
+          }
+        }
+      }
+    },
     "session.opening.armRaise.left.positioning" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -9203,6 +10599,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Jeda"
+          }
+        }
+      }
+    },
+    "session.pausedTitle" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Exercise paused"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Latihan dijeda"
           }
         }
       }
@@ -9649,6 +11061,38 @@
         }
       }
     },
+    "session.repetitionsTitle" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Repetitions"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Repetisi"
+          }
+        }
+      }
+    },
+    "session.repetitionsUnit" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "reps"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "repetisi"
+          }
+        }
+      }
+    },
     "session.rest" : {
       "localizations" : {
         "en" : {
@@ -9726,6 +11170,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Lanjutkan"
+          }
+        }
+      }
+    },
+    "session.resumeExercise" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Resume exercise"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lanjutkan Latihan"
           }
         }
       }
@@ -9910,6 +11370,103 @@
         }
       }
     },
+    "session.setDone %lld" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Set %lld done!"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Set %lld selesai!"
+          }
+        }
+      }
+    },
+    "session.setDoneDetail %lld %lld" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld of %lld repetitions, great work!"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld dari %lld repetisi, kerja bagus!"
+          }
+        }
+      }
+    },
+    "session.setNumber %lld" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Set %lld"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Set %lld"
+          }
+        }
+      }
+    },
+    "session.setProgress %lld %lld" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Set %1$lld / %2$lld"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Set %1$lld / %2$lld"
+          }
+        }
+      }
+    },
+    "session.setRepetitions %lld %lld" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld/%lld reps"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld/%lld repetisi"
+          }
+        }
+      }
+    },
+    "session.setTitle %lld %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Set %lld: %@"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Set %lld: %@"
+          }
+        }
+      }
+    },
     "session.sitToStand" : {
       "localizations" : {
         "en" : {
@@ -10087,6 +11644,166 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Latihan waktu · hanya waktu gerakan yang terbaca"
+          }
+        }
+      }
+    },
+    "settings.exerciseHelp" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Applies from the next session. A session in progress keeps its own settings."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Berlaku mulai sesi berikutnya. Sesi yang sedang berjalan tidak berubah."
+          }
+        }
+      }
+    },
+    "settings.exerciseTitle" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Finger exercises"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Latihan jari"
+          }
+        }
+      }
+    },
+    "settings.patientName" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Name, for example Bu Yuli"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nama, misalnya Bu Yuli"
+          }
+        }
+      }
+    },
+    "settings.patientNameHelp" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Used only to greet the patient on Home and Progress. Stored on this iPad only."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hanya dipakai untuk menyapa pasien di Beranda dan Progres. Hanya disimpan di iPad ini."
+          }
+        }
+      }
+    },
+    "settings.patientNameTitle" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Patient name"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nama pasien"
+          }
+        }
+      }
+    },
+    "settings.voiceGood" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A high-quality voice is in use for instructions."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Suara berkualitas tinggi sudah dipakai untuk instruksi."
+          }
+        }
+      }
+    },
+    "settings.voiceHigh" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "High quality"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kualitas tinggi"
+          }
+        }
+      }
+    },
+    "settings.voiceStandard" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Standard"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Standar"
+          }
+        }
+      }
+    },
+    "settings.voiceTip" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "For a more natural voice, download a high-quality voice in the iPad's Settings › Accessibility › Spoken Content › Voices, then return here."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Agar suara lebih alami, unduh suara berkualitas tinggi di Pengaturan iPad › Aksesibilitas › Konten Lisan › Suara › Bahasa Indonesia, lalu kembali ke sini."
+          }
+        }
+      }
+    },
+    "settings.voiceTitle" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Instruction voice"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Suara instruksi"
           }
         }
       }
@@ -10803,2786 +12520,6 @@
         }
       }
     },
-    "storage.error" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Could not read or save your progress. Try again. Your existing files are kept."
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Kemajuan belum dapat dibaca atau disimpan. Coba lagi. Data yang ada tetap disimpan."
-          }
-        }
-      }
-    },
-    "sts.holdSeated" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Sit comfortably and hold still\nAny comfortable seat works, side to the camera."
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Duduk dengan nyaman dan tahan posisi\nPosisi duduk apa pun yang nyaman, menyamping ke kamera."
-          }
-        }
-      }
-    },
-    "sts.kneeLabel %lld" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Knee %lld°"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Lutut %lld°"
-          }
-        }
-      }
-    },
-    "sts.leanFirst" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Lean forward before you stand\nThis repetition did not count."
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Condong ke depan sebelum berdiri\nRepetisi ini tidak dihitung."
-          }
-        }
-      }
-    },
-    "sts.leanForward" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Lean forward a little\nOnly as far as comfortable."
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Condong sedikit ke depan\nSebatas yang nyaman."
-          }
-        }
-      }
-    },
-    "sts.leanLabel %lld" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Lean %lld°"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Condong %lld°"
-          }
-        }
-      }
-    },
-    "sts.opening" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Sit sideways to the camera\nShow your whole body from head to feet. Feet flat on the floor."
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Duduk menyamping ke kamera\nTampilkan seluruh tubuh dari kepala sampai kaki. Telapak kaki rata di lantai."
-          }
-        }
-      }
-    },
-    "sts.riseProgress" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Rising progress"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Kemajuan berdiri"
-          }
-        }
-      }
-    },
-    "sts.sitDown" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Sit down slowly\nControl your lowering."
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Duduk perlahan\nKendalikan saat turun."
-          }
-        }
-      }
-    },
-    "sts.slowDown" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Sit down a bit more slowly\nThis repetition did not count."
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Duduk sedikit lebih perlahan\nRepetisi ini tidak dihitung."
-          }
-        }
-      }
-    },
-    "sts.stage.lean" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Lean"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Condong"
-          }
-        }
-      }
-    },
-    "sts.stage.sit" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Sit"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Duduk"
-          }
-        }
-      }
-    },
-    "sts.stage.stand" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Stand"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Berdiri"
-          }
-        }
-      }
-    },
-    "sts.standUp" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Stand up at your own pace\nKeep leaning forward as you rise."
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Berdiri sesuai kemampuan Anda\nTetap condong ke depan saat bangkit."
-          }
-        }
-      }
-    },
-    "sts.trackingLost" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Keep your shoulder, hip, knee, and ankle in view"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Pastikan bahu, pinggul, lutut, dan pergelangan kaki terlihat"
-          }
-        }
-      }
-    },
-    "sts.trial" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Do one sit-to-stand your own way\nLean forward, stand up, then sit back down at a comfortable pace."
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Lakukan satu kali duduk ke berdiri dengan cara Anda\nCondong ke depan, berdiri, lalu duduk kembali sesuai kenyamanan Anda."
-          }
-        }
-      }
-    },
-    "tab.home" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Home"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Beranda"
-          }
-        }
-      }
-    },
-    "tab.reports" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Progress"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Progres"
-          }
-        }
-      }
-    },
-    "therapy.armRaise" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Arm raises"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Angkat lengan"
-          }
-        }
-      }
-    },
-    "therapy.directionalReach" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Directional reaching"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Latihan menjangkau"
-          }
-        }
-      }
-    },
-    "therapy.elbowBend" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Elbow bends"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Tekuk siku"
-          }
-        }
-      }
-    },
-    "therapy.overview.description" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Arm raises and elbow bends: five repetitions on each side. Directional reaching: one round on the left. Rest for 15 seconds between activities."
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Angkat lengan dan tekuk siku: lima pengulangan tiap sisi. Menjangkau: satu putaran sisi kiri. Istirahat 15 detik antaraktivitas."
-          }
-        }
-      }
-    },
-    "therapy.overview.positioning" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Place the iPad securely so your face, shoulders, hips, elbows, and wrists remain visible. Move only within a comfortable range."
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Letakkan iPad dengan aman agar wajah, bahu, pinggul, siku, dan pergelangan tangan terlihat. Bergeraklah dalam rentang yang nyaman."
-          }
-        }
-      }
-    },
-    "therapy.overview.status" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Session tracking is not connected yet."
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Pelacakan sesi belum terhubung."
-          }
-        }
-      }
-    },
-    "therapy.overview.title" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Guided therapy"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Terapi terpandu"
-          }
-        }
-      }
-    },
-    "therapy.session.cameraDenied" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Camera access is required. Enable it in Settings."
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Akses kamera diperlukan. Aktifkan di Pengaturan."
-          }
-        }
-      }
-    },
-    "therapy.session.personVisible" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Person detected. Exercise scoring is not connected yet."
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Orang terdeteksi. Penghitungan latihan belum terhubung."
-          }
-        }
-      }
-    },
-    "therapy.session.position" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Keep one person visible in the camera."
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Pastikan satu orang terlihat di kamera."
-          }
-        }
-      }
-    },
-    "therapy.session.start" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Start"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Mulai"
-          }
-        }
-      }
-    },
-    "therapy.session.stop" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "End session"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Akhiri sesi"
-          }
-        }
-      }
-    },
-    "therapy.session.title" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Therapy session"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Sesi terapi"
-          }
-        }
-      }
-    },
-    "trunk.overview.title" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Trunk control practice"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Latihan kontrol trunk"
-          }
-        }
-      }
-    },
-    "trunk.positioning" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Sit sideways to the camera on a stable chair, about 2 to 3 meters away, so your whole body from head to feet is visible from the side. A side view lets the camera follow your shoulder, hip, knee, and ankle accurately."
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Duduk menyamping ke kamera di kursi yang stabil, sekitar 2 sampai 3 meter dari kamera, agar seluruh tubuh dari kepala sampai kaki terlihat dari samping. Tampak samping membuat kamera dapat mengikuti bahu, pinggul, lutut, dan pergelangan kaki dengan akurat."
-          }
-        }
-      }
-    },
-    "voice.command.pause" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "pause|jeda"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "jeda|pause"
-          }
-        }
-      }
-    },
-    "voice.command.repeat" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "repeat|ulangi"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "ulangi|repeat"
-          }
-        }
-      }
-    },
-    "voice.command.resume" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "continue|resume|lanjut|lanjutkan"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "lanjut|lanjutkan|continue|resume"
-          }
-        }
-      }
-    },
-    "voice.command.stop" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "stop|akhiri"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "akhiri|stop"
-          }
-        }
-      }
-    },
-    "voice.commands" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Say: “pause”, “resume”, “stop”, or “repeat”."
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ucapkan: “jeda”, “lanjut”, “akhiri”, atau “ulangi”."
-          }
-        }
-      }
-    },
-    "voice.off" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Voice control: off"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Kontrol suara: mati"
-          }
-        }
-      }
-    },
-    "voice.on" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Voice control: on"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Kontrol suara: aktif"
-          }
-        }
-      }
-    },
-    "voice.pauseListening" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Listening. Say “continue” to return."
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Mendengarkan. Ucapkan “lanjut” untuk kembali."
-          }
-        }
-      }
-    },
-    "voice.unavailable" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "On-device voice controls are unavailable. Ask your caregiver to help with touch controls."
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Kontrol suara di perangkat belum tersedia. Minta pendamping membantu dengan tombol sentuh."
-          }
-        }
-      }
-    },
-    "voice.useTouch" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Use touch controls"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Gunakan tombol sentuh"
-          }
-        }
-      }
-    },
-    "task.category" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Task Oriented"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Berorientasi Tugas"
-          }
-        }
-      }
-    },
-    "session.foldTowel" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Fold Towel"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Melipat Handuk"
-          }
-        }
-      }
-    },
-    "towel.positioning" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Sit comfortably with your selected hand visible. Use an empty hand; the towel is on screen."
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Duduk dengan nyaman dan pastikan tangan yang dipilih terlihat. Gunakan tangan kosong; handuk ada di layar."
-          }
-        }
-      }
-    },
-    "towel.opening.left" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Fold the towel with your left hand.\nFour folds make one repetition."
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Lipat handuk dengan tangan kiri.\nEmpat lipatan untuk satu pengulangan."
-          }
-        }
-      }
-    },
-    "towel.opening.right" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Fold the towel with your right hand.\nFour folds make one repetition."
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Lipat handuk dengan tangan kanan.\nEmpat lipatan untuk satu pengulangan."
-          }
-        }
-      }
-    },
-    "towel.demo" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Close at yellow, move to green, hold, then open.\nYou can begin after the countdown, even while guidance speaks."
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Kepalkan di kuning, gerakkan ke hijau, tahan, lalu buka.\nMulai setelah hitungan mundur, meskipun panduan masih berbicara."
-          }
-        }
-      }
-    },
-    "towel.destinationHold" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Hold your closed hand at green."
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Tahan kepalan di hijau."
-          }
-        }
-      }
-    },
-    "towel.recover" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Keep your hand closed to continue."
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Tetap kepalkan tangan untuk melanjutkan."
-          }
-        }
-      }
-    },
-    "towel.approach" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Close your hand inside yellow."
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Kepalkan tangan di dalam lingkaran kuning."
-          }
-        }
-      }
-    },
-    "towel.grab" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Keep your hand closed briefly."
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Tahan kepalan sebentar."
-          }
-        }
-      }
-    },
-    "towel.fold" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Move your closed hand toward green."
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Gerakkan tangan yang mengepal ke hijau."
-          }
-        }
-      }
-    },
-    "towel.release" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Open your hand at green."
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Buka tangan di hijau."
-          }
-        }
-      }
-    },
-    "towel.trackingLost" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Show your hand. Keep your wrist visible."
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Tampilkan tangan. Pastikan pergelangan terlihat."
-          }
-        }
-      }
-    },
-    "towel.foldNumber %lld" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Fold %1$lld of 4"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Lipatan %1$lld dari 4"
-          }
-        }
-      }
-    },
-    "session.assistance.foldTowel" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Use an empty hand. Close inside yellow for a brief hold, move toward green, hold there, then open. Four folds make one repetition. You can move while guidance is speaking."
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Gunakan tangan kosong. Kepalkan sebentar di kuning, gerakkan ke hijau, tahan, lalu buka. Empat lipatan dihitung satu pengulangan. Anda dapat bergerak saat panduan berbicara."
-          }
-        }
-      }
-    },
-    "towel.routineDetail" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "One repetition is four folds. Each fold requires closing, moving while closed, and opening to release."
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Satu pengulangan terdiri dari empat lipatan. Setiap lipatan memerlukan menutup tangan, bergerak sambil tertutup, lalu membuka untuk melepaskan."
-          }
-        }
-      }
-    },
-    "towel.history" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Task Oriented history"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Riwayat Berorientasi Tugas"
-          }
-        }
-      }
-    },
-    "towel.historyEmpty" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "No task-oriented sessions yet."
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Belum ada sesi berorientasi tugas."
-          }
-        }
-      }
-    },
-    "towel.historyError" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "History could not be loaded. Try again."
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Riwayat tidak dapat dimuat. Coba lagi."
-          }
-        }
-      }
-    },
-    "towel.deleteHistory" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Delete session"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Hapus sesi"
-          }
-        }
-      }
-    },
-    "towel.deleteError" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "The session could not be deleted. Try again."
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Sesi tidak dapat dihapus. Coba lagi."
-          }
-        }
-      }
-    },
-    "towel.restart" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Restart towel"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ulangi handuk"
-          }
-        }
-      },
-      "extractionState" : "manual"
-    },
-    "towel.framingWarning" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Move the iPad farther away. Keep your whole hand visible."
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Jauhkan iPad. Pastikan seluruh tangan terlihat."
-          }
-        }
-      }
-    },
-    "done.message.afternoon" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "You've finished all of this afternoon's exercises.\nThank you for your effort."
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Kamu sudah menyelesaikan semua latihan di siang hari.\nTerima kasih sudah berusaha."
-          }
-        }
-      }
-    },
-    "done.message.evening" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "You've finished all of this evening's exercises.\nThank you for your effort."
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Kamu sudah menyelesaikan semua latihan di sore hari.\nTerima kasih sudah berusaha."
-          }
-        }
-      }
-    },
-    "done.message.morning" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "You've finished all of this morning's exercises.\nThank you for your effort."
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Kamu sudah menyelesaikan semua latihan di pagi hari.\nTerima kasih sudah berusaha."
-          }
-        }
-      }
-    },
-    "done.message.night" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "You've finished all of tonight's exercises.\nThank you for your effort."
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Kamu sudah menyelesaikan semua latihan di malam hari.\nTerima kasih sudah berusaha."
-          }
-        }
-      }
-    },
-    "done.messagePartial" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "The exercise you did has been saved.\nThank you for your effort."
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Latihan yang sudah kamu lakukan sudah tersimpan.\nTerima kasih sudah berusaha."
-          }
-        }
-      }
-    },
-    "done.title" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Exercise complete!"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Latihan selesai!"
-          }
-        }
-      }
-    },
-    "done.titlePartial" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Exercise saved"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Latihan tersimpan"
-          }
-        }
-      }
-    },
-    "done.viewProgress" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "View progress"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Lihat Progres"
-          }
-        }
-      }
-    },
-    "exercise.instructions" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Instructions"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Petunjuk"
-          }
-        }
-      }
-    },
-    "exercise.repetitionsUnit" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Repetitions"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Repetisi"
-          }
-        }
-      }
-    },
-    "exercise.setsUnit" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Sets"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Set"
-          }
-        }
-      }
-    },
-    "exercise.start" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Start exercise"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Mulai Latihan"
-          }
-        }
-      }
-    },
-    "exercise.target" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Target"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Target"
-          }
-        }
-      }
-    },
-    "home.continueExercise" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Continue exercise"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Lanjutkan latihan"
-          }
-        }
-      }
-    },
-    "home.greetingName %@" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Hello, %@!"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Halo, %@!"
-          }
-        }
-      }
-    },
-    "home.greetingSubtitle" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Just a little today, okay?"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Sedikit aja yuk hari ini"
-          }
-        }
-      }
-    },
-    "home.hello" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Hello!"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Halo!"
-          }
-        }
-      }
-    },
-    "home.program.armDetail" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Arm raise, elbow bend, reaching and cup"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Angkat lengan, tekuk siku, menjangkau, dan gelas"
-          }
-        }
-      }
-    },
-    "home.program.balanceDetail" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Reach across your body"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Menjangkau melewati tengah tubuh"
-          }
-        }
-      }
-    },
-    "home.program.finger" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Finger exercises"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Latihan jari"
-          }
-        }
-      }
-    },
-    "home.programs" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Exercise programs"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Program Latihan"
-          }
-        }
-      }
-    },
-    "home.setsReps %lld %lld" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Sets: %lld • Reps: %lld"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%lld set • %lld repetisi"
-          }
-        }
-      }
-    },
-    "home.startExercise" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Start exercise"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Mulai latihan"
-          }
-        }
-      }
-    },
-    "home.todayExercise" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Today's exercise"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Latihan hari ini"
-          }
-        }
-      }
-    },
-    "music.change" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Change music"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ganti musik"
-          }
-        }
-      }
-    },
-    "music.floats" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Floats — Swoop"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Floats — Swoop"
-          }
-        }
-      }
-    },
-    "music.homecoming" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Homecoming — Tranquilium"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Homecoming — Tranquilium"
-          }
-        }
-      }
-    },
-    "music.off" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "No music"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Tanpa musik"
-          }
-        }
-      }
-    },
-    "music.title" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Exercise music"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Musik latihan"
-          }
-        }
-      }
-    },
-    "progress.badgeCount %lld" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Badges: %lld"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%lld lencana"
-          }
-        }
-      }
-    },
-    "progress.badgeEarned %@" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Earned %@"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Diperoleh %@"
-          }
-        }
-      }
-    },
-    "progress.challenge.sessions" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Steady steps"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Langkah rutin"
-          }
-        }
-      }
-    },
-    "progress.challengeActive" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "In progress"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Sedang diikuti"
-          }
-        }
-      }
-    },
-    "progress.challengeProgress %lld %lld" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%lld of %lld sessions"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%lld dari %lld sesi"
-          }
-        }
-      }
-    },
-    "progress.challenges" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Challenges"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Tantangan"
-          }
-        }
-      }
-    },
-    "progress.challengeTarget %@" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Target: %@ badge"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Target: Lencana %@"
-          }
-        }
-      }
-    },
-    "progress.dayEmpty" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Not recorded"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Belum tercatat"
-          }
-        }
-      }
-    },
-    "progress.daySessions %lld" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Sessions done: %lld"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%lld sesi selesai"
-          }
-        }
-      }
-    },
-    "progress.done" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Completed"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Diselesaikan"
-          }
-        }
-      }
-    },
-    "progress.doneRepetitions %lld" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Reps: %lld"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%lld repetisi"
-          }
-        }
-      }
-    },
-    "progress.doneValue %lld %lld %lld" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%lld × %lld = %lld reps"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%lld set × %lld repetisi = %lld repetisi"
-          }
-        }
-      }
-    },
-    "progress.duration %lld" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Exercise time: %lld min"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Durasi latihan: %lld menit"
-          }
-        }
-      }
-    },
-    "progress.feeling" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Feeling after exercise:"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Perasaan setelah latihan:"
-          }
-        }
-      }
-    },
-    "progress.notRecorded" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Not recorded"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Belum dicatat"
-          }
-        }
-      }
-    },
-    "progress.outcome.completed" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Done"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Selesai"
-          }
-        }
-      }
-    },
-    "progress.outcome.interrupted" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Interrupted"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Terhenti"
-          }
-        }
-      }
-    },
-    "progress.outcome.savedForLater" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Saved for later"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Disimpan"
-          }
-        }
-      }
-    },
-    "progress.outcome.stopped" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ended early"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Diakhiri"
-          }
-        }
-      }
-    },
-    "progress.plan" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Therapist's plan"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Rencana dari terapis"
-          }
-        }
-      }
-    },
-    "progress.planValue %lld %lld" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%lld × %lld reps"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%lld set × %lld repetisi"
-          }
-        }
-      }
-    },
-    "progress.sessionsRecorded %lld" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Sessions recorded: %lld"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%lld sesi tercatat"
-          }
-        }
-      }
-    },
-    "progress.title" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Progress"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Progres"
-          }
-        }
-      }
-    },
-    "progress.titleName %@" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%@'s progress"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Progres %@"
-          }
-        }
-      }
-    },
-    "progress.weekDays %lld" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Days practised this week: %lld"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Latihan %lld hari minggu ini"
-          }
-        }
-      }
-    },
-    "progress.weekDetail %lld %lld %lld" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Sessions: %lld • Reps: %lld • Minutes: %lld"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%lld sesi • %lld repetisi • %lld menit"
-          }
-        }
-      }
-    },
-    "recovery.calibration" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Let’s measure again with a comfortable movement."
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Mari ukur ulang dengan gerakan yang nyaman."
-          }
-        }
-      }
-    },
-    "recovery.camera" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "The camera is unavailable. Practice is paused. Try again."
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Kamera belum tersedia. Latihan dijeda. Coba lagi."
-          }
-        }
-      }
-    },
-    "recovery.cameraPermission" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Allow camera access in Settings, then try again."
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Izinkan kamera di Pengaturan, lalu coba lagi."
-          }
-        }
-      }
-    },
-    "recovery.checkAgain" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Check again"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Periksa lagi"
-          }
-        }
-      }
-    },
-    "recovery.fingers" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Face your palm toward the camera so the fingertips are visible."
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Hadapkan telapak ke kamera agar ujung jari terlihat."
-          }
-        }
-      }
-    },
-    "recovery.interrupted" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Practice was interrupted and is paused. Continue when you are ready."
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Latihan terhenti dan sudah dijeda. Lanjutkan saat siap."
-          }
-        }
-      }
-    },
-    "recovery.left" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Use your left hand."
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Gunakan tangan kiri."
-          }
-        }
-      }
-    },
-    "recovery.oneHand" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Show only the hand you are training."
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Tampilkan satu tangan yang dilatih saja."
-          }
-        }
-      }
-    },
-    "recovery.openSettings" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Open Settings"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Buka Pengaturan"
-          }
-        }
-      }
-    },
-    "recovery.position" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Place your hand inside the camera view."
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Posisikan tangan di dalam bingkai kamera."
-          }
-        }
-      }
-    },
-    "recovery.ready" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ready again. Continue when you are ready."
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Sudah siap kembali. Tekan Lanjutkan saat siap."
-          }
-        }
-      }
-    },
-    "recovery.right" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Use your right hand."
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Gunakan tangan kanan."
-          }
-        }
-      }
-    },
-    "recovery.sharing" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "The badge could not be shared. Try again."
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Lencana belum berhasil dibagikan. Coba lagi."
-          }
-        }
-      }
-    },
-    "recovery.storage" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Progress has not been saved. Try saving again."
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Progres belum tersimpan. Coba simpan lagi."
-          }
-        }
-      }
-    },
-    "recovery.tryAgainSlowly" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Let’s try again slowly."
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Mari coba lagi perlahan."
-          }
-        }
-      }
-    },
-    "recovery.voice" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Voice commands are unavailable. Practice is paused. Try again."
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Perintah suara belum tersedia. Latihan dijeda. Coba lagi."
-          }
-        }
-      }
-    },
-    "recovery.voicePermission" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Allow microphone and speech recognition in Settings, then check again."
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Izinkan mikrofon dan pengenalan suara di Pengaturan, lalu periksa lagi."
-          }
-        }
-      }
-    },
-    "rest.nextExercise %@" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Next up: %@…"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Selanjutnya: %@…"
-          }
-        }
-      }
-    },
-    "rest.nextSet %lld" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Next up: set %lld…"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Selanjutnya masuk ke set %lld…"
-          }
-        }
-      }
-    },
-    "rest.seconds" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "seconds"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "detik"
-          }
-        }
-      }
-    },
-    "rest.skip" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Skip"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Lewati"
-          }
-        }
-      }
-    },
-    "rest.startsIn %lld" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Starts in %lld s"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Dimulai dalam %lld detik"
-          }
-        }
-      }
-    },
-    "rest.title" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Time to rest!"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Waktunya istirahat!"
-          }
-        }
-      }
-    },
-    "session.animation" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Animation"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Animasi"
-          }
-        }
-      }
-    },
-    "session.close" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Close"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Tutup"
-          }
-        }
-      }
-    },
-    "session.endCancel" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Cancel"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Batal"
-          }
-        }
-      }
-    },
-    "session.endConfirm" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Yes, end"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ya, akhiri"
-          }
-        }
-      }
-    },
-    "session.endConfirmMessage" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "End this session? Finished exercises stay saved."
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Akhiri sesi latihan? Latihan yang sudah selesai tetap tersimpan."
-          }
-        }
-      }
-    },
-    "session.endSession" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "End session"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Akhiri Sesi Latihan"
-          }
-        }
-      }
-    },
-    "session.nextUp" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Next"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Berikutnya"
-          }
-        }
-      }
-    },
-    "session.pausedTitle" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Exercise paused"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Latihan dijeda"
-          }
-        }
-      }
-    },
-    "session.repetitionsTitle" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Repetitions"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Repetisi"
-          }
-        }
-      }
-    },
-    "session.repetitionsUnit" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "reps"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "repetisi"
-          }
-        }
-      }
-    },
-    "session.resumeExercise" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Resume exercise"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Lanjutkan Latihan"
-          }
-        }
-      }
-    },
-    "session.setDone %lld" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Set %lld done!"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Set %lld selesai!"
-          }
-        }
-      }
-    },
-    "session.setDoneDetail %lld %lld" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%lld of %lld repetitions, great work!"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%lld dari %lld repetisi, kerja bagus!"
-          }
-        }
-      }
-    },
-    "session.setNumber %lld" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Set %lld"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Set %lld"
-          }
-        }
-      }
-    },
-    "session.setRepetitions %lld %lld" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%lld/%lld reps"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%lld/%lld repetisi"
-          }
-        }
-      }
-    },
-    "session.setTitle %lld %@" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Set %lld: %@"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Set %lld: %@"
-          }
-        }
-      }
-    },
-    "settings.exerciseHelp" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Applies from the next session. A session in progress keeps its own settings."
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Berlaku mulai sesi berikutnya. Sesi yang sedang berjalan tidak berubah."
-          }
-        }
-      }
-    },
-    "settings.exerciseTitle" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Finger exercises"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Latihan jari"
-          }
-        }
-      }
-    },
-    "settings.patientName" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Name, for example Bu Yuli"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Nama, misalnya Bu Yuli"
-          }
-        }
-      }
-    },
-    "settings.patientNameHelp" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Used only to greet the patient on Home and Progress. Stored on this iPad only."
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Hanya dipakai untuk menyapa pasien di Beranda dan Progres. Hanya disimpan di iPad ini."
-          }
-        }
-      }
-    },
-    "settings.patientNameTitle" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Patient name"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Nama pasien"
-          }
-        }
-      }
-    },
-    "settings.voiceGood" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "A high-quality voice is in use for instructions."
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Suara berkualitas tinggi sudah dipakai untuk instruksi."
-          }
-        }
-      }
-    },
-    "settings.voiceHigh" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "High quality"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Kualitas tinggi"
-          }
-        }
-      }
-    },
-    "settings.voiceStandard" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Standard"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Standar"
-          }
-        }
-      }
-    },
-    "settings.voiceTip" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "For a more natural voice, download a high-quality voice in the iPad's Settings › Accessibility › Spoken Content › Voices, then return here."
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Agar suara lebih alami, unduh suara berkualitas tinggi di Pengaturan iPad › Aksesibilitas › Konten Lisan › Suara › Bahasa Indonesia, lalu kembali ke sini."
-          }
-        }
-      }
-    },
-    "settings.voiceTitle" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Instruction voice"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Suara instruksi"
-          }
-        }
-      }
-    },
     "steps.extensionSequence.1" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -13936,6 +12873,1069 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Rapatkan kembali jari."
+          }
+        }
+      }
+    },
+    "storage.error" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Could not read or save your progress. Try again. Your existing files are kept."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kemajuan belum dapat dibaca atau disimpan. Coba lagi. Data yang ada tetap disimpan."
+          }
+        }
+      }
+    },
+    "sts.holdSeated" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sit comfortably and hold still\nAny comfortable seat works, side to the camera."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Duduk dengan nyaman dan tahan posisi\nPosisi duduk apa pun yang nyaman, menyamping ke kamera."
+          }
+        }
+      }
+    },
+    "sts.kneeLabel %lld" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Knee %lld°"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lutut %lld°"
+          }
+        }
+      }
+    },
+    "sts.leanFirst" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lean forward before you stand\nThis repetition did not count."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Condong ke depan sebelum berdiri\nRepetisi ini tidak dihitung."
+          }
+        }
+      }
+    },
+    "sts.leanForward" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lean forward a little\nOnly as far as comfortable."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Condong sedikit ke depan\nSebatas yang nyaman."
+          }
+        }
+      }
+    },
+    "sts.leanLabel %lld" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lean %lld°"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Condong %lld°"
+          }
+        }
+      }
+    },
+    "sts.opening" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sit sideways to the camera\nShow your whole body from head to feet. Feet flat on the floor."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Duduk menyamping ke kamera\nTampilkan seluruh tubuh dari kepala sampai kaki. Telapak kaki rata di lantai."
+          }
+        }
+      }
+    },
+    "sts.riseProgress" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rising progress"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kemajuan berdiri"
+          }
+        }
+      }
+    },
+    "sts.sitDown" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sit down slowly\nControl your lowering."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Duduk perlahan\nKendalikan saat turun."
+          }
+        }
+      }
+    },
+    "sts.slowDown" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sit down a bit more slowly\nThis repetition did not count."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Duduk sedikit lebih perlahan\nRepetisi ini tidak dihitung."
+          }
+        }
+      }
+    },
+    "sts.stage.lean" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lean"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Condong"
+          }
+        }
+      }
+    },
+    "sts.stage.sit" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sit"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Duduk"
+          }
+        }
+      }
+    },
+    "sts.stage.stand" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Stand"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Berdiri"
+          }
+        }
+      }
+    },
+    "sts.standUp" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Stand up at your own pace\nKeep leaning forward as you rise."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Berdiri sesuai kemampuan Anda\nTetap condong ke depan saat bangkit."
+          }
+        }
+      }
+    },
+    "sts.trackingLost" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Keep your shoulder, hip, knee, and ankle in view"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pastikan bahu, pinggul, lutut, dan pergelangan kaki terlihat"
+          }
+        }
+      }
+    },
+    "sts.trial" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Do one sit-to-stand your own way\nLean forward, stand up, then sit back down at a comfortable pace."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lakukan satu kali duduk ke berdiri dengan cara Anda\nCondong ke depan, berdiri, lalu duduk kembali sesuai kenyamanan Anda."
+          }
+        }
+      }
+    },
+    "tab.home" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Home"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Beranda"
+          }
+        }
+      }
+    },
+    "tab.reports" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Progress"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Progres"
+          }
+        }
+      }
+    },
+    "task.category" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Task Oriented"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Berorientasi Tugas"
+          }
+        }
+      }
+    },
+    "therapy.armRaise" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Arm raises"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Angkat lengan"
+          }
+        }
+      }
+    },
+    "therapy.directionalReach" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Directional reaching"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Latihan menjangkau"
+          }
+        }
+      }
+    },
+    "therapy.elbowBend" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Elbow bends"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tekuk siku"
+          }
+        }
+      }
+    },
+    "therapy.overview.description" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Arm raises and elbow bends: five repetitions on each side. Directional reaching: one round on the left. Rest for 15 seconds between activities."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Angkat lengan dan tekuk siku: lima pengulangan tiap sisi. Menjangkau: satu putaran sisi kiri. Istirahat 15 detik antaraktivitas."
+          }
+        }
+      }
+    },
+    "therapy.overview.positioning" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Place the iPad securely so your face, shoulders, hips, elbows, and wrists remain visible. Move only within a comfortable range."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Letakkan iPad dengan aman agar wajah, bahu, pinggul, siku, dan pergelangan tangan terlihat. Bergeraklah dalam rentang yang nyaman."
+          }
+        }
+      }
+    },
+    "therapy.overview.status" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Session tracking is not connected yet."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pelacakan sesi belum terhubung."
+          }
+        }
+      }
+    },
+    "therapy.overview.title" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Guided therapy"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Terapi terpandu"
+          }
+        }
+      }
+    },
+    "therapy.session.cameraDenied" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Camera access is required. Enable it in Settings."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Akses kamera diperlukan. Aktifkan di Pengaturan."
+          }
+        }
+      }
+    },
+    "therapy.session.personVisible" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Person detected. Exercise scoring is not connected yet."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Orang terdeteksi. Penghitungan latihan belum terhubung."
+          }
+        }
+      }
+    },
+    "therapy.session.position" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Keep one person visible in the camera."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pastikan satu orang terlihat di kamera."
+          }
+        }
+      }
+    },
+    "therapy.session.start" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Start"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mulai"
+          }
+        }
+      }
+    },
+    "therapy.session.stop" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "End session"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Akhiri sesi"
+          }
+        }
+      }
+    },
+    "therapy.session.title" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Therapy session"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sesi terapi"
+          }
+        }
+      }
+    },
+    "towel.approach" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Close your hand inside yellow."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kepalkan tangan di dalam lingkaran kuning."
+          }
+        }
+      }
+    },
+    "towel.deleteError" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The session could not be deleted. Try again."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sesi tidak dapat dihapus. Coba lagi."
+          }
+        }
+      }
+    },
+    "towel.deleteHistory" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Delete session"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hapus sesi"
+          }
+        }
+      }
+    },
+    "towel.demo" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Close at yellow, move to green, hold, then open.\nYou can begin after the countdown, even while guidance speaks."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kepalkan di kuning, gerakkan ke hijau, tahan, lalu buka.\nMulai setelah hitungan mundur, meskipun panduan masih berbicara."
+          }
+        }
+      }
+    },
+    "towel.destinationHold" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hold your closed hand at green."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tahan kepalan di hijau."
+          }
+        }
+      }
+    },
+    "towel.fold" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Move your closed hand toward green."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gerakkan tangan yang mengepal ke hijau."
+          }
+        }
+      }
+    },
+    "towel.foldNumber %lld" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fold %1$lld of 4"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lipatan %1$lld dari 4"
+          }
+        }
+      }
+    },
+    "towel.framingWarning" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Move the iPad farther away. Keep your whole hand visible."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Jauhkan iPad. Pastikan seluruh tangan terlihat."
+          }
+        }
+      }
+    },
+    "towel.grab" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Keep your hand closed briefly."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tahan kepalan sebentar."
+          }
+        }
+      }
+    },
+    "towel.history" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Task Oriented history"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Riwayat Berorientasi Tugas"
+          }
+        }
+      }
+    },
+    "towel.historyEmpty" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No task-oriented sessions yet."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Belum ada sesi berorientasi tugas."
+          }
+        }
+      }
+    },
+    "towel.historyError" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "History could not be loaded. Try again."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Riwayat tidak dapat dimuat. Coba lagi."
+          }
+        }
+      }
+    },
+    "towel.opening.left" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fold the towel with your left hand.\nFour folds make one repetition."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lipat handuk dengan tangan kiri.\nEmpat lipatan untuk satu pengulangan."
+          }
+        }
+      }
+    },
+    "towel.opening.right" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fold the towel with your right hand.\nFour folds make one repetition."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lipat handuk dengan tangan kanan.\nEmpat lipatan untuk satu pengulangan."
+          }
+        }
+      }
+    },
+    "towel.positioning" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sit comfortably with your selected hand visible. Use an empty hand; the towel is on screen."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Duduk dengan nyaman dan pastikan tangan yang dipilih terlihat. Gunakan tangan kosong; handuk ada di layar."
+          }
+        }
+      }
+    },
+    "towel.recover" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Keep your hand closed to continue."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tetap kepalkan tangan untuk melanjutkan."
+          }
+        }
+      }
+    },
+    "towel.release" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Open your hand at green."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Buka tangan di hijau."
+          }
+        }
+      }
+    },
+    "towel.restart" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Restart towel"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ulangi handuk"
+          }
+        }
+      }
+    },
+    "towel.routineDetail" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "One repetition is four folds. Each fold requires closing, moving while closed, and opening to release."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Satu pengulangan terdiri dari empat lipatan. Setiap lipatan memerlukan menutup tangan, bergerak sambil tertutup, lalu membuka untuk melepaskan."
+          }
+        }
+      }
+    },
+    "towel.trackingLost" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Show your hand. Keep your wrist visible."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tampilkan tangan. Pastikan pergelangan terlihat."
+          }
+        }
+      }
+    },
+    "trunk.overview.title" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Trunk control practice"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Latihan kontrol trunk"
+          }
+        }
+      }
+    },
+    "trunk.positioning" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sit sideways to the camera on a stable chair, about 2 to 3 meters away, so your whole body from head to feet is visible from the side. A side view lets the camera follow your shoulder, hip, knee, and ankle accurately."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Duduk menyamping ke kamera di kursi yang stabil, sekitar 2 sampai 3 meter dari kamera, agar seluruh tubuh dari kepala sampai kaki terlihat dari samping. Tampak samping membuat kamera dapat mengikuti bahu, pinggul, lutut, dan pergelangan kaki dengan akurat."
+          }
+        }
+      }
+    },
+    "voice.command.pause" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "pause|jeda"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "jeda|pause"
+          }
+        }
+      }
+    },
+    "voice.command.repeat" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "repeat|ulangi"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ulangi|repeat"
+          }
+        }
+      }
+    },
+    "voice.command.resume" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "continue|resume|lanjut|lanjutkan"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "lanjut|lanjutkan|continue|resume"
+          }
+        }
+      }
+    },
+    "voice.command.stop" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "stop|akhiri"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "akhiri|stop"
+          }
+        }
+      }
+    },
+    "voice.commands" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Say: “pause”, “resume”, “stop”, or “repeat”."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ucapkan: “jeda”, “lanjut”, “akhiri”, atau “ulangi”."
+          }
+        }
+      }
+    },
+    "voice.off" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Voice control: off"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kontrol suara: mati"
+          }
+        }
+      }
+    },
+    "voice.on" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Voice control: on"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kontrol suara: aktif"
+          }
+        }
+      }
+    },
+    "voice.pauseListening" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Listening. Say “continue” to return."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mendengarkan. Ucapkan “lanjut” untuk kembali."
+          }
+        }
+      }
+    },
+    "voice.unavailable" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "On-device voice controls are unavailable. Ask your caregiver to help with touch controls."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kontrol suara di perangkat belum tersedia. Minta pendamping membantu dengan tombol sentuh."
+          }
+        }
+      }
+    },
+    "voice.useTouch" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Use touch controls"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gunakan tombol sentuh"
           }
         }
       }
