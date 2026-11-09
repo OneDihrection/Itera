@@ -25,6 +25,8 @@ final class AppDependencies: HistoryRecovering {
     let audio = SessionAudioService()
     let routine: RoutineViewModel
     let taskRoutine: RoutineViewModel
+    /// Today's plan across programs; Beranda shows it and finishing sessions report to it.
+    let dailyPlan = DailyPlanViewModel(repository: LocalDailyPlanProgressRepository())
     var selectedRoutine = Routine.demo()
     let sessions: any SessionRepository
     private(set) var recoveryFailure: String?

@@ -89,6 +89,18 @@ enum TherapyPalette {
     static let challengeFill = adaptive(light: (0.93, 0.96, 0.94), dark: (0.12, 0.18, 0.15))
     static let challengeInk = adaptive(light: (0.10, 0.27, 0.20), dark: (0.66, 0.86, 0.75))
 
+    // MARK: - Daily plan palette
+
+    /// Rust brand fill of the prominent "Mulai Latihan" capsule. White text on it is about 5.9:1.
+    static let brand = Color(red: 0.71, green: 0.22, blue: 0.10)
+    static let onBrand = Color.white
+    /// Warm off-white card behind each exercise in the plan timeline.
+    static let planCard = adaptive(light: (0.973, 0.957, 0.945), dark: (0.17, 0.155, 0.145))
+    /// Filled timeline dot of the exercise that comes next. Fixed: it is a marker, not text.
+    static let planMarker = Color(red: 1.0, green: 0.72, blue: 0.0)
+    /// Dashed timeline line and the outline of upcoming dots.
+    static let planTrack = Color(uiColor: .systemGray4)
+
     private static func adaptive(
         light: (Double, Double, Double),
         dark: (Double, Double, Double)
@@ -118,9 +130,42 @@ struct TherapyButton: View {
     var disabled = false
     /// The monochrome pill appearance: dark when primary, grey when `secondary`.
     var pill = false
+    /// The large rust capsule that starts today's plan. It sizes to its label instead of
+    /// filling the width, and ignores `pill` and `secondary`.
+    var prominent = false
     let action: () -> Void
 
     var body: some View {
+        if prominent {
+            prominentButton
+        } else {
+            standardButton
+        }
+    }
+
+    private var prominentButton: some View {
+        Button(action: action) {
+            HStack(spacing: 20) {
+                if let symbol {
+                    Image(systemName: symbol)
+                }
+                Text(title)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
+            }
+            .typography(size: 36, weight: .semiBold, relativeTo: .title)
+            .frame(minHeight: 96)
+            .padding(.horizontal, 48)
+            .foregroundStyle(TherapyPalette.onBrand)
+            .background(TherapyPalette.brand, in: Capsule())
+            .contentShape(Capsule())
+        }
+        .buttonStyle(TherapySoundButtonStyle())
+        .disabled(disabled)
+        .opacity(disabled ? 0.5 : 1)
+    }
+
+    private var standardButton: some View {
         Button(role: destructive ? .destructive : nil, action: action) {
             HStack(spacing: 12) {
                 if let symbol {

@@ -91,3 +91,11 @@ Compatible additions: `MeasuredInstructionText(textColor:)` defaults to white fo
 ## Guided gesture controls
 
 `TherapyGuideZone` (Components/TherapyGuideZone.swift) draws a target zone over the camera: a soft fill, a 10 pt outline over a dark underlay, an icon and an optional white hold ring. It fills the frame it is given, so a caller can draw an ellipse matching a normalized acceptance region. An emphasized zone breathes with a halo outside its outline (frozen under Reduce Motion); a quiet zone recedes. `TherapyHandCursor` is a 68 pt hand marker (open hand on a dark backing, pinching hand on a solid mint backing, thicker mint outline while holding). `TherapyStepStrip` shows a short gesture's steps as icons, with the current step named and finished steps checked, on a dark capsule. All take values only; holds, timing and tracking stay with the caller. Fold towel uses them with `TherapyFoldPanel`, `TherapyProgressDots` and the mint and peach calm tokens.
+
+## Daily plan timeline (2026-11-09)
+
+`TherapyPalette` adds `brand`/`onBrand` (rust capsule, white text about 5.9:1), `planCard` (warm off-white card, adaptive), `planMarker` (yellow next-item dot) and `planTrack` (dashed line and hollow dots). `TherapyButton(prominent:)` draws the large rust "Mulai Latihan" capsule (96 pt high, 36 pt label), sized to its label instead of filling the width.
+
+Components/TherapyTimeline.swift owns `TherapyTimelineRow` (a marker on an unbroken dashed line beside any card), `TherapyTimelineMarker` (`.current` filled yellow, `.done` check, `.upcoming` hollow ring; shape as well as color), `TherapyPlanCard` (title, icon-and-value lines, trailing illustration, one button and one accessibility element whose value names the state) and `TherapyFloatingActionDock` (bottom content over a gradient-masked material fade that never takes taps; solid under Reduce Transparency). They take values and actions only; plan order, progress and session launching stay in Features/Home.
+
+`TherapyArtwork(fallback:)` shows another asset or `symbol:` image when the named asset is not in the catalog, so a card can reference an illustration that is still being drawn. Plan illustrations are named `plan-<item id>` in Assets.xcassets; they are original artwork drawn for Itera (2026-11-09), not third-party assets.

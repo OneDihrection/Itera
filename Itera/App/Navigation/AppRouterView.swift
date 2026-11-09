@@ -77,6 +77,8 @@ enum AppRouterView {
             FingerRoutineSettingsView(category: category)
         case .exercisePreview(let exercise):
             FingerExercisePreviewView(exercise: exercise)
+        case .planNext:
+            DailyPlanNextView()
         }
     }
 }

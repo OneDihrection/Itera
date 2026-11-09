@@ -18,9 +18,19 @@ struct BalanceOverviewView: View {
     init(exercise: BalanceExercise = .crossMidline) {
         self.exercise = exercise
         // Each exercise remembers its own settings; Balancing keeps its original keys.
-        _repetitions = AppStorage(wrappedValue: 6, exercise.storageKey("repetitions"))
-        _holdSeconds = AppStorage(wrappedValue: 10, exercise.storageKey("holdSeconds"))
-        _armSelectionRaw = AppStorage(wrappedValue: BalanceArmSelection.both.rawValue, exercise.storageKey("armSelection"))
+        // The defaults are shared with BalancePracticeSettings, which the daily plan reads.
+        _repetitions = AppStorage(
+            wrappedValue: BalancePracticeSettings.defaultRepetitions,
+            exercise.storageKey("repetitions")
+        )
+        _holdSeconds = AppStorage(
+            wrappedValue: BalancePracticeSettings.defaultHoldSeconds,
+            exercise.storageKey("holdSeconds")
+        )
+        _armSelectionRaw = AppStorage(
+            wrappedValue: BalancePracticeSettings.defaultArmSelection.rawValue,
+            exercise.storageKey("armSelection")
+        )
     }
 
     var body: some View {

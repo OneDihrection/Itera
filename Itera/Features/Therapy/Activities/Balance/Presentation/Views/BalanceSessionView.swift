@@ -10,6 +10,7 @@ import SwiftUI
 struct BalanceSessionView: View {
     @AppStorage(ExerciseMusicTrack.storageKey) private var musicTrack = ExerciseMusicTrack.defaultValue
     @Environment(NavigationRouter.self) private var router
+    @Environment(AppDependencies.self) private var dependencies
     @Environment(PermissionManager.self) private var permissions
     @Environment(\.scenePhase) private var scenePhase
     @State private var model: BalanceSessionViewModel
@@ -50,8 +51,7 @@ struct BalanceSessionView: View {
         .onDisappear { model.stop() }
         .onChange(of: model.requestedExit) { _, requested in
             guard requested else { return }
-            model.stop()
-            router.pop()
+            leave()
         }
         .onChange(of: scenePhase) { _, phase in
             switch phase {
@@ -154,8 +154,7 @@ struct BalanceSessionView: View {
             VStack(alignment: .leading, spacing: 18) {
                 HStack {
                     TherapyIconButton(title: "home.back", symbol: "xmark") {
-                        model.stop()
-                        router.pop()
+                        leave()
                     }
                     Spacer()
                     TherapyIconButton(
@@ -362,7 +361,7 @@ struct BalanceSessionView: View {
                 .foregroundStyle(TherapyPalette.warning)
             Text("balance.cameraRequired").typography(.title).multilineTextAlignment(.center)
             TherapyButton(title: "home.openSettings", symbol: "gear") { model.openSettings() }
-            TherapyButton(title: "home.back", symbol: "chevron.left", secondary: true) { router.pop() }
+            TherapyButton(title: "home.back", symbol: "chevron.left", secondary: true) { leaveWithoutResult() }
         }
         .padding(32)
         .frame(maxWidth: 700, maxHeight: .infinity)
@@ -378,8 +377,31 @@ struct BalanceSessionView: View {
     }
 
     private func endPractice() {
+        leave()
+    }
+
+    /// Stops the session and goes back, or, while today's plan runs, on to the next exercise.
+    /// Only a session that reached its goal counts as done in the plan.
+    private func leave() {
+        let completed = model.snapshot.phase == .complete
         model.stop()
-        router.pop()
+
+        guard dependencies.dailyPlan.isRunning else {
+            router.pop()
+            return
+        }
+
+        dependencies.dailyPlan.finish(completed: completed, router: router)
+    }
+
+    /// Without camera access the session never started, so a running plan ends here.
+    private func leaveWithoutResult() {
+        guard dependencies.dailyPlan.isRunning else {
+            router.pop()
+            return
+        }
+
+        dependencies.dailyPlan.end(router: router)
     }
 }
 

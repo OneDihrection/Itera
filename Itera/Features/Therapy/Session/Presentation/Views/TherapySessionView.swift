@@ -17,6 +17,7 @@ struct TherapySessionView: View {
     @ScaledMetric(relativeTo: .largeTitle) var instructionSize = 96.0
     @Environment(PermissionManager.self) var permissions
     @Environment(NavigationRouter.self) var router
+    @Environment(AppDependencies.self) private var dependencies
     @Environment(\.scenePhase) private var scenePhase
     @AppStorage(PracticePreferences.calmMode) private var calmMode = false
     @State private var celebrationStart: Date?
@@ -57,7 +58,7 @@ struct TherapySessionView: View {
                     .buttonStyle(SessionButtonStyle())
                     Button("home.openSettings") { model.openSettings() }
                         .buttonStyle(SessionButtonStyle())
-                    Button("home.back") { router.popToRoot() }
+                    Button("home.back") { leaveWithoutResult() }
                         .buttonStyle(SessionButtonStyle())
                 }
                 .padding(32)
@@ -815,7 +816,7 @@ struct TherapySessionView: View {
                 }
                 Text("session.summaryCaution")
                 if model.saving { ProgressView("session.saving") }
-                Button("session.restart") { router.pop() }
+                Button(summaryExitTitle) { leaveSummary(summary) }
                     .buttonStyle(SessionButtonStyle())
                     .disabled(model.saving || model.saveFailure != nil)
             }
@@ -823,6 +824,32 @@ struct TherapySessionView: View {
         .listStyle(.insetGrouped)
         .scrollContentBackground(.hidden)
         .background(usesLightTheme ? TherapyPalette.canvas : Color.black)
+    }
+
+    // MARK: - Leaving
+
+    /// While today's plan runs, the summary leads on to the next exercise.
+    private var summaryExitTitle: LocalizedStringKey {
+        dependencies.dailyPlan.isRunning ? "plan.nextContinue" : "session.restart"
+    }
+
+    private func leaveSummary(_ summary: SessionSummary) {
+        guard dependencies.dailyPlan.isRunning else {
+            router.pop()
+            return
+        }
+
+        dependencies.dailyPlan.finish(completed: !summary.stopped, router: router)
+    }
+
+    /// Leaving before the session could start ends a running plan instead of skipping ahead.
+    private func leaveWithoutResult() {
+        guard dependencies.dailyPlan.isRunning else {
+            router.popToRoot()
+            return
+        }
+
+        dependencies.dailyPlan.end(router: router)
     }
 
     private func summaryRow(_ result: SessionActivityResult) -> some View {

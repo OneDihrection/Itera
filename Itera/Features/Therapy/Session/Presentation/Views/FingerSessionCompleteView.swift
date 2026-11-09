@@ -34,7 +34,7 @@ struct FingerSessionCompleteView: View {
 
             Spacer(minLength: 40)
 
-            TherapyButton(title: "done.viewProgress", pill: true, action: showProgress)
+            TherapyButton(title: closingTitle, pill: true, action: close)
                 .frame(maxWidth: 360)
 
             Spacer(minLength: 40)
@@ -67,7 +67,17 @@ struct FingerSessionCompleteView: View {
         }
     }
 
-    private func showProgress() {
+    /// While today's plan runs, this page leads on to the next exercise instead of Progress.
+    private var closingTitle: LocalizedStringKey {
+        dependencies.dailyPlan.isRunning ? "plan.nextContinue" : "done.viewProgress"
+    }
+
+    private func close() {
+        guard !dependencies.dailyPlan.isRunning else {
+            dependencies.dailyPlan.finish(completed: completed, router: router)
+            return
+        }
+
         router.dismissFullScreenCover()
         router.push(.reports)
     }

@@ -4033,6 +4033,22 @@
         }
       }
     },
+    "home.allPrograms" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "All programs"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Semua program"
+          }
+        }
+      }
+    },
     "home.armPractice" : {
       "localizations" : {
         "en" : {
@@ -4751,7 +4767,7 @@
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Mulai latihan"
+            "value" : "Mulai Latihan"
           }
         }
       }
@@ -4949,6 +4965,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Selamat datang"
+          }
+        }
+      }
+    },
+    "home.wellWishes" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Stay healthy"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Semoga sehat selalu"
           }
         }
       }
@@ -6002,6 +6034,22 @@
         }
       }
     },
+    "plan.backHome" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Back to Home"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kembali ke Beranda"
+          }
+        }
+      }
+    },
     "plan.caregiverShort" : {
       "localizations" : {
         "en" : {
@@ -6030,6 +6078,70 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Gerakkan senyamanmu. Berhenti bila nyeri."
+          }
+        }
+      }
+    },
+    "plan.continue" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Continue Practice"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lanjutkan Latihan"
+          }
+        }
+      }
+    },
+    "plan.dayComplete" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Today's practice is done"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Latihan hari ini selesai"
+          }
+        }
+      }
+    },
+    "plan.dayCompleteMessage" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Well done. Rest well."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kerja bagus. Istirahat yang cukup, ya."
+          }
+        }
+      }
+    },
+    "plan.doneToday" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Today's practice is done"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Latihan hari ini selesai"
           }
         }
       }
@@ -6082,6 +6194,22 @@
         }
       }
     },
+    "plan.finishToday" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Finish for today"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Selesai untuk hari ini"
+          }
+        }
+      }
+    },
     "plan.guidance" : {
       "localizations" : {
         "en" : {
@@ -6094,6 +6222,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Minta pendamping mengatur jumlah latihan sesuai arahan terapis. Kamera tidak mengukur kekuatan genggaman."
+          }
+        }
+      }
+    },
+    "plan.holdSeconds %lld" : {
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Hold %lld second"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Hold %lld seconds"
+                }
+              }
+            }
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tahan %lld detik"
           }
         }
       }
@@ -6131,6 +6287,54 @@
         }
       }
     },
+    "plan.next" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Up next"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Selanjutnya"
+          }
+        }
+      }
+    },
+    "plan.nextContinue" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Continue"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lanjut"
+          }
+        }
+      }
+    },
+    "plan.progressUnavailable" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Today's progress can't be saved right now."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kemajuan hari ini belum bisa disimpan."
+          }
+        }
+      }
+    },
     "plan.repetitionFormat" : {
       "localizations" : {
         "en" : {
@@ -6160,6 +6364,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Pengulangan tiap set"
+          }
+        }
+      }
+    },
+    "plan.repetitions %lld" : {
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld repetition"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld repetitions"
+                }
+              }
+            }
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld repetisi"
           }
         }
       }
@@ -6279,6 +6511,34 @@
         }
       }
     },
+    "plan.sets %lld" : {
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld set"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld sets"
+                }
+              }
+            }
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld set"
+          }
+        }
+      }
+    },
     "plan.setsShort" : {
       "localizations" : {
         "en" : {
@@ -6357,6 +6617,54 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Mulai latihan"
+          }
+        }
+      }
+    },
+    "plan.state.done" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Done"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Selesai"
+          }
+        }
+      }
+    },
+    "plan.state.next" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Next"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Berikutnya"
+          }
+        }
+      }
+    },
+    "plan.state.upcoming" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Later"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nanti"
           }
         }
       }

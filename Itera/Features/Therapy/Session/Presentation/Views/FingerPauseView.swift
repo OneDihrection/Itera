@@ -164,6 +164,10 @@ struct FingerPauseView: View {
                 if await model.saveForLater() {
                     router.dismissSheet()
                     router.dismissFullScreenCover()
+                    // Saving for later also pauses today's plan; Beranda offers to continue.
+                    if dependencies.dailyPlan.isRunning {
+                        dependencies.dailyPlan.end(router: router)
+                    }
                     await dependencies.refreshHomes()
                 }
             }
