@@ -11,7 +11,7 @@ import SwiftUI
 ///
 /// Use it instead of a spinner when the wait is expected and not an error. It holds still when
 /// Reduce Motion is on.
-struct TherapyCalmLoader: View {
+struct TMTherapyCalmLoader: View {
     let title: LocalizedStringKey
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion

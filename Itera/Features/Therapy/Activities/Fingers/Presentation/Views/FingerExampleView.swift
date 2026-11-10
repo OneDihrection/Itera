@@ -9,7 +9,7 @@ import SwiftUI
 
 /// Chooses the example for a finger-session exercise: the rendered hand movie where one exists,
 /// otherwise a native illustration.
-struct FingerExampleView: View {
+struct TMFingerExampleView: View {
     let exercise: FingerExercise
     let phase: FingerPhase
     let returning: Bool
@@ -19,9 +19,9 @@ struct FingerExampleView: View {
 
     var body: some View {
         if exercise == .forearmRotation {
-            HandRotationExample(phase: phase, returning: returning, side: side, paused: paused)
+            TMHandRotationExample(phase: phase, returning: returning, side: side, paused: paused)
         } else {
-            FingerDemonstrationView(
+            TMFingerDemonstrationView(
                 exercise: exercise, phase: phase, returning: returning,
                 finger: finger, side: side, paused: paused
             )

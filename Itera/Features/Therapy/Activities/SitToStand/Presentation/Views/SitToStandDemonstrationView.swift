@@ -9,7 +9,7 @@ import SwiftUI
 
 /// A side view of sit-to-stand with a controlled forward lean: sit, lean forward, stand, then sit
 /// back down slowly. A native stand-in until a rendered animation is bundled.
-struct SitToStandDemonstrationView: View {
+struct TMSitToStandDemonstrationView: View {
     let paused: Bool
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
@@ -23,7 +23,7 @@ struct SitToStandDemonstrationView: View {
                 }
             }
 
-            TherapyDemoCaption(paused: paused)
+            TMTherapyDemoCaption(paused: paused)
         }
         .background(TherapyPalette.mediaBackground)
         .clipShape(RoundedRectangle(cornerRadius: 24))

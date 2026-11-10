@@ -10,7 +10,7 @@ import SwiftUI
 /// Quiet repetition progress for the camera view: one soft dot per repetition, no counters.
 ///
 /// Long goals fall back to a thin bar so the row never wraps or crowds the preview.
-struct TherapyProgressDots: View {
+struct TMTherapyProgressDots: View {
     let completed: Int
     let total: Int
     var label: LocalizedStringKey

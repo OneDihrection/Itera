@@ -9,7 +9,7 @@ import SwiftUI
 
 /// Chooses the movement preview for a Balancing-style exercise: the bundled 3D animation for
 /// cross-midline reaching, and a native illustration for external rotation.
-struct BalanceExerciseDemonstrationView: View {
+struct TMBalanceExerciseDemonstrationView: View {
     let exercise: BalanceExercise
     let paused: Bool
     /// The arm being exercised, which picks the recording for that arm.
@@ -33,16 +33,16 @@ struct BalanceExerciseDemonstrationView: View {
             return nil
         }
 
-        return ShoulderRotationMovieView.isAvailable(resource) ? resource : nil
+        return TMShoulderRotationMovieView.isAvailable(resource) ? resource : nil
     }
 
     var body: some View {
         switch exercise {
         case .crossMidline:
-            BalanceDemonstrationView(paused: paused)
+            TMBalanceDemonstrationView(paused: paused)
         case .externalRotation, .internalRotation:
             if let movieResource {
-                ShoulderRotationMovieView(
+                TMShoulderRotationMovieView(
                     resource: movieResource,
                     paused: paused,
                     accessibilityKey: LocalizedStringKey(
@@ -52,19 +52,19 @@ struct BalanceExerciseDemonstrationView: View {
                     )
                 )
             } else {
-                ExternalRotationDemonstrationView(direction: exercise.rotationDirection, paused: paused)
+                TMExternalRotationDemonstrationView(direction: exercise.rotationDirection, paused: paused)
             }
         case .shoulderFlexion:
-            ShoulderFlexionDemonstrationView(paused: paused)
+            TMShoulderFlexionDemonstrationView(paused: paused)
         case .sitToStand:
             if let movieResource {
-                ShoulderRotationMovieView(
+                TMShoulderRotationMovieView(
                     resource: movieResource,
                     paused: paused,
                     accessibilityKey: "sitToStand.animationAccessibility"
                 )
             } else {
-                SitToStandDemonstrationView(paused: paused)
+                TMSitToStandDemonstrationView(paused: paused)
             }
         }
     }
@@ -72,7 +72,7 @@ struct BalanceExerciseDemonstrationView: View {
 
 /// A front view of an arm with the elbow at the side, turning the forearm from pointing at the
 /// viewer out to the side (external) or in across the belly (internal), and back. A native stand-in until a rendered animation is bundled.
-struct ExternalRotationDemonstrationView: View {
+struct TMExternalRotationDemonstrationView: View {
     let direction: RotationDirection
     let paused: Bool
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -86,7 +86,7 @@ struct ExternalRotationDemonstrationView: View {
                     draw(&context, size: size, turn: turn(at: timeline.date))
                 }
             }
-            TherapyDemoCaption(paused: paused)
+            TMTherapyDemoCaption(paused: paused)
         }
         .background(TherapyPalette.mediaBackground)
         .clipShape(RoundedRectangle(cornerRadius: 24))

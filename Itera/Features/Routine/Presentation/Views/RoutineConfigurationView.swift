@@ -7,14 +7,14 @@
 
 import SwiftUI
 
-struct RoutineConfigurationView: View {
+struct TMRoutineConfigurationView: View {
     let category: TherapyCategory
     @Environment(AppDependencies.self) private var dependencies
     @Environment(PermissionManager.self) private var permissions
     @Environment(NavigationRouter.self) private var router
 
     var body: some View {
-        RoutineEditor(
+        TMRoutineEditor(
             category: category,
             model: dependencies.routineModel(for: category),
             readiness: HomeViewModel(permissions: permissions, audio: dependencies.audio, history: dependencies)
@@ -22,7 +22,7 @@ struct RoutineConfigurationView: View {
     }
 }
 
-private struct RoutineEditor: View {
+private struct TMRoutineEditor: View {
     @Environment(NavigationRouter.self) private var router
     @Environment(AppDependencies.self) private var dependencies
     let category: TherapyCategory
@@ -39,7 +39,7 @@ private struct RoutineEditor: View {
             }
             Section("routine.exercises") {
                 ForEach($model.configuration.exercises) { $exercise in
-                    RoutineExerciseRow(exercise: $exercise)
+                    TMRoutineExerciseRow(exercise: $exercise)
                         .listRowBackground(TherapyPalette.surface)
                 }
                 .onMove { model.configuration.exercises.move(fromOffsets: $0, toOffset: $1) }
@@ -88,7 +88,7 @@ private struct RoutineEditor: View {
                     Text(verbatim: failure).foregroundStyle(.red)
                     Button("home.retry") { Task { await model.load() } }
                 }
-                TherapyButton(title: "therapy.session.start", symbol: "play.fill") {
+                TMTherapyButton(title: "therapy.session.start", symbol: "play.fill") {
                     Task {
                         guard await model.save(), await readiness.performAction() else { return }
                         dependencies.selectedRoutine = model.configuration.snapshot
@@ -111,7 +111,7 @@ private struct RoutineEditor: View {
     }
 }
 
-private struct RoutineExerciseRow: View {
+private struct TMRoutineExerciseRow: View {
     @Binding var exercise: RoutineExercise
 
     var body: some View {
@@ -161,7 +161,7 @@ private struct RoutineExerciseRow: View {
     }
 }
 
-struct RoutineExercisePicker: View {
+struct TMRoutineExercisePicker: View {
     let category: TherapyCategory
     @Environment(AppDependencies.self) private var dependencies
     @Environment(NavigationRouter.self) private var router

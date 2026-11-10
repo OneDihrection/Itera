@@ -16,4 +16,5 @@ protocol FingerSessionRepository: FingerHistoryReading {
     func pending() async throws -> FingerSessionSummary?
     func finalize(_ summary: FingerSessionSummary) async throws
     func delete(_ id: UUID) async throws
+    func deleteHistory() async throws
 }

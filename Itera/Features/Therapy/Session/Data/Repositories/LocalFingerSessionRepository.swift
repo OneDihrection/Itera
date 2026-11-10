@@ -71,13 +71,27 @@ actor LocalFingerSessionRepository: FingerSessionRepository {
             return []
         }
         // One unreadable session file is skipped, untouched, rather than hiding every other session.
-        return try FileManager.default.contentsOfDirectory(at: folder, includingPropertiesForKeys: nil)
-            .filter { $0.pathExtension == "json" && !$0.lastPathComponent.hasPrefix("active") }
+        return try historyFiles()
             .compactMap(readOrLog)
             .sorted { $0.started > $1.started }
     }
 
     func delete(_ id: UUID) throws { try FileManager.default.removeItem(at: file(id)) }
+
+    func deleteHistory() throws {
+        for url in try historyFiles() {
+            try FileManager.default.removeItem(at: url)
+        }
+    }
+
+    private func historyFiles() throws -> [URL] {
+        guard FileManager.default.fileExists(atPath: folder.path) else {
+            return []
+        }
+
+        return try FileManager.default.contentsOfDirectory(at: folder, includingPropertiesForKeys: nil)
+            .filter { $0.pathExtension == "json" && !$0.lastPathComponent.hasPrefix("active") }
+    }
 
     private func file(_ id: UUID) -> URL { folder.appendingPathComponent(id.uuidString + ".json") }
 

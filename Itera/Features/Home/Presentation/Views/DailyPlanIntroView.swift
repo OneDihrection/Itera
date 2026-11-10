@@ -9,7 +9,7 @@ import SwiftUI
 
 /// The page before each daily-plan exercise: what it trains, today's target, a safety note
 /// and the explicit Start that validates readiness and opens the session.
-struct DailyPlanIntroView: View {
+struct TMDailyPlanIntroView: View {
     let itemID: String
 
     @Environment(AppDependencies.self) private var dependencies
@@ -36,8 +36,8 @@ struct DailyPlanIntroView: View {
     }
 
     private func intro(_ row: DailyPlanRow) -> some View {
-        TherapyExerciseIntro(
-            heading: TherapyExerciseHeading(
+        TMTherapyExerciseIntro(
+            heading: TMTherapyExerciseHeading(
                 eyebrow: Text("plan.exerciseNumber \(dependencies.dailyPlan.number(of: itemID))"),
                 title: Text(LocalizedStringKey(row.titleKey))
             ),
@@ -66,28 +66,29 @@ struct DailyPlanIntroView: View {
     private func demonstration(for item: DailyPlanItem) -> some View {
         switch item.exercise {
         case .finger(let exercise):
-            FingerExampleView(
+            TMFingerExampleView(
                 exercise: exercise,
                 phase: .demonstration,
                 returning: false,
                 finger: 0,
-                side: dependencies.homeModel(for: exercise.category).routine.side,
+                side: dependencies.dailyPlan.fingerSide(for: exercise, in: dependencies),
                 paused: false
             )
 
         case .therapy(.foldTowel):
-            TowelDemonstrationView()
+            TMTowelDemonstrationView()
 
         case .therapy(let kind):
-            ExerciseExample(
+            let exercise = dependencies.dailyPlan.routineExercise(for: kind, in: dependencies)
+            TMExerciseExample(
                 asset: kind == .elbowBend ? .elbowBend : .armRaise,
-                mirrored: false,
+                mirrored: exercise.activities.first?.side == .left,
                 mode: .looping
             )
 
         case .balance(let exercise):
-            let settings = BalancePracticeSettings(exercise: exercise)
-            BalanceExerciseDemonstrationView(
+            let settings = dependencies.dailyPlan.balanceSettings(for: exercise)
+            TMBalanceExerciseDemonstrationView(
                 exercise: exercise,
                 paused: false,
                 arm: settings.armSelection.initialArm,
@@ -106,24 +107,24 @@ struct DailyPlanIntroView: View {
         }
         let orderedDetails = details.filter { !sets.contains($0) } + sets
 
-        TherapyStatRow {
+        TMTherapyStatRow {
             ForEach(orderedDetails.indices, id: \.self) { index in
                 if index > 0 {
-                    TherapyStatDivider()
+                    TMTherapyStatDivider()
                 }
                 target(orderedDetails[index])
             }
         }
     }
 
-    private func target(_ detail: DailyPlanRow.Detail) -> TherapyTargetStat {
+    private func target(_ detail: DailyPlanRow.Detail) -> TMTherapyTargetStat {
         switch detail {
         case .repetitions(let count):
-            return TherapyTargetStat(value: count, unit: Text("exercise.repetitionsUnit"))
+            return TMTherapyTargetStat(value: count, unit: Text("exercise.repetitionsUnit"))
         case .sets(let count):
-            return TherapyTargetStat(value: count, unit: Text("exercise.setsUnit"))
+            return TMTherapyTargetStat(value: count, unit: Text("exercise.setsUnit"))
         case .holdSeconds(let seconds):
-            return TherapyTargetStat(value: seconds, unit: Text("balance.secondsUnit"))
+            return TMTherapyTargetStat(value: seconds, unit: Text("balance.secondsUnit"))
         }
     }
 

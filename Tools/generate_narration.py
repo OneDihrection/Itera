@@ -79,6 +79,17 @@ BODY_KEYS = (
     # Rotation exercises narrate each calibration step (speakCalibrationGuidanceIfNeeded).
     "rotation.calibration.startHint", "rotation.calibration.endHint",
     "internalRotation.calibration.endHint",
+    # Calibration pages announced by SessionEngine and BalanceSessionViewModel's opening cues.
+    "calibration.intro", "calibration.try", "calibration.complete", "calibration.countdown",
+    # Breathing guidance spoken during Balancing rests (SessionDurationClock breath phases).
+    "rest.breath.inhale", "rest.breath.exhale",
+    # The fold-towel demonstration card (SessionGuidance).
+    "towel.demo",
+    # Balancing speaks the engine's reach instruction when its practice countdown ends.
+    "balance.reachRight", "balance.reachLeft",
+    "rotation.rotateRight", "rotation.rotateLeft",
+    "internalRotation.rotateRight", "internalRotation.rotateLeft",
+    "shoulderFlexion.rotateRight", "shoulderFlexion.rotateLeft",
 ) + tuple(
     f"session.opening.{kind}.{side}.{part}"
     for kind in ("armRaise", "elbowBend")
@@ -119,12 +130,74 @@ def indonesian_number(n):
 
 # Calm, clear delivery for older patients. `speed` below 1 slows speech slightly.
 VOICE_SETTINGS = {
-    "stability": 0.55,
+    # Higher stability keeps the delivery the same from one line to the next (ElevenLabs: lower
+    # values add randomness between generations); 0.70 stays clear of a monotone voice.
+    "stability": 0.70,
     "similarity_boost": 0.8,
-    "style": 0.15,
+    # Style exaggeration makes the model less stable; a soft, explaining tone needs none.
+    "style": 0.0,
     "use_speaker_boost": True,
-    "speed": 0.9,
+    "speed": 0.88,
 }
+
+# Every line uses the same seed, so sampling is as repeatable as the API allows
+# ("best effort", not guaranteed), and the same unspoken lead-in, which steers each line
+# toward one soft, patient, explaining delivery instead of each clip finding its own tone.
+SEED = 20261110
+
+# Takes that came out rushed with the shared seed (well above the ~10 characters per second of
+# the other lines) are re-rendered with their own seed; voice settings stay the same. Add a line
+# here, or change its seed, to retake just that line on the next run.
+RETAKE_SEEDS = {
+    "narration-id-recovery.oneHand": 7102,
+    "narration-id-recovery.calibration": 7103,
+    "narration-id-towel.fold": 7104,
+    "narration-id-session.complete": 7105,
+    "narration-id-balance.voice.leftTarget": 7106,
+    "narration-id-cup.transfer": 7107,
+}
+
+
+def seed_for(line):
+    return RETAKE_SEEDS.get(line["name"], SEED)
+
+
+# Short commands the model reads in a rush even with another seed (about 13-15 characters per
+# second against ~10 for the rest) get a slower speed, so their pace matches the other lines.
+# Only `speed` changes; stability, style and the lead-in stay the same, so the voice does not.
+# The API accepts speeds from 0.7.
+SLOW_LINES = {
+    # Close to the normal speed so it keeps the movement-instruction voice; a comma in its
+    # speak.* text supplies the rest of the slowing (see LEAD_INS).
+    "narration-id-recovery.position": 0.84,
+    "narration-id-recovery.oneHand": 0.72,
+    "narration-id-recovery.calibration": 0.70,
+    "narration-id-towel.fold": 0.70,
+    "narration-id-session.complete": 0.76,
+    "narration-id-balance.voice.leftTarget": 0.78,
+    "narration-id-cup.transfer": 0.72,
+}
+
+
+def settings_for(line):
+    settings = dict(VOICE_SETTINGS)
+    if line["name"] in SLOW_LINES:
+        settings["speed"] = SLOW_LINES[line["name"]]
+    return settings
+
+
+TONE_LEAD_IN = "Dengan suara yang lembut, tenang, dan sabar, ia menjelaskan pelan-pelan:"
+
+# Lines that should sound exactly like a particular instruction are rendered as its next
+# sentence: that instruction is added to the unspoken lead-in, so the model carries on in the
+# same tone. "Posisikan tangan…" follows "Gunakan tangan kanan." as in a live finger session.
+LEAD_INS = {
+    "narration-id-recovery.position": TONE_LEAD_IN + " Gunakan tangan kanan.",
+}
+
+
+def lead_in_for(line):
+    return LEAD_INS.get(line["name"], TONE_LEAD_IN)
 
 
 def clip_name(key, argument=None):
@@ -236,7 +309,7 @@ def find_voice(api_key, name):
 
 
 def fingerprint(line, voice_id, model):
-    payload = json.dumps([line["text"], voice_id, model, VOICE_SETTINGS], sort_keys=True)
+    payload = json.dumps([line["text"], voice_id, model, settings_for(line), seed_for(line), lead_in_for(line)], sort_keys=True)
     return hashlib.sha256(payload.encode()).hexdigest()
 
 
@@ -285,7 +358,13 @@ def main():
         audio = request(
             "POST", f"/v1/text-to-speech/{voice_id}", api_key,
             query={"output_format": "mp3_44100_128"},
-            body={"text": line["text"], "model_id": args.model, "voice_settings": VOICE_SETTINGS},
+            body={
+                "text": line["text"],
+                "model_id": args.model,
+                "voice_settings": settings_for(line),
+                "seed": seed_for(line),
+                "previous_text": lead_in_for(line),
+            },
             accept="audio/mpeg",
         )
         target.write_bytes(audio)

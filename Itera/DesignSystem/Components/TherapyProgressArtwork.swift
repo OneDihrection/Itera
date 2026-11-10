@@ -8,7 +8,7 @@
 import Charts
 import SwiftUI
 
-struct TherapyBadge: View {
+struct TMTherapyBadge: View {
     let symbol: String
     let value: String
     var earned = false
@@ -40,7 +40,7 @@ struct TherapyChartPoint: Identifiable {
     let value: Double
 }
 
-struct TherapyProgressChart: View {
+struct TMTherapyProgressChart: View {
     let title: LocalizedStringKey
     let points: [TherapyChartPoint]
     var line = false

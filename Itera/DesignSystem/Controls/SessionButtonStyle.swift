@@ -7,7 +7,7 @@
 
 import SwiftUI
 
-struct SessionButtonStyle: ButtonStyle {
+struct TMSessionButtonStyle: ButtonStyle {
     var tint: Color = Color(white: 0.16)
     var compact = false
 

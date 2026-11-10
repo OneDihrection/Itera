@@ -15,7 +15,7 @@ import UIKit
 final class TherapySessionViewModel {
     let sessionLanguage = AppLanguage.selected
     var sessionLocale: Locale { sessionLanguage.locale }
-    private(set) var snapshot = SessionSnapshot()
+    private(set) var snapshot: SessionSnapshot
     /// Practice time shown on the pause dialog. It runs while the session is live and stops
     /// for explicit pauses, camera waits and the summary.
     @ObservationIgnored private var clock = SessionDurationClock()
@@ -60,6 +60,7 @@ final class TherapySessionViewModel {
         self.audio = audio
         self.repository = repository
         engine = SessionEngine(routine: routine)
+        snapshot = engine.snapshot
     }
 
     #if DEBUG

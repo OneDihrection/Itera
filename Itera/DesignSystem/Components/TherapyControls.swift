@@ -90,6 +90,13 @@ enum TherapyPalette {
     // MARK: - Daily plan palette
 
     /// Rust brand fill of the prominent "Mulai Latihan" capsule. White text on it is about 5.9:1.
+    static let progressPanel = Color(uiColor: UIColor { traits in
+        traits.userInterfaceStyle == .dark
+            ? UIColor(red: 0.21, green: 0.16, blue: 0.12, alpha: 1)
+            : UIColor(red: 0.99, green: 0.96, blue: 0.92, alpha: 1)
+    })
+    static let progressBar = Color(red: 0.96, green: 0.44, blue: 0.09)
+    static let progressSoftBar = Color(red: 1, green: 0.71, blue: 0.43)
     static let brand = Color(red: 0.71, green: 0.22, blue: 0.10)
     static let onBrand = Color.white
     /// Warm off-white card behind each exercise in the plan timeline.
@@ -122,7 +129,7 @@ enum TherapyPalette {
     }
 }
 
-struct TherapyButton: View {
+struct TMTherapyButton: View {
     let title: LocalizedStringKey
     var symbol: String? = nil
     var secondary = false
@@ -135,6 +142,7 @@ struct TherapyButton: View {
     var prominent = false
     /// With `pill`, fills the pill with the rust brand color instead of the dark action color.
     var brand = false
+    var extraVerticalPadding: CGFloat = 0
     let action: () -> Void
 
     var body: some View {
@@ -162,13 +170,15 @@ struct TherapyButton: View {
             .background(TherapyPalette.brand, in: Capsule())
             .contentShape(Capsule())
         }
-        .buttonStyle(TherapySoundButtonStyle())
+        .buttonStyle(TMTherapySoundButtonStyle())
         .disabled(disabled)
         .opacity(disabled ? 0.5 : 1)
     }
 
     private var standardButton: some View {
-        Button(role: destructive ? .destructive : nil, action: action) {
+        let outline = RoundedRectangle(cornerRadius: pill ? 30 + extraVerticalPadding : 22)
+
+        return Button(role: destructive ? .destructive : nil, action: action) {
             HStack(spacing: 12) {
                 if let symbol {
                     Image(systemName: symbol)
@@ -178,11 +188,12 @@ struct TherapyButton: View {
             .typography(.headline)
             .frame(maxWidth: .infinity, minHeight: pill ? 60 : 68)
             .padding(.horizontal, 20)
+            .padding(.vertical, extraVerticalPadding)
             .foregroundStyle(foreground)
-            .background(background, in: RoundedRectangle(cornerRadius: pill ? 30 : 22))
-            .contentShape(RoundedRectangle(cornerRadius: pill ? 30 : 22))
+            .background(background, in: outline)
+            .contentShape(outline)
         }
-        .buttonStyle(TherapySoundButtonStyle())
+        .buttonStyle(TMTherapySoundButtonStyle())
         .disabled(disabled)
         .opacity(disabled ? 0.5 : 1)
     }
@@ -214,7 +225,7 @@ struct TherapyButton: View {
     }
 }
 
-struct TherapyCard<Content: View>: View {
+struct TMTherapyCard<Content: View>: View {
     var color: Color = TherapyPalette.surface
     /// Draws a thin border, for white cards on a white page.
     var outlined = false
@@ -234,7 +245,7 @@ struct TherapyCard<Content: View>: View {
     }
 }
 
-struct TherapyMetric: View {
+struct TMTherapyMetric: View {
     let title: LocalizedStringKey
     let value: String
     var light = false
@@ -259,7 +270,7 @@ struct TherapyMetric: View {
     }
 }
 
-struct TherapyStatus: View {
+struct TMTherapyStatus: View {
     let title: LocalizedStringKey
     let symbol: String
     var color: Color = TherapyPalette.green
@@ -278,7 +289,7 @@ struct TherapyStatus: View {
 /// The two controls are tap targets rather than `Button`s. Inside a `Form` row, SwiftUI treats
 /// several buttons as one row-wide button and fires all of them for any tap, so a decrease and an
 /// increase cancel each other or only the increase seems to work.
-struct TherapyNumberControl: View {
+struct TMTherapyNumberControl: View {
     let title: LocalizedStringKey
     @Binding var value: Int
     let range: ClosedRange<Int>
@@ -315,7 +326,7 @@ struct TherapyNumberControl: View {
         isEnabled: Bool,
         action: @escaping () -> Void
     ) -> some View {
-        TherapyStepControl(
+        TMTherapyStepControl(
             symbol: symbol,
             label: Text(label) + Text(title),
             isEnabled: isEnabled,
@@ -325,7 +336,7 @@ struct TherapyNumberControl: View {
 }
 
 /// One decrease or increase target that works inside a list row.
-private struct TherapyStepControl: View {
+private struct TMTherapyStepControl: View {
     let symbol: String
     let label: Text
     let isEnabled: Bool
@@ -354,7 +365,7 @@ private struct TherapyStepControl: View {
     }
 }
 
-struct TherapyError: View {
+struct TMTherapyError: View {
     let key: String
     var body: some View {
         Label(LocalizedStringKey(key), systemImage: "exclamationmark.circle.fill")
@@ -367,7 +378,7 @@ struct TherapyError: View {
     }
 }
 
-struct TherapyIconButton: View {
+struct TMTherapyIconButton: View {
     let title: LocalizedStringKey
     let symbol: String
     var size: CGFloat = 88
@@ -396,13 +407,13 @@ struct TherapyIconButton: View {
                     .contentShape(RoundedRectangle(cornerRadius: 26))
             }
         }
-        .buttonStyle(TherapySoundButtonStyle())
+        .buttonStyle(TMTherapySoundButtonStyle())
         .accessibilityLabel(title)
     }
 }
 
 /// A quiet text action for secondary choices beneath primary buttons.
-struct TherapyTextButton: View {
+struct TMTherapyTextButton: View {
     let title: LocalizedStringKey
     var symbol: String? = nil
     var disabled = false
@@ -422,7 +433,7 @@ struct TherapyTextButton: View {
             .frame(minHeight: 48)
             .contentShape(Rectangle())
         }
-        .buttonStyle(TherapySoundButtonStyle())
+        .buttonStyle(TMTherapySoundButtonStyle())
         .disabled(disabled)
         .opacity(disabled ? 0.5 : 1)
     }

@@ -29,7 +29,7 @@ enum TherapyTimelineState: Equatable {
 }
 
 /// A solid yellow dot for completed and current items, and a hollow ring for upcoming items.
-struct TherapyTimelineMarker: View {
+struct TMTherapyTimelineMarker: View {
     let state: TherapyTimelineState
     var diameter: CGFloat = 32
 
@@ -56,7 +56,7 @@ struct TherapyTimelineMarker: View {
 /// One timeline entry: a marker and its incoming and outgoing track segments.
 ///
 /// Rows stack with no spacing of their own; the track spans the space between cards.
-struct TherapyTimelineRow<Card: View>: View {
+struct TMTherapyTimelineRow<Card: View>: View {
     let state: TherapyTimelineState
     var previousIsDone = false
     var isFirst = false
@@ -77,16 +77,16 @@ struct TherapyTimelineRow<Card: View>: View {
     /// Equal flexible segments above and below keep the marker centred on the card.
     private var track: some View {
         VStack(spacing: 0) {
-            TherapyTimelineLine(completed: previousIsDone)
+            TMTherapyTimelineLine(completed: previousIsDone)
                 .opacity(isFirst ? 0 : 1)
 
-            TherapyTimelineMarker(state: state)
+            TMTherapyTimelineMarker(state: state)
 
-            TherapyTimelineLine(completed: state == .done)
+            TMTherapyTimelineLine(completed: state == .done)
                 .opacity(isLast ? 0 : 1)
 
             if !isLast {
-                TherapyTimelineLine(completed: state == .done)
+                TMTherapyTimelineLine(completed: state == .done)
                     .frame(height: spacing)
             }
         }
@@ -94,7 +94,7 @@ struct TherapyTimelineRow<Card: View>: View {
 }
 
 /// A solid completed connector or a dashed upcoming connector.
-private struct TherapyTimelineLine: View {
+private struct TMTherapyTimelineLine: View {
     let completed: Bool
 
     var body: some View {
@@ -123,7 +123,7 @@ struct TherapyPlanDetail {
 
 /// A warm card naming one exercise, its values and an illustration on the trailing side.
 /// The whole card is one button and one accessibility element.
-struct TherapyPlanCard: View {
+struct TMTherapyPlanCard: View {
     let title: LocalizedStringKey
     let details: [TherapyPlanDetail]
     let artwork: String
@@ -141,7 +141,7 @@ struct TherapyPlanCard: View {
                 Spacer(minLength: 0)
 
                 if !typeSize.isAccessibilitySize {
-                    TherapyArtwork(name: artwork, fallback: fallbackArtwork)
+                    TMTherapyArtwork(name: artwork, fallback: fallbackArtwork)
                         .frame(width: 110, height: 160)
                 }
             }
@@ -151,7 +151,7 @@ struct TherapyPlanCard: View {
             .background(TherapyPalette.planCard, in: RoundedRectangle(cornerRadius: 28))
             .contentShape(RoundedRectangle(cornerRadius: 28))
         }
-        .buttonStyle(TherapySoundButtonStyle())
+        .buttonStyle(TMTherapySoundButtonStyle())
         .foregroundStyle(TherapyPalette.ink)
         .accessibilityElement(children: .combine)
         .accessibilityValue(Text(state.accessibilityValue))
@@ -186,7 +186,7 @@ struct TherapyPlanCard: View {
 
 /// Pins its content to the bottom of a scrolling page over a soft fade, so the page can scroll
 /// beneath it. The fade never takes taps; only the content does.
-struct TherapyFloatingActionDock<Content: View>: View {
+struct TMTherapyFloatingActionDock<Content: View>: View {
     @ViewBuilder let content: Content
 
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency

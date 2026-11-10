@@ -7,180 +7,207 @@
 
 import SwiftUI
 
-/// The Progress tab: this week at a glance, the current challenge, badges and history.
-struct FingerReportsView: View {
+/// The Progress tab presents the current week, repetition totals and saved practice.
+struct TMFingerReportsView: View {
     @Environment(AppDependencies.self) private var dependencies
     @Environment(NavigationRouter.self) private var router
     @Environment(\.locale) private var locale
-    @AppStorage(PracticePreferences.patientName) private var patientName = ""
+    @State private var confirmingHistoryDeletion = false
+    @State private var deletingHistory = false
 
     var body: some View {
+        let report = PracticeReport(history: dependencies.home.history)
+
         ScrollView {
-            VStack(alignment: .leading, spacing: 28) {
-                weekRange
-                weekSummary
-                challengeSection
-                TherapyButton(title: "towel.history", symbol: "square.stack.3d.up") {
-                    router.push(.taskReports)
+            LazyVStack(alignment: .leading, spacing: 30) {
+                weekSummary(report)
+
+                Divider()
+                latestSection(report.currentWeek.first)
+
+                Divider()
+                VStack(alignment: .leading, spacing: 16) {
+                    sectionTitle("progress.weeklyChart")
+                    chart(report.weeklyRepetitions)
                 }
-                historySection
+
+                Divider()
+                historySection(report.sessions)
             }
-            // The system page margin keeps content aligned under the large navigation title.
-            .scenePadding(.horizontal)
-            .padding(.top, 4)
-            .padding(.bottom, 32)
+            .frame(maxWidth: 980)
+            .padding(.horizontal, 32)
+            .padding(.vertical, 36)
+            .frame(maxWidth: .infinity)
         }
         .foregroundStyle(TherapyPalette.ink)
         .background(TherapyPalette.canvas)
-        .navigationTitle(headerTitle)
-        .navigationBarTitleDisplayMode(.large)
+        .toolbar(.hidden, for: .navigationBar)
         .task { await refreshProgress() }
+        .refreshable { await refreshProgress() }
     }
 
-    // MARK: - Header
+    private func sectionTitle(_ title: LocalizedStringKey) -> some View {
+        Text(title).typography(.title2).accessibilityAddTraits(.isHeader)
+    }
 
-    @ViewBuilder
-    private var weekRange: some View {
-        if let first = week.first?.date, let last = week.last?.date {
-            Text(first..<last, format: .interval.day().month(.abbreviated).year())
-                .typography(size: 24, weight: .regular, relativeTo: .title3)
-                .foregroundStyle(TherapyPalette.muted)
+    private func latestSection(_ latest: FingerSessionSummary?) -> some View {
+        VStack(alignment: .leading, spacing: 16) {
+            sectionTitle("progress.latestThisWeek")
+            if let latest {
+                sessionCard(latest)
+            } else {
+                Text("progress.noSessionThisWeek")
+                    .typography(.body)
+                    .foregroundStyle(TherapyPalette.muted)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private func weekSummary(_ report: PracticeReport) -> some View {
+        let sessions = report.currentWeek
+        let repetitions = sessions.reduce(0) { $0 + $1.totalRepetitions }
+        let minutes = PracticeReport.minutes(sessions.reduce(0) { $0 + $1.duration })
+        let activeDays = report.days.filter { date in
+            report.sessionsByDay[date, default: []].contains { $0.totalRepetitions > 0 || $0.duration > 0 }
+        }.count
+
+        return TMTherapyWeekSummary(
+            title: "progress.weekDays \(activeDays)",
+            detail: "progress.weekDetail \(sessions.count) \(repetitions) \(minutes)",
+            days: report.days.map { date in
+                dayCell(date, sessions: report.sessionsByDay[date, default: []])
+            }
+        ) {
+            if let latest = sessions.first {
+                sessionCard(latest, centeredDate: true)
+            }
         }
     }
 
-    /// "Progres Bu Yuli" when a name is set in Settings, otherwise "Progres".
-    private var headerTitle: Text {
-        let name = patientName.trimmingCharacters(in: .whitespacesAndNewlines)
+    private func dayCell(_ date: Date, sessions: [FingerSessionSummary]) -> TherapyProgressDay {
+        let completed = sessions.count { $0.outcome == .completed }
+        let caption: LocalizedStringKey
+        let status: TherapyProgressDay.Status
 
-        guard !name.isEmpty else {
-            return Text("progress.title")
+        if completed > 0, completed == sessions.count {
+            caption = "progress.daySessions \(completed)"
+            status = .done
+        } else if !sessions.isEmpty {
+            caption = "progress.dayPartial \(sessions.count - completed)"
+            status = .partial
+        } else {
+            caption = "progress.dayEmpty"
+            status = .empty
         }
 
-        return Text("progress.titleName \(name)")
+        return TherapyProgressDay(
+            id: date,
+            label: date.formatted(.dateTime.day().month(.abbreviated).locale(locale)),
+            caption: caption,
+            status: status
+        )
     }
 
-    // MARK: - Week
-
-    private var week: [PracticeDay] {
-        dependencies.progress.week
+    private func sessionCard(_ session: FingerSessionSummary, centeredDate: Bool = false) -> some View {
+        TMTherapyProgressSessionCard(
+            date: session.ended,
+            completed: session.results.count { $0.completed && !$0.skipped },
+            planned: session.routine.exercises.count,
+            minutes: PracticeReport.minutes(session.duration),
+            repetitions: session.totalRepetitions,
+            centeredDate: centeredDate
+        )
     }
 
-    private var weekSummary: some View {
-        let practisedDays = week.filter { $0.sessions > 0 }.count
-        let sessions = week.reduce(0) { $0 + $1.sessions }
-        let repetitions = week.reduce(0) { $0 + $1.repetitions }
-        let minutes = Int((week.reduce(0) { $0 + $1.seconds } / 60).rounded())
+    private func chart(_ repetitions: [Int]) -> some View {
+        let labels: [LocalizedStringKey] = [
+            "progress.threeWeeksAgo", "progress.twoWeeksAgo", "progress.lastWeek", "progress.thisWeek"
+        ]
+        let completedWeeks = repetitions.dropLast()
+        let increased = (completedWeeks.first ?? 0) < (completedWeeks.last ?? 0)
 
-        return TherapyWeekSummary(
-            title: "progress.weekDays \(practisedDays)",
-            detail: "progress.weekDetail \(sessions) \(repetitions) \(minutes)",
-            days: week.map { day in
-                TherapyWeekSummary.Day(
-                    id: day.date,
-                    label: day.date.formatted(.dateTime.day().month(.abbreviated).locale(locale)),
-                    caption: day.sessions > 0 ? "progress.daySessions \(day.sessions)" : "progress.dayEmpty",
-                    done: day.sessions > 0
-                )
+        return TMTherapyWeeklyRepetitionChart(
+            headline: increased ? "progress.chartIncreased" : "progress.chartHeadline",
+            bars: zip(labels, repetitions).enumerated().map { index, pair in
+                .init(id: index, title: pair.0, repetitions: pair.1)
             }
         )
     }
 
-    // MARK: - Challenge and badges
-
-    @ViewBuilder
-    private var challengeSection: some View {
-        let progress = dependencies.progress
-        let challenge = progress.sessionChallenge
-        let latest = progress.latestAward
-
-        if challenge != nil || latest != nil {
-            VStack(alignment: .leading, spacing: 16) {
-                Text("progress.challenges")
-                    .typography(size: 24, weight: .semiBold, relativeTo: .title2)
-                    .accessibilityAddTraits(.isHeader)
-
-                if let challenge {
-                    TherapyChallengeCard(
-                        title: "progress.challenge.sessions",
-                        progressText: "progress.challengeProgress \(min(progress.progress.sessions, challenge.target)) \(challenge.target)",
-                        status: "progress.challengeActive",
-                        targetText: "progress.challengeTarget \(progress.title(for: challenge))",
-                        completed: progress.progress.sessions,
-                        total: challenge.target
-                    )
-                }
-
-                if let latest {
-                    Button {
-                        router.push(.achievements)
-                    } label: {
-                        TherapyAchievementRow(
-                            title: progress.title(for: latest.badge),
-                            subtitle: earnedText(latest.award.earned),
-                            count: "progress.badgeCount \(progress.awards.count)"
-                        )
-                    }
-                    .buttonStyle(TherapySoundButtonStyle())
-                }
-            }
-        }
-    }
-
-    private func earnedText(_ date: Date) -> String {
-        let formatted = date.formatted(.dateTime.day().month(.abbreviated).year().locale(locale))
-        return String(localized: "progress.badgeEarned \(formatted)", bundle: AppLanguage.selected.resourceBundle)
-    }
-
-    // MARK: - History
-
-    private var historySection: some View {
-        VStack(alignment: .leading, spacing: 18) {
+    private func historySection(_ sessions: [FingerSessionSummary]) -> some View {
+        VStack(alignment: .leading, spacing: 16) {
             HStack(alignment: .lastTextBaseline) {
-                Text("reports.history")
-                    .typography(size: 32, weight: .bold, relativeTo: .title)
-                    .accessibilityAddTraits(.isHeader)
+                sectionTitle("reports.history")
                 Spacer(minLength: 12)
-                Text("progress.sessionsRecorded \(dependencies.home.history.count)")
-                    .typography(size: 20, weight: .regular, relativeTo: .subheadline)
+                Text("progress.sessionsRecorded \(sessions.count)")
+                    .typography(.subheadline)
                     .foregroundStyle(TherapyPalette.muted)
             }
 
             if let error = dependencies.home.errorKey {
-                TherapyError(key: error)
-                TherapyButton(title: "action.retry", secondary: true, pill: true) {
-                    Task { await dependencies.home.refresh() }
+                TMTherapyError(key: error)
+                TMTherapyButton(title: "action.retry", secondary: true, pill: true) {
+                    Task { await refreshProgress() }
                 }
+            } else if sessions.isEmpty {
+                Text("reports.emptyDetail").typography(.body).foregroundStyle(TherapyPalette.muted)
             }
 
-            if dependencies.home.history.isEmpty {
-                emptyHistory
-            } else {
-                ForEach(dependencies.home.history) { summary in
-                    Button {
-                        router.push(.report(summary.id))
-                    } label: {
-                        FingerHistoryCard(summary: summary)
+            if !sessions.isEmpty {
+                historyDeletionControls
+            }
+
+            ForEach(sessions) { summary in
+                Button {
+                    router.push(.report(summary.id))
+                } label: {
+                    TMFingerHistoryCard(summary: summary)
+                }
+                .buttonStyle(TMTherapySoundButtonStyle())
+            }
+        }
+    }
+
+    private var historyDeletionControls: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            if confirmingHistoryDeletion {
+                Text("progress.deleteHistoryMessage").typography(.body)
+                HStack {
+                    TMTherapyButton(title: "progress.cancelHistoryDeletion", secondary: true, disabled: deletingHistory) {
+                        confirmingHistoryDeletion = false
                     }
-                    .buttonStyle(TherapySoundButtonStyle())
+                    TMTherapyButton(title: "progress.deleteHistory", destructive: true, disabled: deletingHistory) {
+                        Task { await deleteHistory() }
+                    }
+                }
+            } else {
+                TMTherapyTextButton(title: "progress.deleteHistory") {
+                    confirmingHistoryDeletion = true
                 }
             }
         }
     }
 
-    private var emptyHistory: some View {
-        TherapyCard(color: TherapyPalette.canvas, outlined: true) {
-            VStack(alignment: .leading, spacing: 16) {
-                Text("reports.empty").typography(.title2)
-                Text("reports.emptyDetail").typography(.body)
-                TherapyButton(title: "home.startExercise", symbol: "play.fill", pill: true) {
-                    router.popToRoot()
-                }
-                .frame(maxWidth: 360)
-            }
+    private func deleteHistory() async {
+        guard !deletingHistory else {
+            return
+        }
+
+        deletingHistory = true
+        defer { deletingHistory = false }
+        await dependencies.home.deleteHistory()
+        if dependencies.home.errorKey == nil {
+            confirmingHistoryDeletion = false
+            await dependencies.progress.refresh()
         }
     }
 
     private func refreshProgress() async {
+        guard !deletingHistory else {
+            return
+        }
+
         await dependencies.home.refresh()
         await dependencies.progress.refresh()
         if !dependencies.progress.pending.isEmpty {
@@ -192,65 +219,74 @@ struct FingerReportsView: View {
 // MARK: - History card
 
 /// One saved session: its date and outcome, then the therapist's plan against what was done.
-private struct FingerHistoryCard: View {
+private struct TMFingerHistoryCard: View {
     let summary: FingerSessionSummary
 
     var body: some View {
-        TherapyCard(color: TherapyPalette.canvas, outlined: true, padding: 24) {
+        TMTherapyCard(color: TherapyPalette.canvas, outlined: true, padding: 24) {
             VStack(alignment: .leading, spacing: 18) {
                 HStack {
                     Text(summary.started, format: .dateTime.weekday(.wide).day().month(.abbreviated).year())
                         .typography(size: 24, weight: .semiBold, relativeTo: .headline)
                     Spacer(minLength: 12)
-                    Label(LocalizedStringKey("progress.outcome." + summary.outcome.rawValue), systemImage: outcomeSymbol)
+                    Label(outcomeTitle, systemImage: outcomeSymbol)
                         .typography(size: 20, weight: .medium, relativeTo: .subheadline)
                 }
-
-                ForEach(performedResults) { result in
-                    resultRow(result)
-                    Divider()
+                ForEach(summary.routine.exercises) { exercise in
+                    resultRow(exercise, result: summary.results.first { $0.kind == exercise })
                 }
 
-                if let feeling = summary.feeling {
-                    HStack(spacing: 6) {
-                        Text("progress.feeling")
-                        Text(LocalizedStringKey(feeling.title))
-                    }
-                    .typography(size: 20, weight: .regular, relativeTo: .subheadline)
-                    .foregroundStyle(TherapyPalette.muted)
+                Divider()
+                HStack(alignment: .top, spacing: 24) {
+                    Text(summary.feeling == .painful ? "progress.painRecorded" : "progress.painUnrecorded")
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    Text("progress.assistanceUnrecorded")
+                        .frame(maxWidth: .infinity, alignment: .leading)
                 }
+                .typography(.subheadline)
+                .foregroundStyle(TherapyPalette.muted)
+
             }
             .foregroundStyle(TherapyPalette.ink)
             .multilineTextAlignment(.leading)
         }
     }
 
-    /// Skipped and untouched movements stay in the detailed report, not this overview.
-    private var performedResults: [FingerExerciseResult] {
-        summary.results.filter { $0.repetitions > 0 && !$0.skipped }
-    }
-
     private var outcomeSymbol: String {
-        summary.outcome == .completed ? "checkmark" : "clock.arrow.circlepath"
+        if summary.outcome == .completed { return "checkmark" }
+        return summary.totalRepetitions > 0 ? "checkmark.square" : "minus.square"
     }
 
-    private func resultRow(_ result: FingerExerciseResult) -> some View {
-        VStack(alignment: .leading, spacing: 14) {
+    private var outcomeTitle: LocalizedStringKey {
+        if summary.outcome == .completed { return "progress.outcome.completed" }
+        return summary.totalRepetitions > 0 ? "progress.partial" : "progress.notDone"
+    }
+
+    private func resultRow(_ exercise: FingerExercise, result: FingerExerciseResult?) -> some View {
+        let performed = (result?.repetitions ?? 0) > 0 || (result?.activeSeconds ?? 0) > 0
+
+        return VStack(alignment: .leading, spacing: 14) {
             HStack(alignment: .firstTextBaseline, spacing: 12) {
-                Image(systemName: "hand.raised")
-                    .accessibilityHidden(true)
+                Image(systemName: "hand.raised").accessibilityHidden(true)
                 VStack(alignment: .leading, spacing: 4) {
-                    Text(LocalizedStringKey(result.kind.title))
+                    Text(LocalizedStringKey(exercise.title))
                         .typography(size: 22, weight: .semiBold, relativeTo: .headline)
-                    Text("progress.duration \(minutes(result.activeSeconds))")
-                        .typography(size: 18, weight: .regular, relativeTo: .subheadline)
-                        .foregroundStyle(TherapyPalette.muted)
+                    if let result, performed {
+                        Text("progress.duration \(PracticeReport.minutes(result.activeSeconds))")
+                            .typography(.subheadline)
+                            .foregroundStyle(TherapyPalette.muted)
+                    } else {
+                        Text("progress.notDone").typography(.subheadline).foregroundStyle(TherapyPalette.muted)
+                    }
                 }
             }
 
             HStack(alignment: .top, spacing: 24) {
                 column(title: "progress.plan", value: plan)
-                column(title: "progress.done", value: done(result))
+                column(
+                    title: performed ? "progress.done" : "progress.actual",
+                    value: result.flatMap { performed ? done($0) : nil } ?? Text("progress.notDone")
+                )
             }
         }
     }
@@ -281,18 +317,9 @@ private struct FingerHistoryCard: View {
 
         return Text("progress.doneValue \(result.completedSets) \(repetitions) \(result.repetitions)")
     }
-
-    /// Whole minutes, with any practice shorter than a minute shown as one.
-    private func minutes(_ seconds: Double) -> Int {
-        guard seconds > 0 else {
-            return 0
-        }
-
-        return max(1, Int((seconds / 60).rounded()))
-    }
 }
 
-struct FingerReportDetailView: View {
+struct TMFingerReportDetailView: View {
     let id: UUID
     @Environment(AppDependencies.self) private var dependencies
     @Environment(NavigationRouter.self) private var router
@@ -324,21 +351,21 @@ struct FingerReportDetailView: View {
     private func report(_ summary: FingerSessionSummary) -> some View {
         VStack(alignment: .leading, spacing: 26) {
             HStack {
-                TherapyStatus(title: "report.tag", symbol: "sparkles")
+                TMTherapyStatus(title: "report.tag", symbol: "sparkles")
                 Spacer()
                 Text(summary.started, format: .dateTime.day().month(.wide).year()).typography(.body)
             }
             Text("report.title").typography(.largeTitle)
             Text("report.encouragement").typography(.body).foregroundStyle(TherapyPalette.muted)
             if summary.feeling == .painful {
-                TherapyError(key: "report.painNote")
+                TMTherapyError(key: "report.painNote")
             }
-            TherapyCard(color: TherapyPalette.green) {
+            TMTherapyCard(color: TherapyPalette.green) {
                 HStack {
-                    TherapyMetric(title: "report.duration", value: duration(summary.duration), light: true)
-                    TherapyMetric(title: "report.sets", value: String(summary.totalSets), light: true)
-                    TherapyMetric(title: "report.repetitions", value: String(summary.totalRepetitions), light: true)
-                    TherapyMetric(title: "plan.side", value: String(localized: String.LocalizationValue(summary.routine.side.title), bundle: AppLanguage.selected.resourceBundle), light: true)
+                    TMTherapyMetric(title: "report.duration", value: duration(summary.duration), light: true)
+                    TMTherapyMetric(title: "report.sets", value: String(summary.totalSets), light: true)
+                    TMTherapyMetric(title: "report.repetitions", value: String(summary.totalRepetitions), light: true)
+                    TMTherapyMetric(title: "plan.side", value: String(localized: String.LocalizationValue(summary.routine.side.title), bundle: AppLanguage.selected.resourceBundle), light: true)
                 }
             }
             HStack {
@@ -351,7 +378,7 @@ struct FingerReportDetailView: View {
             sessionAchievements(summary)
             Text("report.movement").typography(.title2)
             ForEach(summary.results) { result in
-                TherapyCard {
+                TMTherapyCard {
                     HStack(spacing: 20) {
                         Image(systemName: result.kind.symbol).typography(size: 34, weight: .bold)
                             .foregroundStyle(TherapyPalette.green).frame(width: 50)
@@ -360,8 +387,8 @@ struct FingerReportDetailView: View {
                             Text(resultStatus(result)).typography(.footnote)
                         }
                         Spacer()
-                        TherapyMetric(title: "report.sets", value: String(result.completedSets)).frame(width: 110)
-                        TherapyMetric(title: "session.repetitions", value: String(result.repetitions)).frame(width: 130)
+                        TMTherapyMetric(title: "report.sets", value: String(result.completedSets)).frame(width: 110)
+                        TMTherapyMetric(title: "session.repetitions", value: String(result.repetitions)).frame(width: 130)
                         VStack(alignment: .trailing, spacing: 6) {
                             Text("report.cameraIndex").typography(.footnote)
                             if let gain = result.observedGain, gain > 0.05 {
@@ -379,7 +406,7 @@ struct FingerReportDetailView: View {
                     .foregroundStyle(TherapyPalette.muted).padding(.top, 12)
             }
             .typography(.body).tint(TherapyPalette.green)
-            TherapyButton(title: "report.delete", symbol: "trash", secondary: true) {
+            TMTherapyButton(title: "report.delete", symbol: "trash", secondary: true) {
                 Task {
                     await dependencies.home.delete(summary)
                     if dependencies.home.errorKey == nil {
@@ -404,7 +431,7 @@ struct FingerReportDetailView: View {
                 Text("achievement.thisSession").typography(.title2)
                 ScrollView(.horizontal) {
                     HStack(alignment: .top, spacing: 20) {
-                        ForEach(badges) { badge in PracticeBadgeTile(badge: badge).frame(width: 180) }
+                        ForEach(badges) { badge in TMPracticeBadgeTile(badge: badge).frame(width: 180) }
                     }
                 }
             }

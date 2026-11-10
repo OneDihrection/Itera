@@ -9,7 +9,7 @@ import SwiftUI
 
 /// A front view of an arm swinging from hanging at the side, forward and all the way overhead with
 /// the palm turned up and the arm rotated outward, then back down. A native stand-in until a rendered animation is bundled.
-struct ShoulderFlexionDemonstrationView: View {
+struct TMShoulderFlexionDemonstrationView: View {
     let paused: Bool
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
@@ -22,7 +22,7 @@ struct ShoulderFlexionDemonstrationView: View {
                     draw(&context, size: size, lift: lift(at: timeline.date))
                 }
             }
-            TherapyDemoCaption(paused: paused)
+            TMTherapyDemoCaption(paused: paused)
         }
         .background(TherapyPalette.mediaBackground)
         .clipShape(RoundedRectangle(cornerRadius: 24))

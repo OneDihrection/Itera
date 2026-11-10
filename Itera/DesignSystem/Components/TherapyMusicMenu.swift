@@ -13,7 +13,7 @@ struct TherapyMusicOption: Identifiable {
 }
 
 /// A native selection menu; playback and preferences remain with the caller.
-struct TherapyMusicMenu: View {
+struct TMTherapyMusicMenu: View {
     @Binding var selection: String
     let options: [TherapyMusicOption]
     var size: CGFloat = 64

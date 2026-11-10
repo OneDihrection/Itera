@@ -9,7 +9,7 @@ import AVFoundation
 import SwiftUI
 
 /// Plays only the half-cycle matching the current instruction; calibration uses held poses.
-struct FingerDemonstrationView: UIViewRepresentable {
+struct TMFingerDemonstrationView: UIViewRepresentable {
     let exercise: FingerExercise
     let phase: FingerPhase
     let returning: Bool
@@ -18,9 +18,9 @@ struct FingerDemonstrationView: UIViewRepresentable {
     let paused: Bool
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
-    func makeUIView(context: Context) -> HandMovieView { HandMovieView() }
+    func makeUIView(context: Context) -> TMHandMovieView { TMHandMovieView() }
 
-    func updateUIView(_ view: HandMovieView, context: Context) {
+    func updateUIView(_ view: TMHandMovieView, context: Context) {
         let displayedPhase: FingerPhase
         if reduceMotion && (phase == .active || phase == .demonstration) {
             displayedPhase = returning ? .baseline : .target
@@ -32,10 +32,10 @@ struct FingerDemonstrationView: UIViewRepresentable {
                        mirrored: side == .left, paused: paused || reduceMotion)
     }
 
-    static func dismantleUIView(_ view: HandMovieView, coordinator: ()) { view.releasePlayer() }
+    static func dismantleUIView(_ view: TMHandMovieView, coordinator: ()) { view.releasePlayer() }
 }
 
-final class HandMovieView: UIView {
+final class TMHandMovieView: UIView {
     private let playerLayer = AVPlayerLayer()
     private let fallback = UILabel()
     private var player: AVPlayer?
