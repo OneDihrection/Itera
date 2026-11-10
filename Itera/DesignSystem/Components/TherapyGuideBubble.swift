@@ -7,7 +7,7 @@
 
 import SwiftUI
 
-struct TherapyGuideBubble: View {
+struct TMTherapyGuideBubble: View {
     let progress: Double
     let active: Bool
     var completionID: UUID? = nil
@@ -23,7 +23,7 @@ struct TherapyGuideBubble: View {
                 Circle().fill(active ? TherapyPalette.guidanceBlue.opacity(0.15) : TherapyPalette.surface.opacity(0.9))
             }
             if active || outlineOnly {
-                TherapyProgressRing(
+                TMTherapyProgressRing(
                     progress: showsTimer ? progress : 0,
                     lineWidth: ringWidth,
                     animatesProgress: progress < 1,

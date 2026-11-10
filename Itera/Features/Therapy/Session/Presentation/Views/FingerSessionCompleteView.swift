@@ -8,7 +8,7 @@
 import SwiftUI
 
 /// Saves the finished session and offers a way to see progress or continue today’s plan.
-struct FingerSessionCompleteView: View {
+struct TMFingerSessionCompleteView: View {
     @Environment(AppDependencies.self) private var dependencies
     @Environment(NavigationRouter.self) private var router
     @State private var savingFinished = false
@@ -22,7 +22,7 @@ struct FingerSessionCompleteView: View {
             Spacer(minLength: 40)
 
             VStack(spacing: 18) {
-                TherapyCompletionMark(tint: TherapyPalette.brand)
+                TMTherapyCompletionMark(tint: TherapyPalette.brand)
                 Text(completed ? "session.allDoneTitle" : "done.titlePartial")
                     .typography(size: 52, weight: .bold, relativeTo: .largeTitle)
                     .accessibilityAddTraits(.isHeader)
@@ -52,7 +52,7 @@ struct FingerSessionCompleteView: View {
         // The way on appears once saving has finished, whether or not it succeeded, so the
         // patient is never stuck on this page.
         if savingFinished {
-            TherapyButton(
+            TMTherapyButton(
                 title: closingTitle,
                 symbol: dependencies.dailyPlan.isRunning ? "play.fill" : nil,
                 prominent: true,

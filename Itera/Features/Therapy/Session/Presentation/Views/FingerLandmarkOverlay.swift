@@ -12,7 +12,7 @@ import SwiftUI
 /// Sizes follow the hand's size on screen, so a hand farther from the camera gets smaller
 /// circles. Text never sits on the hand: circles show only their progress ring, and the
 /// remaining time appears once, beside the hand.
-struct FingerLandmarkOverlay: View {
+struct TMFingerLandmarkOverlay: View {
     let evidence: HandEvidence
     let progress: Double
     let exercise: FingerExercise
@@ -107,7 +107,7 @@ struct FingerLandmarkOverlay: View {
     private func circles(palm: CGFloat, width: Double, height: Double, origin: CGPoint, viewport: CGSize) -> some View {
         if usesWholeHandCircle {
             if let circle = handCircle(width: width, height: height, origin: origin, viewport: viewport) {
-                TherapyGuideBubble(
+                TMTherapyGuideBubble(
                     progress: progress,
                     active: guiding,
                     completionID: completionID, onCompletionPresented: onCompletionPresented,
@@ -119,7 +119,7 @@ struct FingerLandmarkOverlay: View {
         } else {
             ForEach(Array([4, 8, 12, 16, 20].enumerated()), id: \.offset) { index, joint in
                 if showsBubble(index + 1) && evidence.points[joint].confidence >= 0.5 {
-                    TherapyGuideBubble(
+                    TMTherapyGuideBubble(
                         // No finger numbers: the instruction names the finger to move.
                         progress: progress,
                         active: isActive(index + 1),

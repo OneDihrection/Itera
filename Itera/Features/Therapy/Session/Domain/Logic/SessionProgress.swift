@@ -131,7 +131,7 @@ struct SessionProgress {
         stage = .activity
     }
 
-    private var hasNextSet: Bool {
+    var hasNextSet: Bool {
         guard let activity = currentActivity, let last = results.last else {
             return false
         }

@@ -13,71 +13,71 @@ enum AppRouterView {
     static func destination(_ route: AppRoute) -> some View {
         switch route {
         case .home:
-            HomeView()
+            TMHomeView()
         case .fingerHome(let category):
-            FingerHomeView(category: category)
+            TMFingerHomeView(category: category)
         case .therapyOverview(let category):
-            TherapyOverview(category: category)
+            TMTherapyOverview(category: category)
                 .environment(\.buttonFeedback, {})
                 .environment(\.locale, AppLanguage.selected.locale)
         case .armRotationHome:
-            ArmRotationHomeView()
+            TMArmRotationHomeView()
                 .environment(\.locale, AppLanguage.selected.locale)
         case .balanceOverview(let exercise):
-            BalanceOverviewView(exercise: exercise)
+            TMBalanceOverviewView(exercise: exercise)
                 .environment(\.locale, AppLanguage.selected.locale)
         case .balanceSession(let exercise, let settings):
-            BalanceSessionDestination(exercise: exercise, settings: settings)
+            TMBalanceSessionDestination(exercise: exercise, settings: settings)
                 .environment(\.locale, AppLanguage.selected.locale)
         case .routineConfiguration(let category):
-            RoutineConfigurationView(category: category)
+            TMRoutineConfigurationView(category: category)
                 .environment(\.buttonFeedback, {})
                 .environment(\.locale, AppLanguage.selected.locale)
         case .exercisePicker(let category):
-            RoutineExercisePicker(category: category)
+            TMRoutineExercisePicker(category: category)
                 .environment(\.buttonFeedback, {})
                 .environment(\.locale, AppLanguage.selected.locale)
         case .therapySession:
-            SessionDestination()
+            TMSessionDestination()
                 .environment(\.buttonFeedback, {})
                 .environment(\.locale, AppLanguage.selected.locale)
         case .plan(let category):
-            FingerPlanView(category: category)
+            TMFingerPlanView(category: category)
         case .taskReports:
-            TaskReportsDestination()
+            TMTaskReportsDestination()
                 .environment(\.locale, AppLanguage.selected.locale)
         case .reports:
-            FingerReportsView()
+            TMFingerReportsView()
         case .achievements:
-            PracticeAchievementsView()
+            TMPracticeAchievementsView()
         case .achievementCelebration:
-            AchievementCelebrationView()
+            TMAchievementCelebrationView()
         case .achievement(let id):
-            PracticeAchievementDetailView(id: id)
+            TMPracticeAchievementDetailView(id: id)
         case .achievementShare(let id):
-            AchievementShareDestination(id: id)
+            TMAchievementShareDestination(id: id)
         case .report(let id):
-            FingerReportDetailView(id: id)
+            TMFingerReportDetailView(id: id)
         case .fingerSession:
-            FingerSessionView()
+            TMFingerSessionView()
         case .sessionComplete:
-            FingerSessionCompleteView()
+            TMFingerSessionCompleteView()
         case .practicePreferences:
-            PracticePreferencesView()
+            TMPracticePreferencesView()
         case .routineSettings(let category):
-            FingerRoutineSettingsView(category: category)
+            TMFingerRoutineSettingsView(category: category)
         case .exercisePreview(let exercise):
-            FingerExercisePreviewView(exercise: exercise)
+            TMFingerExercisePreviewView(exercise: exercise)
         case .planNext:
-            DailyPlanNextView()
+            TMDailyPlanNextView()
         case .planIntro(let itemID):
-            DailyPlanIntroView(itemID: itemID)
+            TMDailyPlanIntroView(itemID: itemID)
         }
     }
 }
 
 #if DEBUG
-private struct RouterPreview: View {
+private struct TMRouterPreview: View {
     @State private var router: NavigationRouter
     @State private var dependencies = AppDependencies(permissions: PermissionManager())
 
@@ -96,7 +96,7 @@ private struct RouterPreview: View {
     }
 
     var body: some View {
-        ContentView()
+        TMContentView()
             .typography(.body)
             .withAppRouter()
             .environment(router)
@@ -106,33 +106,33 @@ private struct RouterPreview: View {
 }
 
 #Preview("Root") {
-    RouterPreview()
+    TMRouterPreview()
 }
 
 #Preview("Pushed route") {
-    RouterPreview(route: .home)
+    TMRouterPreview(route: .home)
 }
 
 #Preview("Sheet") {
-    RouterPreview(route: .home, sheet: true)
+    TMRouterPreview(route: .home, sheet: true)
 }
 #endif
 
-private struct SessionDestination: View {
+private struct TMSessionDestination: View {
     @Environment(AppDependencies.self) private var dependencies
 
     var body: some View {
-        TherapySessionView(model: dependencies.makeSession())
+        TMTherapySessionView(model: dependencies.makeSession())
     }
 }
 
-private struct BalanceSessionDestination: View {
+private struct TMBalanceSessionDestination: View {
     @Environment(AppDependencies.self) private var dependencies
     let exercise: BalanceExercise
     let settings: BalancePracticeSettings
 
     var body: some View {
-        BalanceSessionView(model: BalanceSessionViewModel(
+        TMBalanceSessionView(model: BalanceSessionViewModel(
             tracking: dependencies.tracking,
             audio: dependencies.audio,
             settings: settings,
@@ -141,10 +141,10 @@ private struct BalanceSessionDestination: View {
     }
 }
 
-private struct TaskReportsDestination: View {
+private struct TMTaskReportsDestination: View {
     @Environment(AppDependencies.self) private var dependencies
 
     var body: some View {
-        TaskReportsView(model: TaskReportsViewModel(repository: dependencies.sessions))
+        TMTaskReportsView(model: TaskReportsViewModel(repository: dependencies.sessions))
     }
 }

@@ -13,7 +13,7 @@ import SwiftUI
 /// The towel's moving edge follows the fold progress, so the picture matches the hand. Activity
 /// coordinates already include the selected preview reflection, exactly once, so nothing here
 /// reflects them again.
-struct TowelWorkspaceView: View {
+struct TMTowelWorkspaceView: View {
     let snapshot: TowelSnapshot
 
     var interpolates = false
@@ -51,7 +51,7 @@ struct TowelWorkspaceView: View {
     private func board(_ geometry: CameraDisplayGeometry) -> some View {
         let size = TowelBoard.panelFraction(foldIndex: snapshot.foldIndex)
 
-        return TherapyFoldPanel(
+        return TMTherapyFoldPanel(
             progress: snapshot.foldProgress,
             horizontal: snapshot.foldIndex % 2 == 0,
             layers: 1 << snapshot.foldIndex,
@@ -66,7 +66,7 @@ struct TowelWorkspaceView: View {
     }
 
     private func trail(_ geometry: CameraDisplayGeometry) -> some View {
-        TowelTrail(
+        TMTowelTrail(
             from: screen(snapshot.grabPoint, geometry),
             to: screen(snapshot.destination, geometry),
             progress: snapshot.foldProgress,
@@ -81,7 +81,7 @@ struct TowelWorkspaceView: View {
         )
 
         return ZStack {
-            TherapyGuideZone(
+            TMTherapyGuideZone(
                 tint: TherapyPalette.guidanceBlue,
                 symbol: "hand.pinch.fill",
                 emphasized: step == 0
@@ -89,7 +89,7 @@ struct TowelWorkspaceView: View {
             .frame(width: size.width, height: size.height)
             .position(screen(snapshot.grabPoint, geometry))
 
-            TherapyGuideZone(
+            TMTherapyGuideZone(
                 tint: TherapyPalette.guidanceYellow,
                 symbol: destinationSymbol,
                 progress: snapshot.interaction == .readyToRelease ? snapshot.holdProgress : 0,
@@ -103,7 +103,7 @@ struct TowelWorkspaceView: View {
     @ViewBuilder
     private func cursor(_ geometry: CameraDisplayGeometry) -> some View {
         if let hand = snapshot.handPosition {
-            TherapyHandCursor(closed: snapshot.grip == .closed, holding: step > 0)
+            TMTherapyHandCursor(closed: snapshot.grip == .closed, holding: step > 0)
                 .position(screen(hand, geometry))
                 .animation(motion, value: hand)
         }
@@ -113,11 +113,11 @@ struct TowelWorkspaceView: View {
     /// for vertical folds).
     private var header: some View {
         HStack(alignment: .top) {
-            TherapyStepStrip(steps: TowelBoard.steps, current: step)
+            TMTherapyStepStrip(steps: TowelBoard.steps, current: step)
 
             Spacer(minLength: 12)
 
-            TherapyProgressDots(
+            TMTherapyProgressDots(
                 completed: snapshot.foldIndex,
                 total: TowelBoard.foldCount,
                 label: "towel.foldNumber \(snapshot.foldIndex + 1)"
@@ -187,7 +187,7 @@ enum TowelBoard {
 
 /// Three chevrons along the path from the handle to the drop zone. Those the towel has already
 /// passed fade, and the whole trail recedes once the towel is grabbed.
-private struct TowelTrail: View {
+private struct TMTowelTrail: View {
     let from: CGPoint
     let to: CGPoint
     let progress: Double
@@ -233,7 +233,7 @@ private struct TowelTrail: View {
     snapshot.handPosition = TherapyPoint(x: 0.55, y: 0.5)
     snapshot.grip = .closed
 
-    return TowelWorkspaceView(snapshot: snapshot)
+    return TMTowelWorkspaceView(snapshot: snapshot)
         .frame(width: 700, height: 560)
         .background(.gray)
         .foregroundStyle(.white)

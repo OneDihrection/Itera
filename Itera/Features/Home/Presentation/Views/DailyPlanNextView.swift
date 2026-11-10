@@ -8,7 +8,7 @@
 import SwiftUI
 
 /// The page after the last exercise of today's plan.
-struct DailyPlanNextView: View {
+struct TMDailyPlanNextView: View {
     @Environment(AppDependencies.self) private var dependencies
     @Environment(NavigationRouter.self) private var router
 
@@ -17,7 +17,7 @@ struct DailyPlanNextView: View {
             Spacer(minLength: 24)
 
             VStack(spacing: 20) {
-                TherapyCompletionMark(tint: TherapyPalette.brand)
+                TMTherapyCompletionMark(tint: TherapyPalette.brand)
 
                 Text("plan.dayComplete")
                     .typography(size: 52, weight: .bold, relativeTo: .largeTitle)
@@ -30,7 +30,7 @@ struct DailyPlanNextView: View {
 
             Spacer(minLength: 24)
 
-            TherapyButton(title: "plan.backHome", symbol: "house.fill", prominent: true) {
+            TMTherapyButton(title: "plan.backHome", symbol: "house.fill", prominent: true) {
                 dependencies.dailyPlan.end(router: router)
             }
 

@@ -8,7 +8,7 @@
 import SwiftUI
 
 /// Bounded entrance and confetti, restarted only when the caller changes award identity.
-struct TherapyAwardReveal: View {
+struct TMTherapyAwardReveal: View {
     let symbol: String
     let value: String
     var animated = true
@@ -18,9 +18,9 @@ struct TherapyAwardReveal: View {
     var body: some View {
         ZStack {
             if animated && !reduceMotion {
-                TherapyCelebration()
+                TMTherapyCelebration()
             }
-            TherapyBadge(symbol: symbol, value: value, earned: true, size: 200)
+            TMTherapyBadge(symbol: symbol, value: value, earned: true, size: 200)
                 .scaleEffect(revealed || reduceMotion || !animated ? 1 : 0.65)
                 .rotationEffect(.degrees(revealed || reduceMotion || !animated ? 0 : -12))
         }

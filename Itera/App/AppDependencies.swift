@@ -104,7 +104,8 @@ final class AppDependencies: HistoryRecovering {
     func prepareSession(
         category: ExerciseCategory = .fingers,
         continuing: Bool = false,
-        only: FingerExercise? = nil
+        only: FingerExercise? = nil,
+        side: HandSide? = nil
     ) {
         let model = homeModel(for: category)
         let checkpoint = continuing ? model.checkpoint : nil
@@ -112,6 +113,7 @@ final class AppDependencies: HistoryRecovering {
 
         if checkpoint == nil {
             routine.only = only
+            routine.side = side ?? routine.side
         }
 
         session = FingerSessionViewModel(

@@ -7,7 +7,7 @@
 
 import SwiftUI
 
-struct LanguageSelector: View {
+struct TMLanguageSelector: View {
     @Binding var language: String
 
     var body: some View {

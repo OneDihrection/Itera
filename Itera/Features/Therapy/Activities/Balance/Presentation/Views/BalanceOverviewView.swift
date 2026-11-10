@@ -7,7 +7,7 @@
 
 import SwiftUI
 
-struct BalanceOverviewView: View {
+struct TMBalanceOverviewView: View {
     let exercise: BalanceExercise
     @Environment(NavigationRouter.self) private var router
     @AppStorage private var repetitions: Int
@@ -53,7 +53,7 @@ struct BalanceOverviewView: View {
                     .typography(.title2)
                     .foregroundStyle(TherapyPalette.muted)
 
-                TherapyCard(color: TherapyPalette.hero) {
+                TMTherapyCard(color: TherapyPalette.hero) {
                     HStack(spacing: 24) {
                         VStack(alignment: .leading, spacing: 20) {
                             Label("balance.animation", systemImage: "sparkles")
@@ -71,13 +71,13 @@ struct BalanceOverviewView: View {
                         .frame(maxWidth: .infinity, alignment: .leading)
 
                         ZStack(alignment: .bottomTrailing) {
-                            BalanceExerciseDemonstrationView(
+                            TMBalanceExerciseDemonstrationView(
                                 exercise: exercise,
                                 paused: animationPaused,
                                 selection: BalanceArmSelection(rawValue: armSelectionRaw) ?? .both
                             )
                                 .frame(width: 360, height: 260)
-                            TherapyIconButton(
+                            TMTherapyIconButton(
                                 title: animationPaused ? "action.resume" : "action.pause",
                                 symbol: animationPaused ? "play.fill" : "pause.fill",
                                 size: 68
@@ -89,7 +89,7 @@ struct BalanceOverviewView: View {
                     }
                 }
 
-                TherapyCard {
+                TMTherapyCard {
                     VStack(alignment: .leading, spacing: 12) {
                         Text("balance.settings")
                             .typography(.headline)
@@ -114,20 +114,20 @@ struct BalanceOverviewView: View {
                             .padding(18)
                             .background(TherapyPalette.cream, in: RoundedRectangle(cornerRadius: 22))
                         }
-                        TherapyAdjustmentControl(
+                        TMTherapyAdjustmentControl(
                             title: exercise.localized("repetitions"),
                             value: $repetitions,
                             range: 2...20,
                             suffix: exercise.localized("touchUnit")
                         )
-                        TherapyAdjustmentControl(
+                        TMTherapyAdjustmentControl(
                             title: "balance.sets",
                             value: $sets,
                             range: BalancePracticeSettings.setsRange,
                             suffix: "exercise.setsUnit"
                         )
                         if sets > 1 {
-                            TherapyAdjustmentControl(
+                            TMTherapyAdjustmentControl(
                                 title: "balance.restSeconds",
                                 value: $restSeconds,
                                 range: BalancePracticeSettings.restRange,
@@ -135,7 +135,7 @@ struct BalanceOverviewView: View {
                             )
                         }
                         if !exercise.isSitToStand {
-                            TherapyAdjustmentControl(
+                            TMTherapyAdjustmentControl(
                                 title: "balance.holdDuration",
                                 value: $holdSeconds,
                                 range: 3...20,
@@ -176,7 +176,7 @@ struct BalanceOverviewView: View {
                     )
                 }
 
-                TherapyButton(title: exercise.localized("begin"), symbol: "camera.fill") {
+                TMTherapyButton(title: exercise.localized("begin"), symbol: "camera.fill") {
                     router.push(.balanceSession(
                         exercise: exercise,
                         settings: BalancePracticeSettings(exercise: exercise)
@@ -194,7 +194,7 @@ struct BalanceOverviewView: View {
         title: LocalizedStringKey,
         detail: LocalizedStringKey
     ) -> some View {
-        TherapyCard {
+        TMTherapyCard {
             VStack(alignment: .leading, spacing: 14) {
                 Image(systemName: symbol)
                     .typography(size: 40, weight: .bold)

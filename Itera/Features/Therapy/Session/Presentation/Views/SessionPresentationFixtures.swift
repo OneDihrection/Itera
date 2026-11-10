@@ -237,7 +237,7 @@ enum SessionPresentationFixtures {
 struct SessionPresentationFixturePreviews: PreviewProvider {
     static var previews: some View {
         ForEach(SessionPresentationFixtures.all) { fixture in
-            TherapySessionView(fixture: fixture.snapshot)
+            TMTherapySessionView(fixture: fixture.snapshot)
                 .environment(PermissionManager())
                 .environment(NavigationRouter())
                 .preferredColorScheme(.dark)

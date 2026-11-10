@@ -9,7 +9,7 @@ import Combine
 import RealityKit
 import SwiftUI
 
-struct BalanceDemonstrationView: View {
+struct TMBalanceDemonstrationView: View {
     let paused: Bool
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var state = LoadState.loading
@@ -20,7 +20,7 @@ struct BalanceDemonstrationView: View {
 
     var body: some View {
         ZStack {
-            BalanceAnimationViewport(
+            TMBalanceAnimationViewport(
                 paused: paused || reduceMotion,
                 onStateChange: { state = $0 ? .ready : .failed }
             )
@@ -38,7 +38,7 @@ struct BalanceDemonstrationView: View {
                 .foregroundStyle(TherapyPalette.muted)
             }
 
-            TherapyDemoCaption(paused: paused)
+            TMTherapyDemoCaption(paused: paused)
         }
         .background(TherapyPalette.mediaBackground)
         .clipShape(RoundedRectangle(cornerRadius: 24))
@@ -51,7 +51,7 @@ struct BalanceDemonstrationView: View {
     }
 }
 
-private struct BalanceAnimationViewport: UIViewRepresentable {
+private struct TMBalanceAnimationViewport: UIViewRepresentable {
     let paused: Bool
     let onStateChange: (Bool) -> Void
 

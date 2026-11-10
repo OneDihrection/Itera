@@ -7,7 +7,7 @@
 
 import SwiftUI
 
-private struct RouterViewModifier: ViewModifier {
+private struct TMRouterViewModifier: ViewModifier {
     @Environment(NavigationRouter.self) private var router
     @Environment(\.buttonFeedback) private var buttonFeedback
 
@@ -33,7 +33,7 @@ private struct RouterViewModifier: ViewModifier {
             .tag(AppTab.home)
 
             NavigationStack(path: $router.reportsPath) {
-                FingerReportsView()
+                TMFingerReportsView()
                     .navigationDestination(for: AppRoute.self) {
                         AppRouterView.destination($0)
                     }
@@ -43,12 +43,12 @@ private struct RouterViewModifier: ViewModifier {
         }
         // The system tab bar sits at the top on iPadOS 18 and at the bottom on iPadOS 17.
         .tint(TherapyPalette.action)
-        .modifier(ModalStackModifier(index: 0, isCover: false))
-        .modifier(ModalStackModifier(index: 0, isCover: true))
+        .modifier(TMModalStackModifier(index: 0, isCover: false))
+        .modifier(TMModalStackModifier(index: 0, isCover: true))
     }
 }
 
-private struct ModalStackModifier: ViewModifier {
+private struct TMModalStackModifier: ViewModifier {
     @Environment(NavigationRouter.self) private var router
     @Environment(AppDependencies.self) private var dependencies
     @Environment(PermissionManager.self) private var permissions
@@ -100,14 +100,14 @@ private struct ModalStackModifier: ViewModifier {
         Group {
             if isCover {
                 AppRouterView.destination(item.route)
-                    .modifier(ModalStackModifier(index: 0, isCover: false, sheetHostCoverID: item.id))
+                    .modifier(TMModalStackModifier(index: 0, isCover: false, sheetHostCoverID: item.id))
             } else {
                 NavigationStack {
                     AppRouterView.destination(item.route)
                 }
             }
         }
-        .modifier(ModalStackModifier(index: index + 1, isCover: isCover, sheetHostCoverID: sheetHostCoverID))
+        .modifier(TMModalStackModifier(index: index + 1, isCover: isCover, sheetHostCoverID: sheetHostCoverID))
         // Applied last so nested presentations see them too; Mac Catalyst does not
         // reliably forward the presenter's environment into sheet and cover content.
         .environment(router)
@@ -115,12 +115,12 @@ private struct ModalStackModifier: ViewModifier {
         .environment(permissions)
         .environment(\.buttonFeedback, buttonFeedback)
         .typography(.body)
-        .buttonStyle(TherapySoundButtonStyle())
+        .buttonStyle(TMTherapySoundButtonStyle())
     }
 }
 
 extension View {
     func withAppRouter() -> some View {
-        modifier(RouterViewModifier())
+        modifier(TMRouterViewModifier())
     }
 }

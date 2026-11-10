@@ -10,7 +10,7 @@ import SwiftUI
 /// A looping demonstration of the real gesture: a hand pinches the handle, slides the towel to
 /// the goal, then opens. It renders the same workspace the patient sees, driven by a scripted
 /// snapshot, so the example and the exercise never drift apart.
-struct TowelDemonstrationView: View {
+struct TMTowelDemonstrationView: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var start = Date()
 
@@ -18,7 +18,7 @@ struct TowelDemonstrationView: View {
         TimelineView(.animation(minimumInterval: 1.0 / 30, paused: reduceMotion)) { context in
             let elapsed = max(0, context.date.timeIntervalSince(start))
 
-            TowelWorkspaceView(
+            TMTowelWorkspaceView(
                 snapshot: TowelDemoScript.snapshot(at: elapsed, staticPose: reduceMotion),
                 showsHeader: false
             )
@@ -85,7 +85,7 @@ enum TowelDemoScript {
 
 #if DEBUG
 #Preview("Towel demonstration") {
-    TowelDemonstrationView()
+    TMTowelDemonstrationView()
         .frame(width: 420, height: 360)
         .background(TherapyPalette.exerciseBackdrop)
 }

@@ -8,7 +8,7 @@
 import SwiftUI
 
 /// A value-driven pair of cloth-like panels. The caller owns folding and acceptance rules.
-struct TherapyFoldPanel: View {
+struct TMTherapyFoldPanel: View {
     let progress: Double
     let horizontal: Bool
     let layers: Int

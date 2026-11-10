@@ -7,7 +7,7 @@
 
 import SwiftUI
 
-struct TherapyArtwork: View {
+struct TMTherapyArtwork: View {
     let name: String
     var mirrored = false
     /// Shown instead when `name` is an asset the catalog does not contain, for artwork that
@@ -35,7 +35,7 @@ struct TherapyArtwork: View {
     }
 }
 
-struct TherapyArtworkPanel: View {
+struct TMTherapyArtworkPanel: View {
     let title: LocalizedStringKey
     let subtitle: String
     let artwork: String
@@ -53,7 +53,7 @@ struct TherapyArtworkPanel: View {
                     .typography(.body)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
-            TherapyArtwork(name: artwork, mirrored: mirrored)
+            TMTherapyArtwork(name: artwork, mirrored: mirrored)
                 .scaleEffect(1.25)
                 .frame(
                     maxWidth: typeSize.isAccessibilitySize ? 240 : .infinity,
@@ -68,7 +68,7 @@ struct TherapyArtworkPanel: View {
     }
 }
 
-struct TherapyExerciseRow: View {
+struct TMTherapyExerciseRow: View {
     let title: LocalizedStringKey
     let subtitle: String
     let artwork: String
@@ -80,7 +80,7 @@ struct TherapyExerciseRow: View {
     var body: some View {
         Button(action: action) {
             HStack(spacing: 18) {
-                TherapyArtwork(name: artwork, mirrored: mirrored)
+                TMTherapyArtwork(name: artwork, mirrored: mirrored)
                     .scaleEffect(1.2)
                     .frame(width: 84, height: 84)
                     .background(color, in: RoundedRectangle(cornerRadius: 18))
@@ -108,7 +108,7 @@ struct TherapyExerciseRow: View {
             .background(TherapyPalette.surface, in: RoundedRectangle(cornerRadius: 24))
             .contentShape(RoundedRectangle(cornerRadius: 24))
         }
-        .buttonStyle(TherapySoundButtonStyle())
+        .buttonStyle(TMTherapySoundButtonStyle())
         .accessibilityElement(children: .combine)
         .accessibilityHint("exercise.previewHint")
     }

@@ -8,7 +8,7 @@
 import SwiftUI
 
 /// Full-screen guidance leaves the live camera mounted beneath its presentation.
-struct SessionStageSurface<Content: View, Controls: View>: View {
+struct TMSessionStageSurface<Content: View, Controls: View>: View {
     let background: Color
     let border: Color
     @ViewBuilder var content: () -> Content

@@ -8,19 +8,21 @@
 import AVFoundation
 import SwiftUI
 
-struct BodyCameraPreview: UIViewRepresentable {
+struct TMBodyCameraPreview: UIViewRepresentable {
     let session: AVCaptureSession
     let front: Bool
     let onReady: (Bool) -> Void
     let onOrientation: (Bool) -> Void
+    var onVideoBounds: ((CGRect?) -> Void)? = nil
 
-    func makeUIView(context: Context) -> PreviewView {
-        let view = PreviewView()
-        PreviewView.active = view
+    func makeUIView(context: Context) -> TMPreviewView {
+        let view = TMPreviewView()
+        TMPreviewView.active = view
         view.previewLayer.videoGravity = .resizeAspect
         view.previewLayer.session = session
         view.onReady = onReady
         view.onOrientation = onOrientation
+        view.onVideoBounds = onVideoBounds
         view.observation = view.previewLayer.observe(\.isPreviewing, options: [.initial, .new]) {
             [weak view] layer, _ in
             DispatchQueue.main.async { [weak view] in
@@ -31,29 +33,34 @@ struct BodyCameraPreview: UIViewRepresentable {
         return view
     }
 
-    func updateUIView(_ view: PreviewView, context: Context) {
+    func updateUIView(_ view: TMPreviewView, context: Context) {
         view.front = front
+        view.onVideoBounds = onVideoBounds
         view.setNeedsLayout()
     }
 
-    static func dismantleUIView(_ view: PreviewView, coordinator: ()) {
+    static func dismantleUIView(_ view: TMPreviewView, coordinator: ()) {
         // A replaced view must not clear readiness that its successor already reported.
-        if PreviewView.active === view || PreviewView.active == nil {
+        if TMPreviewView.active === view || TMPreviewView.active == nil {
             view.onReady?(false)
         }
         view.observation = nil
         view.onReady = nil
         view.onOrientation = nil
+        view.onVideoBounds = nil
         view.previewLayer.session = nil
     }
 
-    final class PreviewView: UIView {
+    final class TMPreviewView: UIView {
         /// The most recently created preview, the only one allowed to report "not ready" on teardown.
-        static weak var active: PreviewView?
+        static weak var active: TMPreviewView?
 
         var observation: NSKeyValueObservation?
         var onReady: ((Bool) -> Void)?
         var onOrientation: ((Bool) -> Void)?
+        var onVideoBounds: ((CGRect?) -> Void)?
+        private let videoMask = CAShapeLayer()
+        private var videoBounds: CGRect?
         var front = true
         private var lastOrientation: UIInterfaceOrientation?
         private var reportedReady = false
@@ -112,10 +119,30 @@ struct BodyCameraPreview: UIViewRepresentable {
                     connection.isVideoMirrored = front
                 }
             }
+            if onVideoBounds != nil {
+                updateVideoBounds(previewLayer.applyRoundedVideoMask(videoMask))
+            } else {
+                previewLayer.mask = nil
+                videoBounds = nil
+            }
             CATransaction.commit()
             if orientation != lastOrientation {
                 lastOrientation = orientation
                 DispatchQueue.main.async { [weak self] in self?.onOrientation?(right) }
+            }
+        }
+
+        private func updateVideoBounds(_ bounds: CGRect?) {
+            guard videoBounds != bounds else {
+                return
+            }
+
+            videoBounds = bounds
+            DispatchQueue.main.async { [weak self] in
+                guard let self, self.videoBounds == bounds else {
+                    return
+                }
+                self.onVideoBounds?(bounds)
             }
         }
     }

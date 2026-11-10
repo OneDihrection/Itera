@@ -8,37 +8,43 @@
 import AVFoundation
 import SwiftUI
 
-struct HandCameraPreview: UIViewRepresentable {
+struct TMHandCameraPreview: UIViewRepresentable {
     let camera: HandCameraService
     let ready: (Bool) -> Void
+    let videoBoundsChanged: (CGRect?) -> Void
 
-    func makeUIView(context: Context) -> CameraPreviewView {
-        let view = CameraPreviewView()
+    func makeUIView(context: Context) -> TMCameraPreviewView {
+        let view = TMCameraPreviewView()
         view.preview.session = camera.session
         view.preview.videoGravity = .resizeAspect
         view.camera = camera
         view.ready = ready
+        view.videoBoundsChanged = videoBoundsChanged
         return view
     }
 
-    func updateUIView(_ view: CameraPreviewView, context: Context) {
+    func updateUIView(_ view: TMCameraPreviewView, context: Context) {
         view.ready = ready
+        view.videoBoundsChanged = videoBoundsChanged
     }
 
-    static func dismantleUIView(_ view: CameraPreviewView, coordinator: ()) {
+    static func dismantleUIView(_ view: TMCameraPreviewView, coordinator: ()) {
         view.ready?(false)
         view.preview.session = nil
     }
 }
 
-final class CameraPreviewView: UIView {
+final class TMCameraPreviewView: UIView {
     override class var layerClass: AnyClass { AVCaptureVideoPreviewLayer.self }
     var preview: AVCaptureVideoPreviewLayer { layer as! AVCaptureVideoPreviewLayer }
     weak var camera: HandCameraService?
     var ready: ((Bool) -> Void)?
+    var videoBoundsChanged: ((CGRect?) -> Void)?
+    private var videoBounds: CGRect?
     private var reportedReady = false
     private var appliedOrientation: AVCaptureVideoOrientation?
     private var previewObservation: NSKeyValueObservation?
+    private let videoMask = CAShapeLayer()
 
     override init(frame: CGRect) {
         super.init(frame: frame)
@@ -102,8 +108,27 @@ final class CameraPreviewView: UIView {
                 }
             }
         }
+        updateVideoMask()
         CATransaction.commit()
         reportReadiness()
+    }
+
+    private func updateVideoMask() {
+        reportVideoBounds(preview.applyRoundedVideoMask(videoMask))
+    }
+
+    private func reportVideoBounds(_ bounds: CGRect?) {
+        guard videoBounds != bounds else {
+            return
+        }
+
+        videoBounds = bounds
+        DispatchQueue.main.async { [weak self] in
+            guard let self, self.videoBounds == bounds else {
+                return
+            }
+            self.videoBoundsChanged?(bounds)
+        }
     }
 
     private func reportReadiness() {
@@ -118,5 +143,30 @@ final class CameraPreviewView: UIView {
             reportedReady = attached
             DispatchQueue.main.async { [weak self] in self?.ready?(attached) }
         }
+    }
+}
+
+extension AVCaptureVideoPreviewLayer {
+    /// Masks the actual aspect-fit image and returns its bounds for the caption.
+    func applyRoundedVideoMask(_ videoMask: CAShapeLayer) -> CGRect? {
+        guard isPreviewing else {
+            mask = nil
+            return nil
+        }
+
+        // Convert the full image so the corners follow the video inside its letterbox margins.
+        let imageRect = layerRectConverted(
+            fromMetadataOutputRect: CGRect(x: 0, y: 0, width: 1, height: 1)
+        ).intersection(bounds)
+        guard !imageRect.isEmpty else {
+            mask = nil
+            return nil
+        }
+
+        videoMask.frame = bounds
+        let localRect = imageRect.offsetBy(dx: -bounds.minX, dy: -bounds.minY)
+        videoMask.path = UIBezierPath(roundedRect: localRect, cornerRadius: 28).cgPath
+        mask = videoMask
+        return localRect
     }
 }

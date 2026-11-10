@@ -33,13 +33,15 @@ struct SessionDirectionGuide {
 /// Shape, not color alone, tells the zones apart (filled and breathing versus outline), and the
 /// overlay never uses red. Breathing animates only a halo outside the zone, so the accepted
 /// boundary is always the drawn outline. Reduce Motion freezes the halo.
-struct SessionTargetOverlay: View {
+struct TMSessionTargetOverlay: View {
     let imageSize: CGSize?
     let bubbleGuide: SessionBubbleGuide?
     var singleZone = false
     var settingUp = false
     var captureJoint: CGPoint? = nil
     var holdProgress = 0.0
+    /// Hold ring radius in normalized image height, like a bubble radius; nil keeps the default size.
+    var holdRadius: Double? = nil
     var directionGuide: SessionDirectionGuide? = nil
     let mirrored: Bool
     var viewportChanged: ((CGSize) -> Void)? = nil
@@ -177,7 +179,12 @@ struct SessionTargetOverlay: View {
 
             if let joint = captureJoint {
                 let center = point(joint)
-                drawJointHold(center: center, progress: holdProgress, context: &context)
+                drawJointHold(
+                    center: center,
+                    progress: holdProgress,
+                    radius: holdRadius.map { $0 * image.height * scale } ?? 60,
+                    context: &context
+                )
             }
         }
     }
@@ -322,8 +329,12 @@ struct SessionTargetOverlay: View {
 
     /// The hold around the tracked joint: a large ring that is visible from the first frame of the
     /// hold, with a blue fill that grows as the hold completes. It carries no numbers.
-    private func drawJointHold(center: CGPoint, progress: Double, context: inout GraphicsContext) {
-        let radius = 60.0
+    private func drawJointHold(
+        center: CGPoint,
+        progress: Double,
+        radius: Double,
+        context: inout GraphicsContext
+    ) {
         let clamped = min(1, max(0, progress))
         let track = Path(ellipseIn: CGRect(x: center.x - radius, y: center.y - radius, width: radius * 2, height: radius * 2))
 

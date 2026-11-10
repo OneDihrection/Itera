@@ -10,18 +10,18 @@ import SwiftUI
 
 /// The forearm-rotation example: the bundled `hand_rotation_left` / `hand_rotation_right` movie
 /// for the exercised side. Each movie is one full cycle, palm to turned and back.
-struct HandRotationExample: UIViewRepresentable {
+struct TMHandRotationExample: UIViewRepresentable {
     let phase: FingerPhase
     let returning: Bool
     let side: TrainingSide
     let paused: Bool
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
-    func makeUIView(context: Context) -> HandRotationMovieView {
-        HandRotationMovieView()
+    func makeUIView(context: Context) -> TMHandRotationMovieView {
+        TMHandRotationMovieView()
     }
 
-    func updateUIView(_ view: HandRotationMovieView, context: Context) {
+    func updateUIView(_ view: TMHandRotationMovieView, context: Context) {
         view.configure(
             side: side,
             phase: phase,
@@ -31,13 +31,13 @@ struct HandRotationExample: UIViewRepresentable {
         )
     }
 
-    static func dismantleUIView(_ view: HandRotationMovieView, coordinator: ()) {
+    static func dismantleUIView(_ view: TMHandRotationMovieView, coordinator: ()) {
         view.releasePlayer()
     }
 }
 
 /// Plays the half of the cycle that matches the current instruction and holds its end pose.
-final class HandRotationMovieView: UIView {
+final class TMHandRotationMovieView: UIView {
     /// Length of both bundled movies; the turned pose is at the midpoint.
     private static let clipDuration = 6.459
     private static let turnedPose = clipDuration / 2

@@ -78,4 +78,18 @@ final class FingerHomeViewModel {
             errorKey = "storage.error"
         }
     }
+
+    func deleteHistory() async {
+        do {
+            try await repository.deleteHistory()
+            history = []
+            errorKey = nil
+        } catch {
+            // A failed bulk delete may have removed some files before the error.
+            if let remaining = try? await repository.history() {
+                history = remaining
+            }
+            errorKey = "storage.error"
+        }
+    }
 }

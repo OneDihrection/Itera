@@ -25,7 +25,6 @@ struct FingerActivity {
     private(set) var movementFraction = 0.0
     private(set) var remaining = 0.0
     private(set) var activeSeconds = 0.0
-    private(set) var demonstrationSeconds = 0.0
     private(set) var baselines = [Double](repeating: 0, count: 4)
     private(set) var targets = [Double](repeating: 0, count: 4)
     private(set) var best = [Double](repeating: 0, count: 4)
@@ -78,7 +77,6 @@ struct FingerActivity {
 
 
 
-    static let demonstrationDuration = 10.0
     /// Usable seconds the patient sweeps the movement while the range is measured.
     static let rangeDuration = 10.0
     /// How long the start position is held, as a visible countdown, before the sweep is measured.
@@ -93,15 +91,11 @@ struct FingerActivity {
     private static let rangeSettleSeconds = 3.0
     private static let rangeGrowthStep = 0.03
     /// The measured range is shown this long, after its narration, before practice begins.
-    static let rangeResultDuration = 5.0
     /// Time constant of the forearm signal filter; small enough not to delay arrival detection.
     private static let forearmSmoothingSeconds = 0.10
 
     var rangeProgress: Double { min(1, rangeElapsed / Self.rangeDuration) }
     /// How far the automatic start of practice has advanced after the range is shown.
-    var rangeResultProgress: Double {
-        phase == .rangeResult ? min(1, max(0, 1 - remaining / Self.rangeResultDuration)) : 0
-    }
 
     var needsStart: Bool { awaitingStart }
     var holdDuration: Double { phase == .range ? Self.readyCountdown : 2 }
@@ -111,9 +105,6 @@ struct FingerActivity {
         holdCompletionID != nil ? holdDuration : min(holdDuration, hold.elapsed)
     }
     var holdRemaining: Double { max(0, holdDuration - holdElapsed) }
-    var demonstrationRemaining: Double {
-        max(0, Self.demonstrationDuration - demonstrationSeconds)
-    }
     var calibrationCount: Int { kind.isSequential ? 4 : 1 }
     var observedGain: Double? {
         let changes = (0..<calibrationCount).filter { initialized[$0] }.map {
@@ -167,7 +158,6 @@ struct FingerActivity {
         initialized = [Bool](repeating: false, count: 4)
         forearmDirection = 1
         forearmDirectionLocked = false
-        demonstrationSeconds = 0
         resetRange()
         rangeTooSmall = false
         breakEvidence()
@@ -181,17 +171,6 @@ struct FingerActivity {
         }
 
         remaining = 0
-    }
-
-    /// Accepts the measured range and moves on to the demonstration.
-    mutating func confirmRange() {
-        guard phase == .rangeResult else {
-            return
-        }
-        phase = .demonstration
-        demonstrationSeconds = 0
-        remaining = Self.demonstrationDuration
-        narrationFinished = false
     }
 
     mutating func remeasureRange() {
@@ -226,38 +205,22 @@ struct FingerActivity {
         }
         let delta = min(0.2, max(0, now - (lastTick ?? now)))
         switch phase {
-        case .demonstration, .feedback:
-            if phase == .demonstration {
-                demonstrationSeconds = min(Self.demonstrationDuration, demonstrationSeconds + delta)
-                remaining = demonstrationRemaining
+        case .demonstration, .rangeResult:
+            if narrationFinished {
+                beginCountdown()
             }
-            guard narrationFinished else {
-                return
-            }
-            if phase == .feedback {
-                remaining -= delta
-            }
-            if remaining <= 0 {
-                if phase == .demonstration {
-                    phase = .countdown
-                    remaining = 3
-                } else {
-                    if completedSets >= routine.sets && !restAfterFinalSet {
-                        phase = .finished
-                    } else {
-                        phase = .rest
-                        remaining = Double(routine.restSeconds)
-                    }
-                }
-            }
-        case .rangeResult:
-            // The measured range is read aloud first; practice then starts without a tap.
+        case .feedback:
             guard narrationFinished else {
                 return
             }
             remaining -= delta
             if remaining <= 0 {
-                confirmRange()
+                if completedSets >= routine.sets && !restAfterFinalSet {
+                    phase = .finished
+                } else {
+                    phase = .rest
+                    remaining = Double(routine.restSeconds)
+                }
             }
         case .countdown:
             remaining -= delta
@@ -273,13 +236,18 @@ struct FingerActivity {
                     set += 1
                     repetitions = 0
                     awaitingStart = true
-                    phase = .countdown
-                    remaining = 3
+                    beginCountdown()
                 }
             }
         default:
             break
         }
+    }
+
+    private mutating func beginCountdown() {
+        phase = .countdown
+        remaining = 3
+        narrationFinished = false
     }
 
     mutating func observe(_ evidence: HandEvidence, now: Double) {
@@ -424,7 +392,6 @@ struct FingerActivity {
         rangeTooSmall = false
         progress = 0
         phase = .rangeResult
-        remaining = Self.rangeResultDuration
         narrationFinished = false
     }
 
@@ -552,7 +519,6 @@ struct FingerActivity {
             } else {
                 finger = 0
                 phase = .demonstration
-                remaining = Self.demonstrationDuration
                 narrationFinished = false
             }
         case .active:

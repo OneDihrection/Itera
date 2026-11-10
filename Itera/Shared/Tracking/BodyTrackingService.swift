@@ -101,6 +101,11 @@ final class BodyTrackingService: NSObject, AVCaptureVideoDataOutputSampleBufferD
     }
 
     private let request = VNDetectHumanBodyPoseRequest()
+    /// Confined to `inferenceQueue`.
+    private let framePadder = BodyFramePadder()
+    /// Pads frames for upper-body stability. Set `Itera.bodyFramePadding` to false in
+    /// `UserDefaults` to compare against unpadded inference on a device.
+    private static let padsFrames = UserDefaults.standard.object(forKey: "Itera.bodyFramePadding") as? Bool ?? true
     private var notifications: [NSObjectProtocol] = []
 
     override init() {
@@ -354,14 +359,20 @@ final class BodyTrackingService: NSObject, AVCaptureVideoDataOutputSampleBufferD
         guard !cupEnabled || time - lastPublished >= 1.0 / 20 else { return }
         lastPublished = time
         do {
+            // Vision reports in the padded frame when padding is used; `originalY` maps back.
+            var paddedImage: CVPixelBuffer?
             if !cupEnabled && !handEnabled {
-                try VNImageRequestHandler(cvPixelBuffer: image, orientation: .up).perform([request])
+                if Self.padsFrames {
+                    paddedImage = framePadder.padded(image)
+                }
+                try VNImageRequestHandler(cvPixelBuffer: paddedImage ?? image, orientation: .up).perform([request])
             }
+            let originalY: (Double) -> Double = paddedImage == nil ? { $0 } : BodyFramePadder.originalY
             let people = cupEnabled || handEnabled ? [] : (request.results ?? [])
             let personPoints = people.map { (try? $0.recognizedPoints(.all)) ?? [:] }
             let imageAspect = Double(CVPixelBufferGetWidth(image)) / Double(CVPixelBufferGetHeight(image))
             let subject = subjects.select(
-                personPoints.map { Self.candidate(for: $0, aspect: imageAspect) },
+                personPoints.map { Self.candidate(for: $0, aspect: imageAspect, originalY: originalY) },
                 at: time,
                 generation: generation
             )
@@ -371,8 +382,15 @@ final class BodyTrackingService: NSObject, AVCaptureVideoDataOutputSampleBufferD
                 let points = personPoints[subject]
                 for (joint, visionJoint) in Self.jointMap {
                     if let point = points[visionJoint] {
+                        let y = originalY(point.location.y)
+
+                        // Inside the padding strip is below the frame: a guess, never a sighting.
+                        guard y >= 0 else {
+                            continue
+                        }
+
                         joints[joint] = .init(
-                            position: TherapyPoint(x: point.location.x, y: point.location.y),
+                            position: TherapyPoint(x: point.location.x, y: y),
                             confidence: point.confidence)
                     }
                 }
@@ -481,15 +499,16 @@ final class BodyTrackingService: NSObject, AVCaptureVideoDataOutputSampleBufferD
 
     private static func candidate(
         for points: [VNHumanBodyPoseObservation.JointName: VNRecognizedPoint],
-        aspect: Double
+        aspect: Double,
+        originalY: (Double) -> Double
     ) -> BodySubjectSelector.Candidate {
         let confident = points.values
             .filter { $0.confidence >= 0.3 }
-            .map { TherapyPoint(x: $0.location.x * aspect, y: $0.location.y) }
+            .map { TherapyPoint(x: $0.location.x * aspect, y: originalY($0.location.y)) }
         let torso = torsoJoints
             .compactMap { points[$0] }
             .filter { $0.confidence >= 0.3 }
-            .map { TherapyPoint(x: $0.location.x * aspect, y: $0.location.y) }
+            .map { TherapyPoint(x: $0.location.x * aspect, y: originalY($0.location.y)) }
 
         guard !torso.isEmpty, confident.count >= 2 else {
             // Without a torso this person cannot be followed, so they can never win continuity.
@@ -500,7 +519,7 @@ final class BodyTrackingService: NSObject, AVCaptureVideoDataOutputSampleBufferD
 
         return BodySubjectSelector.Candidate(
             torso: center,
-            size: bodySize(points, torso: torso, aspect: aspect),
+            size: bodySize(points, torso: torso, aspect: aspect, originalY: originalY),
             centerOffset: abs(center.x / max(aspect, 0.0001) - 0.5)
         )
     }
@@ -511,13 +530,14 @@ final class BodyTrackingService: NSObject, AVCaptureVideoDataOutputSampleBufferD
     private static func bodySize(
         _ points: [VNHumanBodyPoseObservation.JointName: VNRecognizedPoint],
         torso: [TherapyPoint],
-        aspect: Double
+        aspect: Double,
+        originalY: (Double) -> Double
     ) -> Double {
         if let left = points[.leftShoulder], let right = points[.rightShoulder],
            left.confidence >= 0.3, right.confidence >= 0.3 {
             let width = TherapyPoint(
                 x: (left.location.x - right.location.x) * aspect,
-                y: left.location.y - right.location.y
+                y: originalY(left.location.y) - originalY(right.location.y)
             )
             return width.length
         }

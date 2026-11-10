@@ -7,7 +7,7 @@
 
 import SwiftUI
 
-struct TherapyProgressRing: View {
+struct TMTherapyProgressRing: View {
     let progress: Double
     var lineWidth: CGFloat = 12
     var animatesProgress = true
@@ -32,39 +32,106 @@ struct TherapyProgressRing: View {
     }
 }
 
-/// Visual-only countdown. Its owner supplies monotonic session time and pause behavior.
-struct TherapyCountdown: View {
-    let remaining: Double
-    let total: Double
+/// A breathing cue driven by the rest clock. The session owns narration and timing.
+struct TMTherapyBreathingRest: View {
+    let cue: LocalizedStringKey
+    let intensity: Double
+    var animationDuration = 0.15
     let pause: () -> Void
     let stop: () -> Void
+    var skip: (() -> Void)? = nil
+
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    var body: some View {
+        VStack(spacing: 20) {
+            Spacer(minLength: 0)
+
+            VStack(spacing: 8) {
+                Text(cue)
+                    .typography(size: 40, weight: .bold, relativeTo: .largeTitle)
+                    .accessibilityAddTraits(.isHeader)
+                Text("rest.breath.comfort")
+                    .typography(size: 24, weight: .regular, relativeTo: .title3)
+                    .foregroundStyle(TherapyPalette.muted)
+            }
+            .multilineTextAlignment(.center)
+
+            GeometryReader { geometry in
+                let diameter = min(400, geometry.size.width, geometry.size.height)
+                Circle()
+                    .fill(TherapyPalette.planPanel.opacity(0.35))
+                    .overlay {
+                        Circle()
+                            .strokeBorder(TherapyPalette.brand, lineWidth: diameter * 0.18)
+                            .opacity(reduceMotion ? 1 : intensity)
+                    }
+                    .frame(width: diameter, height: diameter)
+                    .scaleEffect(reduceMotion ? 1 : 0.76 + 0.24 * (intensity - 0.25) / 0.75)
+                    .animation(reduceMotion ? nil : .linear(duration: animationDuration), value: intensity)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .accessibilityHidden(true)
+            }
+            .frame(maxHeight: 400)
+
+            Spacer(minLength: 0)
+
+            HStack(spacing: 20) {
+                TMTherapyTextButton(title: "session.pauseAction", symbol: "pause.fill", action: pause)
+                if let skip {
+                    TMTherapyTextButton(title: "rest.skip", symbol: "forward.end", action: skip)
+                }
+                TMTherapyTextButton(title: "session.endAction", symbol: "stop.fill", action: stop)
+            }
+        }
+        .padding(24)
+        .foregroundStyle(TherapyPalette.ink)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(TherapyPalette.canvas.ignoresSafeArea())
+    }
+}
+
+/// The final countdown overlays the mounted practice layout.
+struct TMPracticeCountdown: View {
+    let seconds: Int
+    let pause: () -> Void
+    let stop: () -> Void
+
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         GeometryReader { geometry in
-            let diameter = min(geometry.size.width, geometry.size.height) * 0.72
             Button(action: pause) {
-                ZStack {
-                    TherapyProgressRing(progress: remaining / max(1, total), lineWidth: 18)
-                    Text(verbatim: String(max(0, Int(ceil(remaining)))))
-                        .typography(size: 180, weight: .bold, relativeTo: .largeTitle)
+                VStack(spacing: 12) {
+                    Text("calibration.countdown")
+                        .typography(size: 32, weight: .bold, relativeTo: .title)
+                        .multilineTextAlignment(.center)
+
+                    Text(seconds, format: .number)
+                        .typography(size: min(240, geometry.size.height * 0.36), weight: .bold, relativeTo: .largeTitle)
                         .monospacedDigit()
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.5)
                         .contentTransition(.numericText(countsDown: true))
-                        .animation(reduceMotion ? nil : .spring(duration: 0.35), value: Int(ceil(remaining)))
-                        .minimumScaleFactor(0.4)
-                        .padding(40)
+                        .animation(reduceMotion ? nil : .easeOut(duration: 0.2), value: seconds)
                 }
-                .frame(width: diameter, height: diameter)
-                .foregroundStyle(TherapyPalette.primary)
+                .padding(24)
+                .foregroundStyle(.white)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .contentShape(Rectangle())
             }
-            .buttonStyle(TherapySoundButtonStyle())
-            .accessibilityLabel("stage.countdown")
-            .accessibilityValue(Text(verbatim: String(max(0, Int(ceil(remaining))))))
+            .buttonStyle(.plain)
+            .accessibilityLabel("calibration.countdown")
+            .accessibilityValue(Text(seconds, format: .number))
             .accessibilityHint("countdown.pauseHint")
             .accessibilityAction(named: Text("action.end"), stop)
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
-        .background(TherapyPalette.cream.ignoresSafeArea())
+        .background {
+            Rectangle()
+                .fill(.regularMaterial)
+                .overlay(Color.black.opacity(0.5))
+                .ignoresSafeArea()
+        }
     }
 }
 
@@ -74,7 +141,7 @@ struct TherapyCountdown: View {
 /// value over exactly one second, so it moves smoothly instead of stepping. When the clock is not
 /// running yet (a cue is still being spoken) or has been reset, the ring rests full with no
 /// animation, so it never moves ahead of the digit.
-struct TherapyCountdownDial: View {
+struct TMTherapyCountdownDial: View {
     let secondsLeft: Int
     let total: Int
     /// False while the countdown is waiting to start; the ring then holds its full value.
@@ -136,7 +203,7 @@ struct TherapyCountdownDial: View {
 }
 
 /// A bounded, deterministic burst; Reduce Motion keeps the success symbol without moving particles.
-struct TherapyCelebration: View {
+struct TMTherapyCelebration: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var started = Date()
     @State private var burstFinished = false
@@ -181,7 +248,7 @@ struct TherapyCelebration: View {
     }
 }
 
-struct TherapyFeelingChoice: View {
+struct TMTherapyFeelingChoice: View {
     let title: LocalizedStringKey
     /// -1 is difficult, 0 is just right, 1 is easy.
     let expression: Int
@@ -205,7 +272,7 @@ struct TherapyFeelingChoice: View {
                             lineWidth: selected ? 4 : 1)
             }
         }
-        .buttonStyle(TherapySoundButtonStyle())
+        .buttonStyle(TMTherapySoundButtonStyle())
         .accessibilityLabel(title)
         .accessibilityAddTraits(selected ? .isSelected : [])
     }

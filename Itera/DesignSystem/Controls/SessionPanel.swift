@@ -7,7 +7,7 @@
 
 import SwiftUI
 
-struct SessionPanel<Content: View>: View {
+struct TMSessionPanel<Content: View>: View {
     enum Tone {
         case neutral, guidance, calibration, practice
 
@@ -47,7 +47,7 @@ struct SessionPanel<Content: View>: View {
     }
 }
 
-struct TargetBubble: View {
+struct TMTargetBubble: View {
     let diameter: Double
     let active: Bool
     let progress: Double

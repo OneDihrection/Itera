@@ -30,7 +30,7 @@ struct MyApp: App {
                 .environment(dependencies)
                 .environment(dependencies.permissions)
                 .environment(\.buttonFeedback, dependencies.playButtonClick)
-                .buttonStyle(TherapySoundButtonStyle())
+                .buttonStyle(TMTherapySoundButtonStyle())
                 .task {
                     #if DEBUG
                     DebugScreenLauncher.openIntroIfRequested(dependencies: dependencies, router: router)
@@ -47,12 +47,12 @@ struct MyApp: App {
     private var root: some View {
         #if DEBUG
         if let screen = DebugScreenLauncher.galleryScreen {
-            DebugScreenGallery(screen: screen)
+            TMDebugScreenGallery(screen: screen)
         } else {
-            ContentView()
+            TMContentView()
         }
         #else
-        ContentView()
+        TMContentView()
         #endif
     }
 }

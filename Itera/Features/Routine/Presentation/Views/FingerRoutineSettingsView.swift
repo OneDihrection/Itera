@@ -7,7 +7,7 @@
 
 import SwiftUI
 
-struct FingerRoutineSettingsView: View {
+struct TMFingerRoutineSettingsView: View {
     @AppStorage(ExerciseMusicTrack.storageKey) private var musicTrack = ExerciseMusicTrack.defaultValue
     let category: ExerciseCategory
     @Environment(AppDependencies.self) private var dependencies
@@ -29,9 +29,9 @@ struct FingerRoutineSettingsView: View {
                 .labelsHidden()
             }
             Section("plan.amountShort") {
-                TherapyNumberControl(title: "plan.setsShort", value: $home.routine.sets, range: 1...5, showsBackground: false)
-                TherapyNumberControl(title: "plan.repsShort", value: $home.routine.repetitions, range: 1...20, showsBackground: false)
-                TherapyNumberControl(title: "plan.restSeconds", value: $home.routine.restSeconds, range: 5...120, step: 5, showsBackground: false)
+                TMTherapyNumberControl(title: "plan.setsShort", value: $home.routine.sets, range: 1...5, showsBackground: false)
+                TMTherapyNumberControl(title: "plan.repsShort", value: $home.routine.repetitions, range: 1...20, showsBackground: false)
+                TMTherapyNumberControl(title: "plan.restSeconds", value: $home.routine.restSeconds, range: 5...120, step: 5, showsBackground: false)
             }
             Section("plan.audioShort") {
                 Toggle("plan.voice", isOn: $home.routine.voiceControl)
@@ -54,7 +54,7 @@ struct FingerRoutineSettingsView: View {
                 }
             }
             if let key = home.errorKey {
-                Section { TherapyError(key: key) }
+                Section { TMTherapyError(key: key) }
             }
         }
         .typography(.body)

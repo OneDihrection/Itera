@@ -7,13 +7,13 @@
 
 import SwiftUI
 
-struct TherapyOverview: View {
+struct TMTherapyOverview: View {
     let category: TherapyCategory
     @Environment(AppDependencies.self) private var dependencies
     @Environment(PermissionManager.self) private var permissions
 
     var body: some View {
-        HomeContent(category: category, model: HomeViewModel(
+        TMHomeContent(category: category, model: HomeViewModel(
             permissions: permissions,
             audio: dependencies.audio,
             history: dependencies
@@ -21,7 +21,7 @@ struct TherapyOverview: View {
     }
 }
 
-private struct HomeContent: View {
+private struct TMHomeContent: View {
     let category: TherapyCategory
     @Environment(NavigationRouter.self) private var router
     @Environment(\.scenePhase) private var scenePhase
@@ -37,12 +37,12 @@ private struct HomeContent: View {
                 Text(LocalizedStringKey(category == .taskOriented ? "task.category" : "therapy.overview.title"))
                     .typography(.largeTitle)
                     .accessibilityAddTraits(.isHeader)
-                LanguageSelector(language: $language)
+                TMLanguageSelector(language: $language)
                     .disabled(model.busy)
                 Text(LocalizedStringKey(category.positioningKey)).typography(.body)
                 exercises
                 if category == .taskOriented {
-                    TherapyButton(title: "towel.history", symbol: "chart.bar") { router.push(.taskReports) }
+                    TMTherapyButton(title: "towel.history", symbol: "chart.bar") { router.push(.taskReports) }
                 }
                 Label(
                     LocalizedStringKey(model.message),
@@ -61,7 +61,7 @@ private struct HomeContent: View {
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 8)
                 }
-                .buttonStyle(SessionButtonStyle())
+                .buttonStyle(TMSessionButtonStyle())
                 .disabled(model.busy)
                 DisclosureGroup("home.permissions") {
                     VStack(alignment: .leading, spacing: 16) {
@@ -92,17 +92,17 @@ private struct HomeContent: View {
 
     private var exercises: some View {
         VStack(spacing: 12) {
-            TherapyArtworkPanel(
+            TMTherapyArtworkPanel(
                 title: LocalizedStringKey(category.title),
                 subtitle: "",
                 artwork: category.artwork
             )
             .clipShape(RoundedRectangle(cornerRadius: 30))
-            TherapyButton(title: "home.viewShort", symbol: "slider.horizontal.3") {
+            TMTherapyButton(title: "home.viewShort", symbol: "slider.horizontal.3") {
                 router.push(.routineConfiguration(category))
             }
             ForEach(Array(category.kinds.enumerated()), id: \.element) { index, kind in
-                TherapyExerciseRow(
+                TMTherapyExerciseRow(
                     title: LocalizedStringKey("session." + kind.rawValue),
                     subtitle: "",
                     artwork: "symbol:" + symbol(for: kind),

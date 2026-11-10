@@ -18,7 +18,7 @@ struct TherapyStep: Identifiable {
 /// steps carry a check, the current step shows its name, and later steps show only their icon.
 ///
 /// It displays the supplied index only; the caller decides what the current step is.
-struct TherapyStepStrip: View {
+struct TMTherapyStepStrip: View {
     let steps: [TherapyStep]
     let current: Int
 
@@ -69,7 +69,7 @@ struct TherapyStepStrip: View {
 #Preview("Step strip") {
     VStack(spacing: 20) {
         ForEach(0..<3, id: \.self) { index in
-            TherapyStepStrip(
+            TMTherapyStepStrip(
                 steps: [
                     TherapyStep(id: 0, title: "Grab", symbol: "hand.raised.fill"),
                     TherapyStep(id: 1, title: "Slide", symbol: "arrow.left"),

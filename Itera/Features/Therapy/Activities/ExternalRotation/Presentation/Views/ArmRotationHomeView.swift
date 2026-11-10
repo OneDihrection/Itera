@@ -8,7 +8,7 @@
 import SwiftUI
 
 /// The Arm Rotation category: one row per rotation, each opening the Balancing-style setup screen.
-struct ArmRotationHomeView: View {
+struct TMArmRotationHomeView: View {
     @Environment(NavigationRouter.self) private var router
 
     private let exercises: [BalanceExercise] = [.internalRotation, .externalRotation, .shoulderFlexion]
@@ -16,7 +16,7 @@ struct ArmRotationHomeView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 28) {
-                TherapyArtworkPanel(
+                TMTherapyArtworkPanel(
                     title: "rotation.category",
                     subtitle: "",
                     artwork: "symbol:arrow.triangle.2.circlepath"
@@ -27,7 +27,7 @@ struct ArmRotationHomeView: View {
                     .foregroundStyle(TherapyPalette.muted)
                 VStack(spacing: 12) {
                     ForEach(Array(exercises.enumerated()), id: \.element) { index, exercise in
-                        TherapyExerciseRow(
+                        TMTherapyExerciseRow(
                             title: exercise.localized("title"),
                             subtitle: "",
                             artwork: "symbol:arrow.triangle.2.circlepath",

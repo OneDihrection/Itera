@@ -45,7 +45,7 @@ enum DebugScreenLauncher {
 }
 
 /// The shared exercise screens filled with sample values from the design.
-struct DebugScreenGallery: View {
+struct TMDebugScreenGallery: View {
     let screen: String
 
     private let results = [
@@ -59,7 +59,7 @@ struct DebugScreenGallery: View {
         case "pause":
             ZStack {
                 live
-                TherapyPauseDialog(
+                TMTherapyPauseDialog(
                     setLabel: Text("session.setNumber \(2)"),
                     title: Text("balance.title"),
                     elapsedSeconds: 173,
@@ -70,7 +70,7 @@ struct DebugScreenGallery: View {
                 }
             }
         case "setDone":
-            TherapySetSummary(
+            TMTherapySetSummary(
                 heading: heading,
                 headline: Text("session.setDone \(2)"),
                 message: Text("session.setRest \(3)"),
@@ -81,26 +81,26 @@ struct DebugScreenGallery: View {
                 EmptyView()
             }
         case "allDone":
-            TherapySetSummary(
+            TMTherapySetSummary(
                 heading: heading,
                 headline: Text("session.allDoneTitle"),
                 message: Text("session.allDoneMessage"),
                 results: results.map { TherapySetResult(number: $0.number, done: 8, goal: 8, state: .done) },
                 total: Text("session.total \(24)")
             ) {
-                TherapyButton(title: "plan.nextContinue", symbol: "play.fill", prominent: true) {}
+                TMTherapyButton(title: "plan.nextContinue", symbol: "play.fill", prominent: true) {}
             }
         default:
             live
         }
     }
 
-    private var heading: TherapyExerciseHeading {
-        TherapyExerciseHeading(eyebrow: Text("plan.exerciseNumber \(1)"), title: Text("balance.title"))
+    private var heading: TMTherapyExerciseHeading {
+        TMTherapyExerciseHeading(eyebrow: Text("plan.exerciseNumber \(1)"), title: Text("balance.title"))
     }
 
     private var live: some View {
-        TherapyExerciseLiveLayout(
+        TMTherapyExerciseLiveLayout(
             heading: heading,
             cue: Text("plan.purpose.crossMidline"),
             demoTitle: "session.followMovement",
@@ -113,7 +113,7 @@ struct DebugScreenGallery: View {
         ) {
             Color.gray.opacity(0.4)
         } demo: {
-            BalanceExerciseDemonstrationView(exercise: .crossMidline, paused: false)
+            TMBalanceExerciseDemonstrationView(exercise: .crossMidline, paused: false)
         } accessories: {
             EmptyView()
         }

@@ -25,6 +25,8 @@ struct TargetGuide {
     var directionOnly = false
     /// Draws the hold ring around the tracked joint instead of around a bubble.
     var jointHold = false
+    /// Sizes the calibration hold ring to `radius`, so it matches the bubbles.
+    var matchesHoldRing = false
     var capturing = false
     var savedStart = false
     var farthest: TherapyPoint? = nil
@@ -237,6 +239,18 @@ struct StableHold {
         last = time
         progress = min(1, elapsed / duration)
     }
+}
+
+/// Radius, in normalized image height, of a bubble drawn `diameter` points across. Uses the same
+/// height conversion as `bubbleRadius`, so drawing and acceptance share one geometry.
+func fixedBubbleRadius(diameter: Double, aspect: Double, viewport: TherapyViewport?) -> Double {
+    guard let viewport, viewport.width > 0, viewport.height > 0 else {
+        return 0.05
+    }
+
+    let height = min(viewport.height, viewport.width / aspect)
+
+    return diameter / (height * 2)
 }
 
 func bubbleRadius(body: Double, separation: Double?, aspect: Double, viewport: TherapyViewport?)

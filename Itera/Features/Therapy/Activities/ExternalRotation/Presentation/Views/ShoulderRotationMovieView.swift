@@ -10,7 +10,7 @@ import SwiftUI
 
 /// The bundled shoulder-rotation example for one arm, looping silently. It stands in for the
 /// native illustration when a recording exists for the exercise and arm.
-struct ShoulderRotationMovieView: View {
+struct TMShoulderRotationMovieView: View {
     let resource: String
     let paused: Bool
     var accessibilityKey: LocalizedStringKey = "rotation.animationAccessibility"
@@ -25,9 +25,9 @@ struct ShoulderRotationMovieView: View {
         let holdsPose = paused || reduceMotion
 
         ZStack {
-            ShoulderRotationPlayer(resource: resource, paused: holdsPose)
+            TMShoulderRotationPlayer(resource: resource, paused: holdsPose)
 
-            TherapyDemoCaption(paused: holdsPose)
+            TMTherapyDemoCaption(paused: holdsPose)
         }
         .background(TherapyPalette.mediaBackground)
         .clipShape(RoundedRectangle(cornerRadius: 24))
@@ -40,25 +40,25 @@ struct ShoulderRotationMovieView: View {
     }
 }
 
-private struct ShoulderRotationPlayer: UIViewRepresentable {
+private struct TMShoulderRotationPlayer: UIViewRepresentable {
     let resource: String
     let paused: Bool
 
-    func makeUIView(context: Context) -> LoopingMovieView {
-        LoopingMovieView()
+    func makeUIView(context: Context) -> TMLoopingMovieView {
+        TMLoopingMovieView()
     }
 
-    func updateUIView(_ view: LoopingMovieView, context: Context) {
+    func updateUIView(_ view: TMLoopingMovieView, context: Context) {
         view.configure(resource: resource, paused: paused)
     }
 
-    static func dismantleUIView(_ view: LoopingMovieView, coordinator: ()) {
+    static func dismantleUIView(_ view: TMLoopingMovieView, coordinator: ()) {
         view.release()
     }
 }
 
 /// Plays one movie on a loop; a pause keeps the visible frame instead of rewinding.
-private final class LoopingMovieView: UIView {
+private final class TMLoopingMovieView: UIView {
     private let playerLayer = AVPlayerLayer()
     private var player: AVQueuePlayer?
     private var looper: AVPlayerLooper?

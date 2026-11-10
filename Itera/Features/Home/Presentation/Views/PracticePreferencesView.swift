@@ -7,7 +7,7 @@
 
 import SwiftUI
 
-struct PracticePreferencesView: View {
+struct TMPracticePreferencesView: View {
     @AppStorage(ExerciseMusicTrack.storageKey) private var musicTrack = ExerciseMusicTrack.defaultValue
     @Environment(NavigationRouter.self) private var router
     @Environment(AppDependencies.self) private var dependencies
@@ -22,14 +22,21 @@ struct PracticePreferencesView: View {
 
     var body: some View {
         @Bindable var home = dependencies.home
+        @Bindable var plan = dependencies.dailyPlan
 
         Form {
             // The same saved finger routine the plan page edits; a session in progress keeps
             // the snapshot it started with.
             Section {
-                TherapyNumberControl(title: "plan.setsShort", value: $home.routine.sets, range: 1...5, showsBackground: false)
-                TherapyNumberControl(title: "plan.repsShort", value: $home.routine.repetitions, range: 1...20, showsBackground: false)
-                TherapyNumberControl(
+                Picker("settings.trainingSide", selection: $plan.sidePreference) {
+                    Text("settings.trainingSideDefault").tag("")
+                    Text("session.left").tag(HandSide.left.rawValue)
+                    Text("session.right").tag(HandSide.right.rawValue)
+                }
+                .frame(minHeight: 64)
+                TMTherapyNumberControl(title: "plan.setsShort", value: $home.routine.sets, range: 1...5, showsBackground: false)
+                TMTherapyNumberControl(title: "plan.repsShort", value: $home.routine.repetitions, range: 1...20, showsBackground: false)
+                TMTherapyNumberControl(
                     title: "plan.restSeconds",
                     value: $home.routine.restSeconds,
                     range: 5...120,
@@ -42,10 +49,10 @@ struct PracticePreferencesView: View {
                 Text("settings.exerciseHelp").typography(.body)
             }
             if let key = home.errorKey {
-                Section { TherapyError(key: key) }
+                Section { TMTherapyError(key: key) }
             }
             Section {
-                LanguageSelector(language: $language)
+                TMLanguageSelector(language: $language)
                     .frame(minHeight: 64)
             } header: {
                 Text("language.title").typography(.headline)

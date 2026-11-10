@@ -7,7 +7,7 @@
 
 import SwiftUI
 
-struct TaskReportsView: View {
+struct TMTaskReportsView: View {
     @State var model: TaskReportsViewModel
 
     var body: some View {
@@ -18,7 +18,7 @@ struct TaskReportsView: View {
             if let key = model.errorKey {
                 Section {
                     Text(LocalizedStringKey(key))
-                    TherapyButton(title: "action.retry") { Task { await model.load() } }
+                    TMTherapyButton(title: "action.retry") { Task { await model.load() } }
                 }
             }
             if !model.loading, model.errorKey == nil, model.summaries.isEmpty {
@@ -32,7 +32,7 @@ struct TaskReportsView: View {
                     ForEach(summary.results.filter { $0.activity.kind == .foldTowel }, id: \.executionID) { result in
                         resultRow(result)
                     }
-                    TherapyButton(title: "towel.deleteHistory", secondary: true) {
+                    TMTherapyButton(title: "towel.deleteHistory", secondary: true) {
                         Task { await model.delete(summary.id) }
                     }
                 }
