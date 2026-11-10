@@ -20,10 +20,6 @@ enum AppRoute: Hashable {
     case plan(ExerciseCategory)
     case reports
     case taskReports
-    case achievements
-    case achievementCelebration
-    case achievement(String)
-    case achievementShare(String)
     case report(UUID)
     case fingerSession
     case sessionComplete
@@ -42,6 +38,11 @@ enum AppTab: Hashable {
 }
 
 struct RoutePresentation: Identifiable {
-    let id = UUID()
+    let id: UUID
     let route: AppRoute
+
+    init(id: UUID = UUID(), route: AppRoute) {
+        self.id = id
+        self.route = route
+    }
 }

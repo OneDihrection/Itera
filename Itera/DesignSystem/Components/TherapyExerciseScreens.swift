@@ -179,6 +179,7 @@ struct TMTherapyExerciseIntro<Media: View, Targets: View>: View {
     let startTitle: LocalizedStringKey
     var startDisabled = false
     var message: Text? = nil
+    var countdownSeconds: Int? = nil
     let onBack: () -> Void
     let onStart: () -> Void
     @ViewBuilder let media: Media
@@ -207,13 +208,25 @@ struct TMTherapyExerciseIntro<Media: View, Targets: View>: View {
                         .multilineTextAlignment(.center)
                 }
 
-                TMTherapyButton(
-                    title: startTitle,
-                    symbol: "play.fill",
-                    disabled: startDisabled,
-                    prominent: true,
-                    action: onStart
-                )
+                if let countdownSeconds {
+                    Text(verbatim: Duration.seconds(countdownSeconds).formatted(.time(pattern: .minuteSecond(padMinuteToLength: 2))))
+                        .typography(size: 44, weight: .bold, relativeTo: .largeTitle)
+                        .monospacedDigit()
+                        .foregroundStyle(TherapyPalette.onBrand)
+                        .padding(.horizontal, 24)
+                        .frame(minHeight: 88)
+                        .background(TherapyPalette.brand, in: Capsule())
+                        .accessibilityLabel("calibration.countdown")
+                        .accessibilityValue(Text(countdownSeconds, format: .number))
+                } else {
+                    TMTherapyButton(
+                        title: startTitle,
+                        symbol: "play.fill",
+                        disabled: startDisabled,
+                        prominent: true,
+                        action: onStart
+                    )
+                }
             }
             .padding(.horizontal, 48)
             .padding(.vertical, 24)

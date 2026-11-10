@@ -23,6 +23,10 @@ struct TMFingerLandmarkOverlay: View {
     var completionID: UUID? = nil
     var onCompletionPresented: (UUID) -> Void = { _ in }
 
+    /// Joints drawn at the confidence scoring accepts, so the ring on a touching fingertip
+    /// (which Vision rates lower) stays on screen while that fingertip is being scored.
+    private static let drawnConfidence: Float = 0.3
+
     // MARK: - Sizing
 
     /// Fingertip circle diameters relative to the on-screen palm length (wrist to middle knuckle).
@@ -70,8 +74,8 @@ struct TMFingerLandmarkOverlay: View {
         for base in [1, 5, 9, 13, 17] {
             let chain = [0, base, base + 1, base + 2, base + 3]
             for pair in zip(chain, chain.dropFirst()) {
-                guard evidence.points[pair.0].confidence >= 0.5,
-                      evidence.points[pair.1].confidence >= 0.5 else { continue }
+                guard evidence.points[pair.0].confidence >= Self.drawnConfidence,
+                      evidence.points[pair.1].confidence >= Self.drawnConfidence else { continue }
                 var path = Path()
                 path.move(to: point(pair.0, width: width, height: height, origin: origin))
                 path.addLine(to: point(pair.1, width: width, height: height, origin: origin))
@@ -81,7 +85,7 @@ struct TMFingerLandmarkOverlay: View {
 
         if !usesWholeHandCircle {
             for (index, joint) in [4, 8, 12, 16, 20].enumerated()
-            where showsBubble(index + 1) && evidence.points[joint].confidence >= 0.5 {
+            where showsBubble(index + 1) && evidence.points[joint].confidence >= Self.drawnConfidence {
                 let anchor = point(joint, width: width, height: height, origin: origin)
                 let center = fingertipCircleCenter(
                     index + 1, joint: joint, palm: palm,
@@ -96,7 +100,7 @@ struct TMFingerLandmarkOverlay: View {
             }
         }
 
-        for index in evidence.points.indices where evidence.points[index].confidence >= 0.5 {
+        for index in evidence.points.indices where evidence.points[index].confidence >= Self.drawnConfidence {
             let p = point(index, width: width, height: height, origin: origin)
             let dot = CGRect(x: p.x - dotRadius, y: p.y - dotRadius, width: dotRadius * 2, height: dotRadius * 2)
             context.fill(Path(ellipseIn: dot), with: .color(TherapyPalette.guidanceYellow))
@@ -118,7 +122,7 @@ struct TMFingerLandmarkOverlay: View {
             }
         } else {
             ForEach(Array([4, 8, 12, 16, 20].enumerated()), id: \.offset) { index, joint in
-                if showsBubble(index + 1) && evidence.points[joint].confidence >= 0.5 {
+                if showsBubble(index + 1) && evidence.points[joint].confidence >= Self.drawnConfidence {
                     TMTherapyGuideBubble(
                         // No finger numbers: the instruction names the finger to move.
                         progress: progress,
@@ -146,7 +150,7 @@ struct TMFingerLandmarkOverlay: View {
     /// On-screen distance from the wrist to the middle-finger knuckle: a steady size cue that
     /// barely changes while the fingers bend.
     private func palmLength(width: Double, height: Double, origin: CGPoint) -> CGFloat {
-        guard evidence.points[0].confidence >= 0.5, evidence.points[9].confidence >= 0.5 else {
+        guard evidence.points[0].confidence >= Self.drawnConfidence, evidence.points[9].confidence >= Self.drawnConfidence else {
             return Self.fallbackPalm
         }
 
@@ -168,7 +172,7 @@ struct TMFingerLandmarkOverlay: View {
     /// The visible hand's bounding box in preview coordinates.
     private func handBounds(width: Double, height: Double, origin: CGPoint) -> CGRect? {
         let visible = evidence.points.indices
-            .filter { evidence.points[$0].confidence >= 0.5 }
+            .filter { evidence.points[$0].confidence >= Self.drawnConfidence }
             .map { point($0, width: width, height: height, origin: origin) }
 
         guard let first = visible.first else {

@@ -7,10 +7,11 @@
 
 import SwiftUI
 
-/// Saves the finished session and offers a way to see progress or continue today’s plan.
+/// Saves the finished session and automatically routes to its next destination.
 struct TMFingerSessionCompleteView: View {
     @Environment(AppDependencies.self) private var dependencies
     @Environment(NavigationRouter.self) private var router
+    @Environment(\.scenePhase) private var scenePhase
     @State private var savingFinished = false
 
     private var summary: FingerSessionSummary? {
@@ -18,48 +19,57 @@ struct TMFingerSessionCompleteView: View {
     }
 
     var body: some View {
-        VStack(spacing: 0) {
-            Spacer(minLength: 40)
-
-            VStack(spacing: 18) {
-                TMTherapyCompletionMark(tint: TherapyPalette.brand)
-                Text(completed ? "session.allDoneTitle" : "done.titlePartial")
-                    .typography(size: 52, weight: .bold, relativeTo: .largeTitle)
-                    .accessibilityAddTraits(.isHeader)
-                message
-                    .typography(size: 26, weight: .regular, relativeTo: .title3)
-                    .multilineTextAlignment(.center)
-                    .fixedSize(horizontal: false, vertical: true)
+        Group {
+            if automaticallyRests, let summary, let exercise = summary.results.last {
+                setSummary(summary, exercise: exercise)
+            } else {
+                ProgressView("session.saving")
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .background(TherapyPalette.canvas)
             }
-            .padding(.horizontal, 40)
-
-            Spacer(minLength: 40)
-
-            closingAction
-
-            Spacer(minLength: 40)
         }
-        .foregroundStyle(TherapyPalette.ink)
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(TherapyPalette.canvas)
         .environment(\.locale, dependencies.session?.sessionLanguage.locale ?? AppLanguage.selected.locale)
         .interactiveDismissDisabled()
         .task { await saveSummary() }
+        .task(id: savingFinished && scenePhase == .active) {
+            guard savingFinished, scenePhase == .active else {
+                return
+            }
+
+            if automaticallyRests {
+                try? await Task.sleep(for: DailyPlanViewModel.completionPreviewDuration)
+            }
+
+            guard !Task.isCancelled, scenePhase == .active else {
+                return
+            }
+            close()
+        }
     }
 
-    @ViewBuilder
-    private var closingAction: some View {
-        // The way on appears once saving has finished, whether or not it succeeded, so the
-        // patient is never stuck on this page.
-        if savingFinished {
-            TMTherapyButton(
-                title: closingTitle,
-                symbol: dependencies.dailyPlan.isRunning ? "play.fill" : nil,
-                prominent: true,
-                action: close
-            )
-        } else {
-            ProgressView()
+    private var automaticallyRests: Bool {
+        completed && dependencies.dailyPlan.hasAutomaticRest
+    }
+
+    private func setSummary(_ summary: FingerSessionSummary, exercise: FingerExerciseResult) -> some View {
+        let goal = summary.routine.repetitions
+        let results = (0..<exercise.completedSets).map { index in
+            TherapySetResult(number: index + 1, done: goal, goal: goal, state: .done)
+        }
+
+        return TMTherapySetSummary(
+            heading: TMTherapyExerciseHeading(
+                eyebrow: dependencies.dailyPlan.currentNumber.map { Text("plan.exerciseNumber \($0)") },
+                title: Text(LocalizedStringKey(exercise.kind.title))
+            ),
+            headline: Text("session.allDoneTitle"),
+            message: Text("session.allDoneMessage"),
+            results: results,
+            total: Text("session.total \(summary.totalRepetitions)")
+        ) {
+            if !savingFinished {
+                ProgressView()
+            }
         }
     }
 
@@ -75,28 +85,6 @@ struct TMFingerSessionCompleteView: View {
         summary?.outcome == .completed
     }
 
-    private var message: Text {
-        guard completed else {
-            return Text("done.messagePartial")
-        }
-
-        switch PartOfDay(date: summary?.ended ?? Date()) {
-        case .morning:
-            return Text("done.message.morning")
-        case .afternoon:
-            return Text("done.message.afternoon")
-        case .evening:
-            return Text("done.message.evening")
-        case .night:
-            return Text("done.message.night")
-        }
-    }
-
-    /// While today's plan runs, this page leads on to the next exercise instead of Progress.
-    private var closingTitle: LocalizedStringKey {
-        dependencies.dailyPlan.isRunning ? "plan.nextContinue" : "done.viewProgress"
-    }
-
     private func close() {
         guard !dependencies.dailyPlan.isRunning else {
             dependencies.dailyPlan.finish(completed: completed, router: router)
@@ -105,23 +93,5 @@ struct TMFingerSessionCompleteView: View {
 
         router.dismissFullScreenCover()
         router.push(.reports)
-    }
-}
-
-/// Indonesian distinguishes pagi, siang, sore and malam; English uses the same four parts.
-private enum PartOfDay {
-    case morning, afternoon, evening, night
-
-    init(date: Date, calendar: Calendar = .current) {
-        switch calendar.component(.hour, from: date) {
-        case 4..<11:
-            self = .morning
-        case 11..<15:
-            self = .afternoon
-        case 15..<18:
-            self = .evening
-        default:
-            self = .night
-        }
     }
 }

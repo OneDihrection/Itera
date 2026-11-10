@@ -42,7 +42,6 @@ struct TMFingerHomeView: View {
         .navigationBarTitleDisplayMode(.inline)
         .task {
             await home.refresh()
-            await dependencies.progress.refresh()
         }
     }
 
@@ -55,17 +54,9 @@ struct TMFingerHomeView: View {
                     .accessibilityAddTraits(.isHeader)
             }
             Spacer()
-            VStack(alignment: .trailing, spacing: 8) {
-                Label {
-                    Text(dependencies.progress.progress.currentStreak, format: .number)
-                    Text("progress.streakDays")
-                } icon: {
-                    Image(systemName: "flame.fill")
-                }
-                .typography(.headline).foregroundStyle(TherapyPalette.primary)
-                Text(Date(), format: .dateTime.day().month(.abbreviated))
-                    .typography(.body).foregroundStyle(TherapyPalette.muted)
-            }
+            Text(Date(), format: .dateTime.day().month(.abbreviated))
+                .typography(.body)
+                .foregroundStyle(TherapyPalette.muted)
         }
         .foregroundStyle(TherapyPalette.ink)
     }

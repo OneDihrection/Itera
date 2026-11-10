@@ -185,8 +185,10 @@ struct HandOverlaySmoother {
         )
     }
 
+    /// Matches the lowest confidence scoring accepts (forearm rotation, touching fingertips),
+    /// so a joint that is scored is also drawn instead of blinking out.
     private static func isUsable(_ point: HandPoint) -> Bool {
-        point.confidence >= 0.5
+        point.confidence >= 0.3
             && point.x.isFinite
             && point.y.isFinite
             && (0...1).contains(point.x)

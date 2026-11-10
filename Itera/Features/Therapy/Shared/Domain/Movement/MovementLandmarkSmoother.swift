@@ -53,13 +53,9 @@ struct MovementLandmarkSmoother {
             filters.removeAll(keepingCapacity: true)
         }
 
-        for joint in BodyJoint.allCases {
-            if let landmark = observation.joints[joint], Self.isUsable(landmark) {
-                continue
-            }
-
-            filters[joint] = nil
-        }
+        // A joint that drops below the confidence floor for a frame or two keeps its filter, so it
+        // does not snap back unfiltered when it returns. The filter's own 0.3 s rule still
+        // restarts it after a real gap, so nothing is blended across lost evidence.
 
         let aspect = observation.aspect
         var joints = observation.joints
@@ -98,6 +94,7 @@ struct MovementLandmarkSmoother {
             personCount: observation.personCount,
             joints: joints,
             cup: observation.cup,
+            hand: observation.hand,
             subjectEpoch: observation.subjectEpoch
         )
     }
@@ -118,6 +115,14 @@ private struct JointPositionFilter {
     private var timestamp: Double?
     private var speed = 0.0
 
+    /// Aspect-corrected jump between two raw frames that is treated as a detector swap until the
+    /// next frame confirms it. A fast reach moves a wrist about 0.05 between frames.
+    private static let outlierDistance = 0.15
+    private static let confirmationDistance = 0.06
+
+    /// The last raw sample held back as a possible outlier, or `nil`.
+    private var heldBack: TherapyPoint?
+
     mutating func consume(_ value: TherapyPoint, at time: Double) -> TherapyPoint {
         guard let previous, let filtered, let timestamp,
               time.isFinite, time > timestamp, time - timestamp <= 0.3 else {
@@ -125,8 +130,24 @@ private struct JointPositionFilter {
             self.filtered = value
             self.timestamp = time.isFinite ? time : nil
             speed = 0
+            heldBack = nil
             return value
         }
+
+        // A single impossible jump (Vision briefly placing a wrist on the other arm) is held for
+        // one frame. If the next frame lands near it, the move was real and is followed; if not,
+        // the jump never reaches the drawing or the scoring.
+        // Compared with the previous raw sample, not the filtered point, which trails a fast move.
+        let isJump = (value - previous).length > Self.outlierDistance
+        let confirmsHeldJump = heldBack.map { (value - $0).length <= Self.confirmationDistance } ?? false
+
+        if isJump, !confirmsHeldJump {
+            heldBack = value
+            self.timestamp = time
+            return filtered
+        }
+
+        heldBack = nil
 
         let interval = time - timestamp
         let measuredSpeed = ((value - previous).scaled(1 / interval)).length

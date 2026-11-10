@@ -396,13 +396,15 @@ extension TMTherapySessionView {
                     saveError(error)
                 }
 
-                TMTherapyButton(
-                    title: summaryExitTitle,
-                    symbol: "play.fill",
-                    disabled: model.saving || model.saveFailure != nil,
-                    prominent: true
-                ) {
-                    leaveSummary(summary)
+                if !automaticallyRests(after: summary) {
+                    TMTherapyButton(
+                        title: summaryExitTitle,
+                        symbol: "play.fill",
+                        disabled: model.saving || model.saveFailure != nil,
+                        prominent: true
+                    ) {
+                        leaveSummary(summary)
+                    }
                 }
             }
         }

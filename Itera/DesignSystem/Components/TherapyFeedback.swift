@@ -91,6 +91,80 @@ struct TMTherapyBreathingRest: View {
     }
 }
 
+/// Full-screen rest waves. The caller supplies the breathing cue and animation progress.
+struct TMTherapyLongRest: View {
+    let cue: Text
+    let cueID: String
+    let counter: Text?
+    let intensity: Double
+    let paused: Bool
+    let togglePause: () -> Void
+    let stop: () -> Void
+
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    var body: some View {
+        ZStack(alignment: .bottom) {
+            Color(red: 0.50, green: 0.16, blue: 0.05)
+                .overlay {
+                    Canvas { context, size in
+                        let rise = reduceMotion ? 0 : CGFloat(intensity - 0.25) * size.height * 0.14
+                        let colors = [
+                            Color(red: 0.63, green: 0.19, blue: 0.06),
+                            Color(red: 0.72, green: 0.22, blue: 0.05),
+                            Color(red: 0.82, green: 0.26, blue: 0.04)
+                        ]
+                        for (index, color) in colors.enumerated() {
+                            let edge = size.height * (0.28 + CGFloat(index) * 0.23) - rise
+                            var wave = Path()
+                            wave.move(to: CGPoint(x: 0, y: edge))
+                            wave.addQuadCurve(
+                                to: CGPoint(x: size.width, y: edge),
+                                control: CGPoint(x: size.width / 2, y: edge - size.height * 0.14)
+                            )
+                            wave.addLine(to: CGPoint(x: size.width, y: size.height))
+                            wave.addLine(to: CGPoint(x: 0, y: size.height))
+                            wave.closeSubpath()
+                            context.fill(wave, with: .color(color))
+                        }
+                    }
+                    .accessibilityHidden(true)
+                }
+                .ignoresSafeArea()
+
+            VStack(spacing: 16) {
+                if let counter {
+                    counter.typography(.title3)
+                }
+                ZStack {
+                    (paused ? Text("session.paused") : cue)
+                        .typography(size: 40, weight: .bold, relativeTo: .largeTitle)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.5)
+                        .id(paused ? "session.paused" : cueID)
+                        .transition(reduceMotion ? .identity : .opacity.combined(with: .offset(y: 8)))
+                }
+                .animation(reduceMotion ? nil : .easeInOut(duration: 0.28), value: cueID)
+            }
+            .accessibilityElement(children: .combine)
+            .accessibilityAddTraits(.isHeader)
+            .multilineTextAlignment(.center)
+            .padding(24)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+
+            HStack(spacing: 24) {
+                Button(paused ? "session.resume" : "session.pause", action: togglePause)
+                Button("session.endAction", action: stop)
+            }
+            .typography(.headline)
+            .buttonStyle(.bordered)
+            .tint(.white)
+            .padding(24)
+        }
+        .foregroundStyle(.white)
+    }
+}
+
 /// The final countdown overlays the mounted practice layout.
 struct TMPracticeCountdown: View {
     let seconds: Int
