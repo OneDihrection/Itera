@@ -10,6 +10,19 @@ import SwiftUI
 // The five screens every exercise shares: intro, live practice, pause, set done and all done.
 // They take values, content and actions only; sessions keep their own timing and progression.
 
+// MARK: - Layout scale
+
+/// Scales sizes against an 11-inch iPad landscape reference (1194 x 834) so screens fill
+/// larger and smaller iPads proportionally.
+private func therapyLayoutScale(
+    for size: CGSize,
+    limits: ClosedRange<CGFloat>
+) -> CGFloat {
+    let proportional = min(size.width / 1194, size.height / 834)
+
+    return min(max(proportional, limits.lowerBound), limits.upperBound)
+}
+
 // MARK: - Heading
 
 /// Grey "Latihan 1" above the exercise title, centred.
@@ -66,7 +79,7 @@ struct TMTherapyProgressStat: View {
     var textScale: CGFloat = 1
 
     var body: some View {
-        HStack(alignment: .firstTextBaseline, spacing: 18) {
+        HStack(alignment: .center, spacing: 18) {
             label
                 .typography(size: 30 * textScale, weight: .semiBold, relativeTo: .title2)
                 .foregroundStyle(TherapyPalette.muted)
@@ -312,7 +325,7 @@ struct TMTherapyExerciseLiveLayout<Camera: View, Demo: View, Accessories: View>:
     let endTitle: LocalizedStringKey
     var pauseDisabled = false
     var calibrating = false
-    var demoWidthFraction: CGFloat = 0.66
+    var demoWidthFraction: CGFloat = 0.9
     let onPause: () -> Void
     let onEnd: () -> Void
     @ViewBuilder let camera: Camera
@@ -320,18 +333,32 @@ struct TMTherapyExerciseLiveLayout<Camera: View, Demo: View, Accessories: View>:
     /// Small trailing controls beside the heading, such as music or voice.
     @ViewBuilder let accessories: Accessories
 
+    // The heading and the counters/buttons row take fixed shares of the height (about 12% and
+    // 20%); the camera and demo row takes the rest. The minimums keep a two-line heading and
+    // the stacked buttons from clipping on the smallest iPad.
+    private static var headerHeightFraction: CGFloat { 0.12 }
+    private static var bottomHeightFraction: CGFloat { 0.20 }
+    private static var minimumHeaderHeight: CGFloat { 72 }
+    private static var minimumBottomHeight: CGFloat { 140 }
+
     var body: some View {
         GeometryReader { geometry in
             let width = geometry.size.width
-            let inset = min(32, width * 0.024)
-            let columnSpacing = min(24, width * 0.018)
+            let inset = min(20, width * 0.015)
+            let columnSpacing = min(16, width * 0.012)
             let availableWidth = max(0, width - 2 * inset - columnSpacing)
-            let sideWidth = min(420, availableWidth * 0.367)
+            let sideWidth = min(460, availableWidth * 0.35)
             let cameraWidth = availableWidth - sideWidth
+            let rowSpacing = columnSpacing * 0.5
+            let verticalPadding = min(10, geometry.size.height * 0.012)
+            let contentHeight = max(0, geometry.size.height - 2 * verticalPadding - 2 * rowSpacing)
+            let headerHeight = max(contentHeight * Self.headerHeightFraction, Self.minimumHeaderHeight)
+            let bottomHeight = max(contentHeight * Self.bottomHeightFraction, Self.minimumBottomHeight)
+            let scale = therapyLayoutScale(for: geometry.size, limits: 0.8...1.3)
 
-            VStack(spacing: columnSpacing) {
+            VStack(spacing: rowSpacing) {
                 liveHeader
-                    .padding(.top, cuePlacement.usesVideo ? 16 : 0)
+                    .frame(height: headerHeight)
 
                 HStack(alignment: .top, spacing: columnSpacing) {
                     cameraArea
@@ -342,14 +369,15 @@ struct TMTherapyExerciseLiveLayout<Camera: View, Demo: View, Accessories: View>:
                 .frame(maxHeight: .infinity)
 
                 HStack(alignment: .center, spacing: columnSpacing) {
-                    stats
+                    stats(scale: scale)
                         .frame(width: cameraWidth)
-                    controls
+                    controls(scale: scale)
                         .frame(width: sideWidth)
                 }
+                .frame(height: bottomHeight)
             }
             .padding(.horizontal, inset)
-            .padding(.vertical, min(20, geometry.size.height * 0.025))
+            .padding(.vertical, verticalPadding)
         }
         .background(TherapyPalette.canvas)
     }
@@ -399,7 +427,7 @@ struct TMTherapyExerciseLiveLayout<Camera: View, Demo: View, Accessories: View>:
     }
 
     private func demoColumn(maxMediaWidth: CGFloat) -> some View {
-        VStack(spacing: 16) {
+        VStack(spacing: 8) {
             Text(demoTitle)
                 .typography(size: 24, weight: .bold, relativeTo: .title3)
                 .foregroundStyle(TherapyPalette.ink)
@@ -418,57 +446,57 @@ struct TMTherapyExerciseLiveLayout<Camera: View, Demo: View, Accessories: View>:
         }
     }
 
-    private var stats: some View {
+    private func stats(scale: CGFloat) -> some View {
         ViewThatFits(in: .horizontal) {
             TMTherapyStatRow {
-                repetitionStat
+                repetitionStat(scale: scale)
 
                 if let sets {
                     TMTherapyStatDivider(thickness: cuePlacement.usesVideo ? 3 : 1.5)
-                    setStat(sets)
+                    setStat(sets, scale: scale)
                 }
             }
             .fixedSize(horizontal: true, vertical: false)
 
             VStack(spacing: 4) {
-                repetitionStat
+                repetitionStat(scale: scale)
 
                 if let sets {
-                    setStat(sets)
+                    setStat(sets, scale: scale)
                 }
             }
         }
     }
 
-    private var repetitionStat: some View {
+    private func repetitionStat(scale: CGFloat) -> some View {
         TMTherapyProgressStat(
             label: Text("exercise.repetitionsUnit"),
             value: repetitions.done,
             total: repetitions.goal,
             muted: calibrating,
-            textScale: cuePlacement.usesVideo ? 1.2 : 1
+            textScale: (cuePlacement.usesVideo ? 1.2 : 1) * scale
         )
     }
 
-    private func setStat(_ sets: (number: Int, total: Int)) -> some View {
+    private func setStat(_ sets: (number: Int, total: Int), scale: CGFloat) -> some View {
         TMTherapyProgressStat(
             label: Text("exercise.setsUnit"),
             value: sets.number,
             total: sets.total,
             muted: calibrating,
-            textScale: cuePlacement.usesVideo ? 1.2 : 1
+            textScale: (cuePlacement.usesVideo ? 1.2 : 1) * scale
         )
     }
 
-    private var controls: some View {
-        VStack(spacing: 16) {
+    private func controls(scale: CGFloat) -> some View {
+        VStack(spacing: 10 * scale) {
             TMTherapyButton(
                 title: pauseTitle,
                 symbol: "pause.fill",
                 disabled: pauseDisabled,
                 pill: true,
                 brand: true,
-                extraVerticalPadding: cuePlacement.usesVideo ? 8 : 0,
+                extraVerticalPadding: cuePlacement.usesVideo ? 4 * scale : 0,
                 action: onPause
             )
             TMTherapyButton(
@@ -476,7 +504,7 @@ struct TMTherapyExerciseLiveLayout<Camera: View, Demo: View, Accessories: View>:
                 symbol: "stop.fill",
                 secondary: true,
                 pill: true,
-                extraVerticalPadding: cuePlacement.usesVideo ? 8 : 0,
+                extraVerticalPadding: cuePlacement.usesVideo ? 4 * scale : 0,
                 action: onEnd
             )
         }
@@ -638,83 +666,92 @@ struct TMTherapySetSummary<Actions: View>: View {
     @ViewBuilder let actions: Actions
 
     var body: some View {
-        ScrollView {
-            VStack(spacing: 28) {
-                heading
+        GeometryReader { geometry in
+            let scale = therapyLayoutScale(for: geometry.size, limits: 0.8...1.4)
 
-                TMTherapyCompletionMark(size: 124, tint: TherapyPalette.brand)
-                    .padding(.top, 12)
+            ScrollView {
+                VStack(spacing: 28 * scale) {
+                    Spacer(minLength: 0)
 
-                VStack(spacing: 10) {
-                    headline
-                        .typography(size: 40, weight: .bold, relativeTo: .largeTitle)
-                        .accessibilityAddTraits(.isHeader)
-                    message
-                        .typography(size: 24, weight: .regular, relativeTo: .title3)
+                    heading
+
+                    TMTherapyCompletionMark(size: 124 * scale, tint: TherapyPalette.brand)
+                        .padding(.top, 12 * scale)
+
+                    VStack(spacing: 10 * scale) {
+                        headline
+                            .typography(size: 40 * scale, weight: .bold, relativeTo: .largeTitle)
+                            .accessibilityAddTraits(.isHeader)
+                        message
+                            .typography(size: 24 * scale, weight: .regular, relativeTo: .title3)
+                    }
+                    .multilineTextAlignment(.center)
+
+                    panel(scale: scale, width: geometry.size.width)
+
+                    if let footer {
+                        footer
+                            .typography(size: 22 * scale, weight: .regular, relativeTo: .title3)
+                            .foregroundStyle(TherapyPalette.muted)
+                            .monospacedDigit()
+                    }
+
+                    actions
+
+                    Spacer(minLength: 0)
                 }
-                .multilineTextAlignment(.center)
-
-                panel
-
-                if let footer {
-                    footer
-                        .typography(size: 22, weight: .regular, relativeTo: .title3)
-                        .foregroundStyle(TherapyPalette.muted)
-                        .monospacedDigit()
-                }
-
-                actions
+                .foregroundStyle(TherapyPalette.ink)
+                .padding(.horizontal, 48 * scale)
+                .padding(.vertical, 24 * scale)
+                .frame(maxWidth: .infinity, minHeight: geometry.size.height)
             }
-            .foregroundStyle(TherapyPalette.ink)
-            .padding(.horizontal, 48)
-            .padding(.vertical, 24)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(TherapyPalette.canvas)
     }
 
-    private var panel: some View {
-        VStack(spacing: 20) {
+    private func panel(scale: CGFloat, width: CGFloat) -> some View {
+        VStack(spacing: 20 * scale) {
             HStack(spacing: 0) {
                 ForEach(results) { result in
                     if result.number != results.first?.number {
                         Rectangle()
                             .fill(TherapyPalette.outline)
-                            .frame(width: 1.5, height: 80)
+                            .frame(width: 1.5, height: 80 * scale)
                     }
-                    setColumn(result)
+                    setColumn(result, scale: scale)
                         .frame(maxWidth: .infinity)
                 }
             }
 
             total
-                .typography(size: 24, weight: .regular, relativeTo: .title3)
+                .typography(size: 24 * scale, weight: .regular, relativeTo: .title3)
         }
-        .padding(.vertical, 28)
-        .padding(.horizontal, 24)
-        .frame(maxWidth: 820)
-        .background(TherapyPalette.planPanel, in: RoundedRectangle(cornerRadius: 28))
+        .padding(.vertical, 28 * scale)
+        .padding(.horizontal, 24 * scale)
+        .frame(maxWidth: width * 0.8)
+        .background(TherapyPalette.planPanel, in: RoundedRectangle(cornerRadius: 28 * scale))
     }
 
-    private func setColumn(_ result: TherapySetResult) -> some View {
+    private func setColumn(_ result: TherapySetResult, scale: CGFloat) -> some View {
         let finished = result.state == .done
         let tint = finished ? TherapyPalette.brand : TherapyPalette.muted
 
-        return VStack(spacing: 6) {
-            HStack(spacing: 10) {
+        return VStack(spacing: 6 * scale) {
+            HStack(spacing: 10 * scale) {
                 Image(systemName: finished ? "checkmark.circle.fill" : "circle")
                     .foregroundStyle(tint)
                 Text("session.setNumber \(result.number)")
                     .foregroundStyle(finished ? TherapyPalette.ink : TherapyPalette.muted)
             }
-            .typography(size: 24, weight: .medium, relativeTo: .title3)
+            .typography(size: 24 * scale, weight: .medium, relativeTo: .title3)
 
             Text(verbatim: "\(result.done) / \(result.goal)")
-                .typography(size: 36, weight: .bold, relativeTo: .title)
+                .typography(size: 36 * scale, weight: .bold, relativeTo: .title)
                 .foregroundStyle(tint)
 
             Text("session.repetitionsLower")
-                .typography(size: 20, weight: .regular, relativeTo: .callout)
+                .typography(size: 20 * scale, weight: .regular, relativeTo: .callout)
                 .foregroundStyle(TherapyPalette.muted)
         }
         .accessibilityElement(children: .combine)
