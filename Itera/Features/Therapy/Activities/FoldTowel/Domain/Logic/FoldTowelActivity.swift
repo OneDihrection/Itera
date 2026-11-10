@@ -20,7 +20,14 @@ struct FoldTowelActivity: TherapyActivity {
     private var stableGrip: TowelFoldSequence.Grip?
     private var stableGripTime = 0.0
     private var cursorFilter = HandCursorFilter()
+    private var pinchFilter = ScalarCursorFilter()
+    /// Joints used last frame, so a joint hovering at the confidence cutoff does not flicker.
+    private var measuredJoints: Set<Int> = []
+    private var lastMeasured = 0.0
     private var viewport: TherapyViewport?
+
+    /// Longest stretch of missing or weak evidence bridged by holding the last state.
+    private static let dropoutBridge = 0.1
 
     init(configuration: SessionActivity) { self.configuration = configuration }
 
@@ -105,6 +112,8 @@ struct FoldTowelActivity: TherapyActivity {
 
     private mutating func loseTracking(at time: Double? = nil) {
         stableGrip = nil
+        pinchFilter.reset()
+        measuredJoints = []
         snapshot.grip = .uncertain
         snapshot.handPosition = nil
         snapshot.trackingMessage = "towel.trackingLost"
@@ -134,12 +143,25 @@ struct FoldTowelActivity: TherapyActivity {
               hand.generation == frame.generation,
               hand.timestamp == frame.timestamp,
               hand.side?.rawValue == configuration.side.rawValue,
-              let measurement = TowelHandMeasurement(hand) else {
+              let measurement = TowelHandMeasurement(hand, retained: measuredJoints) else {
+            // One missed or low-confidence frame keeps the last cursor and state instead of
+            // flashing the hand away; the tick timeout still ends a real loss.
+            if snapshot.handPosition != nil, frame.timestamp - lastMeasured <= Self.dropoutBridge {
+                return
+            }
             loseTracking()
             return
         }
+        measuredJoints = measurement.joints
+        lastMeasured = frame.timestamp
         snapshot.trackingMessage = nil
-        snapshot.grip = measurement.pinch.map { classify($0, at: frame.timestamp) } ?? .uncertain
+        if let pinch = measurement.pinch {
+            let smoothed = pinchFilter.consume(pinch, at: frame.timestamp)
+            snapshot.grip = classify(smoothed, at: frame.timestamp)
+        } else {
+            pinchFilter.reset()
+            snapshot.grip = .uncertain
+        }
 
         // Cursor and acceptance share one filtered point, so what is drawn is what is scored.
         let position = cursorFilter.consume(
