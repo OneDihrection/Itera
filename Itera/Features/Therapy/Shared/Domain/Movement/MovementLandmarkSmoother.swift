@@ -9,12 +9,22 @@ import Foundation
 
 /// Smooths movement observations before they reach activity geometry or overlays.
 struct MovementLandmarkSmoother {
-    private var filters: [BodyJoint: JointPositionFilter] = [:]
+    private let minimumConfidence: Float
+    private let limbMinimumConfidence: Float
+    private var filters: [BodyJoint: OneEuroFilter] = [:]
     private var lastTimestamp: Double?
     private var lastGeneration: UUID?
     private var lastEpoch = 0
     private var imageWidth = 0
     private var imageHeight = 0
+
+    /// Joints below their confidence floor are not filtered, so a floor lower than the activity's
+    /// own acceptance floor lets weak joints flip between filtered and raw. Pass the same floors
+    /// the activity accepts; elbows and wrists may use a lower one because they are foreshortened.
+    init(minimumConfidence: Float = 0.5, limbMinimumConfidence: Float? = nil) {
+        self.minimumConfidence = minimumConfidence
+        self.limbMinimumConfidence = limbMinimumConfidence ?? minimumConfidence
+    }
 
     mutating func reset() {
         filters.removeAll(keepingCapacity: true)
@@ -54,7 +64,7 @@ struct MovementLandmarkSmoother {
         }
 
         for joint in BodyJoint.allCases {
-            if let landmark = observation.joints[joint], Self.isUsable(landmark) {
+            if let landmark = observation.joints[joint], isUsable(landmark, joint: joint) {
                 continue
             }
 
@@ -65,11 +75,11 @@ struct MovementLandmarkSmoother {
         var joints = observation.joints
 
         for (joint, landmark) in observation.joints {
-            guard Self.isUsable(landmark) else {
+            guard isUsable(landmark, joint: joint) else {
                 continue
             }
 
-            var filter = filters[joint] ?? JointPositionFilter()
+            var filter = filters[joint] ?? OneEuroFilter(parameters: .bodyJoint)
             let position = filter.consume(
                 TherapyPoint(
                     x: landmark.position.x * aspect,
@@ -101,43 +111,21 @@ struct MovementLandmarkSmoother {
         )
     }
 
-    private static func isUsable(_ landmark: TrackingObservation.Landmark) -> Bool {
-        landmark.confidence.isFinite
-            && landmark.confidence >= 0.5
+    private func isUsable(_ landmark: TrackingObservation.Landmark, joint: BodyJoint) -> Bool {
+        let floor: Float
+
+        switch joint {
+        case .leftElbow, .rightElbow, .leftWrist, .rightWrist:
+            floor = limbMinimumConfidence
+        default:
+            floor = minimumConfidence
+        }
+
+        return landmark.confidence.isFinite
+            && landmark.confidence >= floor
             && landmark.position.x.isFinite
             && landmark.position.y.isFinite
             && (0...1).contains(landmark.position.x)
             && (0...1).contains(landmark.position.y)
-    }
-}
-
-private struct JointPositionFilter {
-    private var previous: TherapyPoint?
-    private var filtered: TherapyPoint?
-    private var timestamp: Double?
-    private var speed = 0.0
-
-    mutating func consume(_ value: TherapyPoint, at time: Double) -> TherapyPoint {
-        guard let previous, let filtered, let timestamp,
-              time.isFinite, time > timestamp, time - timestamp <= 0.3 else {
-            self.previous = value
-            self.filtered = value
-            self.timestamp = time.isFinite ? time : nil
-            speed = 0
-            return value
-        }
-
-        let interval = time - timestamp
-        let measuredSpeed = ((value - previous).scaled(1 / interval)).length
-        speed += (1 - exp(-interval / 0.1)) * (measuredSpeed - speed)
-
-        let motion = min(1, speed / 0.5)
-        let timeConstant = 0.14 - 0.08 * motion
-        let result = filtered + (value - filtered).scaled(1 - exp(-interval / timeConstant))
-
-        self.previous = value
-        self.filtered = result
-        self.timestamp = time
-        return result
     }
 }

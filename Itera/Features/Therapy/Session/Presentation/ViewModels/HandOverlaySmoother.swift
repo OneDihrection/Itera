@@ -12,8 +12,8 @@ import Foundation
 /// Each joint passes through three stages:
 /// 1. A median of the last three raw samples removes single-frame detector spikes.
 /// 2. A large jump that the next frame does not confirm is held back for one frame.
-/// 3. A speed-adaptive low-pass filter follows the median trajectory: calm when the hand
-///    is still, responsive when it moves.
+/// 3. A One Euro filter follows the median trajectory: calm when the hand is still,
+///    responsive when it moves.
 ///
 /// A joint that drops out briefly keeps its last drawn position so overlays do not blink.
 /// None of these presentation positions are ever fed into exercise scoring.
@@ -27,9 +27,6 @@ struct HandOverlaySmoother {
     /// Aspect-corrected jump treated as a possible outlier until the next frame confirms it.
     private static let outlierDistance = 0.18
     private static let confirmationDistance = 0.08
-    /// Low-pass cutoff in hertz while still, and the extra cutoff added per unit of speed.
-    private static let restingCutoff = 1.2
-    private static let maximumExtraCutoff = 3.0
 
     // MARK: - State
 
@@ -37,6 +34,7 @@ struct HandOverlaySmoother {
     private var preceding = [HandPoint?](repeating: nil, count: 21)
     private var lastValidTime = [Double?](repeating: nil, count: 21)
     private var filtered = [HandPoint?](repeating: nil, count: 21)
+    private var oneEuro = [OneEuroFilter](repeating: OneEuroFilter(parameters: .handOverlay), count: 21)
     private var last: HandEvidence?
 
     mutating func reset() {
@@ -49,6 +47,7 @@ struct HandOverlaySmoother {
             preceding[index] = nil
             lastValidTime[index] = nil
             filtered[index] = nil
+            oneEuro[index].reset()
         }
 
         last = nil
@@ -127,6 +126,7 @@ struct HandOverlaySmoother {
 
         guard let display = filtered[index], interval > 0 else {
             filtered[index] = target
+            oneEuro[index].restart(at: TherapyPoint(x: target.x * aspect, y: target.y), time: time)
             return target
         }
 
@@ -143,14 +143,15 @@ struct HandOverlaySmoother {
             }
         }
 
-        // Without a previous raw sample this is a reacquired joint: glide at the resting rate.
-        let speed = raw[index] == nil ? 0 : displacement / interval
-        let cutoff = Self.restingCutoff + min(Self.maximumExtraCutoff, max(0, speed - 0.25) * 1.5)
-        let alpha = 1 - exp(-2 * .pi * cutoff * interval)
+        // Without a previous raw sample this is a reacquired joint: glide from where it was drawn.
+        if raw[index] == nil, let validTime = lastValidTime[index] {
+            oneEuro[index].restart(at: TherapyPoint(x: display.x * aspect, y: display.y), time: validTime)
+        }
 
+        let smoothed = oneEuro[index].consume(TherapyPoint(x: target.x * aspect, y: target.y), at: time)
         let result = HandPoint(
-            x: display.x + alpha * (target.x - display.x),
-            y: display.y + alpha * (target.y - display.y),
+            x: smoothed.x / aspect,
+            y: smoothed.y,
             confidence: point.confidence
         )
         filtered[index] = result

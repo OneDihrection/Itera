@@ -184,7 +184,7 @@ struct ArmMovementEngine: BalanceMovementEngine {
     private func bubbleRadius(aspect: Double) -> Double {
         sharedBubbleRadius(aspect: aspect, viewport: viewport)
     }
-    private var smoother = MovementLandmarkSmoother()
+    private var smoother = MovementLandmarkSmoother(minimumConfidence: 0.3, limbMinimumConfidence: 0.1)
     private var torso: TorsoBaseline?
     private var neutrals: [CrossingArm: Neutral] = [:]
     private var capture: Capture?
