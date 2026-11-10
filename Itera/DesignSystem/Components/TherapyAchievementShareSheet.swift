@@ -63,7 +63,7 @@ private struct TMTherapyAchievementShareCard: View {
 
     var body: some View {
         VStack(spacing: 24) {
-            Text(verbatim: "Itera")
+            Text(verbatim: "TeMan")
                 .typography(.title2)
                 .foregroundStyle(TherapyPalette.primary)
             TMTherapyBadge(symbol: symbol, value: value, earned: true, size: 200)

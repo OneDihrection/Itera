@@ -19,22 +19,34 @@ struct TMExerciseExample: View {
     var body: some View {
         ZStack {
             if !failed {
-                TMAnimationViewport(asset: asset, mode: mode, reducedMotion: reducedMotion) { event in
-                    switch event {
-                    case .ready: ready = true
-                    case .failed: failed = true
+                Group {
+                    if asset == .armRaise {
+                        TMArmRaiseVideoView(mode: mode, reducedMotion: reducedMotion) { event in
+                            handle(event)
+                        }
+                    } else {
+                        TMAnimationViewport(asset: asset, mode: mode, reducedMotion: reducedMotion) { event in
+                            handle(event)
+                        }
                     }
                 }
                 .scaleEffect(x: mirrored ? -1 : 1, y: 1)
             }
             if failed {
                 Text("session.animationFallback").padding()
-            } else if !ready {
+            } else if !ready && asset != .armRaise {
                 ProgressView().accessibilityLabel(Text("session.loading"))
             }
         }
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(Text("session.example"))
+    }
+
+    private func handle(_ event: ExerciseAnimationRenderer.Event) {
+        switch event {
+        case .ready: ready = true
+        case .failed: failed = true
+        }
     }
 }
 

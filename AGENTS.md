@@ -12,6 +12,10 @@ Screens may use native SwiftUI layout directly; navigation must use the shared r
 
 Design system components accept values, bindings, content, and actions as needed. They must not depend on feature view models, repositories, or exercise logic.
 
+## 3D animation rendering
+
+Before creating or replacing a rendered 3D exercise animation, follow [Documentation/AnimationRenderingStandard.md](Documentation/AnimationRenderingStandard.md). Keep the existing animation and playback contracts in SYSTEM_DESIGN.md and `Itera/Resources/Animations/README.md`; the rendering standard defines the export and naming requirements for new renders.
+
 ## Project generation
 
 Use the existing Itera project and source directory names. The specification is named project.yml, matching XcodeGen’s default and SYSTEM_DESIGN.md.
