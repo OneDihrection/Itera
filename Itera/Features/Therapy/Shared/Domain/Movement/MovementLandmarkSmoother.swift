@@ -97,7 +97,6 @@ struct MovementLandmarkSmoother {
             height: observation.height,
             personCount: observation.personCount,
             joints: joints,
-            cup: observation.cup,
             subjectEpoch: observation.subjectEpoch
         )
     }

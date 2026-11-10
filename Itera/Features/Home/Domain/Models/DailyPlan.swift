@@ -47,8 +47,6 @@ struct DailyPlanItem: Identifiable, Hashable {
             return "symbol:figure.strengthtraining.traditional"
         case .therapy(.directionalReach):
             return "symbol:hand.point.up.left"
-        case .therapy(.cup):
-            return "symbol:cup.and.saucer.fill"
         case .therapy(.foldTowel):
             return "symbol:square.stack.3d.up"
         case .therapy:

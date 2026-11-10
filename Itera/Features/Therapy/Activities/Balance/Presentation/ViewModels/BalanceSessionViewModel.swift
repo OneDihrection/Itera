@@ -129,7 +129,6 @@ final class BalanceSessionViewModel {
         started = true
         wasIdleTimerDisabled = UIApplication.shared.isIdleTimerDisabled
         UIApplication.shared.isIdleTimerDisabled = true
-        tracking.requireCup(false)
 
         tracking.frames
             .receive(on: DispatchQueue.main)

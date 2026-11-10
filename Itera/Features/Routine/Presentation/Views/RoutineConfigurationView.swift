@@ -154,7 +154,7 @@ private struct TMRoutineExerciseRow: View {
                 Stepper(value: $exercise.rounds, in: 1...10) {
                     Text("routine.rounds \(exercise.rounds)")
                 }
-                Text(exercise.kind == .cup ? "routine.cupDetail" : "routine.reachDetail")
+                Text("routine.reachDetail")
             }
         }
         .padding(.vertical, 8)

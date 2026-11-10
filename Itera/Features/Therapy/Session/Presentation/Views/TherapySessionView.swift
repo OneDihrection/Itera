@@ -160,7 +160,7 @@ struct TMTherapySessionView: View {
     private static let lightKinds: Set<TherapyKind> = [.armRaise, .elbowBend, .directionalReach, .foldTowel]
 
     /// The whole screen is light while a light activity runs. The summary is light only when every
-    /// result is, so a routine mixing in cup or sit-to-stand does not flip themes at the end.
+    /// result is, so a routine mixing in sit-to-stand does not flip themes at the end.
     var usesLightTheme: Bool {
         guard let summary = model.snapshot.summary else {
             return usesLightLayout
@@ -470,8 +470,6 @@ struct TMTherapySessionView: View {
                 case .countdown: return "session.countdown"
                 case .finished: return "session.complete"
                 }
-            case .cup(let value):
-                return value.phase == .practice ? "session.practice" : "session.rehearsal"
             case .timed: return "session.timedPractice"
             case nil: return "session.cameraWait"
             }
@@ -556,8 +554,6 @@ struct TMTherapySessionView: View {
                 case .countdown, .practice: return .green
                 case .finished: return .gray
                 }
-            case .cup(let value):
-                return value.phase == .practice || value.phase == .countdown ? .green : .blue
             case .timed: return .green
             case nil: return .gray
             }
@@ -651,7 +647,6 @@ struct TMTherapySessionView: View {
         case .towel(let value): return value.trackingMessage ?? value.instruction
         case .movement(let value): return value.trackingMessage ?? model.snapshot.instruction
         case .reach(let value): return value.trackingMessage ?? model.snapshot.instruction
-        case .cup(let value): return value.evidenceMessage ?? model.snapshot.instruction
         default: return model.snapshot.instruction
         }
     }
@@ -690,11 +685,6 @@ struct TMTherapySessionView: View {
                     if reach.rehearsal { Text("session.rehearsal") }
                     if reach.seconds > 0 { Text("session.remaining \(reach.seconds)").monospacedDigit() }
                 }
-            case .cup(let cup):
-                Text(cup.phase == .rehearsal ? "session.rehearsal" : "cup.safety")
-                if cup.phase == .rehearsal {
-                    Text(LocalizedStringKey(cupSupportCue(cup.step)))
-                }
             case .timed(let practice):
                 Text("session.practiceSeconds \(Int(practice.seconds)) \(Int(practice.goal))")
             case nil: EmptyView()
@@ -706,14 +696,6 @@ struct TMTherapySessionView: View {
         .typography(.title2)
         .padding(8)
         .background(.black, in: RoundedRectangle(cornerRadius: 12))
-    }
-
-    private func cupSupportCue(_ step: CupStep) -> String {
-        switch step {
-        case .start, .nearFace: return "session.cupHoldSupport"
-        case .transfer: return "session.cupTransferSupport"
-        case .handReturn, .cupReturn: return "session.cupReturnSupport"
-        }
     }
 
     var preparingContent: some View {
@@ -745,11 +727,7 @@ struct TMTherapySessionView: View {
                     Button("session.redo") { model.command(.redo) }
                         .buttonStyle(TMSessionButtonStyle())
                     let reachActivity = model.snapshot.activity?.kind == .directionalReach
-                    let cupRehearsal: Bool = {
-                        guard case .cup(let cup) = model.snapshot.presentation else { return false }
-                        return cup.phase == .rehearsal
-                    }()
-                    if reachActivity || cupRehearsal {
+                    if reachActivity {
                         Button("session.adjustTarget") { model.command(.adjustTarget) }
                             .buttonStyle(TMSessionButtonStyle())
                     }
@@ -832,9 +810,6 @@ struct TMTherapySessionView: View {
                 }
             }
             Section {
-                if summary.results.contains(where: { $0.activity.kind == .cup }) {
-                    Text("session.cupCaution")
-                }
                 Text("session.summaryCaution")
                 if model.saving { ProgressView("session.saving") }
                 Button(summaryExitTitle) { leaveSummary(summary) }
@@ -891,15 +866,6 @@ struct TMTherapySessionView: View {
                     Text(verbatim: "\(result.completedWork) / \(result.activity.goal)")
                 }
             }
-            if let outcomes = result.cupOutcomes {
-                ForEach(Array(outcomes.enumerated()), id: \.offset) { _, milestone in
-                    HStack {
-                        Text("cup.round \(milestone.round)")
-                        Text(LocalizedStringKey("cup.step.\(milestone.step)"))
-                    }
-                    .typography(.caption)
-                }
-            }
             if !result.reachOutcomes.isEmpty {
                 ForEach(Array(result.reachOutcomes.enumerated()), id: \.offset) { _, outcome in
                     HStack {
@@ -938,7 +904,6 @@ struct TMTherapySessionView: View {
         case .armRaise: return "session.armRaise"
         case .elbowBend: return "session.elbowBend"
         case .directionalReach: return "session.directionalReach"
-        case .cup: return "session.cup"
         case .foldTowel: return "session.foldTowel"
         case .sitToStand: return "session.sitToStand"
         }

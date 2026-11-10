@@ -54,21 +54,19 @@ FINGER_KEYS = (
 # Format keys with the values the app passes; FingerActivity holds for 2 seconds.
 FORMAT_KEYS = {"guide.holdDuration %lld": (2,)}
 
-# Arm, reaching, cup and balance sessions: keys spoken through SessionAudioService.
+# Arm, reaching and balance sessions: keys spoken through SessionAudioService.
 BODY_KEYS = (
     "balance.voice.complete", "balance.voice.leftTarget", "balance.voice.returnAndSwitch",
     "balance.voice.returnSameSide", "balance.voice.rightTarget",
-    "cup.cupReturn", "cup.handReturn", "cup.nearFace", "cup.start", "cup.transfer",
     "parity.audioUnavailable", "parity.closingComplete", "parity.closingPartial",
-    "parity.cupOpening", "parity.getReady", "parity.moveComfortably", "parity.reachOpening",
+    "parity.getReady", "parity.moveComfortably", "parity.reachOpening",
     "session.cameraWait", "session.countdown", "session.farther", "session.holdStart",
     "session.holdTarget", "session.moveTarget", "session.reachStart", "session.rest",
     "session.returnStart", "session.timedPractice",
     "session.reachRight", "session.reachLeft", "session.reachUp",
-    # Activity instructions announced by SessionEngine (CupActivity, DirectionalReachActivity,
+    # Activity instructions announced by SessionEngine (DirectionalReachActivity,
     # FoldTowelActivity, SitToStandActivity) and its stage cards.
-    "cup.ambiguous", "cup.evidenceMissing", "cup.trackingLost",
-    "session.assistance.cup", "session.assistance.sitToStand", "session.feedback", "session.skipped",
+    "session.assistance.sitToStand", "session.feedback", "session.skipped",
     "session.reachAcross", "session.reachLeftFar", "session.reachRightFar", "session.reachUpFar",
     "session.reachTrackingLost",
     "sts.holdSeated", "sts.holdStanding", "sts.leanFirst", "sts.leanForward", "sts.sitDown",
@@ -154,7 +152,6 @@ RETAKE_SEEDS = {
     "narration-id-towel.fold": 7104,
     "narration-id-session.complete": 7105,
     "narration-id-balance.voice.leftTarget": 7106,
-    "narration-id-cup.transfer": 7107,
 }
 
 
@@ -175,7 +172,6 @@ SLOW_LINES = {
     "narration-id-towel.fold": 0.70,
     "narration-id-session.complete": 0.76,
     "narration-id-balance.voice.leftTarget": 0.78,
-    "narration-id-cup.transfer": 0.72,
 }
 
 

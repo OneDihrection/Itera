@@ -23,33 +23,6 @@ struct TherapyPoint: Equatable {
     var length: Double { hypot(x, y) }
 }
 
-struct TherapyRectangle {
-    let minX: Double
-    let minY: Double
-    let width: Double
-    let height: Double
-
-    func contains(_ point: TherapyPoint, margin: Double) -> Bool {
-        minX.isFinite && minY.isFinite && width.isFinite && height.isFinite
-            && width > 0 && height > 0
-            && point.x >= minX - margin && point.x <= minX + width + margin
-            && point.y >= minY - margin && point.y <= minY + height + margin
-    }
-}
-
-enum CupTrackingState { case searching, tracking, lost, ambiguous }
-
-struct CupEvidence {
-    let timestamp: Double
-    let generation: UUID
-    let centers: [TherapyPoint]
-    var bounds: [TherapyRectangle] = []
-    var trackID: UUID? = nil
-    var confidence: Float = 0
-    var lastDetectionTimestamp: Double? = nil
-    var state: CupTrackingState = .searching
-}
-
 struct TrackingObservation {
     struct Landmark {
         let position: TherapyPoint
@@ -64,7 +37,6 @@ struct TrackingObservation {
     /// everyone in view, otherwise the number of people detected (0, or several when ambiguous).
     let personCount: Int
     let joints: [BodyJoint: Landmark]
-    var cup: CupEvidence? = nil
     var hand: HandEvidence? = nil
     var workspaceMirrored = false
     /// Changes whenever a different person is locked as the patient, so smoothing can restart.

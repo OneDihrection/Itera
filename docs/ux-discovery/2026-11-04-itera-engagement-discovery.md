@@ -27,7 +27,7 @@ Created by Amelia Putri Aftiana on 04/11/2026.
 - **Problem:** Patients must practise on their own, twice a day, for a duration their doctor sets (up to 90 minutes). The repetitive exercises become boring, and boredom puts adherence, dose and mood at risk. The goal is practice that is fun and interesting but still comfortable for their condition.
 - **Affected users:** Stroke survivors doing home hand/arm rehab (primary), family caregivers who set up and support sessions (secondary), and the therapists who prescribe the dose (stakeholder).
 - **Current alternatives:** Paper exercise sheets or videos (no feedback), clinic sessions (supervised but rare), commercial games (not built for stroke impairments or fatigue).
-- **What Itera already has:** five finger movements plus arm/reach/cup/balance activities, a garden theme where movements move objects into a planter, flowers per completed set, 50 badges, daily streaks, confetti/chime on set completion, an animated rest garden, calm mode, voice commands and a feeling check.
+- **What Itera already has:** five finger movements plus arm/reach/balance activities, a garden theme where movements move objects into a planter, flowers per completed set, 50 badges, daily streaks, confetti/chime on set completion, an animated rest garden, calm mode, voice commands and a feeling check.
 - **Why it still feels boring (diagnosis):**
   1. **The reward loop never changes.** The same object, the same planter and the same chime come every repetition, for 90 minutes. People habituate to a predictable reward quickly.
   2. **The session has no shape.** Sets and rests repeat with no chapters, no midpoint and no visible "how much is left". Fatigue builds and nothing marks progress.

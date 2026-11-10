@@ -110,29 +110,6 @@ enum SessionPresentationFixtures {
         reachLoss.instruction = lostReachState.instruction
         fixtures.append(Fixture(id: "reach-tracking-loss-and-skipped-step", snapshot: reachLoss))
 
-        for phase in [CupPhase.rehearsal, .countdown, .practice, .finished] {
-            for step in [CupStep.start, .nearFace, .handReturn, .transfer, .cupReturn] {
-                var value = base(SessionActivity(kind: .cup, side: .left, goal: 1))
-                var state = CupSnapshot()
-                state.phase = phase
-                state.step = step
-                state.guide = guide(progress: 0.5, capturing: phase == .rehearsal)
-                value.presentation = .cup(state)
-                value.instruction = ["cup.start", "cup.nearFace", "cup.handReturn", "cup.transfer", "cup.cupReturn"][step.rawValue]
-                fixtures.append(Fixture(id: "cup-\(phase)-\(step)", snapshot: value))
-            }
-        }
-        var cupEvidenceLoss = base(SessionActivity(kind: .cup, side: .left, goal: 3))
-        var lostCupState = CupSnapshot()
-        lostCupState.phase = .practice
-        lostCupState.step = .transfer
-        lostCupState.count = 1
-        lostCupState.evidenceMessage = "cup.evidenceMissing"
-        lostCupState.guide = guide(progress: 0.25)
-        cupEvidenceLoss.presentation = .cup(lostCupState)
-        cupEvidenceLoss.instruction = lostCupState.instruction
-        fixtures.append(Fixture(id: "cup-evidence-loss", snapshot: cupEvidenceLoss))
-
         for stage in [SessionSnapshot.Stage.preparationWait, .feedback, .rest, .preparing, .summary] {
             var value = base(movement)
             value.stage = stage
@@ -159,7 +136,6 @@ enum SessionPresentationFixtures {
 
     private static func assistanceKey(for kind: TherapyKind) -> String? {
         switch kind {
-        case .cup: return "session.assistance.cup"
         case .sitToStand: return "session.assistance.sitToStand"
         case .armRaise, .elbowBend, .directionalReach, .foldTowel: return nil
         }
@@ -176,7 +152,6 @@ enum SessionPresentationFixtures {
     private static func summary(stopped: Bool = false, interrupted: Bool = false) -> SessionSnapshot {
         let now = Date()
         let reach = SessionActivity(kind: .directionalReach, side: .left, goal: 3)
-        let cup = SessionActivity(kind: .cup, side: .right, goal: 3)
         let reachResult = SessionActivityResult(
             executionID: UUID(),
             activity: reach,
@@ -188,13 +163,6 @@ enum SessionPresentationFixtures {
             ],
             skippedReachSteps: [ReachSkippedStep(round: 3, direction: 2, phase: .practice)]
         )
-        let cupResult = SessionActivityResult(
-            executionID: UUID(),
-            activity: cup,
-            outcome: stopped ? .interrupted : .completed,
-            completedWork: 1,
-            cupOutcomes: [CupMilestone(round: 1, step: CupStep.start.rawValue)]
-        )
         var value = base(reach)
         value.stage = .summary
         value.summary = SessionSummary(
@@ -204,7 +172,7 @@ enum SessionPresentationFixtures {
             endedAt: now,
             stopped: stopped,
             interrupted: interrupted,
-            results: stopped ? [reachResult, cupResult] : [reachResult]
+            results: [reachResult]
         )
         return value
     }

@@ -121,7 +121,6 @@ private struct TMHomeContent: View {
         case .elbowBend: return "figure.strengthtraining.traditional"
         case .directionalReach: return "hand.point.up.left"
         case .foldTowel: return "square.stack.3d.up"
-        case .cup: return "cup.and.saucer.fill"
         case .sitToStand: return "figure.stand"
         }
     }

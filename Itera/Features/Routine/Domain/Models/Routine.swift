@@ -16,7 +16,6 @@ enum TherapyKind: String, Codable, CaseIterable {
     case armRaise
     case elbowBend
     case directionalReach
-    case cup
     /// No longer offered in routines: Trunk Control now runs on the Balancing screens. The case
     /// stays so sessions and routines saved earlier still decode.
     case sitToStand
@@ -26,7 +25,7 @@ enum TherapyKind: String, Codable, CaseIterable {
         switch self {
         case .foldTowel: return .taskOriented
         case .sitToStand: return nil
-        case .armRaise, .elbowBend, .directionalReach, .cup: return .arm
+        case .armRaise, .elbowBend, .directionalReach: return .arm
         }
     }
 }
