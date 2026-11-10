@@ -112,6 +112,12 @@ struct CrossMidlineBalanceEngine: BalanceMovementEngine {
     }
 
     private(set) var snapshot = BalanceSnapshot()
+    var viewport: TherapyViewport?
+
+    /// The shared bubble radius in normalized image height for the current camera frame.
+    private func bubbleRadius(aspect: Double) -> Double {
+        sharedBubbleRadius(aspect: aspect, viewport: viewport)
+    }
     private var baseline: Baseline?
     private var baselineCapture: BaselineCapture?
     private var generation: UUID?
@@ -128,15 +134,15 @@ struct CrossMidlineBalanceEngine: BalanceMovementEngine {
     private var jerkSquareSum = 0.0
     private var jerkSampleCount = 0
     private var cachedJoints: [BodyJoint: CachedJoint] = [:]
+    /// Time-aware One Euro smoothing shared with the other body exercises; the cache stores its output.
+    private var landmarkSmoother = MovementLandmarkSmoother(minimumConfidence: 0.20)
     private var lastTorsoAnchor: TorsoAnchor?
 
     private let baselineDuration = 1.0
     private let targetHoldDuration: Double
     private let returnHoldDuration = 5.0
-    private let targetRadiusRatio = 0.34
-    private let targetExitRadiusRatio = 0.40
-    private let returnRadiusRatio = 0.38
-    private let returnExitRadiusRatio = 0.44
+    /// A hold that has begun tolerates a slightly larger circle than the one drawn.
+    private let exitRadiusScale = 1.2
     private let leanThresholdDegrees = 18.0
     private let lateralShiftThreshold = 0.40
     private let rotationThreshold = 0.40
@@ -180,7 +186,7 @@ struct CrossMidlineBalanceEngine: BalanceMovementEngine {
             clearMotionEvidence()
         }
 
-        updateJointCache(from: frame)
+        updateJointCache(from: frame, smoothed: landmarkSmoother.consume(frame))
         guard let geometry = geometry(from: frame) else {
             snapshot.phase = baseline == nil ? .findingBody : snapshot.phase
             snapshot.instructionKey = "balance.tracking"
@@ -258,6 +264,7 @@ struct CrossMidlineBalanceEngine: BalanceMovementEngine {
         snapshot.calibrationProgress = 0
         snapshot.overlay = nil
         cachedJoints.removeAll()
+        landmarkSmoother.reset()
         lastOverlayTimestamp = nil
         clearTransientEvidence()
     }
@@ -425,12 +432,8 @@ struct CrossMidlineBalanceEngine: BalanceMovementEngine {
             let home = homeWristPositions[snapshot.activeArm]
                 ?? fallbackHomePosition(for: snapshot.activeArm, geometry: geometry)
             homeWristPositions[snapshot.activeArm] = home
-            let returnRadius = max(
-                0.06,
-                geometry.shoulderWidth * (!returnHold.isHolding
-                    ? returnRadiusRatio
-                    : returnExitRadiusRatio)
-            )
+            let returnRadius = bubbleRadius(aspect: frame.aspect)
+                * (returnHold.isHolding ? exitRadiusScale : 1)
             let isOnStartingSide = crossedMidline(
                 wrist: wrist,
                 target: ownShoulder,
@@ -468,12 +471,8 @@ struct CrossMidlineBalanceEngine: BalanceMovementEngine {
         updatePath(position: wrist, time: frame.timestamp, scale: geometry.shoulderWidth)
 
         let proximity = (wrist - target).length
-        let targetRadius = max(
-            0.055,
-            geometry.shoulderWidth * (!targetHold.isHolding
-                ? targetRadiusRatio
-                : targetExitRadiusRatio)
-        )
+        let targetRadius = bubbleRadius(aspect: frame.aspect)
+            * (targetHold.isHolding ? exitRadiusScale : 1)
         // The visible, body-anchored target is authoritative for contact. It is already
         // centered on the opposite shoulder; requiring a second midline predicate here
         // can reject a wrist that is visibly inside the circle when the torso axis jitters.
@@ -788,7 +787,9 @@ struct CrossMidlineBalanceEngine: BalanceMovementEngine {
 
     private var lastOverlayTimestamp: Double?
 
-    private mutating func updateJointCache(from frame: TrackingObservation) {
+    /// `frame` is the raw observation, used to judge impossible jumps; the cache stores the
+    /// matching point from `smoothed`.
+    private mutating func updateJointCache(from frame: TrackingObservation, smoothed: TrackingObservation) {
         guard frame.personCount == 1 else { return }
         let observed = Dictionary(uniqueKeysWithValues: BodyJoint.allCases.compactMap { joint in
             frame.point(joint, minimumConfidence: balanceConfidence).map { (joint, $0) }
@@ -797,13 +798,14 @@ struct CrossMidlineBalanceEngine: BalanceMovementEngine {
 
         let referenceScale = shoulderScale(from: observed)
         for (joint, current) in observed {
+            let stored = smoothed.point(joint, minimumConfidence: balanceConfidence) ?? current
             guard let previous = cachedJoints[joint] else {
-                cachedJoints[joint] = CachedJoint(point: current, timestamp: frame.timestamp)
+                cachedJoints[joint] = CachedJoint(point: stored, timestamp: frame.timestamp)
                 continue
             }
             let elapsed = frame.timestamp - previous.timestamp
             guard elapsed > 0, elapsed <= overlayGracePeriod else {
-                cachedJoints[joint] = CachedJoint(point: current, timestamp: frame.timestamp)
+                cachedJoints[joint] = CachedJoint(point: stored, timestamp: frame.timestamp)
                 continue
             }
 
@@ -816,16 +818,7 @@ struct CrossMidlineBalanceEngine: BalanceMovementEngine {
                 continue
             }
 
-            let confidence = Double(frame.joints[joint]?.confidence ?? balanceConfidence)
-            let weight = adaptiveSmoothingWeight(
-                for: joint,
-                displacement: displacement,
-                elapsed: elapsed,
-                scale: referenceScale,
-                confidence: confidence
-            )
-            let smoothed = previous.point.scaled(1 - weight) + current.scaled(weight)
-            cachedJoints[joint] = CachedJoint(point: smoothed, timestamp: frame.timestamp)
+            cachedJoints[joint] = CachedJoint(point: stored, timestamp: frame.timestamp)
         }
         cachedJoints = cachedJoints.filter {
             frame.timestamp - $0.value.timestamp <= overlayGracePeriod
@@ -882,28 +875,6 @@ struct CrossMidlineBalanceEngine: BalanceMovementEngine {
         return 0.25
     }
 
-    private func adaptiveSmoothingWeight(
-        for joint: BodyJoint,
-        displacement: Double,
-        elapsed: Double,
-        scale: Double,
-        confidence: Double
-    ) -> Double {
-        let normalizedSpeed = displacement / max(0.001, scale * elapsed)
-        let speedResponse = min(1, normalizedSpeed / 2.2)
-        let range: ClosedRange<Double> = switch joint {
-        case .nose, .neck, .root, .leftShoulder, .rightShoulder, .leftHip, .rightHip:
-            0.18...0.72
-        case .leftElbow, .rightElbow, .leftWrist, .rightWrist,
-            .leftKnee, .rightKnee, .leftAnkle, .rightAnkle:
-            0.30...0.88
-        }
-        let motionWeight = range.lowerBound
-            + (range.upperBound - range.lowerBound) * speedResponse
-        let confidenceWeight = 0.65 + min(1, max(0, confidence)) * 0.35
-        return min(range.upperBound, max(range.lowerBound, motionWeight * confidenceWeight))
-    }
-
     private func maximumFrameDisplacement(for joint: BodyJoint) -> Double {
         switch joint {
         case .nose, .neck, .root, .leftShoulder, .rightShoulder, .leftHip, .rightHip:
@@ -941,9 +912,7 @@ struct CrossMidlineBalanceEngine: BalanceMovementEngine {
             wrist: point(snapshot.activeArm.wrist, in: geometry),
             target: target,
             isReturnTarget: isReturnTarget,
-            targetRadius: isReturnTarget
-                ? max(0.06, geometry.shoulderWidth * returnRadiusRatio)
-                : max(0.055, geometry.shoulderWidth * targetRadiusRatio),
+            targetRadius: bubbleRadius(aspect: frame.aspect),
             crossedMidline: crossed,
             targetProgress: progress,
             holdSecondsRemaining: holdSecondsRemaining(

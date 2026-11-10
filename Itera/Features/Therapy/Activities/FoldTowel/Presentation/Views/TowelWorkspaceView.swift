@@ -21,8 +21,10 @@ struct TMTowelWorkspaceView: View {
     var showsHeader = true
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
+    /// A critically damped spring retargets from the current value when a new frame arrives, so a
+    /// fast fold (or a skipped frame) glides to the new position instead of snapping.
     private var motion: Animation? {
-        interpolates && !reduceMotion ? .linear(duration: 0.05) : nil
+        interpolates && !reduceMotion ? .interactiveSpring(response: 0.16, dampingFraction: 1, blendDuration: 0.1) : nil
     }
 
     var body: some View {

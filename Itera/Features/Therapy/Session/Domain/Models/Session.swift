@@ -35,7 +35,6 @@ struct SessionActivityResult: Codable, Equatable {
     let completedWork: Int
     var reachOutcomes: [ReachOutcome] = []
     var skippedReachSteps: [ReachSkippedStep]? = nil
-    var cupOutcomes: [CupMilestone]? = nil
     var practiceSeconds: Double = 0
     /// Absent in summaries saved before per-exercise sets were introduced.
     var setNumber: Int? = nil

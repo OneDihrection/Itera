@@ -54,7 +54,7 @@ struct TMFingerSessionView: View {
             endTitle: "session.endAction",
             pauseDisabled: model.paused,
             calibrating: model.isCalibrating,
-            demoWidthFraction: 0.76,
+            demoWidthFraction: 0.94,
             onPause: { model.handleCommand(.pause) },
             onEnd: {
                 endRequested = true

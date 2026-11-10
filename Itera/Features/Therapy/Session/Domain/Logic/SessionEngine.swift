@@ -195,7 +195,6 @@ struct SessionEngine {
         case .armRaise: activity = ArmRaiseActivity(configuration: configuration)
         case .elbowBend: activity = ElbowBendActivity(configuration: configuration)
         case .directionalReach: activity = DirectionalReachActivity(configuration: configuration)
-        case .cup: activity = CupActivity(configuration: configuration)
         case .sitToStand:
             // Kept only so routines and sessions saved before Trunk Control moved to the
             // Balancing screens still decode; nothing offers it any more.
@@ -581,11 +580,6 @@ struct SessionEngine {
         announce(snapshot.instruction, timed: false)
     }
 
-    private var cupOutcomes: [CupMilestone]? {
-        if case .cup(let value) = activity?.presentation { return value.outcomes }
-        return nil
-    }
-
     private var practicedSeconds: Double {
         switch activity?.presentation {
         case .reach(let value): return value.practiceSeconds
@@ -612,8 +606,7 @@ struct SessionEngine {
             execution: progress.executionID, outcome: outcome,
             completedWork: presentation?.count ?? 0, reachOutcomes: reach?.outcomes ?? [],
             skippedReachSteps: reach?.caregiverSkippedSteps,
-            practiceSeconds: practicedSeconds,
-            cupOutcomes: cupOutcomes)
+            practiceSeconds: practicedSeconds)
         effects.append(.checkpoint(checkpoint))
         snapshot.stage = .feedback
         feedbackEnteredAt = now
@@ -670,8 +663,7 @@ struct SessionEngine {
                     completedWork: activity?.presentation.count ?? 0,
                     reachOutcomes: reach?.outcomes ?? [],
                     skippedReachSteps: reach?.caregiverSkippedSteps,
-                    practiceSeconds: practicedSeconds,
-                    cupOutcomes: cupOutcomes
+                    practiceSeconds: practicedSeconds
                 )
             }
             progress.finalize(stopped: true, date: Date())
@@ -712,7 +704,6 @@ struct SessionEngine {
     /// Help text exists only for the dark-layout therapies; the light-layout ones show no Help.
     private var currentAssistanceKey: String? {
         switch progress.currentActivity?.kind {
-        case .cup: return "session.assistance.cup"
         case .sitToStand: return "session.assistance.sitToStand"
         case .armRaise, .elbowBend, .directionalReach, .foldTowel, nil: return nil
         }

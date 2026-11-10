@@ -87,6 +87,8 @@ enum RotationDirection {
 /// What the Balancing view model needs from a movement engine.
 protocol BalanceMovementEngine {
     var snapshot: BalanceSnapshot { get }
+    /// The camera frame in points, so bubbles keep the shared on-screen size.
+    var viewport: TherapyViewport? { get set }
     mutating func consume(_ frame: TrackingObservation, scoringEnabled: Bool)
     mutating func invalidateCalibration()
     mutating func restart()

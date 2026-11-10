@@ -16,7 +16,7 @@ This is an implementation record, not a claim of WCAG or COGA conformance.
 | Prevent mistakes | Tracking acceptance and freshness checks remain immediate. Presentation delays never allow repetitions from missing evidence. |
 | Maintain attention | Calm display removes decorative rest and celebration motion. Button sounds can be disabled separately. System Reduce Motion remains respected. |
 | Reduce memory demands | Temporary camera waits preserve the current stage, example and controls instead of replacing them with a recovery screen. The timer remains owned by the engine. |
-| Help and support | Repeat instruction and explicit resume remain available (Help only for cup and sit-to-stand); permission and voice failures retain their recovery controls. |
+| Help and support | Repeat instruction and explicit resume remain available (Help only for sit-to-stand); permission and voice failures retain their recovery controls. |
 | Adapt to the user | Comfort choices persist. Full-screen control layout stacks at accessibility text sizes. |
 
 ## Tracking presentation
@@ -152,7 +152,7 @@ Verification: a temporary replay reproduced the failed-first-load/no-retry case 
 
 ## Merge with main (5 November 2026)
 
-Integrated main into withoutgamification while retaining the monochrome layouts, music selection/audibility recovery, recorded narration and bystander/interruptible-hold behavior. Main's forearm range assessment, other exercise categories, task-oriented towel folding/history, cup-only tracking, set coordination and asynchronous audio input remain available. The retained Home layout exposes the additional categories; the shared finger screen includes the range-result confirmation and measurement progress. String Catalog entries were merged by key against the common ancestor, preserving main-only edits and local-only copy.
+Integrated main into withoutgamification while retaining the monochrome layouts, music selection/audibility recovery, recorded narration and bystander/interruptible-hold behavior. Main's forearm range assessment, other exercise categories, task-oriented towel folding/history, set coordination and asynchronous audio input remain available. The retained Home layout exposes the additional categories; the shared finger screen includes the range-result confirmation and measurement progress. String Catalog entries were merged by key against the common ancestor, preserving main-only edits and local-only copy.
 
 The body audio scheduler retains its bounded counts/latest-prompt policy and intentional cancellation events. Recorded-key cues keep their key through the pending queue, with recorded playback or best-installed-voice fallback; music remains owned by the same service. Camera capture/preview use semantic landscape orientation on iPad and main's unrotated path on Catalyst. Main's three-second movement calibration holds retain interruptible evidence accounting.
 

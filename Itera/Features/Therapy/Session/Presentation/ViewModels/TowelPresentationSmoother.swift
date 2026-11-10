@@ -22,18 +22,17 @@ struct TowelPresentationSmoother {
     mutating func consume(_ raw: TowelSnapshot, time: Double, generation: UUID) -> TowelSnapshot {
         interpolates = false
         if let previous, let lastTime {
-            // The cursor eases between consecutive fresh frames of the same grab. Authoritative
-            // resets (a new fold or repetition, lost or recovering evidence, a cancelled fold)
-            // snap instead.
+            // The cursor and fold ease between consecutive fresh frames of the same grab, including
+            // the jump to the destination and an early release. Authoritative resets (a new fold
+            // or repetition, lost or recovering evidence) snap instead.
             interpolates = self.generation == generation
-                && time > lastTime && time - lastTime <= 0.15
+                && time > lastTime && time - lastTime <= 0.3
                 && previous.phase == raw.phase && raw.phase == .practice
                 && previous.foldIndex == raw.foldIndex && previous.count == raw.count
                 && previous.grabID == raw.grabID
                 && raw.interaction != .recovering && previous.interaction != .recovering
                 && raw.trackingMessage == nil && previous.trackingMessage == nil
                 && raw.handPosition != nil && previous.handPosition != nil
-                && !(raw.foldProgress == 0 && previous.foldProgress > 0)
         }
         previous = raw
         lastTime = time

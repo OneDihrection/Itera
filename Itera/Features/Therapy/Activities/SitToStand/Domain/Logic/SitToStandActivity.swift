@@ -26,7 +26,7 @@ struct SitToStandActivity {
     private let goal: Int
     private var snapshot = SitToStandSnapshot()
     private var hold = StableHold()
-    private var landmarkSmoother = MovementLandmarkSmoother()
+    private var landmarkSmoother = MovementLandmarkSmoother(minimumConfidence: 0.3)
     private var seated: Pose?
     private var standing: Pose?
     /// How far, in degrees, the patient leaned forward of their seated pose during the trial.
