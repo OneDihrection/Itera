@@ -575,6 +575,7 @@
       }
     },
     "action.repeat" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -2046,6 +2047,7 @@
       }
     },
     "balance.voiceListening" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -2062,6 +2064,7 @@
       }
     },
     "balance.voiceTouchFallback" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -7207,7 +7210,40 @@
         }
       }
     },
+    "progress.actual" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Actual"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Realisasi"
+          }
+        }
+      }
+    },
+    "progress.assistanceUnrecorded" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Assistance: Not recorded"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bantuan: Belum dicatat"
+          }
+        }
+      }
+    },
     "progress.badgeCount %lld" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -7224,6 +7260,7 @@
       }
     },
     "progress.badgeEarned %@" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -7255,7 +7292,24 @@
         }
       }
     },
+    "progress.cancelHistoryDeletion" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cancel"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Batal"
+          }
+        }
+      }
+    },
     "progress.challenge.sessions" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -7272,6 +7326,7 @@
       }
     },
     "progress.challengeActive" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -7288,6 +7343,7 @@
       }
     },
     "progress.challengeProgress %lld %lld" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -7304,6 +7360,7 @@
       }
     },
     "progress.challenges" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -7320,6 +7377,7 @@
       }
     },
     "progress.challengeTarget %@" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -7331,6 +7389,54 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Target: Lencana %@"
+          }
+        }
+      }
+    },
+    "progress.chartHeadline" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Repetitions over the last 4 weeks"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Jumlah pengulangan dalam 4 minggu"
+          }
+        }
+      }
+    },
+    "progress.chartIncreased" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Weekly repetitions increased over the last 4 weeks"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dalam 4 minggu, jumlah pengulangan per minggu bertambah"
+          }
+        }
+      }
+    },
+    "progress.chartValue %lld" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld repetitions"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld pengulangan"
           }
         }
       }
@@ -7351,6 +7457,22 @@
         }
       }
     },
+    "progress.currentWeekNote" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This week is still in progress"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Minggu ini masih berjalan"
+          }
+        }
+      }
+    },
     "progress.dayEmpty" : {
       "localizations" : {
         "en" : {
@@ -7367,6 +7489,22 @@
         }
       }
     },
+    "progress.dayPartial %lld" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Unfinished sessions: %lld"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld sesi belum selesai"
+          }
+        }
+      }
+    },
     "progress.daySessions %lld" : {
       "localizations" : {
         "en" : {
@@ -7379,6 +7517,38 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "%lld sesi selesai"
+          }
+        }
+      }
+    },
+    "progress.deleteHistory" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Delete practice history"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hapus riwayat latihan"
+          }
+        }
+      }
+    },
+    "progress.deleteHistoryMessage" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Delete all practice sessions listed here? This cannot be undone."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hapus semua riwayat latihan di halaman ini? Riwayat yang dihapus tidak bisa dikembalikan."
           }
         }
       }
@@ -7447,7 +7617,40 @@
         }
       }
     },
+    "progress.exercisesDone %lld %lld" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld of %lld"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld dari %lld"
+          }
+        }
+      }
+    },
+    "progress.exerciseUnit" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "exercises"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "latihan"
+          }
+        }
+      }
+    },
     "progress.feeling" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -7459,6 +7662,38 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Perasaan setelah latihan:"
+          }
+        }
+      }
+    },
+    "progress.lastWeek" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Last week"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Minggu lalu"
+          }
+        }
+      }
+    },
+    "progress.latestThisWeek" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Latest session this week"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sesi terakhir minggu ini"
           }
         }
       }
@@ -7479,6 +7714,22 @@
         }
       }
     },
+    "progress.minuteUnit" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "minutes"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "menit"
+          }
+        }
+      }
+    },
     "progress.nextWeek" : {
       "localizations" : {
         "en" : {
@@ -7491,6 +7742,38 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Minggu berikutnya"
+          }
+        }
+      }
+    },
+    "progress.noSessionThisWeek" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No sessions recorded this week"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Belum ada sesi tercatat minggu ini"
+          }
+        }
+      }
+    },
+    "progress.notDone" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Not done"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tidak dilakukan"
           }
         }
       }
@@ -7580,6 +7863,54 @@
         }
       }
     },
+    "progress.painRecorded" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pain: Recorded"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nyeri/keluhan: Tercatat"
+          }
+        }
+      }
+    },
+    "progress.painUnrecorded" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pain: Not recorded"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nyeri/keluhan: Belum dicatat"
+          }
+        }
+      }
+    },
+    "progress.partial" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Partially done"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Selesai sebagian"
+          }
+        }
+      }
+    },
     "progress.plan" : {
       "localizations" : {
         "en" : {
@@ -7640,6 +7971,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Ulangan per hari"
+          }
+        }
+      }
+    },
+    "progress.repetitionUnit" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "repetitions"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "pengulangan"
           }
         }
       }
@@ -7708,7 +8055,40 @@
         }
       }
     },
+    "progress.thisWeek" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This week"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Minggu ini"
+          }
+        }
+      }
+    },
+    "progress.threeWeeksAgo" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "3 weeks ago"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "3 mgg lalu"
+          }
+        }
+      }
+    },
     "progress.title" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -7725,6 +8105,7 @@
       }
     },
     "progress.titleName %@" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -7736,6 +8117,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Progres %@"
+          }
+        }
+      }
+    },
+    "progress.twoWeeksAgo" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "2 weeks ago"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "2 mgg lalu"
           }
         }
       }
@@ -7784,6 +8181,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "%lld sesi • %lld repetisi • %lld menit"
+          }
+        }
+      }
+    },
+    "progress.weeklyChart" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Weekly repetitions chart"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Grafik pengulangan mingguan"
           }
         }
       }
@@ -8636,6 +9049,7 @@
       }
     },
     "reports.empty" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -8733,18 +9147,18 @@
         }
       }
     },
-    "rest.breath.inhale" : {
+    "rest.breath.comfort" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Breathe in slowly"
+            "value" : "Breathe comfortably"
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Tarik napas perlahan"
+            "value" : "Bernapas senyamannya"
           }
         }
       }
@@ -8765,18 +9179,18 @@
         }
       }
     },
-    "rest.breath.comfort" : {
+    "rest.breath.inhale" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Breathe comfortably"
+            "value" : "Breathe in slowly"
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Bernapas senyamannya"
+            "value" : "Tarik napas perlahan"
           }
         }
       }
@@ -11793,6 +12207,7 @@
       }
     },
     "session.preparing" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -14179,6 +14594,23 @@
         }
       }
     },
+    "speak.recovery.position" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Place your hand inside the camera view."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Posisikan tangan, di dalam bingkai kamera."
+          }
+        }
+      }
+    },
     "speak.session.countdown" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -16002,6 +16434,7 @@
       }
     },
     "voice.off" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -16018,6 +16451,7 @@
       }
     },
     "voice.on" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {

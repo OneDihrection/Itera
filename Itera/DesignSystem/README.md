@@ -84,7 +84,7 @@ Top-level navigation uses the system `TabView` (a top tab bar on iPadOS 18, a bo
 
 Arm raise, elbow bend, directional reach and fold towel use the finger-exercise look instead of the black session screen (`TMTherapySessionView` chooses it by activity kind, never by stage, so the preview stays mounted). Practice now uses `TMTherapyExerciseLiveLayout` (see "Shared exercise screens"); the earlier header, 380-point side column and `TMTherapyRepetitionPanel` are replaced. Instruction, demonstration and countdowns are light pages over the mounted preview; countdowns use `TMTherapyCountdownDial`.
 
-`TMTherapyCalmLoader(title:)` is the quiet startup state (breathing circle and a single calm line; static under Reduce Motion) shown while the camera gets ready. The light stage pages force the light color scheme, so they stay light in system dark mode.
+The exercise layout stays visible while the camera gets ready. The light stage pages force the light color scheme, so they stay light in system dark mode.
 
 Compatible additions: `TMMeasuredInstructionText(textColor:)` defaults to white for the dark screens, and light pages pass `.label`. `TMSessionPanel(light:)` draws the grey `panel` instead of a tinted black panel. The 3D examples render on `TherapyPalette.mediaBackground`, the studio grey of the finger demonstrations. The blue and yellow guidance colors use the existing `calmUnderlay` where drawn over camera video.
 
@@ -108,10 +108,11 @@ Components/TherapyExerciseScreens.swift owns the five screens every exercise sha
 
 - `TMTherapyExerciseHeading`: grey "Latihan N" eyebrow over a bold centred title.
 - `TMTherapyTargetStat` ("8 Repetisi", rust number) and `TMTherapyProgressStat` ("Repetisi 3 / 8"), laid out with `TMTherapyStatRow` and `TMTherapyStatDivider`.
-- `TMTherapyInstructionBubble`: the white cue bubble at the bottom of the camera.
+- `TMTherapyInstructionBubble`: a floating white cue bubble or an attached black caption with white text. The finger session clips its caption to the visible video bounds so it follows the rounded bottom corners.
 - `TMTherapyBackButton`: the rust "‹ Kembali" text action.
 - `TMTherapyExerciseIntro`: heading, a media slot (the exercise's own demonstration), focus text, a target slot, the safety note and the prominent start.
 - `TMTherapyExerciseLiveLayout`: heading with trailing accessories, the camera slot with the cue bubble, the "Ikuti gerakan ini" demonstration column, repetition and set counters, and Pause (`TMTherapyButton(pill:brand:)`) and End. The camera keeps one position, so callers layer stage pages and dialogs over it without remounting the preview.
+- The attached video layout uses a centered heading, enlarged counters, taller controls, and a black caption aligned to the visible video. Finger, Balancing and light guided sessions share these settings. `TMTherapyVideoFooter` also hosts the guided calibration cards that require measured reading.
 - `TMTherapyPauseDialog`: a frosted backdrop with the paused card (set, title, practice time mm:ss, end with an inline confirmation, resume) and an `Extra` slot for caregiver recovery. `confirmingEndInitially` opens it on the confirmation when it came from an End button. It hugs its content and scrolls only when it does not fit.
 - `TMTherapySetSummary` with `TherapySetResult`: the set-done and all-done page (rust check, headline, message, results panel, total, optional rest line and actions).
 - `TMTherapyDemoCaption`: the "Ikuti gerakan ini" / paused pill drawn by the Balancing demonstrations, now one shared view. The `therapyDemoCaptionHidden` environment value hides it where a heading already says it; the intro and live layouts set it.

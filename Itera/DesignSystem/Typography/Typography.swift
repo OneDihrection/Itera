@@ -210,9 +210,10 @@ enum AppFont {
         appearance.largeTitleTextAttributes = [.font: largeTitle]
     }
 
-    static func uiFont(size: CGFloat) -> UIFont {
-        UIFont(name: AppFontWeight.bold.postScriptName(), size: size)
-            ?? UIFont.systemFont(ofSize: size, weight: .bold)
+    static func uiFont(size: CGFloat, weight: AppFontWeight = .bold) -> UIFont {
+        let name = weight.postScriptName()
+        let fallbackWeight: UIFont.Weight = name == AppFontWeight.bold.postScriptName() ? .bold : .regular
+        return UIFont(name: name, size: size) ?? UIFont.systemFont(ofSize: size, weight: fallbackWeight)
     }
 
     /// Returns a PlusJakartaSans font configured with weight, size, optional italic style, and Dynamic Type scaling.

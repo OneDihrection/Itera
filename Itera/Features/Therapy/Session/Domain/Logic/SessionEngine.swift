@@ -574,9 +574,8 @@ struct SessionEngine {
         evidenceBoundary = now
         snapshot.instruction = activity?.presentation.instruction ?? "session.holdStart"
         if case .towel = activity?.presentation {
-            guidance = nil
-            speechTimeout = nil
-            effects.append(.cancelSpeech)
+            // The towel activity already has a countdown while its demonstration is on screen.
+            announcePracticeCountdown()
             return
         }
         announce(snapshot.instruction, timed: false)

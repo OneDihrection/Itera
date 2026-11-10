@@ -15,6 +15,7 @@ struct TMTherapySessionView: View {
     /// Read from UIAccessibility instead of the environment key, which traps on Mac Catalyst.
     @State var voiceOver = UIAccessibility.isVoiceOverRunning
     @ScaledMetric(relativeTo: .largeTitle) var instructionSize = 96.0
+    @ScaledMetric(relativeTo: .title3) var calibrationCaptionSize = TMTherapyInstructionBubble.baseFontSize
     @Environment(PermissionManager.self) var permissions
     @Environment(NavigationRouter.self) var router
     @Environment(AppDependencies.self) var dependencies
@@ -26,6 +27,7 @@ struct TMTherapySessionView: View {
     @State var restTotal = 0.0
     /// Set when End was tapped on the live screen, so the pause dialog opens on its confirmation.
     @State var endRequested = false
+    @State var videoBounds: CGRect?
     @State var model: TherapySessionViewModel
 
     private var presentationOnly = false
@@ -121,7 +123,7 @@ struct TMTherapySessionView: View {
         .foregroundStyle(usesLightTheme ? TherapyPalette.ink : Color.white)
         .toolbar(model.snapshot.summary == nil || usesLightTheme ? .hidden : .visible, for: .navigationBar)
         .navigationTitle(model.snapshot.summary == nil ? "" : "session.summaryTitle")
-        .statusBarHidden(model.snapshot.summary == nil)
+        .statusBarHidden(!usesLightLayout && model.snapshot.summary == nil)
         .navigationBarBackButtonHidden(model.snapshot.summary == nil || usesLightTheme)
         .task {
             if !presentationOnly { await model.start(permissions: permissions) }
@@ -168,12 +170,22 @@ struct TMTherapySessionView: View {
     }
 
     var hasFullScreenPresentation: Bool {
-        if usesLightLayout, isCalibrationLayout, !model.cameraDenied,
-           model.voiceReady || model.isStarting {
+        if model.cameraDenied || (model.snapshot.paused && !usesLightLayout) {
+            return true
+        }
+        if model.isStarting {
             return false
         }
-        return model.cameraDenied || !model.voiceReady || (model.snapshot.paused && !usesLightLayout)
-            || model.snapshot.stage == .preparing || model.snapshot.stage == .instruction
+        if !model.voiceReady {
+            return true
+        }
+        if model.snapshot.stage == .preparing {
+            return model.failure != nil || showsCameraRecovery
+        }
+        if usesLightLayout, isCalibrationLayout {
+            return false
+        }
+        return model.snapshot.stage == .instruction
             || model.snapshot.stage == .demonstration || model.snapshot.stage == .preparationWait || model.snapshot.stage == .rest
             || model.snapshot.stage == .feedback
             || model.snapshot.presentation?.countdownSeconds != nil
@@ -196,6 +208,7 @@ struct TMTherapySessionView: View {
                 }
             )
         } else if usesLightLayout,
+           model.snapshot.stage == .activity,
            let seconds = model.snapshot.presentation?.countdownSeconds,
            model.snapshot.instruction != "calibration.complete",
            !model.cameraDenied, model.voiceReady {
@@ -205,8 +218,6 @@ struct TMTherapySessionView: View {
                 stop: { requestEnd() }
             )
             .ignoresSafeArea()
-        } else if usesLightLayout, isCalibrationLayout, !model.cameraDenied, model.voiceReady {
-            EmptyView()
         } else if usesLightLayout {
             lightStagePage
         } else {
@@ -304,7 +315,9 @@ struct TMTherapySessionView: View {
 
             ScrollView {
                 trackingStatus
-                footer
+                if model.snapshot.stage != .preparing {
+                    footer
+                }
                 if let error = model.saveFailure { saveError(error) }
             }
             .frame(height: barsHeight * 0.6)
@@ -354,8 +367,6 @@ struct TMTherapySessionView: View {
                     }
                 }
             }
-        } else if model.isStarting {
-            startupWaiting
         } else if !model.voiceReady {
             controlChoice
         } else if model.snapshot.stage == .preparing {
@@ -480,13 +491,11 @@ struct TMTherapySessionView: View {
             ZStack {
                 TMBodyCameraPreview(
                     session: model.tracking.session, front: true,
-                    onReady: model.previewReady, onOrientation: model.orientationChanged)
+                    onReady: model.previewReady,
+                    onOrientation: model.orientationChanged,
+                    onVideoBounds: usesLightLayout ? { videoBounds = $0 } : nil
+                )
                     .frame(width: geometry.size.width, height: geometry.size.height)
-                if usesLightLayout, !model.snapshot.cameraWaiting {
-                    // Soft scrim so the bubbles read clearly without hiding the patient. Left off
-                    // while waiting for the camera so the calm notice sits on an untinted view.
-                    Color.black.opacity(0.1).allowsHitTesting(false)
-                }
                 if !model.snapshot.paused, !model.snapshot.cameraWaiting,
                     model.snapshot.stage == .activity,
                     let guide = model.snapshot.presentation?.guide
@@ -517,8 +526,8 @@ struct TMTherapySessionView: View {
                     .allowsHitTesting(false)
                 }
             }
-            .background(.black)
-            .clipShape(RoundedRectangle(cornerRadius: 36))
+            .background(usesLightLayout ? TherapyPalette.canvas : Color.black)
+            .clipShape(RoundedRectangle(cornerRadius: usesLightLayout ? 28 : 36))
             .onAppear { model.viewport(width: geometry.size.width, height: geometry.size.height) }
             .onChange(of: geometry.size) { _, size in
                 model.viewport(width: size.width, height: size.height)
@@ -720,20 +729,8 @@ struct TMTherapySessionView: View {
         }
     }
 
-    /// Camera startup takes a moment and is not an error: show calm waiting text and no retry
-    /// controls until a real failure is reported or the wait outlasts `cameraRecoveryDelay`.
-    @ViewBuilder
     var preparingContent: some View {
-        if model.failure != nil || showsCameraRecovery {
-            recoveryPanel("session.cameraWait")
-        } else {
-            startupWaiting
-        }
-    }
-
-    var startupWaiting: some View {
-        TMTherapyCalmLoader(title: "session.preparing")
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        recoveryPanel("session.cameraWait")
     }
 
     var controlChoice: some View {

@@ -13,6 +13,7 @@ struct TMBodyCameraPreview: UIViewRepresentable {
     let front: Bool
     let onReady: (Bool) -> Void
     let onOrientation: (Bool) -> Void
+    var onVideoBounds: ((CGRect?) -> Void)? = nil
 
     func makeUIView(context: Context) -> TMPreviewView {
         let view = TMPreviewView()
@@ -21,6 +22,7 @@ struct TMBodyCameraPreview: UIViewRepresentable {
         view.previewLayer.session = session
         view.onReady = onReady
         view.onOrientation = onOrientation
+        view.onVideoBounds = onVideoBounds
         view.observation = view.previewLayer.observe(\.isPreviewing, options: [.initial, .new]) {
             [weak view] layer, _ in
             DispatchQueue.main.async { [weak view] in
@@ -33,6 +35,7 @@ struct TMBodyCameraPreview: UIViewRepresentable {
 
     func updateUIView(_ view: TMPreviewView, context: Context) {
         view.front = front
+        view.onVideoBounds = onVideoBounds
         view.setNeedsLayout()
     }
 
@@ -44,6 +47,7 @@ struct TMBodyCameraPreview: UIViewRepresentable {
         view.observation = nil
         view.onReady = nil
         view.onOrientation = nil
+        view.onVideoBounds = nil
         view.previewLayer.session = nil
     }
 
@@ -54,6 +58,9 @@ struct TMBodyCameraPreview: UIViewRepresentable {
         var observation: NSKeyValueObservation?
         var onReady: ((Bool) -> Void)?
         var onOrientation: ((Bool) -> Void)?
+        var onVideoBounds: ((CGRect?) -> Void)?
+        private let videoMask = CAShapeLayer()
+        private var videoBounds: CGRect?
         var front = true
         private var lastOrientation: UIInterfaceOrientation?
         private var reportedReady = false
@@ -112,10 +119,30 @@ struct TMBodyCameraPreview: UIViewRepresentable {
                     connection.isVideoMirrored = front
                 }
             }
+            if onVideoBounds != nil {
+                updateVideoBounds(previewLayer.applyRoundedVideoMask(videoMask))
+            } else {
+                previewLayer.mask = nil
+                videoBounds = nil
+            }
             CATransaction.commit()
             if orientation != lastOrientation {
                 lastOrientation = orientation
                 DispatchQueue.main.async { [weak self] in self?.onOrientation?(right) }
+            }
+        }
+
+        private func updateVideoBounds(_ bounds: CGRect?) {
+            guard videoBounds != bounds else {
+                return
+            }
+
+            videoBounds = bounds
+            DispatchQueue.main.async { [weak self] in
+                guard let self, self.videoBounds == bounds else {
+                    return
+                }
+                self.onVideoBounds?(bounds)
             }
         }
     }

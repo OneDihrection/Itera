@@ -90,6 +90,13 @@ enum TherapyPalette {
     // MARK: - Daily plan palette
 
     /// Rust brand fill of the prominent "Mulai Latihan" capsule. White text on it is about 5.9:1.
+    static let progressPanel = Color(uiColor: UIColor { traits in
+        traits.userInterfaceStyle == .dark
+            ? UIColor(red: 0.21, green: 0.16, blue: 0.12, alpha: 1)
+            : UIColor(red: 0.99, green: 0.96, blue: 0.92, alpha: 1)
+    })
+    static let progressBar = Color(red: 0.96, green: 0.44, blue: 0.09)
+    static let progressSoftBar = Color(red: 1, green: 0.71, blue: 0.43)
     static let brand = Color(red: 0.71, green: 0.22, blue: 0.10)
     static let onBrand = Color.white
     /// Warm off-white card behind each exercise in the plan timeline.
@@ -135,6 +142,7 @@ struct TMTherapyButton: View {
     var prominent = false
     /// With `pill`, fills the pill with the rust brand color instead of the dark action color.
     var brand = false
+    var extraVerticalPadding: CGFloat = 0
     let action: () -> Void
 
     var body: some View {
@@ -168,7 +176,9 @@ struct TMTherapyButton: View {
     }
 
     private var standardButton: some View {
-        Button(role: destructive ? .destructive : nil, action: action) {
+        let outline = RoundedRectangle(cornerRadius: pill ? 30 + extraVerticalPadding : 22)
+
+        return Button(role: destructive ? .destructive : nil, action: action) {
             HStack(spacing: 12) {
                 if let symbol {
                     Image(systemName: symbol)
@@ -178,9 +188,10 @@ struct TMTherapyButton: View {
             .typography(.headline)
             .frame(maxWidth: .infinity, minHeight: pill ? 60 : 68)
             .padding(.horizontal, 20)
+            .padding(.vertical, extraVerticalPadding)
             .foregroundStyle(foreground)
-            .background(background, in: RoundedRectangle(cornerRadius: pill ? 30 : 22))
-            .contentShape(RoundedRectangle(cornerRadius: pill ? 30 : 22))
+            .background(background, in: outline)
+            .contentShape(outline)
         }
         .buttonStyle(TMTherapySoundButtonStyle())
         .disabled(disabled)

@@ -8,7 +8,6 @@
 import SwiftUI
 
 struct TMBalanceSessionView: View {
-    @AppStorage(ExerciseMusicTrack.storageKey) private var musicTrack = ExerciseMusicTrack.defaultValue
     @Environment(NavigationRouter.self) private var router
     @Environment(AppDependencies.self) private var dependencies
     @Environment(PermissionManager.self) private var permissions
@@ -21,6 +20,7 @@ struct TMBalanceSessionView: View {
 
     /// Set when End was tapped on the live screen, so the pause dialog opens on its confirmation.
     @State private var endRequested = false
+    @State private var videoBounds: CGRect?
 
     var body: some View {
         ZStack {
@@ -60,6 +60,7 @@ struct TMBalanceSessionView: View {
         .animation(.easeOut(duration: 0.28), value: model.allSetsDone)
         .background(TherapyPalette.canvas)
         .environment(\.colorScheme, .light)
+        .statusBarHidden(false)
         .navigationBarBackButtonHidden(true)
         .toolbar(.hidden, for: .navigationBar)
         .toolbar(.hidden, for: .tabBar)
@@ -106,6 +107,7 @@ struct TMBalanceSessionView: View {
                 ? heading
                 : TMTherapyExerciseHeading(eyebrow: eyebrow, title: Text("stage.calibration")),
             cue: practiceCue,
+            cuePlacement: .video(videoBounds),
             demoTitle: "session.followMovement",
             repetitions: (model.snapshot.metrics.completedTouches, model.snapshot.goal),
             sets: (model.setNumber, model.totalSets),
@@ -125,17 +127,15 @@ struct TMBalanceSessionView: View {
                 selection: model.snapshot.armSelection
             )
         } accessories: {
-            accessories
+            EmptyView()
         }
     }
 
     private var practiceCue: Text {
-        let cue = Text(LocalizedStringKey(cueKey))
-        guard let message = model.calibrationMessage else {
-            return cue
+        if let message = model.calibrationMessage, message != "calibration.try" {
+            return Text(LocalizedStringKey(message))
         }
-        let text = Text(LocalizedStringKey(message))
-        return message == "calibration.try" ? text + Text(verbatim: "\n") + cue : text
+        return Text(LocalizedStringKey(cueKey))
     }
 
     /// The one cue line under the camera: a compensation warning first, then a rotation's
@@ -165,7 +165,8 @@ struct TMBalanceSessionView: View {
                 session: model.tracking.session,
                 front: true,
                 onReady: model.previewReady,
-                onOrientation: model.orientationChanged
+                onOrientation: model.orientationChanged,
+                onVideoBounds: { videoBounds = $0 }
             )
 
             if let overlay = model.snapshot.overlay {
@@ -177,24 +178,8 @@ struct TMBalanceSessionView: View {
                     .padding(20)
             }
         }
-        .background(TherapyPalette.cameraBackground)
+        .background(TherapyPalette.canvas)
         .accessibilityLabel(model.exercise.localized("cameraAccessibility"))
-    }
-
-    @ViewBuilder
-    private var accessories: some View {
-        Image(systemName: model.voiceListening ? "waveform" : "hand.tap")
-            .foregroundStyle(model.voiceListening ? TherapyPalette.setDone : TherapyPalette.muted)
-            .frame(width: 44, height: 44)
-            .accessibilityLabel(Text(model.voiceListening ? "balance.voiceListening" : "balance.voiceTouchFallback"))
-
-        TMTherapyMusicMenu(
-            selection: $musicTrack,
-            options: ExerciseMusicTrack.allCases.map {
-                TherapyMusicOption(id: $0.rawValue, title: LocalizedStringKey($0.titleKey))
-            },
-            size: 44
-        )
     }
 
     private func requestEnd() {

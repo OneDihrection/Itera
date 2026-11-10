@@ -25,6 +25,7 @@ extension TMTherapySessionView {
                 )
                 : lightHeading,
             cue: showsCalibrationCard ? nil : lightCue,
+            cuePlacement: .video(videoBounds),
             demoTitle: "session.followMovement",
             repetitions: (model.snapshot.presentation?.count ?? 0, model.snapshot.activity?.goal ?? 0),
             sets: (model.snapshot.setNumber, model.snapshot.activity?.sets ?? 1),
@@ -40,7 +41,7 @@ extension TMTherapySessionView {
             demonstration
                 .background(TherapyPalette.exerciseBackdrop)
         } accessories: {
-            lightAccessories
+            EmptyView()
         }
         .accessibilityHidden(hasFullScreenPresentation || model.snapshot.paused)
     }
@@ -100,7 +101,6 @@ extension TMTherapySessionView {
         return name
     }
 
-    /// The live cue, with the towel fold, reach round or timed seconds after it when relevant.
     private var lightCue: Text {
         if usesCalibrationOpening, model.snapshot.stage == .preparing {
             return Text("calibration.intro")
@@ -108,60 +108,34 @@ extension TMTherapySessionView {
         if model.snapshot.instruction.hasPrefix("calibration.") {
             return Text(LocalizedStringKey(model.snapshot.instruction))
         }
-        if isCalibrationLayout {
-            return Text("calibration.try") + Text(verbatim: "\n")
-                + Text(verbatim: lightString(primaryMovementCue))
-        }
 
-        let copy = SessionGuidanceCopy(phrase: lightString(primaryMovementCue))
-        var lines = [copy.main]
-
-        if let support = copy.support {
-            lines.append(support)
-        }
-
-        if let status = lightStatus {
-            lines.append(status)
-        }
-
-        return Text(verbatim: lines.joined(separator: "\n"))
-    }
-
-    private var lightStatus: String? {
-        switch model.snapshot.presentation {
-        case .reach(let reach) where reach.phase == .rehearsal:
-            return lightString("session.rehearsal")
-        case .towel(let towel) where towel.phase == .practice:
-            return String(format: lightString("towel.foldNumber %lld"), towel.foldIndex + 1)
-        case .timed(let practice):
-            return String(
+        let instruction = lightString(primaryMovementCue)
+            .split(whereSeparator: \.isNewline)
+            .joined(separator: " · ")
+        if case .timed(let practice) = model.snapshot.presentation {
+            let time = String(
                 format: lightString("session.practiceSeconds %lld %lld"),
                 Int(practice.seconds),
                 Int(practice.goal)
             )
-        default:
-            return nil
+            return Text(verbatim: "\(instruction) · \(time)")
         }
+        return Text(verbatim: instruction)
     }
 
     /// The shared preview with camera-wait and failure notices at its top edge, clear of the cue.
     private var lightCamera: some View {
         camera
-            .overlay(alignment: .bottom) {
+            .overlay(alignment: .topLeading) {
                 if showsCalibrationCard, !model.snapshot.cameraWaiting {
-                    VStack(spacing: 12) {
-                        lightGuidanceText(demonstrating: true)
-
-                        if voiceOver, let id = model.snapshot.guidanceID {
-                            TMTherapyButton(title: "session.readingComplete", pill: true, brand: true) {
-                                model.readingChanged(id, complete: true)
-                            }
+                    if let videoBounds {
+                        TMTherapyVideoFooter(bounds: videoBounds) {
+                            calibrationCard
                         }
+                    } else {
+                        calibrationCard
+                            .frame(maxHeight: .infinity, alignment: .bottom)
                     }
-                    .padding(16)
-                    .frame(maxHeight: 180)
-                    .background(TherapyPalette.canvas, in: RoundedRectangle(cornerRadius: 24))
-                    .padding(24)
                 }
             }
             .overlay(alignment: .top) {
@@ -186,22 +160,19 @@ extension TMTherapySessionView {
             }
     }
 
-    @ViewBuilder
-    private var lightAccessories: some View {
-        TMTherapyMusicMenu(
-            selection: $musicTrack,
-            options: ExerciseMusicTrack.allCases.map {
-                TherapyMusicOption(id: $0.rawValue, title: LocalizedStringKey($0.titleKey))
-            },
-            size: 44
-        )
-        TMTherapyIconButton(title: "session.repeat", symbol: "speaker.wave.2.fill", size: 44, circle: true) {
-            model.command(.repeatInstruction)
+    private var calibrationCard: some View {
+        VStack(spacing: 12) {
+            lightGuidanceText(demonstrating: true, compact: true)
+
+            if voiceOver, let id = model.snapshot.guidanceID {
+                TMTherapyButton(title: "session.readingComplete", pill: true, brand: true) {
+                    model.readingChanged(id, complete: true)
+                }
+            }
         }
-        Image(systemName: model.listening ? "mic.fill" : "mic.slash")
-            .typography(size: 20, weight: .semiBold)
-            .frame(width: 44, height: 44)
-            .accessibilityLabel(Text(model.listening ? "session.listening" : "home.voiceUnavailable"))
+        .padding(16)
+        .frame(maxHeight: voiceOver || dynamicTypeSize.isAccessibilitySize ? 180 : 84)
+        .background(Color.black)
     }
 
     func requestEnd() {
@@ -255,8 +226,6 @@ extension TMTherapySessionView {
     private var lightStageContent: some View {
         if model.cameraDenied {
             recoveryPanel("therapy.session.cameraDenied")
-        } else if model.isStarting {
-            startupWaiting
         } else if !model.voiceReady {
             controlChoice
         } else if model.snapshot.stage == .preparing {
@@ -307,15 +276,17 @@ extension TMTherapySessionView {
 
     /// Measured reading stays the advancement gate for every instruction and demonstration card.
     @ViewBuilder
-    private func lightGuidanceText(demonstrating: Bool) -> some View {
+    private func lightGuidanceText(demonstrating: Bool, compact: Bool = false) -> some View {
         if let id = model.snapshot.guidanceID {
+            let fullPageSize = demonstrating ? instructionSize / 2 : instructionSize * 2 / 3
             TMMeasuredInstructionText(
                 phrase: guidancePhrase,
                 instructionID: id,
-                fontSize: demonstrating ? instructionSize / 2 : instructionSize * 2 / 3,
+                fontSize: compact ? calibrationCaptionSize : fullPageSize,
                 reduceMotion: reduceMotion,
                 voiceOver: voiceOver,
-                textColor: .label,
+                textColor: compact ? .white : .label,
+                compact: compact,
                 onReadingChanged: { id, complete in model.readingChanged(id, complete: complete) }
             )
             .frame(maxWidth: .infinity, maxHeight: .infinity)

@@ -63,18 +63,19 @@ struct TMTherapyProgressStat: View {
     let value: Int
     let total: Int
     var muted = false
+    var textScale: CGFloat = 1
 
     var body: some View {
         HStack(alignment: .firstTextBaseline, spacing: 18) {
             label
-                .typography(size: 30, weight: .semiBold, relativeTo: .title2)
+                .typography(size: 30 * textScale, weight: .semiBold, relativeTo: .title2)
                 .foregroundStyle(TherapyPalette.muted)
             HStack(alignment: .firstTextBaseline, spacing: 8) {
                 Text(value, format: .number)
-                    .typography(size: 56, weight: .bold, relativeTo: .largeTitle)
+                    .typography(size: 56 * textScale, weight: .bold, relativeTo: .largeTitle)
                     .foregroundStyle(muted ? TherapyPalette.muted : TherapyPalette.brand)
                 Text(verbatim: "/ \(total)")
-                    .typography(size: 48, weight: .regular, relativeTo: .largeTitle)
+                    .typography(size: 48 * textScale, weight: .regular, relativeTo: .largeTitle)
                     .foregroundStyle(TherapyPalette.muted)
             }
         }
@@ -95,31 +96,52 @@ struct TMTherapyStatRow<Content: View>: View {
 
 /// The thin vertical divider used between stats.
 struct TMTherapyStatDivider: View {
+    var thickness: CGFloat = 1.5
+
     var body: some View {
         Rectangle()
             .fill(TherapyPalette.outline)
-            .frame(width: 1.5, height: 64)
+            .frame(width: thickness, height: 64)
             .accessibilityHidden(true)
     }
 }
 
 // MARK: - Instruction bubble
 
-/// A white rounded bubble for the live cue, placed at the bottom of the camera.
+/// A floating cue bubble or a caption attached to the video.
 struct TMTherapyInstructionBubble: View {
+    static let baseFontSize: CGFloat = 24
+
     let text: Text
+    var singleLine = false
+    var attached = false
 
     var body: some View {
         text
-            .typography(size: 24, weight: .medium, relativeTo: .title3)
-            .foregroundStyle(Color.black)
+            .typography(size: Self.baseFontSize, weight: .medium, relativeTo: .title3)
+            .lineLimit(singleLine ? 1 : nil)
+            .minimumScaleFactor(singleLine ? 0.7 : 1)
+            .foregroundStyle(attached ? Color.white : Color.black)
             .multilineTextAlignment(.center)
             .padding(.horizontal, 28)
             .padding(.vertical, 16)
             .frame(maxWidth: .infinity)
-            .background(Color.white, in: RoundedRectangle(cornerRadius: 18))
-            .shadow(color: .black.opacity(0.12), radius: 8, y: 2)
+            .background(attached ? Color.black : Color.white, in: RoundedRectangle(cornerRadius: attached ? 0 : 18))
+            .shadow(color: .black.opacity(attached ? 0 : 0.12), radius: 8, y: 2)
             .accessibilityAddTraits(.updatesFrequently)
+    }
+}
+
+/// Positions content along the actual video edge, inside the rounded camera frame.
+struct TMTherapyVideoFooter<Content: View>: View {
+    let bounds: CGRect
+    @ViewBuilder let content: Content
+
+    var body: some View {
+        content
+            .frame(width: bounds.width, height: bounds.height, alignment: .bottom)
+            .clipShape(RoundedRectangle(cornerRadius: 28))
+            .position(x: bounds.midX, y: bounds.midY)
     }
 }
 
@@ -264,6 +286,16 @@ struct TMTherapyExerciseIntro<Media: View, Targets: View>: View {
 
 // MARK: - Live practice
 
+enum TherapyLiveCuePlacement {
+    case floating
+    case video(CGRect?)
+
+    var usesVideo: Bool {
+        if case .video = self { return true }
+        return false
+    }
+}
+
 /// The practice screen: heading, the camera with its cue bubble, the demonstration column,
 /// repetition and set counters, and Pause and End.
 ///
@@ -272,6 +304,7 @@ struct TMTherapyExerciseIntro<Media: View, Targets: View>: View {
 struct TMTherapyExerciseLiveLayout<Camera: View, Demo: View, Accessories: View>: View {
     let heading: TMTherapyExerciseHeading
     var cue: Text? = nil
+    var cuePlacement = TherapyLiveCuePlacement.floating
     let demoTitle: LocalizedStringKey
     let repetitions: (done: Int, goal: Int)
     var sets: (number: Int, total: Int)? = nil
@@ -298,6 +331,7 @@ struct TMTherapyExerciseLiveLayout<Camera: View, Demo: View, Accessories: View>:
 
             VStack(spacing: columnSpacing) {
                 liveHeader
+                    .padding(.top, cuePlacement.usesVideo ? 16 : 0)
 
                 HStack(alignment: .top, spacing: columnSpacing) {
                     cameraArea
@@ -320,14 +354,19 @@ struct TMTherapyExerciseLiveLayout<Camera: View, Demo: View, Accessories: View>:
         .background(TherapyPalette.canvas)
     }
 
+    @ViewBuilder
     private var liveHeader: some View {
-        HStack(spacing: 12) {
+        if Accessories.self == EmptyView.self {
             heading
-
+        } else {
             HStack(spacing: 12) {
-                accessories
+                heading
+
+                HStack(spacing: 12) {
+                    accessories
+                }
+                .layoutPriority(1)
             }
-            .layoutPriority(1)
         }
     }
 
@@ -337,10 +376,26 @@ struct TMTherapyExerciseLiveLayout<Camera: View, Demo: View, Accessories: View>:
             .clipShape(RoundedRectangle(cornerRadius: 28))
             .overlay(alignment: .bottom) {
                 if let cue {
-                    TMTherapyInstructionBubble(text: cue)
-                        .padding(24)
+                    switch cuePlacement {
+                    case .floating:
+                        TMTherapyInstructionBubble(text: cue).padding(24)
+                    case .video(let bounds):
+                        if let bounds {
+                            TMTherapyVideoFooter(bounds: bounds) {
+                                TMTherapyInstructionBubble(text: cue, singleLine: true, attached: true)
+                            }
+                            .allowsHitTesting(false)
+                        }
+                    }
                 }
             }
+    }
+
+    private var demoTitleOffset: CGFloat {
+        guard case .video(let bounds) = cuePlacement else {
+            return 0
+        }
+        return bounds?.minY ?? 0
     }
 
     private func demoColumn(maxMediaWidth: CGFloat) -> some View {
@@ -348,6 +403,7 @@ struct TMTherapyExerciseLiveLayout<Camera: View, Demo: View, Accessories: View>:
             Text(demoTitle)
                 .typography(size: 24, weight: .bold, relativeTo: .title3)
                 .foregroundStyle(TherapyPalette.ink)
+                .offset(y: demoTitleOffset)
 
             Color.clear
                 .aspectRatio(1, contentMode: .fit)
@@ -368,7 +424,7 @@ struct TMTherapyExerciseLiveLayout<Camera: View, Demo: View, Accessories: View>:
                 repetitionStat
 
                 if let sets {
-                    TMTherapyStatDivider()
+                    TMTherapyStatDivider(thickness: cuePlacement.usesVideo ? 3 : 1.5)
                     setStat(sets)
                 }
             }
@@ -389,7 +445,8 @@ struct TMTherapyExerciseLiveLayout<Camera: View, Demo: View, Accessories: View>:
             label: Text("exercise.repetitionsUnit"),
             value: repetitions.done,
             total: repetitions.goal,
-            muted: calibrating
+            muted: calibrating,
+            textScale: cuePlacement.usesVideo ? 1.2 : 1
         )
     }
 
@@ -398,7 +455,8 @@ struct TMTherapyExerciseLiveLayout<Camera: View, Demo: View, Accessories: View>:
             label: Text("exercise.setsUnit"),
             value: sets.number,
             total: sets.total,
-            muted: calibrating
+            muted: calibrating,
+            textScale: cuePlacement.usesVideo ? 1.2 : 1
         )
     }
 
@@ -410,6 +468,7 @@ struct TMTherapyExerciseLiveLayout<Camera: View, Demo: View, Accessories: View>:
                 disabled: pauseDisabled,
                 pill: true,
                 brand: true,
+                extraVerticalPadding: cuePlacement.usesVideo ? 8 : 0,
                 action: onPause
             )
             TMTherapyButton(
@@ -417,6 +476,7 @@ struct TMTherapyExerciseLiveLayout<Camera: View, Demo: View, Accessories: View>:
                 symbol: "stop.fill",
                 secondary: true,
                 pill: true,
+                extraVerticalPadding: cuePlacement.usesVideo ? 8 : 0,
                 action: onEnd
             )
         }

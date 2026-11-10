@@ -8,12 +8,12 @@
 import SwiftUI
 
 struct TMFingerSessionView: View {
-    @AppStorage(ExerciseMusicTrack.storageKey) private var musicTrack = ExerciseMusicTrack.defaultValue
     @Environment(AppDependencies.self) private var dependencies
     @Environment(NavigationRouter.self) private var router
     @Environment(\.scenePhase) private var scenePhase
     /// Set when End was tapped on the live screen, so the pause dialog opens on its confirmation.
     @State private var endRequested = false
+    @State private var videoBounds: CGRect?
 
     var body: some View {
         Group {
@@ -46,6 +46,7 @@ struct TMFingerSessionView: View {
         TMTherapyExerciseLiveLayout(
             heading: heading(model),
             cue: cue(model),
+            cuePlacement: .video(videoBounds),
             demoTitle: "session.followMovement",
             repetitions: (model.activity.repetitions, model.routine.repetitions),
             sets: (model.activity.set, model.routine.sets),
@@ -64,7 +65,7 @@ struct TMFingerSessionView: View {
         } demo: {
             example(model)
         } accessories: {
-            accessories(model)
+            EmptyView()
         }
         .accessibilityHidden(coversSession(model) || model.activity.phase == .countdown || model.paused)
         .overlay {
@@ -85,7 +86,7 @@ struct TMFingerSessionView: View {
             }
         }
         .environment(\.colorScheme, .light)
-        .statusBarHidden(true)
+        .statusBarHidden(false)
     }
 
     private func heading(_ model: FingerSessionViewModel) -> TMTherapyExerciseHeading {
@@ -95,45 +96,24 @@ struct TMFingerSessionView: View {
         )
     }
 
-    /// Live feedback while tracking, otherwise the instruction; sequential movements add the finger.
+    /// Show one cue at a time, with the active finger inline when it is relevant.
     private func cue(_ model: FingerSessionViewModel) -> Text? {
-
         if let message = model.calibrationMessage, message != "calibration.try" {
             return Text(LocalizedStringKey(message))
         }
 
-        let instruction = Text(LocalizedStringKey(liveCue(model) ?? model.instructionKey))
-        let main = model.calibrationMessage == nil
-            ? instruction
-            : Text("calibration.try") + Text(verbatim: "\n") + instruction
-
-        guard model.activity.kind.isSequential, isTracking(model) else {
-            return main
+        if isTracking(model), !model.trackingReady {
+            return Text(LocalizedStringKey(liveCue(model) ?? model.instructionKey))
         }
 
-        return main + Text(verbatim: "\n") + Text(LocalizedStringKey(model.fingerKey))
-    }
+        let key = model.recoveryGuidanceKey ?? model.calibrationMessage ?? liveCue(model) ?? model.instructionKey
+        let instruction = Text(LocalizedStringKey(key))
 
-    @ViewBuilder
-    private func accessories(_ model: FingerSessionViewModel) -> some View {
-        TMTherapyMusicMenu(
-            selection: $musicTrack,
-            options: ExerciseMusicTrack.allCases.map {
-                TherapyMusicOption(id: $0.rawValue, title: LocalizedStringKey($0.titleKey))
-            },
-            size: 44
-        )
-        TMTherapyIconButton(title: "action.repeat", symbol: "speaker.wave.2.fill", size: 44, circle: true) {
-            model.narrate()
+        guard model.activity.kind.isSequential, isTracking(model), model.recoveryGuidanceKey == nil else {
+            return instruction
         }
-        TMTherapyIconButton(
-            title: model.voiceEnabled ? "voice.on" : "voice.off",
-            symbol: model.voiceEnabled ? "mic.fill" : "mic.slash",
-            size: 44,
-            circle: true
-        ) {
-            Task { await model.setVoice(!model.voiceEnabled) }
-        }
+
+        return instruction + Text(verbatim: " · ") + Text(LocalizedStringKey(model.fingerKey))
     }
 
     private func isTracking(_ model: FingerSessionViewModel) -> Bool {
@@ -210,9 +190,11 @@ struct TMFingerSessionView: View {
 
     private func cameraPreview(_ model: FingerSessionViewModel) -> some View {
         ZStack(alignment: .bottomLeading) {
-            TherapyPalette.cameraBackground
-            TMHandCameraPreview(camera: model.camera, ready: model.previewReady)
-                .accessibilityLabel("camera.preview")
+            TherapyPalette.canvas
+            TMHandCameraPreview(camera: model.camera, ready: model.previewReady) { bounds in
+                videoBounds = bounds
+            }
+            .accessibilityLabel("camera.preview")
             if let evidence = model.guideEvidence {
                 TMFingerLandmarkOverlay(
                     evidence: evidence,

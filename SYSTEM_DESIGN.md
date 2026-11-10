@@ -572,7 +572,7 @@ Verification: Simulator build with IPHONEOS_DEPLOYMENT_TARGET=17.0 passed. A tem
 
 The session screen uses one layout for every stage of an activity; the calm arm and reaching layout is chosen by activity kind, never by stage, so the camera preview stays mounted through countdowns, preparation and rest (section 5). A replaced preview can no longer report "not ready" after its successor reported ready. A movement countdown advances from the clock as well as from frames, and an interrupted countdown stays pending: resuming re-announces it and starts a fresh three seconds instead of returning to the start bubble. After the frame watchdog stops capture, capture restarts once automatically (bounded); the session still pauses until explicit Resume.
 
-While the session is starting, or the camera is becoming ready, the screen shows a calm light startup state (`TMTherapyCalmLoader`: a slowly breathing circle and a single calm line, with no technical wording; the in-session camera-wait pill uses the same line) without recovery buttons. Retry appears after three seconds of waiting or on a real failure.
+While the session is starting or the camera is becoming ready, the exercise layout stays visible with its inline camera-wait message. Retry appears after three seconds of waiting or on a real failure.
 
 Verification: Simulator build passed and a temporary harness over the movement code confirmed the countdown completes from ticks alone and survives suspend and resume. Physical M1-iPad checks remain pending: interrupt the camera during the countdown, confirm one preview mount across stages, and confirm no retry flash on cold start in both languages.
 
