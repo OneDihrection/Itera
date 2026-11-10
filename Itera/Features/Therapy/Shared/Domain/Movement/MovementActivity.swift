@@ -27,6 +27,14 @@ struct MovementActivity: TherapyActivity {
     private var cueCandidate = false
     private var cueSince: Double?
 
+    /// Points across for the start bubble, target bubble and calibration ring. Fixed so all three
+    /// match and stay clearly larger than the 28 pt joint marker whatever the patient's size.
+    private static let zoneDiameter = 100.0
+
+    private func zoneRadius(aspect: Double) -> Double {
+        fixedBubbleRadius(diameter: Self.zoneDiameter, aspect: aspect, viewport: viewport)
+    }
+
     /// Seconds the patient holds inside the start or target bubble before it is accepted.
     private static let dwellDuration = 2.0
     /// Seconds the patient holds still to capture the start and target positions.
@@ -275,9 +283,9 @@ struct MovementActivity: TherapyActivity {
             // Keep live geometry visible even when this position cannot be captured.
             snapshot.guide = TargetGuide(
                 start: start.map { anchor + $0.scaled(scale) } ?? tracked, target: tracked, tracked: tracked,
-                radius: bubbleRadius(body: scale * offset.length * 0.2, separation: nil, aspect: frame.aspect, viewport: viewport),
+                radius: zoneRadius(aspect: frame.aspect),
                 targetActive: false, progress: 0, aspect: frame.aspect,
-                capturing: true, savedStart: start != nil
+                matchesHoldRing: true, capturing: true, savedStart: start != nil
             )
 
             if let start, (offset - start).length <= limb * 0.4 {
@@ -351,9 +359,7 @@ struct MovementActivity: TherapyActivity {
         }
         let startCenter = anchor + start.scaled(scale)
         let targetCenter = anchor + target.scaled(scale)
-        let radius = bubbleRadius(
-            body: limb * scale * 0.2, separation: (targetCenter - startCenter).length,
-            aspect: frame.aspect, viewport: viewport)
+        let radius = zoneRadius(aspect: frame.aspect)
         let active = phase == 1 ? targetCenter : startCenter
         let inside = (tracked - active).length <= radius
 
@@ -369,7 +375,7 @@ struct MovementActivity: TherapyActivity {
         snapshot.progress = progress
         snapshot.guide = TargetGuide(
             start: startCenter, target: targetCenter, tracked: tracked, radius: radius,
-            targetActive: phase == 1, progress: progress, aspect: frame.aspect)
+            targetActive: phase == 1, progress: progress, aspect: frame.aspect, matchesHoldRing: true)
         guard progress >= 1 else {
             return
         }

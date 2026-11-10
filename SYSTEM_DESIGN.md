@@ -100,7 +100,7 @@ These rules were checked against the current therapy implementation. Do not subs
 
 ### Common geometry
 
-For body-based activities, require one person and usable required joints (confidence at least 0.5). Correct horizontal distances by image width/height. Draw and accept against the same geometry. Body-based radius is 20% of the reference limb length. With a valid viewport, clamp bubble diameter to 68–120 points, then cap it at 80% of center separation; close targets may therefore produce smaller bubbles. Without a viewport, retain body-relative radius.
+For body-based activities, require one person and usable required joints (confidence at least 0.5). Correct horizontal distances by image width/height. Draw and accept against the same geometry. Body-based radius is 20% of the reference limb length. With a valid viewport, clamp bubble diameter to 68–120 points, then cap it at 80% of center separation; close targets may therefore produce smaller bubbles. Without a viewport, retain body-relative radius. Arm raise and elbow bend are the exception: their start bubble, target bubble and calibration hold ring are one fixed 100 points across (`MovementActivity.zoneDiameter`), converted with the same viewport height as other bubbles.
 
 ### Arm raise and elbow bend
 
@@ -523,7 +523,7 @@ Arm raises, elbow bends, directional reaching, and cup practice configure 1–5 
 
 Session coordination owns set ordering and rest. Each completed set records and checkpoints one result with its set number; summaries retain per-set goals and work, so totals are the sum of results. Missing set configuration in older files means one set; missing result set number means set one. Interrupted recovery preserves saved sets and marks the next unfinished set interrupted without inventing work. Calibration is never persisted for reuse after termination.
 
-On iPad, all exercises use the front camera. Body exercises prefer the front ultra-wide camera, then the front wide-angle camera. Hand/finger exercises use the front wide-angle camera. Camera recovery offers retry. Mac Catalyst can use the system webcam when its position is unspecified. Validate lens selection and tracking geometry physically; a Simulator build does not establish device acceptance.
+On iPad, all exercises use the front camera. Body exercises prefer the front ultra-wide camera, then the front wide-angle camera. Hand/finger exercises use the front wide-angle camera. Camera recovery offers retry. Mac Catalyst can use the system webcam when its position is unspecified. Body pose inference runs on a copy of each frame extended downward by a neutral strip (`BodyFramePadder`, 50% of the frame height), because Vision's body pose model drops people and joints when only the upper body is visible. Everything downstream of `BodyTrackingService` stays in original-frame coordinates: normalized `y` is mapped back as `y_original = y_padded * 1.5 - 0.5`, `x` is unchanged, and joints that land below the frame (`y < 0`) are discarded as guesses. Padding applies to body mode only, never hand or cup mode, and is on by default; the `Itera.bodyFramePadding` user default turns it off for on-device comparison. Validate lens selection and tracking geometry physically; a Simulator build does not establish device acceptance.
 
 
 ## Cup-only verification status
@@ -578,7 +578,7 @@ Verification: Simulator build passed and a temporary harness over the movement c
 
 ## Calm guidance visibility (2026-11-06)
 
-Calm guidance stays clearly visible for older patients. Every on-camera shape has a dark underlay; the target outline is at least 10 pt over a mostly opaque fill, the home outline 7 pt, the guidance arrow 9 pt and never fades while the joint is outside the active bubble, the hold ring 10 pt over a visible track, and the joint marker 28 pt. Progress dots are 24 pt on a dark backing, and Pause and Stop remain readable. The 68-120 pt bubble size rule is unchanged. Verification: Simulator build only; reading each indicator at 1.5, 2 and 2.5 m in bright and dim rooms remains pending on the M1 iPad.
+Calm guidance stays clearly visible for older patients. Every on-camera shape has a dark underlay; the target outline is at least 10 pt over a mostly opaque fill, the home outline 7 pt, the guidance arrow 9 pt and never fades while the joint is outside the active bubble, the hold ring 10 pt over a visible track, and the joint marker 28 pt. Progress dots are 24 pt on a dark backing, and Pause and Stop remain readable. The 68-120 pt bubble size rule is unchanged for reach and cup; arm raise and elbow bend use a fixed 100 pt (see 2026-11-10 below). Verification: Simulator build only; reading each indicator at 1.5, 2 and 2.5 m in bright and dim rooms remains pending on the M1 iPad.
 
 ## Locked patient and two-second holds (2026-11-06)
 
@@ -723,3 +723,5 @@ The first screen of a calibrated exercise is titled Kalibrasi. For arm raise, el
 The camera stays visible throughout calibration. Guided instruction cards occupy the lower portion of the camera panel. Finger calibration proceeds to countdown as soon as the completion cue finishes, including forearm rotation. There is no fixed demonstration or range-review delay.
 
 **Breathing between sets.** The existing rest clocks drive a six-second inhale and three-second exhale cue across exercise types. The shared rest screen uses a rust ring that expands and intensifies on inhale, then contracts and fades on exhale, and the existing audio services speak each new phase in the session language. Pausing preserves the rest position. Reduce Motion keeps the ring static while the text and voice still change. The guide ends when the configured rest ends, and there is no breath hold or motion scoring. Between-exercise transitions and final summaries retain their existing layouts.
+
+Arm raise and elbow bend bubble size, 2026-11-10: at the product owner's request, the start bubble, target bubble and calibration hold ring are all a fixed 100 pt across, replacing the body-scaled 68–120 pt clamp and the 80% separation cap for these two activities. Practice bubbles were small and varied with arm length and hip/shoulder jitter, while the calibration ring was 120 pt; all three now match and stay about 3.5 times the 28 pt joint marker. Directional reach and cup keep the clamp. Acceptance uses the drawn radius, so hit zones follow the new size. Verification: Simulator build only; start and target overlap on short reaches and ring legibility at 1.5–2.5 m need physical M1-iPad checks.
