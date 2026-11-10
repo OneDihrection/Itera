@@ -7,7 +7,6 @@
 
 import AVFoundation
 import Combine
-import CoreML
 import Vision
 
 /// One serial capture/inference owner, with one replaceable pending delivery on the main queue.
@@ -15,7 +14,6 @@ final class BodyTrackingService: NSObject, AVCaptureVideoDataOutputSampleBufferD
     let session = AVCaptureSession()
     let frames = PassthroughSubject<TrackingObservation, Never>()
     let failures = PassthroughSubject<String, Never>()
-    let cupFailures = PassthroughSubject<String, Never>()
     let availability = PassthroughSubject<TrackingAvailability, Never>()
 
     private let queue = DispatchQueue(label: "Itera.bodyTracking", qos: .userInitiated)
@@ -34,13 +32,9 @@ final class BodyTrackingService: NSObject, AVCaptureVideoDataOutputSampleBufferD
     private var lastStaleLog = 0.0
     /// Oldest inference result still worth showing, in seconds.
     private static let maximumFrameAge = 0.8
-    private var lastPublished = 0.0
     /// Keeps tracking the patient while bystanders are in view. Confined to `queue`.
     private var subjects = BodySubjectSelector()
     private var lastInferenceFailure = 0.0
-    private var cupRequest: VNCoreMLRequest?
-    private var cupEnabled = false
-    private let cupTracker = CupObjectTracker()
     private var watchdogIdentity = UUID()
     private var frameWatchdog: DispatchWorkItem?
     private var awaitingFirstFrame = false
@@ -48,33 +42,13 @@ final class BodyTrackingService: NSObject, AVCaptureVideoDataOutputSampleBufferD
     private var watchdogRestarts = 0
     private var captureStartedAt = 0.0
 
-    func requireCup(_ enabled: Bool) {
-        inferenceQueue.async { [weak self] in
-            guard let self, self.cupEnabled != enabled || (enabled && self.cupRequest == nil) else { return }
-            self.cupEnabled = enabled
-            self.cupRequest = nil
-            self.cupTracker.reset()
-            guard enabled else { return }
-            do {
-                guard let url = Bundle.main.url(forResource: "yolo11n", withExtension: "mlmodelc") else {
-                    throw CocoaError(.fileNoSuchFile)
-                }
-                let model = try MLModel(contentsOf: url)
-                self.cupRequest = VNCoreMLRequest(model: try VNCoreMLModel(for: model))
-                self.cupRequest?.imageCropAndScaleOption = .scaleFit
-            } catch {
-                self.cupFailures.send("cup.modelUnavailable")
-            }
-        }
-    }
-
     private let handRequest = VNDetectHumanHandPoseRequest()
     private var handEnabled = false
     private var normalLens = false
     /// Chooses the patient's hand among several. Confined to `inferenceQueue`.
     private var handSubjects = HandSubjectSelector()
 
-    /// Hand inference shares the capture session and bounded delivery with body and cup modes.
+    /// Hand inference shares the capture session and bounded delivery with body inference.
     /// - Parameter side: the exercised hand, used to pick the patient's hand when several are visible.
     func requireHand(_ enabled: Bool, side: HandSide? = nil) {
         inferenceQueue.async { [weak self] in
@@ -356,19 +330,17 @@ final class BodyTrackingService: NSObject, AVCaptureVideoDataOutputSampleBufferD
 
     private func process(_ image: CVPixelBuffer, time: Double, generation: UUID) {
         // Hand inference runs at the full capture rate: a lower rate makes the cursor visibly steppy.
-        guard !cupEnabled || time - lastPublished >= 1.0 / 20 else { return }
-        lastPublished = time
         do {
             // Vision reports in the padded frame when padding is used; `originalY` maps back.
             var paddedImage: CVPixelBuffer?
-            if !cupEnabled && !handEnabled {
+            if !handEnabled {
                 if Self.padsFrames {
                     paddedImage = framePadder.padded(image)
                 }
                 try VNImageRequestHandler(cvPixelBuffer: paddedImage ?? image, orientation: .up).perform([request])
             }
             let originalY: (Double) -> Double = paddedImage == nil ? { $0 } : BodyFramePadder.originalY
-            let people = cupEnabled || handEnabled ? [] : (request.results ?? [])
+            let people = handEnabled ? [] : (request.results ?? [])
             let personPoints = people.map { (try? $0.recognizedPoints(.all)) ?? [:] }
             let imageAspect = Double(CVPixelBufferGetWidth(image)) / Double(CVPixelBufferGetHeight(image))
             let subject = subjects.select(
@@ -412,18 +384,6 @@ final class BodyTrackingService: NSObject, AVCaptureVideoDataOutputSampleBufferD
                     )
                 }
             }
-            var cup: CupEvidence?
-            if cupEnabled, let cupRequest {
-                do {
-                    cup = try cupTracker.process(
-                        image, timestamp: time, generation: generation, detector: cupRequest)
-                } catch {
-                    cupTracker.reset()
-                    self.cupRequest = nil
-                    cupFailures.send("cup.modelUnavailable")
-                }
-            }
-
             deliver(
                 TrackingObservation(
                     timestamp: time, generation: generation, width: CVPixelBufferGetWidth(image),
@@ -431,7 +391,7 @@ final class BodyTrackingService: NSObject, AVCaptureVideoDataOutputSampleBufferD
                     // Bystanders are excluded once the patient is selected; ambiguity reports everyone.
                     personCount: subject == nil ? people.count : 1,
                     joints: joints,
-                    cup: cup, hand: hand,
+                    hand: hand,
                     subjectEpoch: subjects.epoch
                 ))
         } catch {
@@ -443,7 +403,7 @@ final class BodyTrackingService: NSObject, AVCaptureVideoDataOutputSampleBufferD
             deliver(TrackingObservation(
                 timestamp: time, generation: generation,
                 width: CVPixelBufferGetWidth(image), height: CVPixelBufferGetHeight(image),
-                personCount: 0, joints: [:], cup: nil
+                personCount: 0, joints: [:]
             ))
         }
     }

@@ -17,6 +17,12 @@ import Foundation
 /// - leaning and standing are the repetition itself, and each counted repetition is a "touch".
 struct SitToStandBalanceEngine: BalanceMovementEngine {
     private(set) var snapshot = BalanceSnapshot()
+    var viewport: TherapyViewport?
+
+    /// The shared bubble radius in normalized image height for the current camera frame.
+    private func bubbleRadius(aspect: Double) -> Double {
+        sharedBubbleRadius(aspect: aspect, viewport: viewport)
+    }
     private var activity: SitToStandActivity
     private let goal: Int
     private var suspended = false
@@ -142,7 +148,7 @@ struct SitToStandBalanceEngine: BalanceMovementEngine {
             wrist: nil,
             target: marker == nil ? nil : joints.hip,
             isReturnTarget: marker ?? false,
-            targetRadius: marker == nil ? 0 : 0.08,
+            targetRadius: marker == nil ? 0 : bubbleRadius(aspect: value.aspect),
             crossedMidline: false,
             targetProgress: marker == nil ? 0 : snapshot.calibrationProgress,
             holdSecondsRemaining: marker == nil ? nil : snapshot.calibrationCountdown,

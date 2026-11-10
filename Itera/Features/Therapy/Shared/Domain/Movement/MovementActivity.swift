@@ -27,12 +27,10 @@ struct MovementActivity: TherapyActivity {
     private var cueCandidate = false
     private var cueSince: Double?
 
-    /// Points across for the start bubble, target bubble and calibration ring. Fixed so all three
-    /// match and stay clearly larger than the 28 pt joint marker whatever the patient's size.
-    private static let zoneDiameter = 100.0
-
+    /// The start bubble, target bubble and calibration ring all use the shared bubble size, so
+    /// they match and stay clearly larger than the 28 pt joint marker.
     private func zoneRadius(aspect: Double) -> Double {
-        fixedBubbleRadius(diameter: Self.zoneDiameter, aspect: aspect, viewport: viewport)
+        sharedBubbleRadius(aspect: aspect, viewport: viewport)
     }
 
     /// Seconds the patient holds inside the start or target bubble before it is accepted.
@@ -285,7 +283,7 @@ struct MovementActivity: TherapyActivity {
                 start: start.map { anchor + $0.scaled(scale) } ?? tracked, target: tracked, tracked: tracked,
                 radius: zoneRadius(aspect: frame.aspect),
                 targetActive: false, progress: 0, aspect: frame.aspect,
-                matchesHoldRing: true, capturing: true, savedStart: start != nil
+                capturing: true, savedStart: start != nil
             )
 
             if let start, (offset - start).length <= limb * 0.4 {
@@ -375,7 +373,7 @@ struct MovementActivity: TherapyActivity {
         snapshot.progress = progress
         snapshot.guide = TargetGuide(
             start: startCenter, target: targetCenter, tracked: tracked, radius: radius,
-            targetActive: phase == 1, progress: progress, aspect: frame.aspect, matchesHoldRing: true)
+            targetActive: phase == 1, progress: progress, aspect: frame.aspect)
         guard progress >= 1 else {
             return
         }

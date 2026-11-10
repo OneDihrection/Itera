@@ -2831,350 +2831,6 @@
         }
       }
     },
-    "cup.ambiguous" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Keep only one cup in view\nTracking is uncertain."
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Pastikan hanya satu cangkir terlihat\nPelacakan belum pasti."
-          }
-        }
-      }
-    },
-    "cup.bodyTrackingLost" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Show one cup clearly"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Pastikan satu cangkir terlihat jelas"
-          }
-        }
-      }
-    },
-    "cup.cupReturn" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Return the cup"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Kembalikan cangkir"
-          }
-        }
-      }
-    },
-    "cup.evidenceMissing" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Show one cup clearly\nKeep it visible while it is found."
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Perlihatkan satu cangkir dengan jelas\nTetap perlihatkan sampai terdeteksi."
-          }
-        }
-      }
-    },
-    "cup.guidance" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Use one empty cup. Hold at the start, raise it, return, move sideways, then return. Hold each position until the ring fills. Your body does not need to be visible. This rehearsal is not counted."
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Gunakan satu cangkir kosong. Tahan di awal, angkat, kembalikan, geser ke samping, lalu kembalikan. Tahan tiap posisi sampai lingkaran terisi. Tubuh tidak perlu terlihat. Percobaan ini belum dihitung."
-          }
-        }
-      }
-    },
-    "cup.handReturn" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Return the cup to start"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Kembalikan cangkir ke awal"
-          }
-        }
-      }
-    },
-    "cup.holdCup" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Hold the cup in the trained hand."
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Pegang cangkir dengan tangan yang dilatih."
-          }
-        }
-      }
-    },
-    "cup.milestone %lld %lld" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Round %1$lld · step %2$lld observed"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Putaran %1$lld · langkah %2$lld teramati"
-          }
-        }
-      }
-    },
-    "cup.modelUnavailable" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Cup detection is unavailable. Retry or ask your caregiver to skip this activity."
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Deteksi cangkir tidak tersedia. Coba lagi atau minta pendamping melewati aktivitas ini."
-          }
-        }
-      }
-    },
-    "cup.nearFace" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Raise the cup comfortably\nKeep it visible. Do not drink."
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Angkat cangkir sebatas nyaman\nTetap perlihatkan. Jangan diminum."
-          }
-        }
-      }
-    },
-    "cup.round %lld" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Round %lld"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Putaran %lld"
-          }
-        }
-      }
-    },
-    "cup.safety" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Keep holding. Do not drink."
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Tetap pegang. Jangan diminum."
-          }
-        }
-      }
-    },
-    "cup.start" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Hold the cup still"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Tahan posisi cangkir"
-          }
-        }
-      }
-    },
-    "cup.step.%lld" : {
-      "comment" : "Text describing a step in a cup exercise.",
-      "isCommentAutoGenerated" : true
-    },
-    "cup.step.0" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Starting position captured"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Posisi awal tersimpan"
-          }
-        }
-      }
-    },
-    "cup.step.1" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Cup reached raised target"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Cangkir mencapai target atas"
-          }
-        }
-      }
-    },
-    "cup.step.2" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Cup returned from raised target"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Cangkir kembali dari target atas"
-          }
-        }
-      }
-    },
-    "cup.step.3" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Cup reached sideways target"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Cangkir mencapai target samping"
-          }
-        }
-      }
-    },
-    "cup.step.4" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Cup returned to start"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Cangkir kembali ke awal"
-          }
-        }
-      }
-    },
-    "cup.trackingLost" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Show the cup again\nReturn to the starting circle."
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Perlihatkan kembali cangkir\nKembalikan ke lingkaran awal."
-          }
-        }
-      }
-    },
-    "cup.transfer" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Move cup sideways\nOnly as far as comfortable."
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Geser cangkir ke samping\nSebatas nyaman."
-          }
-        }
-      }
-    },
     "demo.extensionSequence" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -3413,6 +3069,7 @@
       }
     },
     "done.message.afternoon" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -3429,6 +3086,7 @@
       }
     },
     "done.message.evening" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -3445,6 +3103,7 @@
       }
     },
     "done.message.morning" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -3461,6 +3120,7 @@
       }
     },
     "done.message.night" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -4663,13 +4323,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Arm raise, elbow bend, reaching and cup"
+            "value" : "Arm raise, elbow bend and reaching"
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Angkat lengan, tekuk siku, menjangkau, dan gelas"
+            "value" : "Angkat lengan, tekuk siku, dan menjangkau"
           }
         }
       }
@@ -5731,23 +5391,6 @@
         }
       }
     },
-    "parity.cupOpening" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Show one empty cup\nRaise, return, move sideways, then return. Keep holding; do not drink. Your body does not need to be visible."
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Perlihatkan satu cangkir kosong\nAngkat, kembalikan, geser ke samping, lalu kembalikan. Tetap pegang; jangan diminum. Tubuh tidak perlu terlihat."
-          }
-        }
-      }
-    },
     "parity.distance" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -6553,23 +6196,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Melatih bahu dan lengan agar lebih mudah bergerak menyilang tubuh, seperti saat memasang sabuk pengaman."
-          }
-        }
-      }
-    },
-    "plan.purpose.cup" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Practices moving a cup steadily, as when drinking, without spilling."
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Melatih memindahkan gelas dengan mantap, seperti saat minum, tanpa tumpah."
           }
         }
       }
@@ -10275,23 +9901,6 @@
         }
       }
     },
-    "routine.cupDetail" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Use one empty cup. Keep it visible without drinking. Rehearse raising it, returning, moving sideways, and returning. Only the cup needs to be in view. The rehearsal is not counted."
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Gunakan satu cangkir kosong. Tetap perlihatkan tanpa minum. Coba angkat, kembalikan, geser ke samping, lalu kembalikan. Hanya cangkir yang perlu terlihat. Percobaan belum dihitung."
-          }
-        }
-      }
-    },
     "routine.delete" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -10999,23 +10608,6 @@
         }
       }
     },
-    "session.assistance.cup" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Use one empty cup. Keep it in view and follow the guided movements without drinking. Stop if you feel discomfort."
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Gunakan satu cangkir kosong. Pastikan cangkir terlihat dan ikuti gerakan tanpa minum. Berhenti jika terasa tidak nyaman."
-          }
-        }
-      }
-    },
     "session.assistance.sitToStand" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -11192,91 +10784,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Bersiap: tiga, dua, satu"
-          }
-        }
-      }
-    },
-    "session.cup" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Cup practice"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Latihan cangkir"
-          }
-        }
-      }
-    },
-    "session.cupCaution" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Observed cup positions do not verify drinking, grasp, release, or proximity to the mouth."
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Posisi cangkir yang teramati bukan bukti minum, menggenggam, melepas, atau kedekatan dengan mulut."
-          }
-        }
-      }
-    },
-    "session.cupHoldSupport" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Hold the cup still until the ring fills."
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Tahan cangkir sampai lingkaran terisi."
-          }
-        }
-      }
-    },
-    "session.cupReturnSupport" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Move the cup to the starting circle."
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Pindahkan cangkir ke lingkaran awal."
-          }
-        }
-      }
-    },
-    "session.cupTransferSupport" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Choose a comfortable side. Hold until the ring fills."
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Pilih sisi yang nyaman. Tahan sampai lingkaran terisi."
           }
         }
       }

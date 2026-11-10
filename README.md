@@ -2,7 +2,7 @@
 
 # TeMan: Terapi Mandiri
 
-Native iPad app for the five requested finger exercises: full fist and release, hook fist, thumb-to-finger opposition, finger spreading, and sequential finger extension. This branch implements the user's finger-only scope in place of the original arm/reach/cup scope in SYSTEM_DESIGN.md, retaining the single target, router, domain ownership, local storage, and manual verification policy.
+Native iPad app for the five requested finger exercises: full fist and release, hook fist, thumb-to-finger opposition, finger spreading, and sequential finger extension. This branch implements the user's finger-only scope in place of the original arm/reach scope in SYSTEM_DESIGN.md, retaining the single target, router, domain ownership, local storage, and manual verification policy.
 
 ## Run
 

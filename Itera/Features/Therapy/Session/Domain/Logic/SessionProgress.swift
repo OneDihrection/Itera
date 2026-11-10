@@ -71,8 +71,7 @@ struct SessionProgress {
         completedWork: Int,
         reachOutcomes: [ReachOutcome] = [],
         skippedReachSteps: [ReachSkippedStep]? = nil,
-        practiceSeconds: Double = 0,
-        cupOutcomes: [CupMilestone]? = nil
+        practiceSeconds: Double = 0
     ) {
         guard pausedAt == nil,
             stage == .activity,
@@ -91,7 +90,6 @@ struct SessionProgress {
                 completedWork: max(0, completedWork),
                 reachOutcomes: reachOutcomes,
                 skippedReachSteps: skippedReachSteps,
-                cupOutcomes: cupOutcomes,
                 practiceSeconds: practiceSeconds,
                 setNumber: setNumber
             )

@@ -32,9 +32,6 @@ struct SessionGuidance {
                 Card(key: "towel.demo", demonstration: true)
             ], destination: .activity)
         }
-        if activity.kind == .cup {
-            return Self(cards: [Card(key: "parity.cupOpening")], destination: .activity, quietDelay: 1)
-        }
         if activity.kind == .directionalReach {
             return Self(cards: [Card(key: "parity.reachOpening")], destination: .capture, quietDelay: 1, watchdog: 12)
         }

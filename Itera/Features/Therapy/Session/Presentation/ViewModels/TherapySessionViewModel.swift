@@ -122,11 +122,6 @@ final class TherapySessionViewModel {
             observation.workspaceMirrored = true
             self.send(.observation(observation))
         }.store(in: &subscriptions)
-        tracking.cupFailures.receive(on: DispatchQueue.main).sink { [weak self] error in
-            guard let self else { return }
-            self.failure = String(localized: String.LocalizationValue(error), bundle: self.sessionLanguage.resourceBundle, locale: self.sessionLocale)
-            self.command(.pause)
-        }.store(in: &subscriptions)
         tracking.failures.receive(on: DispatchQueue.main).sink { [weak self] error in
             guard let self else { return }
             let explanation = String(localized: "session.captureError", bundle: self.sessionLanguage.resourceBundle, locale: self.sessionLocale)
@@ -223,10 +218,6 @@ final class TherapySessionViewModel {
             }
         }
         guard started else { return }
-        if case .retryCalibration = command, snapshot.activity?.kind == .cup {
-            failure = nil
-            tracking.requireCup(true)
-        }
         send(.command(command))
     }
 
@@ -367,7 +358,6 @@ final class TherapySessionViewModel {
         }
         if previousKind != snapshot.activity?.kind || previousSide != snapshot.activity?.side {
             updateHandRequirement()
-            tracking.requireCup(snapshot.activity?.kind == .cup)
         }
         for effect in transition.effects {
             switch effect {
@@ -380,7 +370,6 @@ final class TherapySessionViewModel {
                     case .armRaise: kindKey = "session.armRaise"
                     case .elbowBend: kindKey = "session.elbowBend"
                     case .directionalReach: kindKey = "session.directionalReach"
-                    case .cup: kindKey = "session.cup"
                     case .foldTowel: kindKey = "session.foldTowel"
                     case .sitToStand: kindKey = "session.sitToStand"
                     }
@@ -439,7 +428,6 @@ final class TherapySessionViewModel {
         }
         live = false
         tracking.stop()
-        tracking.requireCup(false)
         tracking.requireHand(false)
         if preserveClosing { audio.stopListening() } else { audio.stop() }
         timer?.cancel()

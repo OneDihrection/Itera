@@ -16,7 +16,6 @@ SKIN, HAIR, MOUTH = "#E7B48F", "#3A2A24", "#B5715A"
 TOP, SLEEVE = "#F08A3C", "#E2772C"
 TROUSERS, SHOE = "#E2B33C", "#7A4A2B"
 ACCENT = "#C9BBAA"  # motion arrows, muted so they never compete with the figure
-CUP, CUP_DARK = "#9FD3EA", "#7FBBD6"
 
 
 def stroke(d, color, width):
@@ -144,15 +143,6 @@ def arrow(x1, y1, x2, y2):
     ])
 
 
-def mug(x, y):
-    """A small cup held at (x, y), drawn over the hand."""
-    return "".join([
-        f'<path d="M{x - 8},{y - 12} L{x + 8},{y - 12} L{x + 6},{y + 6} L{x - 6},{y + 6} Z" fill="{CUP}"/>',
-        f'<path d="M{x + 7},{y - 7} q7,1 5,8 q-1,4 -6,3" fill="none" stroke="{CUP_DARK}" stroke-width="2.5"/>',
-        f'<rect x="{x - 8}" y="{y - 13}" width="16" height="3" rx="1.5" fill="{CUP_DARK}"/>',
-    ])
-
-
 def finger_pose(hand):
     return legs_and_torso() + resting_left_arm() + arm(RAISED_RIGHT, False) + hand + head()
 
@@ -171,9 +161,6 @@ POSES = {
     "directionalReach": legs_and_torso() + resting_left_arm()
         + arm([(74, 68), (93, 70), (110, 71)], (114.5, 71)) + arrow(104, 58, 112, 46)
         + arrow(104, 84, 112, 96) + head(),
-    # Holding a cup in front of the chest.
-    "cup": legs_and_torso() + resting_left_arm()
-        + arm([(74, 68), (84, 106), (70, 96)], (66, 96)) + mug(66, 94) + head(),
     # Elbow at the side, forearm turned in across the belly.
     "internalRotation": legs_and_torso() + resting_left_arm()
         + arm([(74, 68), (80, 104), (56, 108)], (51.5, 108)) + rotation_arrow(66, 118, 14, False) + head(),

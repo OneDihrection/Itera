@@ -178,7 +178,13 @@ struct ArmMovementEngine: BalanceMovementEngine {
     }
 
     private(set) var snapshot = BalanceSnapshot()
-    private var smoother = MovementLandmarkSmoother()
+    var viewport: TherapyViewport?
+
+    /// The shared bubble radius in normalized image height for the current camera frame.
+    private func bubbleRadius(aspect: Double) -> Double {
+        sharedBubbleRadius(aspect: aspect, viewport: viewport)
+    }
+    private var smoother = MovementLandmarkSmoother(minimumConfidence: 0.3, limbMinimumConfidence: 0.1)
     private var torso: TorsoBaseline?
     private var neutrals: [CrossingArm: Neutral] = [:]
     private var capture: Capture?
@@ -230,7 +236,6 @@ struct ArmMovementEngine: BalanceMovementEngine {
     private let rangeHoldDuration = 3.0
     private var rangeTolerance: Double { isFlexion ? 12 : 10 }
     private let trackingGracePeriod = 0.40
-    private var targetRadiusRatio: Double { isFlexion ? 0.15 : 0.28 }
     private let exitRadiusScale = 1.25
     private let elbowAwayThreshold = 0.35
     private let leanThresholdDegrees = 18.0
@@ -634,14 +639,6 @@ struct ArmMovementEngine: BalanceMovementEngine {
         geometry.reference + geometry.world(neutral.wrist)
     }
 
-    /// Wide enough to forgive jitter, but never so wide that the start and target circles merge.
-    private func circleRadius(_ neutral: Neutral) -> Double {
-        let base = max(0.05, (isFlexion ? neutral.armLength : neutral.upperArm) * targetRadiusRatio)
-        guard let end = ends[snapshot.activeArm] else { return base }
-        let separation = (end - neutral.wrist).length
-        return max(0.03, min(base, separation * 0.42))
-    }
-
     private mutating func process(
         _ geometry: Geometry,
         frame: TrackingObservation,
@@ -650,7 +647,7 @@ struct ArmMovementEngine: BalanceMovementEngine {
     ) {
         let time = frame.timestamp
         updatePath(geometry.wrist, time: time, scale: isFlexion ? neutral.armLength : geometry.upperArm)
-        let radius = circleRadius(neutral)
+        let radius = bubbleRadius(aspect: frame.aspect)
 
         if snapshot.phase == .returning {
             let home = homeCenter(geometry, neutral: neutral)
@@ -933,17 +930,17 @@ struct ArmMovementEngine: BalanceMovementEngine {
         var target: TherapyPoint?
         var isReturn = false
         var calibrationHold = false
-        var radius = 0.055
+        var radius = bubbleRadius(aspect: frame.aspect)
 
         if snapshot.phase == .calibrating, snapshot.calibrationCountdown != nil {
             // The starting pose is held under a blue marker on the wrist, like the return circle.
             target = geometry.wrist
             isReturn = true
             calibrationHold = true
-            radius = max(0.05, geometry.upperArm * 0.28)
+            radius = bubbleRadius(aspect: frame.aspect)
         }
         if let neutral {
-            radius = circleRadius(neutral)
+            radius = bubbleRadius(aspect: frame.aspect)
             if snapshot.phase == .returning {
                 target = homeCenter(geometry, neutral: neutral)
                 isReturn = true
