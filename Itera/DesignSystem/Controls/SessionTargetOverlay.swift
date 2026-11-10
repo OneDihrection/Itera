@@ -37,6 +37,8 @@ struct TMSessionTargetOverlay: View {
     let imageSize: CGSize?
     let bubbleGuide: SessionBubbleGuide?
     var singleZone = false
+    /// False draws only the target bubble, for exercises whose start is not a place to return to.
+    var showsStart = true
     var settingUp = false
     var captureJoint: CGPoint? = nil
     var holdProgress = 0.0
@@ -162,7 +164,9 @@ struct TMSessionTargetOverlay: View {
                     )
                 }
 
-                drawBubble(.start, center: start, radius: radius, breath: breath, guide: guide, context: &context)
+                if showsStart || singleZone {
+                    drawBubble(.start, center: start, radius: radius, breath: breath, guide: guide, context: &context)
+                }
 
                 if !settingUp && !singleZone {
                     drawBubble(.target, center: target, radius: radius, breath: breath, guide: guide, context: &context)

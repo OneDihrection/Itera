@@ -171,6 +171,7 @@ struct TMBalanceSessionView: View {
 
             if let overlay = model.snapshot.overlay {
                 TMBalancePoseOverlay(state: overlay, mirrored: true)
+                targetOverlay(overlay)
             }
 
             if model.cameraWaiting {
@@ -180,6 +181,54 @@ struct TMBalanceSessionView: View {
         }
         .background(TherapyPalette.canvas)
         .accessibilityLabel(model.exercise.localized("cameraAccessibility"))
+    }
+
+    /// The standard target bubble, hold ring and direction cue shared with the movement exercises.
+    private func targetOverlay(_ overlay: BalanceOverlay) -> some View {
+        func normalized(_ point: TherapyPoint) -> CGPoint {
+            CGPoint(x: point.x / overlay.aspect, y: point.y)
+        }
+
+        let imageSize = CGSize(width: overlay.aspect, height: 1)
+
+        guard let target = overlay.target else {
+            return TMSessionTargetOverlay(
+                imageSize: imageSize,
+                bubbleGuide: nil,
+                mirrored: true
+            )
+        }
+
+        guard !overlay.isCalibrationHold else {
+            // The patient's own wrist is the marker while the end pose is held still.
+            return TMSessionTargetOverlay(
+                imageSize: imageSize,
+                bubbleGuide: nil,
+                captureJoint: overlay.wrist.map(normalized),
+                holdProgress: overlay.targetProgress,
+                holdRadius: overlay.targetRadius,
+                mirrored: true
+            )
+        }
+
+        let inside = overlay.wrist.map { ($0 - target).length <= overlay.targetRadius } ?? false
+        let bubble = SessionBubbleGuide(
+            startCenter: normalized(target),
+            targetCenter: normalized(target),
+            trackedJoint: overlay.wrist.map(normalized),
+            radius: overlay.targetRadius,
+            activeZone: overlay.isReturnTarget ? .start : .target,
+            trackedJointInside: inside,
+            dwellProgress: overlay.targetProgress
+        )
+
+        return TMSessionTargetOverlay(
+            imageSize: imageSize,
+            bubbleGuide: bubble,
+            singleZone: overlay.isReturnTarget,
+            showsStart: false,
+            mirrored: true
+        )
     }
 
     private func requestEnd() {
@@ -346,147 +395,42 @@ private struct TMBalancePoseOverlay: View {
                 }
             }
 
-            if let target = state.target {
+            // The count sits just outside the target so it never hides the wrist, above it
+            // unless that would leave the picture.
+            if let target = state.target, let remaining = state.holdSecondsRemaining {
                 let radius = state.targetRadius * scale
-                let targetColor: Color = TherapyPalette.guidanceBlue
-                let rect = CGRect(
-                    x: point(target).x - radius,
-                    y: point(target).y - radius,
-                    width: radius * 2,
-                    height: radius * 2
+                let badge = 54.0
+                let gap = 14.0
+                let center = point(target)
+                let above = center.y - radius - gap - badge / 2
+                let badgeCenter = CGPoint(
+                    x: center.x,
+                    y: above - badge / 2 >= offset.y
+                        ? above
+                        : center.y + radius + gap + badge / 2
                 )
-                context.fill(Path(ellipseIn: rect), with: .color(targetColor.opacity(0.28)))
-                // The outline is the progress bar: a dim track that fills clockwise.
-                context.stroke(Path(ellipseIn: rect), with: .color(targetColor.opacity(0.45)), lineWidth: 8)
-                if state.targetProgress > 0 {
-                    var progress = Path()
-                    progress.addArc(
-                        center: point(target),
-                        radius: radius,
-                        startAngle: .degrees(-90),
-                        endAngle: .degrees(-90 + 360 * min(1, state.targetProgress)),
-                        clockwise: false
-                    )
-                    context.stroke(
-                        progress,
-                        with: .color(targetColor),
-                        style: StrokeStyle(lineWidth: 10, lineCap: .round)
-                    )
-                }
-                if let remaining = state.holdSecondsRemaining {
-                    // The count sits just outside the marker so it never hides the wrist, above
-                    // it unless that would leave the picture.
-                    let badge = 54.0
-                    let gap = 14.0
-                    let center = point(target)
-                    let above = center.y - radius - gap - badge / 2
-                    let badgeCenter = CGPoint(
-                        x: center.x,
-                        y: above - badge / 2 >= offset.y
-                            ? above
-                            : center.y + radius + gap + badge / 2
-                    )
-                    let badgeRect = CGRect(
-                        x: badgeCenter.x - badge / 2,
-                        y: badgeCenter.y - badge / 2,
-                        width: badge,
-                        height: badge
-                    )
+                let badgeRect = CGRect(
+                    x: badgeCenter.x - badge / 2,
+                    y: badgeCenter.y - badge / 2,
+                    width: badge,
+                    height: badge
+                )
 
-                    context.fill(Path(ellipseIn: badgeRect), with: .color(.black.opacity(0.6)))
-                    context.stroke(Path(ellipseIn: badgeRect), with: .color(targetColor), lineWidth: 3)
-                    context.draw(
-                        Text(verbatim: String(remaining))
-                            .font(.system(size: 32, weight: .bold))
-                            .foregroundStyle(.white),
-                        at: badgeCenter
-                    )
-                }
-            }
-
-            if let target = state.target, let trackedWrist = state.wrist {
-                drawGuideArrow(
-                    in: &context,
-                    from: point(trackedWrist),
-                    to: point(target),
-                    targetRadius: state.targetRadius * scale,
-                    color: .white
+                context.fill(Path(ellipseIn: badgeRect), with: .color(.black.opacity(0.6)))
+                context.stroke(
+                    Path(ellipseIn: badgeRect),
+                    with: .color(TherapyPalette.guidanceBlue),
+                    lineWidth: 3
                 )
-            }
-
-            // During the end-pose hold the marker itself sits on the wrist, with the countdown inside.
-            if let trackedWrist = state.wrist, !state.isCalibrationHold {
-                let wrist = point(trackedWrist)
-                let wristRadius = 14.0
-                let wristRect = CGRect(
-                    x: wrist.x - wristRadius,
-                    y: wrist.y - wristRadius,
-                    width: wristRadius * 2,
-                    height: wristRadius * 2
+                context.draw(
+                    Text(verbatim: String(remaining))
+                        .font(.system(size: 32, weight: .bold))
+                        .foregroundStyle(.white),
+                    at: badgeCenter
                 )
-                context.fill(
-                    Path(ellipseIn: wristRect),
-                    with: .color(TherapyPalette.guidanceYellow)
-                )
-                context.stroke(Path(ellipseIn: wristRect), with: .color(.white), lineWidth: 4)
             }
         }
         .allowsHitTesting(false)
         .accessibilityHidden(true)
-    }
-
-    /// An arrow from the patient's wrist to the edge of the target, so it is clear where to
-    /// move. It disappears once the wrist is inside the target.
-    private func drawGuideArrow(
-        in context: inout GraphicsContext,
-        from start: CGPoint,
-        to end: CGPoint,
-        targetRadius: Double,
-        color: Color
-    ) {
-        let dx = end.x - start.x
-        let dy = end.y - start.y
-        let distance = hypot(dx, dy)
-        let wristGap = 22.0
-        let tipGap = targetRadius + 8
-
-        guard distance > tipGap + wristGap + 30 else {
-            return
-        }
-
-        let unit = CGPoint(x: dx / distance, y: dy / distance)
-        let tail = CGPoint(x: start.x + unit.x * wristGap, y: start.y + unit.y * wristGap)
-        let tip = CGPoint(x: end.x - unit.x * tipGap, y: end.y - unit.y * tipGap)
-
-        let headLength = 26.0
-        let spread = Angle.degrees(28).radians
-        let angle = atan2(unit.y, unit.x)
-        let shaftEnd = CGPoint(
-            x: tip.x - unit.x * headLength * 0.6,
-            y: tip.y - unit.y * headLength * 0.6
-        )
-
-        var shaft = Path()
-        shaft.move(to: tail)
-        shaft.addLine(to: shaftEnd)
-
-        var head = Path()
-        head.move(to: tip)
-        head.addLine(to: CGPoint(
-            x: tip.x - headLength * cos(angle - spread),
-            y: tip.y - headLength * sin(angle - spread)
-        ))
-        head.addLine(to: CGPoint(
-            x: tip.x - headLength * cos(angle + spread),
-            y: tip.y - headLength * sin(angle + spread)
-        ))
-        head.closeSubpath()
-
-        let dashed = StrokeStyle(lineWidth: 7, lineCap: .round, dash: [14, 10])
-
-        context.stroke(shaft, with: .color(.black.opacity(0.55)), style: StrokeStyle(lineWidth: 11, lineCap: .round, dash: [14, 10]))
-        context.stroke(shaft, with: .color(color), style: dashed)
-        context.fill(head, with: .color(.black.opacity(0.55)))
-        context.fill(head, with: .color(color))
     }
 }

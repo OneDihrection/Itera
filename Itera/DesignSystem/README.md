@@ -82,7 +82,7 @@ Top-level navigation uses the system `TabView` (a top tab bar on iPadOS 18, a bo
 
 ## Light session layout
 
-Arm raise, elbow bend, directional reach and fold towel use the finger-exercise look instead of the black session screen (`TMTherapySessionView` chooses it by activity kind, never by stage, so the preview stays mounted). Practice now uses `TMTherapyExerciseLiveLayout` (see "Shared exercise screens"); the earlier header, 380-point side column and `TMTherapyRepetitionPanel` are replaced. Instruction, demonstration and countdowns are light pages over the mounted preview; countdowns use `TMTherapyCountdownDial`.
+Arm raise, elbow bend, directional reach and fold towel use the finger-exercise look instead of the black session screen (`TMTherapySessionView` chooses it by activity kind, never by stage, so the preview stays mounted). Practice now uses `TMTherapyExerciseLiveLayout` (see "Shared exercise screens"); the earlier header, 380-point side column and `TMTherapyRepetitionPanel` are replaced. Instruction, demonstration and countdowns are light pages over the mounted preview; countdowns use `TMPracticeCountdown`, and rest uses `TMTherapyBreathingRest` (`TMTherapyCountdownDial` is no longer used).
 
 The exercise layout stays visible while the camera gets ready. The light stage pages force the light color scheme, so they stay light in system dark mode.
 

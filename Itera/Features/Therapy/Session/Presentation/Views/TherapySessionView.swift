@@ -207,15 +207,20 @@ struct TMTherapySessionView: View {
                     }
                 }
             )
-        } else if usesLightLayout,
-           model.snapshot.stage == .activity,
+        } else if model.snapshot.stage == .activity,
            let seconds = model.snapshot.presentation?.countdownSeconds,
            model.snapshot.instruction != "calibration.complete",
-           !model.cameraDenied, model.voiceReady {
+           !model.cameraDenied, model.voiceReady, !model.snapshot.paused || usesLightLayout {
             TMPracticeCountdown(
                 seconds: seconds,
                 pause: { model.command(.pause) },
-                stop: { requestEnd() }
+                stop: {
+                    if usesLightLayout {
+                        requestEnd()
+                    } else {
+                        model.command(.stop)
+                    }
+                }
             )
             .ignoresSafeArea()
         } else if usesLightLayout {
@@ -393,11 +398,6 @@ struct TMTherapySessionView: View {
             }
         } else if model.snapshot.stage == .demonstration {
             guidancePanel(demonstrating: true)
-        } else if model.snapshot.stage == .activity,
-            let seconds = model.snapshot.presentation?.countdownSeconds
-        {
-            countdownPanel(seconds)
-                .frame(maxHeight: .infinity)
         }
     }
 
@@ -615,19 +615,6 @@ struct TMTherapySessionView: View {
 
     var guidancePhrase: String {
         String(localized: String.LocalizationValue(model.snapshot.instruction), bundle: model.sessionLanguage.resourceBundle, locale: model.sessionLocale)
-    }
-
-    func countdownPanel(_ seconds: Int) -> some View {
-        ScrollView {
-            VStack(spacing: 0) {
-                Text("session.countdown").typography(.therapyPhase)
-                Text(verbatim: "\(seconds)")
-                    .typography(.therapyCountdown)
-                    .monospacedDigit()
-            }
-            .frame(maxWidth: .infinity)
-        }
-        .background(.black.opacity(0.9))
     }
 
     @ViewBuilder var demonstration: some View {
