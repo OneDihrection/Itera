@@ -758,6 +758,64 @@ struct TMTherapySetSummary<Actions: View>: View {
     }
 }
 
+// MARK: - Finish actions
+
+/// The way on from the all-done page: a prominent button, an optional "repeat" link under it,
+/// and a slot above for saving progress or a save error. Every exercise ends with this block.
+struct TMTherapyFinishActions<Status: View>: View {
+    let title: LocalizedStringKey
+    var symbol: String? = nil
+    var disabled = false
+    var repeatTitle: LocalizedStringKey? = nil
+    var onRepeat: (() -> Void)? = nil
+    let action: () -> Void
+    @ViewBuilder let status: Status
+
+    var body: some View {
+        VStack(spacing: 12) {
+            status
+
+            TMTherapyButton(
+                title: title,
+                symbol: symbol,
+                disabled: disabled,
+                prominent: true,
+                action: action
+            )
+
+            if let repeatTitle, let onRepeat {
+                TMTherapyTextButton(
+                    title: repeatTitle,
+                    symbol: "arrow.clockwise",
+                    action: onRepeat
+                )
+            }
+        }
+    }
+}
+
+extension TMTherapyFinishActions where Status == EmptyView {
+    init(
+        title: LocalizedStringKey,
+        symbol: String? = nil,
+        disabled: Bool = false,
+        repeatTitle: LocalizedStringKey? = nil,
+        onRepeat: (() -> Void)? = nil,
+        action: @escaping () -> Void
+    ) {
+        self.init(
+            title: title,
+            symbol: symbol,
+            disabled: disabled,
+            repeatTitle: repeatTitle,
+            onRepeat: onRepeat,
+            action: action
+        ) {
+            EmptyView()
+        }
+    }
+}
+
 // MARK: - Demonstration caption
 
 private struct DemoCaptionHiddenKey: EnvironmentKey {

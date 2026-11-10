@@ -112,6 +112,12 @@ struct CrossMidlineBalanceEngine: BalanceMovementEngine {
     }
 
     private(set) var snapshot = BalanceSnapshot()
+    var viewport: TherapyViewport?
+
+    /// The shared bubble radius in normalized image height for the current camera frame.
+    private func bubbleRadius(aspect: Double) -> Double {
+        sharedBubbleRadius(aspect: aspect, viewport: viewport)
+    }
     private var baseline: Baseline?
     private var baselineCapture: BaselineCapture?
     private var generation: UUID?
@@ -133,10 +139,8 @@ struct CrossMidlineBalanceEngine: BalanceMovementEngine {
     private let baselineDuration = 1.0
     private let targetHoldDuration: Double
     private let returnHoldDuration = 5.0
-    private let targetRadiusRatio = 0.34
-    private let targetExitRadiusRatio = 0.40
-    private let returnRadiusRatio = 0.38
-    private let returnExitRadiusRatio = 0.44
+    /// A hold that has begun tolerates a slightly larger circle than the one drawn.
+    private let exitRadiusScale = 1.2
     private let leanThresholdDegrees = 18.0
     private let lateralShiftThreshold = 0.40
     private let rotationThreshold = 0.40
@@ -425,12 +429,8 @@ struct CrossMidlineBalanceEngine: BalanceMovementEngine {
             let home = homeWristPositions[snapshot.activeArm]
                 ?? fallbackHomePosition(for: snapshot.activeArm, geometry: geometry)
             homeWristPositions[snapshot.activeArm] = home
-            let returnRadius = max(
-                0.06,
-                geometry.shoulderWidth * (!returnHold.isHolding
-                    ? returnRadiusRatio
-                    : returnExitRadiusRatio)
-            )
+            let returnRadius = bubbleRadius(aspect: frame.aspect)
+                * (returnHold.isHolding ? exitRadiusScale : 1)
             let isOnStartingSide = crossedMidline(
                 wrist: wrist,
                 target: ownShoulder,
@@ -468,12 +468,8 @@ struct CrossMidlineBalanceEngine: BalanceMovementEngine {
         updatePath(position: wrist, time: frame.timestamp, scale: geometry.shoulderWidth)
 
         let proximity = (wrist - target).length
-        let targetRadius = max(
-            0.055,
-            geometry.shoulderWidth * (!targetHold.isHolding
-                ? targetRadiusRatio
-                : targetExitRadiusRatio)
-        )
+        let targetRadius = bubbleRadius(aspect: frame.aspect)
+            * (targetHold.isHolding ? exitRadiusScale : 1)
         // The visible, body-anchored target is authoritative for contact. It is already
         // centered on the opposite shoulder; requiring a second midline predicate here
         // can reject a wrist that is visibly inside the circle when the torso axis jitters.
@@ -941,9 +937,7 @@ struct CrossMidlineBalanceEngine: BalanceMovementEngine {
             wrist: point(snapshot.activeArm.wrist, in: geometry),
             target: target,
             isReturnTarget: isReturnTarget,
-            targetRadius: isReturnTarget
-                ? max(0.06, geometry.shoulderWidth * returnRadiusRatio)
-                : max(0.055, geometry.shoulderWidth * targetRadiusRatio),
+            targetRadius: bubbleRadius(aspect: frame.aspect),
             crossedMidline: crossed,
             targetProgress: progress,
             holdSecondsRemaining: holdSecondsRemaining(

@@ -72,6 +72,7 @@ final class BalanceSessionViewModel {
     @ObservationIgnored private let audio: SessionAudioService
     @ObservationIgnored private var engine: any BalanceMovementEngine
     @ObservationIgnored private var subscriptions = Set<AnyCancellable>()
+    @ObservationIgnored private var viewport: TherapyViewport?
     @ObservationIgnored private var started = false
     @ObservationIgnored private var wasIdleTimerDisabled = false
     @ObservationIgnored private var lastSpokenCountdown: Int?
@@ -278,6 +279,16 @@ final class BalanceSessionViewModel {
         openingCue = .countdown
     }
 
+    /// The camera frame in points, so the engine sizes bubbles like the other exercises.
+    func viewport(_ size: CGSize) {
+        guard size.width > 0, size.height > 0 else {
+            return
+        }
+
+        viewport = TherapyViewport(width: size.width, height: size.height)
+        engine.viewport = viewport
+    }
+
     func previewReady(_ ready: Bool) {
         if ready { cameraWaiting = false }
     }
@@ -301,6 +312,7 @@ final class BalanceSessionViewModel {
         audio.cancelSpeech()
         audio.startMusic()
         engine.restart()
+        engine.viewport = viewport
         resetOpening()
         snapshot = engine.snapshot
         tracking.start()

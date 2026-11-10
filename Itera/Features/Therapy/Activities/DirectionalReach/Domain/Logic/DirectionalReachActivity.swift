@@ -579,9 +579,7 @@ struct DirectionalReachActivity: TherapyActivity {
             return false
         }
         let target = targets[direction] ?? start
-        let effective = bubbleRadius(
-            body: radius, separation: target == start ? nil : (target - start).length,
-            aspect: frame.aspect, viewport: viewport)
+        let effective = sharedBubbleRadius(aspect: frame.aspect, viewport: viewport)
         let inside = (relative - (outward ? target : start)).length <= effective
 
         // Stepping out briefly or a jittery sample freezes the dwell; only a longer exit clears it.

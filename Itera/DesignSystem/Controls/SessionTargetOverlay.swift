@@ -27,6 +27,24 @@ struct SessionDirectionGuide {
     var farthestPosition: CGPoint?
 }
 
+/// The tracked body, in normalized image coordinates: an optional shoulder-hip box and midline,
+/// and a chain of joints such as shoulder, elbow and wrist.
+struct SessionPoseGuide {
+    /// Shoulders and hips in drawing order; fewer than three points draws no box.
+    var torso: [CGPoint] = []
+    var midline: (base: CGPoint, top: CGPoint)?
+    var chain: [CGPoint] = []
+    /// Draws the box and midline in orange instead of yellow.
+    var warning = false
+}
+
+/// The seconds left in a hold, drawn beside the bubble so it never hides the joint.
+struct SessionHoldCountdown {
+    let seconds: Int
+    let center: CGPoint
+    let radius: Double
+}
+
 /// Calm camera guidance: a breathing target bubble, a quiet outline-only home bubble, one thin
 /// fading arrow and a slow hold ring.
 ///
@@ -45,6 +63,8 @@ struct TMSessionTargetOverlay: View {
     /// Hold ring radius in normalized image height, like a bubble radius; nil keeps the default size.
     var holdRadius: Double? = nil
     var directionGuide: SessionDirectionGuide? = nil
+    var poseGuide: SessionPoseGuide? = nil
+    var holdCountdown: SessionHoldCountdown? = nil
     let mirrored: Bool
     var viewportChanged: ((CGSize) -> Void)? = nil
 
@@ -129,6 +149,10 @@ struct TMSessionTargetOverlay: View {
                 size: CGSize(width: image.width * scale, height: image.height * scale)
             )
 
+            if let poseGuide {
+                drawPose(poseGuide, point: point, context: &context)
+            }
+
             if let directionGuide {
                 if directionGuide.showsArrow {
                     drawReachDirection(
@@ -179,6 +203,16 @@ struct TMSessionTargetOverlay: View {
 
             if let pop {
                 drawPop(pop, scale: scale, imageHeight: image.height, at: point(pop.center), now: now, context: &context)
+            }
+
+            if let holdCountdown {
+                drawCountdown(
+                    holdCountdown,
+                    center: point(holdCountdown.center),
+                    radius: holdCountdown.radius * image.height * scale,
+                    bounds: imageBounds,
+                    context: &context
+                )
             }
 
             if let joint = captureJoint {
@@ -253,6 +287,80 @@ struct TMSessionTargetOverlay: View {
         )
         context.fill(Path(roundedRect: rect, cornerRadius: 12), with: .color(.black.opacity(0.75)))
         context.draw(text, at: CGPoint(x: rect.midX, y: rect.midY))
+    }
+
+    /// The body outline under the bubbles: a quiet shoulder-hip box and midline, and the joint
+    /// chain in the same dark-underlay style as every other line.
+    private func drawPose(
+        _ pose: SessionPoseGuide,
+        point: (CGPoint) -> CGPoint,
+        context: inout GraphicsContext
+    ) {
+        let torsoColor = pose.warning ? Color.orange : TherapyPalette.guidanceYellow
+
+        if pose.torso.count > 2 {
+            var torso = Path()
+            torso.move(to: point(pose.torso[0]))
+            pose.torso.dropFirst().forEach { torso.addLine(to: point($0)) }
+            torso.closeSubpath()
+            context.fill(torso, with: .color(torsoColor.opacity(0.10)))
+            strokeWithUnderlay(torso, color: torsoColor.opacity(0.75), width: 3, context: &context)
+        }
+
+        if let midline = pose.midline {
+            var path = Path()
+            path.move(to: point(midline.base))
+            path.addLine(to: point(midline.top))
+            strokeWithUnderlay(
+                path,
+                color: torsoColor,
+                width: 5,
+                style: StrokeStyle(lineWidth: 5, lineCap: .round, dash: [12, 8]),
+                context: &context
+            )
+        }
+
+        guard pose.chain.count > 1 else {
+            return
+        }
+
+        var chain = Path()
+        chain.move(to: point(pose.chain[0]))
+        pose.chain.dropFirst().forEach { chain.addLine(to: point($0)) }
+        strokeWithUnderlay(chain, color: .white, width: 6, context: &context)
+        pose.chain.forEach { drawJoint(point($0), context: &context) }
+    }
+
+    /// The count sits just outside the bubble, above it unless that would leave the picture.
+    private func drawCountdown(
+        _ countdown: SessionHoldCountdown,
+        center: CGPoint,
+        radius: Double,
+        bounds: CGRect,
+        context: inout GraphicsContext
+    ) {
+        let badge = 54.0
+        let gap = 14.0
+        let above = center.y - radius - gap - badge / 2
+        let badgeCenter = CGPoint(
+            x: center.x,
+            y: above - badge / 2 >= bounds.minY ? above : center.y + radius + gap + badge / 2
+        )
+        let rect = CGRect(
+            x: badgeCenter.x - badge / 2,
+            y: badgeCenter.y - badge / 2,
+            width: badge,
+            height: badge
+        )
+
+        context.fill(Path(ellipseIn: rect), with: .color(TherapyPalette.calmUnderlay))
+        context.stroke(Path(ellipseIn: rect), with: .color(TherapyPalette.guidanceBlue), lineWidth: 3)
+        context.draw(
+            context.resolve(
+                AppTypography.overlayText(LocalizedStringKey(String(countdown.seconds)), size: 32, weight: .bold)
+            ),
+            at: badgeCenter
+        )
     }
 
     /// The tracked joint: a large yellow disc the patient can always find.

@@ -3069,6 +3069,7 @@
       }
     },
     "done.message.afternoon" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -3085,6 +3086,7 @@
       }
     },
     "done.message.evening" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -3101,6 +3103,7 @@
       }
     },
     "done.message.morning" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -3117,6 +3120,7 @@
       }
     },
     "done.message.night" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {

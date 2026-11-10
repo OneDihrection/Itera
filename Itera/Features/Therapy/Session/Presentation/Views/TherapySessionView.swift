@@ -938,7 +938,7 @@ struct TMTherapySessionView: View {
             settingUp: guide.capturing,
             captureJoint: (guide.capturing || guide.jointHold) ? normalized(guide.tracked) : nil,
             holdProgress: guide.progress,
-            holdRadius: guide.matchesHoldRing ? guide.radius : nil,
+            holdRadius: guide.radius,
             directionGuide: direction,
             mirrored: true
         )

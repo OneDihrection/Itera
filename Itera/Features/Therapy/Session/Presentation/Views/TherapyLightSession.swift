@@ -387,22 +387,18 @@ extension TMTherapySessionView {
             results: results,
             total: Text("session.total \(results.reduce(0) { $0 + $1.done })")
         ) {
-            VStack(spacing: 12) {
+            TMTherapyFinishActions(
+                title: summaryExitTitle,
+                symbol: "play.fill",
+                disabled: model.saving || model.saveFailure != nil,
+                action: { leaveSummary(summary) }
+            ) {
                 if model.saving {
                     ProgressView("session.saving")
                 }
 
                 if let error = model.saveFailure {
                     saveError(error)
-                }
-
-                TMTherapyButton(
-                    title: summaryExitTitle,
-                    symbol: "play.fill",
-                    disabled: model.saving || model.saveFailure != nil,
-                    prominent: true
-                ) {
-                    leaveSummary(summary)
                 }
             }
         }

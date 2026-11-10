@@ -7,7 +7,8 @@
 
 import SwiftUI
 
-/// Saves the finished session and offers a way to see progress or continue today’s plan.
+/// The shared all-done page for the finger exercises: saves the finished session, then offers a
+/// way on to the next exercise or to progress.
 struct TMFingerSessionCompleteView: View {
     @Environment(AppDependencies.self) private var dependencies
     @Environment(NavigationRouter.self) private var router
@@ -18,49 +19,63 @@ struct TMFingerSessionCompleteView: View {
     }
 
     var body: some View {
-        VStack(spacing: 0) {
-            Spacer(minLength: 40)
-
-            VStack(spacing: 18) {
-                TMTherapyCompletionMark(tint: TherapyPalette.brand)
-                Text(completed ? "session.allDoneTitle" : "done.titlePartial")
-                    .typography(size: 52, weight: .bold, relativeTo: .largeTitle)
-                    .accessibilityAddTraits(.isHeader)
-                message
-                    .typography(size: 26, weight: .regular, relativeTo: .title3)
-                    .multilineTextAlignment(.center)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-            .padding(.horizontal, 40)
-
-            Spacer(minLength: 40)
-
+        TMTherapySetSummary(
+            heading: TMTherapyExerciseHeading(
+                eyebrow: dependencies.dailyPlan.currentNumber.map { Text("plan.exerciseNumber \($0)") },
+                title: Text(verbatim: dependencies.session?.exerciseTitle ?? "")
+            ),
+            headline: Text(completed ? "session.allDoneTitle" : "done.titlePartial"),
+            message: Text(completed ? "session.allDoneMessage" : "done.messagePartial"),
+            results: results,
+            total: Text("session.total \(summary?.totalRepetitions ?? 0)")
+        ) {
             closingAction
-
-            Spacer(minLength: 40)
         }
-        .foregroundStyle(TherapyPalette.ink)
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(TherapyPalette.canvas)
+        .environment(\.colorScheme, .light)
         .environment(\.locale, dependencies.session?.sessionLanguage.locale ?? AppLanguage.selected.locale)
         .interactiveDismissDisabled()
         .task { await saveSummary() }
     }
 
-    @ViewBuilder
+    /// The way on appears once saving has finished, whether or not it succeeded, so the
+    /// patient is never stuck on this page.
     private var closingAction: some View {
-        // The way on appears once saving has finished, whether or not it succeeded, so the
-        // patient is never stuck on this page.
-        if savingFinished {
-            TMTherapyButton(
-                title: closingTitle,
-                symbol: dependencies.dailyPlan.isRunning ? "play.fill" : nil,
-                prominent: true,
-                action: close
-            )
-        } else {
-            ProgressView()
+        TMTherapyFinishActions(
+            title: closingTitle,
+            symbol: dependencies.dailyPlan.isRunning ? "play.fill" : nil,
+            disabled: !savingFinished,
+            action: close
+        ) {
+            if !savingFinished {
+                ProgressView()
+            }
         }
+    }
+
+    /// Every set of every movement. Finger sets end only when the goal is reached, so a finished
+    /// set is goal/goal and the rest are still to do.
+    private var results: [TherapySetResult] {
+        guard let summary else {
+            return []
+        }
+
+        let sets = max(1, summary.routine.sets)
+        let goal = summary.routine.repetitions
+
+        return summary.results
+            .enumerated()
+            .flatMap { movement, result in
+                (1...sets).map { number in
+                    let finished = number <= result.completedSets
+
+                    return TherapySetResult(
+                        number: movement * sets + number,
+                        done: finished ? goal : 0,
+                        goal: goal,
+                        state: finished ? .done : .upcoming
+                    )
+                }
+            }
     }
 
     private func saveSummary() async {
@@ -73,23 +88,6 @@ struct TMFingerSessionCompleteView: View {
 
     private var completed: Bool {
         summary?.outcome == .completed
-    }
-
-    private var message: Text {
-        guard completed else {
-            return Text("done.messagePartial")
-        }
-
-        switch PartOfDay(date: summary?.ended ?? Date()) {
-        case .morning:
-            return Text("done.message.morning")
-        case .afternoon:
-            return Text("done.message.afternoon")
-        case .evening:
-            return Text("done.message.evening")
-        case .night:
-            return Text("done.message.night")
-        }
     }
 
     /// While today's plan runs, this page leads on to the next exercise instead of Progress.
@@ -105,23 +103,5 @@ struct TMFingerSessionCompleteView: View {
 
         router.dismissFullScreenCover()
         router.push(.reports)
-    }
-}
-
-/// Indonesian distinguishes pagi, siang, sore and malam; English uses the same four parts.
-private enum PartOfDay {
-    case morning, afternoon, evening, night
-
-    init(date: Date, calendar: Calendar = .current) {
-        switch calendar.component(.hour, from: date) {
-        case 4..<11:
-            self = .morning
-        case 11..<15:
-            self = .afternoon
-        case 15..<18:
-            self = .evening
-        default:
-            self = .night
-        }
     }
 }

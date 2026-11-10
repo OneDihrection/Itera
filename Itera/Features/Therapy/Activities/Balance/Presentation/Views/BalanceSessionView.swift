@@ -170,7 +170,6 @@ struct TMBalanceSessionView: View {
             )
 
             if let overlay = model.snapshot.overlay {
-                TMBalancePoseOverlay(state: overlay, mirrored: true)
                 targetOverlay(overlay)
             }
 
@@ -180,21 +179,51 @@ struct TMBalanceSessionView: View {
             }
         }
         .background(TherapyPalette.canvas)
+        .background {
+            GeometryReader { proxy in
+                Color.clear
+                    .onAppear { model.viewport(proxy.size) }
+                    .onChange(of: proxy.size) { _, size in
+                        model.viewport(size)
+                    }
+            }
+        }
         .accessibilityLabel(model.exercise.localized("cameraAccessibility"))
     }
 
-    /// The standard target bubble, hold ring and direction cue shared with the movement exercises.
+    /// The standard pose, target bubble, hold ring and countdown shared with the movement exercises.
     private func targetOverlay(_ overlay: BalanceOverlay) -> some View {
         func normalized(_ point: TherapyPoint) -> CGPoint {
             CGPoint(x: point.x / overlay.aspect, y: point.y)
         }
 
         let imageSize = CGSize(width: overlay.aspect, height: 1)
+        let pose = SessionPoseGuide(
+            torso: overlay.showsTorso
+                ? [overlay.leftShoulder, overlay.rightShoulder, overlay.rightHip, overlay.leftHip]
+                    .map(normalized)
+                : [],
+            midline: overlay.showsMidline
+                ? (normalized(overlay.midlineBase), normalized(overlay.midlineTop))
+                : nil,
+            chain: overlay.armChain.map(normalized),
+            warning: overlay.compensationWarning
+        )
+        let countdown = overlay.target.flatMap { target in
+            overlay.holdSecondsRemaining.map { seconds in
+                SessionHoldCountdown(
+                    seconds: seconds,
+                    center: normalized(target),
+                    radius: overlay.targetRadius
+                )
+            }
+        }
 
         guard let target = overlay.target else {
             return TMSessionTargetOverlay(
                 imageSize: imageSize,
                 bubbleGuide: nil,
+                poseGuide: pose,
                 mirrored: true
             )
         }
@@ -207,6 +236,8 @@ struct TMBalanceSessionView: View {
                 captureJoint: overlay.wrist.map(normalized),
                 holdProgress: overlay.targetProgress,
                 holdRadius: overlay.targetRadius,
+                poseGuide: pose,
+                holdCountdown: countdown,
                 mirrored: true
             )
         }
@@ -227,6 +258,8 @@ struct TMBalanceSessionView: View {
             bubbleGuide: bubble,
             singleZone: overlay.isReturnTarget,
             showsStart: false,
+            poseGuide: pose,
+            holdCountdown: countdown,
             mirrored: true
         )
     }
@@ -281,17 +314,13 @@ struct TMBalanceSessionView: View {
             results: results,
             total: Text("session.total \(repetitionsDone)")
         ) {
-            VStack(spacing: 12) {
-                TMTherapyButton(
-                    title: dependencies.dailyPlan.isRunning ? "plan.nextContinue" : "balance.completion.end",
-                    symbol: dependencies.dailyPlan.isRunning ? "play.fill" : nil,
-                    prominent: true,
-                    action: endPractice
-                )
-                TMTherapyTextButton(title: "balance.completion.repeat", symbol: "arrow.clockwise") {
-                    model.restart()
-                }
-            }
+            TMTherapyFinishActions(
+                title: dependencies.dailyPlan.isRunning ? "plan.nextContinue" : "balance.completion.end",
+                symbol: dependencies.dailyPlan.isRunning ? "play.fill" : nil,
+                repeatTitle: "balance.completion.repeat",
+                onRepeat: model.restart,
+                action: endPractice
+            )
         }
     }
 
@@ -335,102 +364,5 @@ struct TMBalanceSessionView: View {
         }
 
         dependencies.dailyPlan.end(router: router)
-    }
-}
-
-private struct TMBalancePoseOverlay: View {
-    let state: BalanceOverlay
-    let mirrored: Bool
-
-    var body: some View {
-        Canvas { context, size in
-            let image = CGSize(width: state.aspect, height: 1)
-            let scale = min(size.width / image.width, size.height / image.height)
-            let offset = CGPoint(
-                x: (size.width - image.width * scale) / 2,
-                y: (size.height - image.height * scale) / 2
-            )
-            func point(_ source: TherapyPoint) -> CGPoint {
-                CGPoint(
-                    x: offset.x + (mirrored ? state.aspect - source.x : source.x) * scale,
-                    y: offset.y + (1 - source.y) * scale
-                )
-            }
-
-            let warning = state.compensationWarning
-            let torsoColor = warning ? Color.orange : TherapyPalette.guidanceYellow
-
-            if state.showsTorso {
-                var torso = Path()
-                torso.move(to: point(state.leftShoulder))
-                torso.addLine(to: point(state.rightShoulder))
-                torso.addLine(to: point(state.rightHip))
-                torso.addLine(to: point(state.leftHip))
-                torso.closeSubpath()
-                context.fill(torso, with: .color(torsoColor.opacity(0.10)))
-                context.stroke(torso, with: .color(torsoColor.opacity(0.75)), lineWidth: 3)
-            }
-
-            if state.showsMidline {
-                var midline = Path()
-                midline.move(to: point(state.midlineBase))
-                midline.addLine(to: point(state.midlineTop))
-                context.stroke(
-                    midline,
-                    with: .color(torsoColor),
-                    style: StrokeStyle(lineWidth: 5, lineCap: .round, dash: [12, 8])
-                )
-            }
-
-            if state.armChain.count > 1 {
-                var arm = Path()
-                arm.move(to: point(state.armChain[0]))
-                state.armChain.dropFirst().forEach { arm.addLine(to: point($0)) }
-                context.stroke(arm, with: .color(.black), style: StrokeStyle(lineWidth: 11, lineCap: .round, lineJoin: .round))
-                context.stroke(arm, with: .color(.white), style: StrokeStyle(lineWidth: 6, lineCap: .round, lineJoin: .round))
-                for joint in state.armChain {
-                    let center = point(joint)
-                    let rect = CGRect(x: center.x - 9, y: center.y - 9, width: 18, height: 18)
-                    context.fill(Path(ellipseIn: rect), with: .color(TherapyPalette.guidanceYellow))
-                }
-            }
-
-            // The count sits just outside the target so it never hides the wrist, above it
-            // unless that would leave the picture.
-            if let target = state.target, let remaining = state.holdSecondsRemaining {
-                let radius = state.targetRadius * scale
-                let badge = 54.0
-                let gap = 14.0
-                let center = point(target)
-                let above = center.y - radius - gap - badge / 2
-                let badgeCenter = CGPoint(
-                    x: center.x,
-                    y: above - badge / 2 >= offset.y
-                        ? above
-                        : center.y + radius + gap + badge / 2
-                )
-                let badgeRect = CGRect(
-                    x: badgeCenter.x - badge / 2,
-                    y: badgeCenter.y - badge / 2,
-                    width: badge,
-                    height: badge
-                )
-
-                context.fill(Path(ellipseIn: badgeRect), with: .color(.black.opacity(0.6)))
-                context.stroke(
-                    Path(ellipseIn: badgeRect),
-                    with: .color(TherapyPalette.guidanceBlue),
-                    lineWidth: 3
-                )
-                context.draw(
-                    Text(verbatim: String(remaining))
-                        .font(.system(size: 32, weight: .bold))
-                        .foregroundStyle(.white),
-                    at: badgeCenter
-                )
-            }
-        }
-        .allowsHitTesting(false)
-        .accessibilityHidden(true)
     }
 }
