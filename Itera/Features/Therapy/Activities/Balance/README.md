@@ -58,7 +58,7 @@ Frames with gaps above 300 ms clear transient evidence. The output is an exercis
 
 ## Presentation and completion
 
-The setup screen stores the touch goal, hold duration, and active-arm choice. Right and Left repeat only the selected arm after every return-to-start phase; Both begins on the right and alternates arms. The demonstration plays the bundled `cross_midline_right_demonstration.mp4` (reflected for the left arm; Both shows it beside its reflection).
+The setup screen stores the touch goal, hold duration, and active-arm choice. Right and Left repeat only the selected arm after every return-to-start phase; Both begins on the right and alternates arms. The demonstration plays the bundled `cross_midline_right_demonstration.mp4` (reflected for the left arm; Both follows the active arm as it alternates).
 
 After the final target, capture stops and a modal-style overlay presents target completion, across-midline time, compensation load, and the jerk-derived smoothness estimate. The chart explicitly identifies camera results as session estimates rather than clinical assessment. The patient can repeat with fresh calibration or end and return to the Balancing overview.
 

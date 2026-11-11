@@ -361,6 +361,7 @@
       }
     },
     "balance.animationUnavailable" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -2726,7 +2727,6 @@
       }
     },
     "done.messagePartial" : {
-      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -2760,7 +2760,6 @@
       }
     },
     "done.titlePartial" : {
-      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -2777,7 +2776,6 @@
       }
     },
     "done.viewProgress" : {
-      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -4408,7 +4406,6 @@
       }
     },
     "internalRotation.animationAccessibility" : {
-      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {

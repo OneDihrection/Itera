@@ -147,7 +147,7 @@ Repository errors are visible. Retry failed saves; require caregiver acknowledgm
 
 ## 9. Assets and animation
 
-Body-exercise examples are bundled silent H.264 MP4s in `Itera/Resources/Animations` (see its README), rendered per `Documentation/AnimationRenderingStandard.md`: arm raise, elbow bend, directional reach, cross-midline, shoulder external/internal rotation, shoulder flexion, and sit-to-stand. Arm clips show the right arm; reflect the rendered picture for left-side examples without reflecting labels, and show both arms as the right-arm clip beside its reflection. Hand and finger exercises use their own bundled MOV examples.
+Body-exercise examples are bundled silent H.264 MP4s in `Itera/Resources/Animations` (see its README), rendered per `Documentation/AnimationRenderingStandard.md`: arm raise, elbow bend, directional reach, cross-midline, shoulder external/internal rotation, shoulder flexion, and sit-to-stand. Arm clips show the right arm; reflect the rendered picture for left-side examples without reflecting labels; with both arms chosen, the example follows the active arm. Hand and finger exercises use their own bundled MOV examples.
 
 Keep assets self-contained. Loop demonstrations and active examples; a static start example holds the first frame, a static peak example the midpoint, and Reduce Motion shows a paused midpoint.
 
