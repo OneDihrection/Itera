@@ -13,19 +13,27 @@ import SwiftUI
 struct TMShoulderRotationMovieView: View {
     let resource: String
     let paused: Bool
+    var mirrored: Bool = false
+    /// Shows the right-arm recording beside its reflection, depicting both arms.
+    var bothArms: Bool = false
     var accessibilityKey: LocalizedStringKey = "rotation.animationAccessibility"
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-
-    /// Whether the movie for `resource` is bundled, so callers can fall back to the illustration.
-    static func isAvailable(_ resource: String) -> Bool {
-        Bundle.main.url(forResource: resource, withExtension: "mov") != nil
-    }
 
     var body: some View {
         let holdsPose = paused || reduceMotion
 
         ZStack {
-            TMShoulderRotationPlayer(resource: resource, paused: holdsPose)
+            if bothArms {
+                HStack(spacing: 0) {
+                    TMShoulderRotationPlayer(resource: resource, paused: holdsPose, fitsFigure: true)
+
+                    TMShoulderRotationPlayer(resource: resource, paused: holdsPose, fitsFigure: true)
+                        .scaleEffect(x: -1, y: 1)
+                }
+            } else {
+                TMShoulderRotationPlayer(resource: resource, paused: holdsPose)
+                    .scaleEffect(x: mirrored ? -1 : 1, y: 1)
+            }
 
             TMTherapyDemoCaption(paused: holdsPose)
         }
@@ -43,12 +51,15 @@ struct TMShoulderRotationMovieView: View {
 private struct TMShoulderRotationPlayer: UIViewRepresentable {
     let resource: String
     let paused: Bool
+    /// Letterboxes instead of cropping, so a half-width figure stays whole.
+    var fitsFigure = false
 
     func makeUIView(context: Context) -> TMLoopingMovieView {
         TMLoopingMovieView()
     }
 
     func updateUIView(_ view: TMLoopingMovieView, context: Context) {
+        view.fitsFigure = fitsFigure
         view.configure(resource: resource, paused: paused)
     }
 
@@ -63,6 +74,12 @@ private final class TMLoopingMovieView: UIView {
     private var player: AVQueuePlayer?
     private var looper: AVPlayerLooper?
     private var loadedResource: String?
+
+    var fitsFigure = false {
+        didSet {
+            playerLayer.videoGravity = fitsFigure ? .resizeAspect : .resizeAspectFill
+        }
+    }
 
     override init(frame: CGRect) {
         super.init(frame: frame)
@@ -97,7 +114,7 @@ private final class TMLoopingMovieView: UIView {
     private func load(_ resource: String) {
         release()
 
-        guard let url = Bundle.main.url(forResource: resource, withExtension: "mov") else {
+        guard let url = Bundle.main.url(forResource: resource, withExtension: "mp4") else {
             return
         }
 

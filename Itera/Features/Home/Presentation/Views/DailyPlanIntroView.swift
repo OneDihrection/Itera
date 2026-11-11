@@ -88,7 +88,7 @@ struct TMDailyPlanIntroView: View {
         case .therapy(let kind):
             let exercise = dependencies.dailyPlan.routineExercise(for: kind, in: dependencies)
             TMExerciseExample(
-                asset: kind == .elbowBend ? .elbowBend : .armRaise,
+                asset: kind == .elbowBend ? .elbowBend : kind == .directionalReach ? .directionalReach : .armRaise,
                 mirrored: exercise.activities.first?.side == .left,
                 mode: .looping
             )

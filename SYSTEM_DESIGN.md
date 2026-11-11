@@ -147,18 +147,11 @@ Repository errors are visible. Retry failed saves; require caregiver acknowledgm
 
 ## 9. Assets and animation
 
-Copy these binary resources from the proof of concept into the new project's resources and verify target membership:
+Body-exercise examples are bundled silent H.264 MP4s in `Itera/Resources/Animations` (see its README), rendered per `Documentation/AnimationRenderingStandard.md`: arm raise, elbow bend, directional reach, cross-midline, shoulder external/internal rotation, shoulder flexion, and sit-to-stand. Arm clips show the right arm; reflect the rendered picture for left-side examples without reflecting labels, and show both arms as the right-arm clip beside its reflection. Hand and finger exercises use their own bundled MOV examples.
 
-| Resource | Existing source location | Notes |
-| --- | --- | --- |
-| Arm raise | `VisionPoc/Resources/USDZ/side_arm_raise_male_v1.usdz` | Current illustration is bilateral. |
-| Elbow bend | `VisionPoc/Resources/USDZ/bicep_curl_right_male_v1.usdz` | Right-sided source. |
+Keep assets self-contained. Loop demonstrations and active examples; a static start example holds the first frame, a static peak example the midpoint, and Reduce Motion shows a paused midpoint.
 
-Keep assets self-contained. USD conventions: default prim Exercise, Y-up, metersPerUnit 1. Reflect the rendered picture for left-side examples without reflecting labels or rewriting skeletons. A bilateral illustration remains bilateral after reflection.
-
-Select the first discoverable animation recursively. Use its imported duration, not an assumed six seconds: observed prototype durations were approximately 5.333 seconds for raise and 5.067 for curl. Start pose uses paused time zero; peak uses paused imported midpoint and requires visual verification. Loop demonstrations and active examples; Reduce Motion shows a paused midpoint. Preserve materials and frame with a parent container rather than overwriting authored transforms.
-
-Keep examples hidden during instruction cards, preparation, countdown, rest, and pause; static start/peak capture examples remain visible when holds reset. Missing assets show text fallback, never block scoring, and time out loading after ten seconds. Ignore obsolete loads. Card delays start when narration completes or fails: eight seconds for full demonstrations and three seconds for ordinary instructions. Identified reading completion is an independent advancement gate, so an elapsed card delay cannot advance until reading also completes. Presentation reports measured reading status to the session engine, which alone owns advancement. VoiceOver requires explicit reading acknowledgment. Replayed or interrupted guidance receives a new identity; obsolete reading and narration callbacks cannot advance it. Movement capture begins only after the post-card five-second preparation stage. The directional-reaching opening failure watchdog remains referenced to guidance start (12 seconds). Verify this timing with both languages. No new generated assets are required.
+Keep examples hidden during instruction cards, preparation, countdown, rest, and pause; static start/peak capture examples remain visible when holds reset. Missing assets show text fallback and never block scoring. Ignore obsolete loads. Card delays start when narration completes or fails: eight seconds for full demonstrations and three seconds for ordinary instructions. Identified reading completion is an independent advancement gate, so an elapsed card delay cannot advance until reading also completes. Presentation reports measured reading status to the session engine, which alone owns advancement. VoiceOver requires explicit reading acknowledgment. Replayed or interrupted guidance receives a new identity; obsolete reading and narration callbacks cannot advance it. Movement capture begins only after the post-card five-second preparation stage. The directional-reaching opening failure watchdog remains referenced to guidance start (12 seconds). Verify this timing with both languages. No new generated assets are required.
 
 ## 10. Architectural decisions
 

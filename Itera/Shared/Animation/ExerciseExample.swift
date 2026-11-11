@@ -5,7 +5,6 @@
 //  Created by dimaswisodewo on 28/10/2026.
 //
 
-import RealityKit
 import SwiftUI
 
 struct TMExerciseExample: View {
@@ -19,22 +18,14 @@ struct TMExerciseExample: View {
     var body: some View {
         ZStack {
             if !failed {
-                Group {
-                    if asset == .armRaise {
-                        TMArmRaiseVideoView(mode: mode, reducedMotion: reducedMotion) { event in
-                            handle(event)
-                        }
-                    } else {
-                        TMAnimationViewport(asset: asset, mode: mode, reducedMotion: reducedMotion) { event in
-                            handle(event)
-                        }
-                    }
+                TMExerciseVideoView(resource: asset.demonstrationResource, mode: mode, reducedMotion: reducedMotion) { event in
+                    handle(event)
                 }
                 .scaleEffect(x: mirrored ? -1 : 1, y: 1)
             }
             if failed {
                 Text("session.animationFallback").padding()
-            } else if !ready && asset != .armRaise {
+            } else if !ready {
                 ProgressView().accessibilityLabel(Text("session.loading"))
             }
         }
@@ -42,28 +33,10 @@ struct TMExerciseExample: View {
         .accessibilityLabel(Text("session.example"))
     }
 
-    private func handle(_ event: ExerciseAnimationRenderer.Event) {
+    private func handle(_ event: ExerciseVideoEvent) {
         switch event {
         case .ready: ready = true
         case .failed: failed = true
         }
-    }
-}
-
-private struct TMAnimationViewport: UIViewRepresentable {
-    let asset: ExerciseAnimationAsset
-    let mode: TherapyAnimationPlayback
-    let reducedMotion: Bool
-    let onEvent: (ExerciseAnimationRenderer.Event) -> Void
-
-    func makeCoordinator() -> ExerciseAnimationRenderer { ExerciseAnimationRenderer() }
-    func makeUIView(context: Context) -> ARView { context.coordinator.view }
-    func updateUIView(_ view: ARView, context: Context) {
-        context.coordinator.configure(
-            exercise: asset, reducedMotion: reducedMotion, mode: mode, requestID: nil,
-            onEvent: onEvent)
-    }
-    static func dismantleUIView(_ view: ARView, coordinator: ExerciseAnimationRenderer) {
-        coordinator.stop()
     }
 }

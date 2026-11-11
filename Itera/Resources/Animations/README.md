@@ -2,12 +2,8 @@
 
 # Animation sources
 
-The two unmodified USDZ assets were copied from the local VisionPoc proof of concept's `VisionPoc/Resources/USDZ` directory. Names and authored transforms/materials are preserved. The arm-raise illustration is bilateral; reflecting its rendered picture does not make it unilateral.
-
-`Shared/Animation/ExerciseAnimationRenderer.swift` adapts the local VisionPoc `Features/Therapy/TherapyAnimationRenderer.swift` implementation: recursive animation discovery, imported clip duration, parent-container framing, lighting, cancellation, and ten-second loading fallback. No external runtime assets are fetched.
-
-Physical-device verification of static start/peak poses, playback, materials, and side reflection remains pending.
-
 `HandRotation/hand_rotation_left.mov` and `hand_rotation_right.mov` are the forearm-rotation examples (640 × 640, 6.459 s, one full cycle: palm, turned at the midpoint, palm). `HandRotationExample` shows the movie for the exercised side as the mirrored camera preview displays it (the left hand uses `hand_rotation_right.mov` and the right hand `hand_rotation_left.mov`), so no reflection is applied. Demonstration and range loop the full cycle; the turn plays the first half and the return the second. Reduce Motion and pause hold the turned pose. Physical-device checks of playback and side choice remain pending.
 
-`arm_raise_demonstration.mp4` is the muted arm raise example, replaced with `/Users/mdimaswisodewo/Documents/Codex/2026-11-09/can-you-access-blender-mcp-and/outputs/arm_raise_ffb700_bright_separated_demonstration.mp4`. The previous source was `Calm_Animated_Character_Soft_3D_Light_Gray_24fps.mp4` from the same outputs directory. The video replaces the USDZ in demonstration and practice; the original USDZ remains bundled.
+The body-exercise demonstrations are the connected-joint renders of the light-brown rig in [`ArtSource/BodyDemonstrationsReview/BodyDemonstrations_ConnectedMotion.blend`](../../../ArtSource/BodyDemonstrationsReview/BodyDemonstrations_ConnectedMotion.blend), authored by [`Tools/author_body_demonstrations.py`](../../../Tools/author_body_demonstrations.py) and rendered to 768 × 768, 24 FPS silent H.264 MP4s following [`Documentation/AnimationRenderingStandard.md`](../../../Documentation/AnimationRenderingStandard.md). The app uses them for arm raise, elbow bend, directional reach, cross-midline reach, shoulder external and internal rotation, shoulder flexion, and sit-to-stand. Every arm clip shows the right arm; left-arm playback reflects it, and choosing both arms plays the right-arm clip beside its reflection. Fold towel and hand or finger exercises retain their separate demonstrations because they require different assets.
+
+Physical-device verification of the new MP4s and the side-by-side both-arm layout remains pending.

@@ -624,7 +624,7 @@ struct TMTherapySessionView: View {
             TMTowelDemonstrationView()
         }
 
-        if let activity = model.snapshot.activity, activity.kind == .armRaise || activity.kind == .elbowBend {
+        if let activity = model.snapshot.activity, activity.kind == .armRaise || activity.kind == .elbowBend || activity.kind == .directionalReach {
             let mode: TherapyAnimationPlayback = {
                 if model.snapshot.stage == .demonstration {
                     return .looping
@@ -639,7 +639,7 @@ struct TMTherapySessionView: View {
                 return .looping
             }()
             TMExerciseExample(
-                asset: activity.kind == .armRaise ? .armRaise : .elbowBend,
+                asset: activity.kind == .armRaise ? .armRaise : activity.kind == .elbowBend ? .elbowBend : .directionalReach,
                 mirrored: activity.side == .left,
                 mode: mode
             )

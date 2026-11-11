@@ -1,5 +1,5 @@
 //
-//  ArmRaiseVideoView.swift
+//  ExerciseVideoView.swift
 //  Itera
 //
 //  Created by dimaswisodewo on 09/11/2026.
@@ -8,21 +8,22 @@
 import AVFoundation
 import SwiftUI
 
-struct TMArmRaiseVideoView: UIViewRepresentable {
+struct TMExerciseVideoView: UIViewRepresentable {
+    let resource: String
     let mode: TherapyAnimationPlayback
     let reducedMotion: Bool
-    let onEvent: (ExerciseAnimationRenderer.Event) -> Void
+    let onEvent: (ExerciseVideoEvent) -> Void
 
     func makeCoordinator() -> Coordinator { Coordinator() }
 
     func makeUIView(context: Context) -> TMPlayerView {
         let view = TMPlayerView()
-        context.coordinator.configure(view: view, mode: mode, reducedMotion: reducedMotion, onEvent: onEvent)
+        context.coordinator.configure(view: view, resource: resource, mode: mode, reducedMotion: reducedMotion, onEvent: onEvent)
         return view
     }
 
     func updateUIView(_ view: TMPlayerView, context: Context) {
-        context.coordinator.configure(view: view, mode: mode, reducedMotion: reducedMotion, onEvent: onEvent)
+        context.coordinator.configure(view: view, resource: resource, mode: mode, reducedMotion: reducedMotion, onEvent: onEvent)
     }
 
     static func dismantleUIView(_ view: TMPlayerView, coordinator: Coordinator) {
@@ -39,15 +40,18 @@ struct TMArmRaiseVideoView: UIViewRepresentable {
         private var looper: AVPlayerLooper?
         private var currentMode: TherapyAnimationPlayback?
         private var currentReducedMotion: Bool?
+        private var currentResource: String?
 
         func configure(
             view: TMPlayerView,
+            resource: String,
             mode: TherapyAnimationPlayback,
             reducedMotion: Bool,
-            onEvent: @escaping (ExerciseAnimationRenderer.Event) -> Void
+            onEvent: @escaping (ExerciseVideoEvent) -> Void
         ) {
-            if player == nil {
-                guard let url = Bundle.main.url(forResource: "arm_raise_demonstration", withExtension: "mp4") else {
+            if currentResource != resource {
+                stop(view: view)
+                guard let url = Bundle.main.url(forResource: resource, withExtension: "mp4") else {
                     onEvent(.failed)
                     return
                 }
@@ -57,6 +61,7 @@ struct TMArmRaiseVideoView: UIViewRepresentable {
                 view.playerLayer.player = queue
                 player = queue
                 looper = AVPlayerLooper(player: queue, templateItem: AVPlayerItem(url: url))
+                currentResource = resource
                 onEvent(.ready)
             }
 
@@ -81,6 +86,9 @@ struct TMArmRaiseVideoView: UIViewRepresentable {
             player?.removeAllItems()
             view.playerLayer.player = nil
             player = nil
+            currentResource = nil
+            currentMode = nil
+            currentReducedMotion = nil
         }
     }
 }
