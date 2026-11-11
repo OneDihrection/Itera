@@ -11,6 +11,7 @@ import SwiftUI
 /// and the explicit Start that validates readiness and opens the session.
 struct TMDailyPlanIntroView: View {
     let itemID: String
+    var countdownSeconds: Int? = nil
 
     @Environment(AppDependencies.self) private var dependencies
     @Environment(NavigationRouter.self) private var router
@@ -26,7 +27,9 @@ struct TMDailyPlanIntroView: View {
                 .toolbar(.hidden, for: .navigationBar)
                 .toolbar(.hidden, for: .tabBar)
                 .task {
-                    prepareReadiness()
+                    if countdownSeconds == nil {
+                        prepareReadiness()
+                    }
                 }
         }
     }
@@ -48,7 +51,11 @@ struct TMDailyPlanIntroView: View {
             startTitle: "exercise.start",
             startDisabled: starting,
             message: readinessMessage,
+            countdownSeconds: countdownSeconds,
             onBack: {
+                if countdownSeconds != nil {
+                    dependencies.audio.cancelSpeech()
+                }
                 dependencies.dailyPlan.end(router: router)
             },
             onStart: start

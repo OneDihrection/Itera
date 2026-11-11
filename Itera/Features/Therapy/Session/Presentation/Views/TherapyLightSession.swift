@@ -387,18 +387,28 @@ extension TMTherapySessionView {
             results: results,
             total: Text("session.total \(results.reduce(0) { $0 + $1.done })")
         ) {
-            TMTherapyFinishActions(
-                title: summaryExitTitle,
-                symbol: "play.fill",
-                disabled: model.saving || model.saveFailure != nil,
-                action: { leaveSummary(summary) }
-            ) {
+            if automaticallyRests(after: summary) {
                 if model.saving {
                     ProgressView("session.saving")
                 }
 
                 if let error = model.saveFailure {
                     saveError(error)
+                }
+            } else {
+                TMTherapyFinishActions(
+                    title: summaryExitTitle,
+                    symbol: "play.fill",
+                    disabled: model.saving || model.saveFailure != nil,
+                    action: { leaveSummary(summary) }
+                ) {
+                    if model.saving {
+                        ProgressView("session.saving")
+                    }
+
+                    if let error = model.saveFailure {
+                        saveError(error)
+                    }
                 }
             }
         }

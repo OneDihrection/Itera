@@ -35,18 +35,20 @@ struct DailyPlanRow: Identifiable, Equatable {
 
 /// Runs today's plan: exercises from different programs, one after another.
 ///
-/// Each item opens with its intro page; its Start validates readiness and opens the session.
-/// While a plan is running, a session's finishing action calls `finish(completed:router:)`
-/// instead of its usual exit, which opens the next item's intro. Settings are read from each
+/// The first item's intro validates readiness before opening its session.
+/// Completed sessions advance through the rest and countdown before launching the next item.
+/// Settings are read from each
 /// program's own storage at launch, so the cards and the session always agree.
 @MainActor
 @Observable
 final class DailyPlanViewModel {
+    static let completionPreviewDuration: Duration = .seconds(4)
     let items: [DailyPlanItem]
     private(set) var progress = DailyPlanProgress.empty(on: .now)
     /// Index of the item whose session is open, or that just finished.
     private(set) var currentIndex: Int?
     private(set) var isRunning = false
+    private(set) var restingBeforeNext = false
     private(set) var errorKey: String?
     var sidePreference = UserDefaults.standard.string(forKey: PracticePreferences.dailyPlanSide) ?? "" {
         didSet { UserDefaults.standard.set(sidePreference, forKey: PracticePreferences.dailyPlanSide) }
@@ -97,6 +99,21 @@ final class DailyPlanViewModel {
         }
 
         return items[start...].firstIndex { !progress.completed.contains($0.id) }
+    }
+
+    var hasAutomaticRest: Bool {
+        isRunning && !restingBeforeNext && upcomingIndex != nil
+    }
+
+    var nextSessionItemID: String? {
+        guard let currentIndex else {
+            return nil
+        }
+        return items[currentIndex].id
+    }
+
+    var nextSessionTitleKey: String? {
+        currentIndex.map { Self.titleKey(for: items[$0].exercise) }
     }
 
     // MARK: - Rows
@@ -236,44 +253,55 @@ final class DailyPlanViewModel {
     }
 
     /// Called by a session's finishing action while the plan runs. Only a session that reached
-    /// its goal counts as done; a stopped one stays open for later. The next undone item's
-    /// intro follows, or the day-complete page after the last one.
+    /// its goal counts as done. A completed item leads to rest, or to the day-complete page.
     func finish(completed: Bool, router: NavigationRouter) {
-        guard isRunning, let currentIndex else {
+        guard isRunning, !restingBeforeNext, let currentIndex else {
             return
         }
 
-        if completed {
-            progress = progress.current(on: .now)
-            progress.completed.insert(items[currentIndex].id)
-            Task { await saveProgress() }
+        guard completed else {
+            end(router: router)
+            return
         }
+        progress = progress.current(on: .now)
+        progress.completed.insert(items[currentIndex].id)
+        Task { await saveProgress() }
 
         let next = upcomingIndex
-        router.dismiss()
-        router.popToRoot()
+        self.currentIndex = next
+        restingBeforeNext = next != nil
 
-        guard let next else {
-            self.currentIndex = nil
+        if router.presentedFullScreenCovers.isEmpty {
             router.presentFullScreenCover(.planNext)
+        } else {
+            router.replaceFullScreenCover(with: .planNext)
+        }
+    }
+
+    func launchAfterRest(dependencies: AppDependencies, router: NavigationRouter) {
+        guard isRunning, restingBeforeNext, let currentIndex else {
             return
         }
-
-        self.currentIndex = next
-        router.push(.planIntro(items[next].id))
+        restingBeforeNext = false
+        launch(currentIndex, dependencies: dependencies, router: router, replacingRest: true)
     }
 
     /// "Kembali" on an intro, "Kembali ke Beranda" after the last item, or leaving a session
     /// without continuing.
     func end(router: NavigationRouter) {
         isRunning = false
+        restingBeforeNext = false
         currentIndex = nil
         router.dismiss()
         router.popToRoot()
     }
 
-    private func launch(_ index: Int, dependencies: AppDependencies, router: NavigationRouter) {
+    private func launch(
+        _ index: Int, dependencies: AppDependencies, router: NavigationRouter,
+        replacingRest: Bool = false
+    ) {
         currentIndex = index
+        let route: AppRoute
 
         switch items[index].exercise {
         case .finger(let exercise):
@@ -286,7 +314,7 @@ final class DailyPlanViewModel {
                 only: exercise,
                 side: side
             )
-            router.presentFullScreenCover(.fingerSession)
+            route = .fingerSession
 
         case .therapy(let kind):
             let exercise = routineExercise(for: kind, in: dependencies)
@@ -297,11 +325,17 @@ final class DailyPlanViewModel {
                 restSeconds: Double(configuration.restSeconds),
                 practiceSeconds: Double(configuration.practiceSeconds)
             )
-            router.push(.therapySession)
+            route = .therapySession
 
         case .balance(let exercise):
             let settings = balanceSettings(for: exercise)
-            router.push(.balanceSession(exercise: exercise, settings: settings))
+            route = .balanceSession(exercise: exercise, settings: settings)
+        }
+
+        if replacingRest {
+            router.replaceFullScreenCover(with: route)
+        } else {
+            router.presentFullScreenCover(route)
         }
     }
 

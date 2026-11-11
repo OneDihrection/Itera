@@ -56,9 +56,8 @@ struct FingerActivity {
     private var rangeCandidateCount = 0
     /// Sweep time at which the measured range last grew, so a settled range can finish early.
     private var rangeGrowthElapsed = 0.0
-    /// Forearm rotation only: exponentially smoothed palm-facing signal.
-    private var smoothedValue: Double?
-    private var smoothedTime = 0.0
+    /// Smooths the scored metric for every exercise; restarted whenever evidence is lost.
+    private var metricFilter = FingerMetricFilter()
     /// Forearm rotation only: +1 or -1, the sign the patient's turn produces. It is learned while
     /// the target pose is calibrated and then fixed for the exercise.
     private var forearmDirection = 1.0
@@ -90,9 +89,13 @@ struct FingerActivity {
     private static let rangeMinimumSweepSeconds = 4.0
     private static let rangeSettleSeconds = 3.0
     private static let rangeGrowthStep = 0.03
-    /// The measured range is shown this long, after its narration, before practice begins.
-    /// Time constant of the forearm signal filter; small enough not to delay arrival detection.
-    private static let forearmSmoothingSeconds = 0.10
+    /// Smallest change from the start pose that counts as reaching the target pose. Smaller
+    /// changes are detector noise or a half movement, so their hold timer never runs.
+    private static let minimumTargetChange = 0.15
+    /// Thumb-to-fingertip distance, as a fraction of palm length, that counts as touching.
+    /// A hold starts only at `contactEntry` and survives up to `contactExit`.
+    private static let contactEntry = 0.35
+    private static let contactExit = 0.45
 
     var rangeProgress: Double { min(1, rangeElapsed / Self.rangeDuration) }
     /// How far the automatic start of practice has advanced after the range is shown.
@@ -133,12 +136,12 @@ struct FingerActivity {
 
         peakStart = nil
         lastTimestamp = nil
-        smoothedValue = nil
+        metricFilter.reset()
     }
 
     mutating func breakEvidence() {
         resetHold()
-        smoothedValue = nil
+        metricFilter.reset()
         peakStart = nil
         rangeCandidate = nil
         awaitingStart = true
@@ -257,7 +260,8 @@ struct FingerActivity {
             breakEvidence()
             return
         }
-        let value = smoothed(rawValue, at: evidence.timestamp) * (kind == .forearmRotation ? forearmDirection : 1)
+        let value = metricFilter.consume(rawValue, at: evidence.timestamp)
+            * (kind == .forearmRotation ? forearmDirection : 1)
         // A completed hold remains the current instruction until its full ring is presented.
         if holdCompletionID != nil {
             lastTimestamp = evidence.timestamp
@@ -300,7 +304,7 @@ struct FingerActivity {
             movementFraction = min(1, max(0, normalized))
             capturePeak(value, time: evidence.timestamp, tolerance: range * 0.12)
             if awaitingStart {
-                guard normalized <= (hold.isHolding ? 0.35 : 0.25) else {
+                guard normalized <= (hold.isHolding ? 0.30 : 0.25) else {
                     leaveZone(at: evidence.timestamp)
                     return
                 }
@@ -311,10 +315,11 @@ struct FingerActivity {
             }
             progress = min(1, max(0, returning ? 1 - normalized : normalized))
             // Separate entry/exit bands prevent tiny boundary noise from restarting a valid hold.
+            // They are narrow so a pose that slips away from the target stops the timer.
             let holding = hold.isHolding
             let arrived = returning
-                ? normalized <= (holding ? 0.35 : 0.25)
-                : normalized >= (holding ? 0.70 : 0.80)
+                ? normalized <= (holding ? 0.30 : 0.25)
+                : normalized >= (holding ? 0.75 : 0.80) && touchesFingertip(value, holding: holding)
             guard arrived else {
                 leaveZone(at: evidence.timestamp)
                 return
@@ -440,26 +445,6 @@ struct FingerActivity {
         return -value
     }
 
-    /// Palm facing flickers when the palm turns edge-on to the camera, so forearm rotation
-    /// reads a lightly smoothed signal. Other exercises keep their raw measurements.
-    private mutating func smoothed(_ value: Double, at time: Double) -> Double {
-        guard kind == .forearmRotation else {
-            return value
-        }
-
-        defer { smoothedTime = time }
-
-        guard let previous = smoothedValue, time > smoothedTime, time - smoothedTime <= 0.3 else {
-            smoothedValue = value
-            return value
-        }
-
-        let blend = 1 - exp(-(time - smoothedTime) / Self.forearmSmoothingSeconds)
-        let result = previous + (value - previous) * blend
-        smoothedValue = result
-        return result
-    }
-
     private mutating func resetRange(keepReady: Bool = false) {
         rangeReady = keepReady && rangeReady
         rangeElapsed = 0
@@ -474,7 +459,7 @@ struct FingerActivity {
 
     private mutating func capture(_ value: Double, time: Double) {
         // A stationary hand outside the requested target must never run its hold clock.
-        if phase == .target, value - baselines[finger] <= 0.08 {
+        if phase == .target, !reachesTarget(value) {
             leaveZone(at: time)
             return
         }
@@ -482,6 +467,22 @@ struct FingerActivity {
             return
         }
         markHoldComplete()
+    }
+
+    private func reachesTarget(_ value: Double) -> Bool {
+        value - baselines[finger] > Self.minimumTargetChange
+            && touchesFingertip(value, holding: hold.isHolding)
+    }
+
+    /// Opposition is only done when the thumb tip actually meets the fingertip; getting most of
+    /// the way there must not run the timer. Other exercises have no contact requirement.
+    /// The opposition metric is the negative thumb-to-fingertip distance over palm length.
+    private func touchesFingertip(_ value: Double, holding: Bool) -> Bool {
+        guard kind == .opposition else {
+            return true
+        }
+
+        return -value <= (holding ? Self.contactExit : Self.contactEntry)
     }
 
     mutating func holdCompletionPresented(_ id: UUID) {
@@ -515,9 +516,11 @@ struct FingerActivity {
             initialized[finger] = true
             if finger + 1 < calibrationCount {
                 finger += 1
+                metricFilter.reset()
                 phase = .baseline
             } else {
                 finger = 0
+                metricFilter.reset()
                 phase = .demonstration
                 narrationFinished = false
             }
@@ -532,8 +535,10 @@ struct FingerActivity {
                 peakStart = nil
                 if kind.isSequential && finger < 3 {
                     finger += 1
+                    metricFilter.reset()
                 } else {
                     finger = 0
+                    metricFilter.reset()
                     repetitions += 1
                     totalRepetitions += 1
                     if repetitions >= routine.repetitions {
@@ -570,7 +575,11 @@ struct FingerActivity {
 
     private mutating func stable(_ value: Double, time: Double, tolerance: Double, duration: Double) -> Bool {
         // A brief drift beyond tolerance (detector noise) freezes the hold; sustained drift restarts it.
-        if hold.isHolding, abs(value - holdValue) > tolerance {
+        // After a few samples the pose is compared with the hold's average, not its first frame,
+        // so one noisy starting frame cannot make the rest of the hold look like drift.
+        let anchor = holdCount >= 3 ? holdSum / Double(holdCount) : holdValue
+
+        if hold.isHolding, abs(value - anchor) > tolerance {
             leaveZone(at: time)
 
             if hold.isHolding {

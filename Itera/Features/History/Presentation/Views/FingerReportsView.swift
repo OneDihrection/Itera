@@ -199,7 +199,6 @@ struct TMFingerReportsView: View {
         await dependencies.home.deleteHistory()
         if dependencies.home.errorKey == nil {
             confirmingHistoryDeletion = false
-            await dependencies.progress.refresh()
         }
     }
 
@@ -209,10 +208,6 @@ struct TMFingerReportsView: View {
         }
 
         await dependencies.home.refresh()
-        await dependencies.progress.refresh()
-        if !dependencies.progress.pending.isEmpty {
-            router.presentAchievementCelebration()
-        }
     }
 }
 
@@ -341,10 +336,6 @@ struct TMFingerReportDetailView: View {
         .navigationBarTitleDisplayMode(.inline)
         .task {
             await dependencies.home.refresh()
-            await dependencies.progress.refresh()
-            if !dependencies.progress.pending.isEmpty {
-                router.presentAchievementCelebration()
-            }
         }
     }
 
@@ -375,7 +366,6 @@ struct TMFingerReportDetailView: View {
                     Label(LocalizedStringKey(feeling.title), systemImage: feeling.symbol).typography(.headline)
                 }
             }
-            sessionAchievements(summary)
             Text("report.movement").typography(.title2)
             ForEach(summary.results) { result in
                 TMTherapyCard {
@@ -412,26 +402,6 @@ struct TMFingerReportDetailView: View {
                     if dependencies.home.errorKey == nil {
                         router.popToRoot()
                         router.push(.reports)
-                    }
-                }
-            }
-        }
-    }
-
-    @ViewBuilder
-    private func sessionAchievements(_ summary: FingerSessionSummary) -> some View {
-        let badges = PracticeAchievement.catalog.filter { badge in
-            guard let award = dependencies.progress.award(for: badge) else {
-                return false
-            }
-            return abs(award.earned.timeIntervalSince(summary.ended)) < 0.001
-        }
-        if !badges.isEmpty {
-            VStack(alignment: .leading, spacing: 20) {
-                Text("achievement.thisSession").typography(.title2)
-                ScrollView(.horizontal) {
-                    HStack(alignment: .top, spacing: 20) {
-                        ForEach(badges) { badge in TMPracticeBadgeTile(badge: badge).frame(width: 180) }
                     }
                 }
             }

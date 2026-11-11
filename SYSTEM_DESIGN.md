@@ -568,7 +568,7 @@ Accepted at the product owner's request, after reports of overlapping voices and
 
 **One audio configuration.** During a session the audio session stays at `.playAndRecord` with `.default` mode and `.defaultToSpeaker` (normal media volume, never `.voiceChat`). `NarrationAudioSession.activate` is idempotent: it changes the category or reactivates only when something differs, and `SessionAudioService` always asks for the listening configuration because voice commands are mandatory, so music and narration never see a category switch. The microphone engine enables the system voice processing (echo cancellation and noise suppression) once, before it starts, with other-audio ducking set to minimum (`voiceProcessingOtherAudioDuckingConfiguration`, iOS 17) so music and narration stay loud. If enabling it fails, listening continues without it. Debug builds launched with `-IteraNoVoiceProcessing` skip it for comparison.
 
-**No overlap.** Starting any narration, count clip or system-speech utterance fades out target and towel effects first. Clip players stamp every play with a token, so a late finish callback cannot complete a newer play, and every stop fades out over about 40 ms before pausing. Count clips are preloaded. Clip watchdogs for counts and the target clip are 2 seconds. Music ducks to 0.10 during any cue. The button click is skipped, and the achievement cue waits (up to 3 seconds), while the session is narrating.
+**No overlap.** Starting any narration, count clip or system-speech utterance fades out target and towel effects first. Clip players stamp every play with a token, so a late finish callback cannot complete a newer play, and every stop fades out over about 40 ms before pausing. Count clips are preloaded. Clip watchdogs for counts and the target clip are 2 seconds. Music ducks to 0.10 during any cue. The button click is skipped while the session is narrating.
 
 **Spoken text may differ from displayed text.** An optional `speak.<key>` String Catalog entry replaces the wording that is spoken (`NarrationText.resolve`); without one, speech uses the displayed text. Screen text, the measured-reading gate and card advancement are unchanged. Recorded Indonesian clips remain keyed by the base key, so Indonesian `speak.` entries exist only for cues without a recording (arm raise and elbow bend opening cards, reach directions). For recorded cues (`parity.reachOpening`, `session.reachStart`, `session.farther`, `session.countdown`, `session.rest`, `session.timedPractice`) only English has a short variant until the Indonesian recording is regenerated; the intended Indonesian short wording is "Tahan posisi.", "Jangkau sedikit lebih jauh.", "Bersiap. Tiga, dua, satu.", "Istirahat." and "Latihan waktu." `Tools/generate_narration.py` prefers `speak.<key>` text and includes the new keys for the next run with an ElevenLabs key. The spoken exercise-and-side cue is now just the exercise and side.
 
@@ -695,7 +695,7 @@ The first screen of a calibrated exercise is titled Kalibrasi. For arm raise, el
 
 The camera stays visible throughout calibration. Guided instruction cards occupy the lower portion of the camera panel. Finger calibration proceeds to countdown as soon as the completion cue finishes, including forearm rotation. There is no fixed demonstration or range-review delay.
 
-**Breathing between sets.** The existing rest clocks drive a six-second inhale and three-second exhale cue across exercise types. The shared rest screen uses a rust ring that expands and intensifies on inhale, then contracts and fades on exhale, and the existing audio services speak each new phase in the session language. Pausing preserves the rest position. Reduce Motion keeps the ring static while the text and voice still change. The guide ends when the configured rest ends, and there is no breath hold or motion scoring. Between-exercise transitions and final summaries retain their existing layouts.
+**Breathing between sets.** The existing rest clocks drive a six-second inhale and three-second exhale cue across exercise types. The shared rest screen uses a rust ring that expands and intensifies on inhale, then contracts and fades on exhale, and the existing audio services speak each new phase in the session language. Pausing preserves the rest position. Reduce Motion keeps the ring static while the text and voice still change. The guide ends when the configured rest ends, and there is no breath hold or motion scoring.
 
 Arm raise and elbow bend bubble size, 2026-11-10: at the product owner's request, the start bubble, target bubble and calibration hold ring are all a fixed 100 pt across, replacing the body-scaled 68–120 pt clamp and the 80% separation cap for these two activities. Practice bubbles were small and varied with arm length and hip/shoulder jitter, while the calibration ring was 120 pt; all three now match and stay about 3.5 times the 28 pt joint marker. Directional reach keeps the clamp. Acceptance uses the drawn radius, so hit zones follow the new size. Verification: Simulator build only; start and target overlap on short reaches and ring legibility at 1.5–2.5 m need physical M1-iPad checks.
 
@@ -724,3 +724,64 @@ Accepted at the product owner's request, because the exercise was too hard to co
 - Each outward attempt has 12 usable seconds (`outwardBudget`).
 
 Verification: Simulator build only; physical M1-iPad checks with patients remain pending.
+
+**Rest between daily-plan exercises.** When a completed exercise has a next plan item, its set summary stays visible without a Continue button. After any required save and four seconds of summary, the plan opens a narrated rest with orange waves. An opening introduces six numbered breathing cycles. Each uses a three-second inhale, a two-second hold, a five-second exhale and a two-second pause. The closing narration names the next exercise before its intro appears. The next exercise's intro displays a ten-second countdown in place of Start, then opens the session automatically. Each exercise retains its own readiness checks and calibration. Pausing during rest or leaving the foreground freezes the transition clock, and ending the plan prevents launch.
+
+After the initial Start, the daily plan keeps one full-screen presentation while switching among sessions, summaries, rest and the next intro. The router replaces the destination inside that presentation and returns to Beranda when the plan ends. Screen changes use a short fade and respect Reduce Motion.
+
+## Finger tracking stability and strict holds (2026-11-10)
+
+Accepted at the product owner's request: finger tracking flickered, worst in thumb opposition ("Sentuh jempol ke jari"), and the blue hold ring must not move unless the pose is done correctly. This supersedes, for finger exercises only, scoring from raw unsmoothed evidence (forearm rotation was the only filtered metric) and the finger overlay's 0.5 drawing confidence.
+
+**Causes found.** (1) Vision's chirality flips for single frames, or reads unknown, while fingers touch or curl; each flip was rejected as "the other hand". (2) Touching fingertips overlap, so Vision rates exactly the two opposition tips below 0.5 and the metric dropped out. (3) The scored metric was unsmoothed, so 15 Hz jitter pushed a held pose in and out of its zone, and a hold was compared with its first, possibly noisy, frame. (4) One bad frame started a tracking problem, and recovery then demanded 0.35 s of good frames, so each dropout froze the hold for about 0.4 s and hid the overlay.
+
+**Changes.**
+- `HandSideStabilizer` (Shared/Tracking) treats chirality as a vote (0.6 s time constant). The confirmed side changes only after a sustained disagreement (about 0.4 s), unknown readings keep it, and the first reading is tentative. It restarts on a generation change or a gap over 1.5 s. Forearm rotation still assigns the exercised side directly. `HandSubjectSelector` is unchanged and still decides which hand is the patient's.
+- Opposition accepts its thumb tip and target fingertip at confidence 0.3 (as forearm rotation does); every other required joint stays at 0.5. The finger overlay and `HandOverlaySmoother` draw joints from 0.3, so the ring on a touching tip stays visible.
+- `FingerMetricFilter`, a scalar One Euro filter (1.2 Hz at rest, plus 1.5 Hz per metric unit per second), now smooths the scored metric of every finger exercise, replacing the forearm-only filter. It restarts on loss of evidence, a gap over 0.3 s, non-increasing time, and whenever the measured finger changes, so it never blends across missing evidence or between fingers.
+- After three samples, hold stability is measured against the hold's running average instead of its first frame.
+- `FingerTrackingRecovery.missingFrame` ignores per-frame misses shorter than 0.3 s; a longer miss starts the problem from when the misses began. Explicit problem starts (camera failure, new generation, resume) are unchanged. Missing frames still freeze the hold and earn no credit (`InterruptibleHold`). During such a dropout the last drawn hand stays on screen for up to 0.3 s, and a frozen hold keeps its paused ring.
+
+**Strict holds.**
+- Opposition counts only real contact: the thumb-to-fingertip distance must be at most 0.35 of palm length (wrist to middle knuckle) to start a hold, and at most 0.45 to keep it. This applies when calibrating the target pose and when holding it in practice; "nearly touching" never runs the ring.
+- Every exercise's target calibration needs a change of more than 0.15 from the start pose (was 0.08).
+- In practice the hold bands are narrower: the target zone is kept down to 75% of the calibrated range (was 70%), and the start zone up to 30% (was 35%). Entry stays at 80% / 25%. Leaving a zone still freezes the ring for up to 0.4 s, then clears it.
+
+**Verification.** A Simulator build, plus a temporary harness with synthetic noisy hands:
+- An open-hand start pose completed.
+- An "almost touching" target (0.6 palm lengths) earned no hold time in 4 s.
+- A touching target with jittery tips at confidence 0.35 completed.
+- For a right hand whose chirality read left on every fourth frame, only the first few frames were rejected, and a sustained left reading switched after six frames.
+
+**Pending on the M1 iPad:**
+- the feel of the overlay and ring in every finger exercise
+- whether patients with limited thumb opposition can reach 0.35, and whether the 0.3 tip confidence ever produces a false touch
+- the smoothing lag on fast movements
+- both hands
+
+**Long rest narration (2026-11-10).** At the product owner's request, the long breathing rest between daily-plan exercises (`DailyPlanNextView`) is narrated in the Marizka voice and tone.
+- **Spoken by key.** The page now speaks each line by its catalog key (`SessionAudioService.speak(id:key:argument:)`) instead of passing finished text, so the bundled clip plays and the system voice is only the fallback. The same applies to the next exercise's title.
+- **Breath counts.** A count before an inhale ("lima napas lagi") is its own clip, played just before the inhale cue; the stage waits for the second clip.
+- **Numbers spoken as words.** `rest.long.remaining %lld` has clips for 2 to 6, rendered with the number spelled out. `speak.rest.long.instructions` spells out "enam".
+- **Rendering.** `Tools/generate_narration.py` lists the 15 `rest.long.*` lines, the five counts and the 15 plan exercise titles, rendered with the shared voice settings, seed and soft lead-in.
+- **Verification.** Simulator build only; listening on the M1 iPad is pending.
+
+**Smoother tracking (2026-11-10).** At the product owner's request, finger and body movement tracking were made smoother.
+- **Merge resolution (2026-11-11).** Body joints retain the shared `OneEuroFilter.bodyJoint` preset and each activity's confidence floor from main. A per-joint gate now holds isolated jumps using the 0.15 aspect-corrected distance and 0.06 confirmation distance below. Short confidence dropouts keep the filter; a gap over 0.3 s restarts it. Achievements and the cup exercise are removed.
+- **Finger inference rate.** `HandCameraService` runs hand inference at 30 Hz instead of 15 Hz (`inferenceInterval`). The drawn hand and ring now update every camera frame, and every time-based filter has twice the samples. Work stays bounded: inference runs on the capture queue and late frames are dropped by the output. Every finger hold, recovery and filter rule is time-based, so none of them change with the rate.
+- **Body joint dropouts.** `MovementLandmarkSmoother` (arm raise, elbow bend, directional reach, rotation and flexion engines, sit to stand) keeps a joint's filter through a one- or two-frame confidence dropout instead of discarding it, so the joint no longer snaps back unfiltered. The filter's 0.3 s gap rule still restarts it after a real loss.
+- **Body single-frame jumps.** Each joint filter holds back a single raw jump larger than 0.15 (aspect-corrected) between frames until the next frame confirms it within 0.06. Vision briefly placing a joint on the wrong limb therefore never reaches drawing or scoring, while a real fast movement is followed one frame later.
+- **Hand evidence.** The smoother now passes `TrackingObservation.hand` through; it was previously dropped.
+
+**Verification.** Simulator build. A temporary harness ran the production smoother against the previous version with synthetic 30 Hz frames:
+
+| Case | Previous | New |
+|---|---|---|
+| A still wrist with one wrong-place frame (biggest drawn step) | 0.093 | 0.003 |
+| A fast real reach at 0.9 image widths per second (worst lag) | 0.045 | 0.042 |
+| One-frame confidence dropout (biggest step) | 0.006 | 0.002 |
+
+**Pending on the M1 iPad.**
+- Inference cadence and thermal behaviour at 30 Hz over two-minute finger runs.
+- Overlay smoothness in every exercise.
+- Whether very fast, jerky movements trigger the jump hold.

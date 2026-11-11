@@ -217,15 +217,6 @@ final class GuidanceAudioService: NSObject, AVSpeechSynthesizerDelegate {
         audioSessionActive = true
     }
 
-    func playAchievementCue() {
-        do {
-            try prepareOptionalPlayback()
-            playCue(.setCompleted)
-        } catch {
-            // Celebrations remain usable when optional sound is unavailable.
-        }
-    }
-
     func playCue(_ cue: GuidanceSound) {
         let name: String
         switch cue {

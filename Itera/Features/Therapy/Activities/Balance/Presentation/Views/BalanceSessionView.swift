@@ -65,6 +65,12 @@ struct TMBalanceSessionView: View {
         .toolbar(.hidden, for: .navigationBar)
         .toolbar(.hidden, for: .tabBar)
         .task { await model.start(permissions: permissions) }
+        .task(id: automaticallyRests && scenePhase == .active) {
+            guard automaticallyRests, scenePhase == .active else { return }
+            try? await Task.sleep(for: DailyPlanViewModel.completionPreviewDuration)
+            guard !Task.isCancelled, automaticallyRests else { return }
+            leave()
+        }
         .onDisappear { model.stop() }
         .onChange(of: model.requestedExit) { _, requested in
             guard requested else { return }
@@ -306,6 +312,10 @@ struct TMBalanceSessionView: View {
         model.setResults.reduce(0, +)
     }
 
+    private var automaticallyRests: Bool {
+        model.allSetsDone && dependencies.dailyPlan.hasAutomaticRest
+    }
+
     private var allDonePage: some View {
         TMTherapySetSummary(
             heading: heading,
@@ -314,13 +324,15 @@ struct TMBalanceSessionView: View {
             results: results,
             total: Text("session.total \(repetitionsDone)")
         ) {
-            TMTherapyFinishActions(
-                title: dependencies.dailyPlan.isRunning ? "plan.nextContinue" : "balance.completion.end",
-                symbol: dependencies.dailyPlan.isRunning ? "play.fill" : nil,
-                repeatTitle: "balance.completion.repeat",
-                onRepeat: model.restart,
-                action: endPractice
-            )
+            if !automaticallyRests {
+                TMTherapyFinishActions(
+                    title: dependencies.dailyPlan.isRunning ? "plan.nextContinue" : "balance.completion.end",
+                    symbol: dependencies.dailyPlan.isRunning ? "play.fill" : nil,
+                    repeatTitle: "balance.completion.repeat",
+                    onRepeat: model.restart,
+                    action: endPractice
+                )
+            }
         }
     }
 

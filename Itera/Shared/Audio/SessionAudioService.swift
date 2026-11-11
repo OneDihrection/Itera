@@ -76,7 +76,7 @@ final class SessionAudioService: NSObject, VoiceReadinessProviding, AVSpeechSynt
     private var clipWatchdog: Task<Void, Never>?
     private var afterClip: (() -> Void)?
     private var failedClip: (() -> Void)?
-    private var pendingSpeech: (id: UUID, text: String, key: String?)?
+    private var pendingSpeech: (id: UUID, text: String, line: NarrationLine?)?
     private var pendingCounts: [(id: UUID, number: Int)] = []
     private var speechWatchdog: Task<Void, Never>?
     private var closingWatchdog: Task<Void, Never>?
@@ -173,6 +173,11 @@ final class SessionAudioService: NSObject, VoiceReadinessProviding, AVSpeechSynt
             self.events.send(.completed(id, false))
             self.drainPendingAudio()
         }
+    }
+
+    func prepareRestNarration() {
+        prepare()
+        try? NarrationAudioSession.activate(listening: false)
     }
 
     func cancelSpeech() {
@@ -354,16 +359,19 @@ final class SessionAudioService: NSObject, VoiceReadinessProviding, AVSpeechSynt
         playClip(name, id: id, timeout: 1.5)
     }
 
-    func speak(id: UUID, key: String) {
-        let text = NarrationText.resolve(key, bundle: language.resourceBundle, locale: language.locale)
+    /// Plays the recorded clip for a catalog key, or speaks its text with the system voice when
+    /// no clip exists. `argument` fills a format key such as "rest.long.remaining %lld" and picks
+    /// its numbered clip ("narration-id-rest.long.remaining-4").
+    func speak(id: UUID, key: String, argument: Int? = nil) {
+        let text = spokenText(for: key, argument: argument)
+        let line = NarrationLine(key: key, argument: argument)
         guard utteranceIDs.isEmpty, clipID == nil else {
             if let previous = pendingSpeech {
                 events.send(.cancelled(previous.id))
             }
-            pendingSpeech = (id, text, key)
+            pendingSpeech = (id, text, line)
             return
         }
-        let line = NarrationLine(key: key)
         let name = NarrationClips.resourceName(for: line)
         if narrationClips[name] == nil, let url = NarrationClips.url(for: line, language: language) {
             narrationClips[name] = try? PreparedAudioClip(url: url)
@@ -399,6 +407,18 @@ final class SessionAudioService: NSObject, VoiceReadinessProviding, AVSpeechSynt
             do { try await Task.sleep(for: .seconds(30)) } catch { return }
             completed(id, false)
         }
+    }
+
+    /// A format key is read raw from the catalog and filled here, so its "%lld" is replaced
+    /// by the number instead of being looked up as an interpolation.
+    private func spokenText(for key: String, argument: Int?) -> String {
+        guard let argument else {
+            return NarrationText.resolve(key, bundle: language.resourceBundle, locale: language.locale)
+        }
+
+        let format = language.resourceBundle.localizedString(forKey: key, value: nil, table: nil)
+
+        return String(format: format, locale: language.locale, argument)
     }
 
     private func playClip(_ name: String, id: UUID, timeout: Double, failure: (() -> Void)? = nil, completion: (() -> Void)? = nil) {
@@ -457,8 +477,8 @@ final class SessionAudioService: NSObject, VoiceReadinessProviding, AVSpeechSynt
             play(id: next.id, cue: .count(next.number))
         } else if let next = pendingSpeech {
             pendingSpeech = nil
-            if let key = next.key {
-                speak(id: next.id, key: key)
+            if let line = next.line {
+                speak(id: next.id, key: line.key, argument: line.argument)
             } else {
                 speak(id: next.id, text: next.text)
             }
@@ -654,11 +674,10 @@ final class SessionAudioService: NSObject, VoiceReadinessProviding, AVSpeechSynt
         events.send(.listening(false))
     }
 
-    func startMusic() {
+    func startMusic(listening: Bool = true) {
         do {
-            // Voice commands are mandatory before therapy, so the session always uses the listening
-            // configuration; switching categories mid-playback would click.
-            try NarrationAudioSession.activate(listening: true)
+            // Keep the same audio configuration as the current session or standalone narration.
+            try NarrationAudioSession.activate(listening: listening)
             music.start()
         } catch {
             music.pause()

@@ -52,7 +52,14 @@ FINGER_KEYS = (
     "range.ready", "range.instruction", "range.resultSpoken",
 )
 # Format keys with the values the app passes; FingerActivity holds for 2 seconds.
-FORMAT_KEYS = {"guide.holdDuration %lld": (2,)}
+FORMAT_KEYS = {
+    "guide.holdDuration %lld": (2,),
+    # The long rest between plan exercises counts six breaths down to two (DailyPlanNextView).
+    "rest.long.remaining %lld": (2, 3, 4, 5, 6),
+}
+
+# Format keys whose number is read as an Indonesian word rather than a digit.
+SPELLED_FORMAT_KEYS = {"rest.long.remaining %lld"}
 
 # Arm, reaching and balance sessions: keys spoken through SessionAudioService.
 BODY_KEYS = (
@@ -88,6 +95,17 @@ BODY_KEYS = (
     "rotation.rotateRight", "rotation.rotateLeft",
     "internalRotation.rotateRight", "internalRotation.rotateLeft",
     "shoulderFlexion.rotateRight", "shoulderFlexion.rotateLeft",
+    # The long breathing rest between daily-plan exercises (DailyPlanNextView).
+    "rest.long.opening", "rest.long.restInvitation", "rest.long.instructions", "rest.long.posture",
+    "rest.long.inhaleFirst", "rest.long.inhale", "rest.long.inhaleLast", "rest.long.hold",
+    "rest.long.exhaleSlow", "rest.long.exhaleShoulders", "rest.long.exhale", "rest.long.exhaleLast",
+    "rest.long.settle", "rest.long.closing", "rest.long.nextExercise",
+    # The rest then names the next exercise (DailyPlanViewModel.nextSessionTitleKey).
+    "exercise.fullFist", "exercise.hookFist", "exercise.opposition", "exercise.spreading",
+    "exercise.extensionSequence", "exercise.forearmRotation",
+    "session.armRaise", "session.elbowBend", "session.directionalReach", "session.foldTowel",
+    "balance.title", "rotation.title", "internalRotation.title", "shoulderFlexion.title",
+    "sitToStand.title",
 ) + tuple(
     f"session.opening.{kind}.{side}.{part}"
     for kind in ("armRaise", "elbowBend")
@@ -172,6 +190,9 @@ SLOW_LINES = {
     "narration-id-towel.fold": 0.70,
     "narration-id-session.complete": 0.76,
     "narration-id-balance.voice.leftTarget": 0.78,
+    # Long-rest lines measured at 13.1 and 12.5 characters per second at the normal speed.
+    "narration-id-rest.long.opening": 0.74,
+    "narration-id-rest.long.instructions": 0.76,
 }
 
 
@@ -237,7 +258,9 @@ def collect_lines(groups):
             print(f"skip {key}: no Indonesian text", file=sys.stderr)
             continue
         if argument is not None:
-            text = text.replace("%lld", str(argument))
+            # Counts the patient hears are spelled out ("enam napas lagi"), as the number clips are.
+            spoken = indonesian_number(argument) if key in SPELLED_FORMAT_KEYS else str(argument)
+            text = text.replace("%lld", spoken)
         lines.append({"key": key, "argument": argument, "text": text, "name": clip_name(key, argument)})
 
     return sorted(lines + numbers, key=lambda line: line["name"])

@@ -19,9 +19,40 @@ struct FingerTrackingRecovery {
     private var lastGood: Double?
     private var candidate: FingerTrackingProblem?
     private var candidateSince: Double?
+    /// When per-frame misses began, before they were long enough to count as a problem.
+    private var frameMissingSince: Double?
+
+    /// Misses shorter than this are detector dropouts, not a tracking problem.
+    static let frameTolerance = 0.3
 
     mutating func reset() {
         self = Self()
+    }
+
+    /// Records one frame without usable evidence, ignoring dropouts shorter than
+    /// `frameTolerance`. A single bad frame used to start a problem, and recovering from it
+    /// then required 0.35 s of good frames, so every dropout froze the hold for about 0.4 s.
+    /// The missing frames themselves still earn no hold credit; the activity freezes the hold.
+    mutating func missingFrame(_ problem: FingerTrackingProblem, at now: Double) {
+        guard now.isFinite else {
+            return
+        }
+
+        guard self.problem == nil else {
+            missing(problem, at: now)
+            return
+        }
+
+        let since = frameMissingSince ?? now
+        frameMissingSince = since
+
+        guard now - since >= Self.frameTolerance else {
+            return
+        }
+
+        missing(problem, at: now)
+        problemSince = since
+        frameMissingSince = nil
     }
 
     mutating func missing(_ problem: FingerTrackingProblem, at now: Double) {
@@ -55,6 +86,7 @@ struct FingerTrackingRecovery {
             return false
         }
         guard problem != nil else {
+            frameMissingSince = nil
             return true
         }
         if goodSince == nil || now - (lastGood ?? now) > 0.3 || now <= (lastGood ?? -.infinity) {

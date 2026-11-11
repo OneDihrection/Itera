@@ -38,6 +38,10 @@ final class HandCameraService: NSObject, AVCaptureVideoDataOutputSampleBufferDel
     private var notifications: [NSObjectProtocol] = []
     /// Keeps scoring on the patient's hand when bystanders' or the other hand appear. Queue-confined.
     private var subjects = HandSubjectSelector()
+    /// One hand-pose inference per camera frame at 30 fps. At 15 Hz the drawn hand and its ring
+    /// moved in visible steps and every filter lagged twice as long. Work stays bounded: inference
+    /// runs on the capture queue and late frames are dropped by the output, never queued.
+    private static let inferenceInterval = 1.0 / 30
 
     override init() {
         super.init()
@@ -174,7 +178,7 @@ final class HandCameraService: NSObject, AVCaptureVideoDataOutputSampleBufferDel
             from: session.synchronizationClock ?? CMClockGetHostTimeClock(),
             to: CMClockGetHostTimeClock()
         ).seconds
-        guard timestamp - lastInference >= 1.0 / 15 - 0.001,
+        guard timestamp - lastInference >= Self.inferenceInterval - 0.001,
               let pixelBuffer = CMSampleBufferGetImageBuffer(buffer) else { return }
         lastInference = timestamp
         do {

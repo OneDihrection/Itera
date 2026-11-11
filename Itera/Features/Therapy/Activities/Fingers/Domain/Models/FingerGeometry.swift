@@ -50,15 +50,30 @@ extension HandEvidence {
         return across / palmLength
     }
 
+    /// Lowest confidence a required joint may have.
+    ///
+    /// A turning palm hides its outer knuckles briefly, so forearm rotation accepts them at a
+    /// lower confidence instead of dropping the hand mid-turn. Touching fingertips overlap in the
+    /// image, which lowers Vision's confidence in exactly the two tips opposition measures, so
+    /// those two joints get the same allowance. Every other joint stays at 0.5.
+    private func minimumConfidence(for joint: Int, exercise: FingerExercise, finger: Int) -> Float {
+        switch exercise {
+        case .forearmRotation:
+            return 0.3
+        case .opposition where joint == 4 || joint == [5, 9, 13, 17][finger] + 3:
+            return 0.3
+        default:
+            return 0.5
+        }
+    }
+
     /// Dimensionless visible-motion metrics; these are not grip force or clinical joint angles.
     func metric(for exercise: FingerExercise, finger: Int) -> Double? {
-        // A turning palm hides its outer knuckles briefly, so forearm rotation accepts them at a
-        // lower confidence instead of dropping the hand mid-turn.
-        let minimumConfidence: Float = exercise == .forearmRotation ? 0.3 : 0.5
-
         guard points.count == 21, (0..<4).contains(finger),
               requiredJoints(for: exercise, finger: finger).allSatisfy({
-                  points[$0].confidence >= minimumConfidence && points[$0].x.isFinite && points[$0].y.isFinite
+                  points[$0].confidence >= minimumConfidence(for: $0, exercise: exercise, finger: finger)
+                      && points[$0].x.isFinite
+                      && points[$0].y.isFinite
               }),
               width.isFinite, height.isFinite, width > 0, height > 0 else { return nil }
         let bases = [5, 9, 13, 17]

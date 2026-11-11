@@ -45,13 +45,6 @@ final class NavigationRouter {
         }
     }
 
-    func presentAchievementCelebration() {
-        guard presentedSheets.isEmpty, presentedFullScreenCovers.isEmpty else {
-            return
-        }
-        presentSheet(.achievementCelebration)
-    }
-
     func pop() {
         guard !path.isEmpty else { return }
         path.removeLast()
@@ -86,8 +79,13 @@ final class NavigationRouter {
     }
 
     func replaceFullScreenCover(with route: AppRoute) {
-        guard !presentedFullScreenCovers.isEmpty else { return }
-        presentedFullScreenCovers[presentedFullScreenCovers.count - 1] = RoutePresentation(route: route)
+        guard let current = presentedFullScreenCovers.last else {
+            return
+        }
+        presentedFullScreenCovers[presentedFullScreenCovers.count - 1] = RoutePresentation(
+            id: current.id,
+            route: route
+        )
     }
 
     func dismissFullScreenCover() {
