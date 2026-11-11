@@ -16,6 +16,8 @@ final class FingerSessionViewModel {
     private(set) var sessionElapsedSeconds = 0.0
     @ObservationIgnored private var durationClock = SessionDurationClock()
     @ObservationIgnored private var overlaySmoother = HandOverlaySmoother()
+    /// Steadies Vision's left/right reading so a one-frame flip is not treated as the other hand.
+    @ObservationIgnored private var sideStabilizer = HandSideStabilizer()
     private(set) var engine: FingerSessionEngine
     private(set) var evidence: HandEvidence?
     private(set) var trackingReady = false
@@ -99,11 +101,20 @@ final class FingerSessionViewModel {
             return lastGuideEvidence
         }
         // A frozen partial hold keeps its bubble at the last drawn position, so the timer
-        // visibly pauses instead of disappearing while a bystander passes.
-        let displayGrace = activity.holdCompletionID != nil ? 0.5 : InterruptibleHold.trackingGrace
+        // visibly pauses instead of disappearing while a bystander passes. Without a hold, a
+        // detector dropout shorter than the recovery tolerance keeps the hand drawn, so the
+        // overlay does not blink.
+        let displayGrace: Double
 
-        guard activity.isHolding,
-              previewAttached,
+        if activity.holdCompletionID != nil {
+            displayGrace = 0.5
+        } else if activity.isHolding {
+            displayGrace = InterruptibleHold.trackingGrace
+        } else {
+            displayGrace = FingerTrackingRecovery.frameTolerance
+        }
+
+        guard previewAttached,
               !waitingForCamera,
               ProcessInfo.processInfo.systemUptime - lastHandFrame <= displayGrace else {
             return nil
@@ -117,8 +128,9 @@ final class FingerSessionViewModel {
     }
 
     var showsGuideTimer: Bool {
+        // A frozen hold keeps its paused timer on screen; it receives no time while frozen.
         guard !paused, guideEvidence != nil,
-              trackingReady || activity.holdCompletionID != nil else {
+              trackingReady || activity.isHolding else {
             return false
         }
         switch activity.phase {
@@ -372,6 +384,7 @@ final class FingerSessionViewModel {
             evidence = nil
             lastGuideEvidence = nil
             overlaySmoother.reset()
+            sideStabilizer.reset()
             cameraMessage = key
             errorKey = key
             trackingRecoveryPaused = true
@@ -387,6 +400,7 @@ final class FingerSessionViewModel {
                 generation = sample.generation
                 lastGuideEvidence = nil
                 overlaySmoother.reset()
+                sideStabilizer.reset()
                 engine.recalibrate()
                 announcedCalibrationIndex = nil
                 trackingRecovery.reset()
@@ -415,13 +429,13 @@ final class FingerSessionViewModel {
                 let problem: FingerTrackingProblem
                 if sample.issue == .multipleHands {
                     problem = .multipleHands
-                } else if let hand = sample.evidence {
+                } else if let hand = detected {
                     problem = hand.side == nil || hand.side == routine.side ? .fingers : .selectedHand
                 } else {
                     problem = .position
                 }
                 if requiresHandTracking {
-                    trackingRecovery.missing(problem, at: now)
+                    trackingRecovery.missingFrame(problem, at: now)
                 }
                 handleMissingHand(now: now)
                 return
@@ -459,10 +473,18 @@ final class FingerSessionViewModel {
     /// Forearm rotation turns the palm toward and away from the camera, which makes a hand's
     /// reported chirality unreliable. Capture accepts a single hand, so credit it to the
     /// exercised side instead of rejecting the end of the movement.
+    ///
+    /// Every other exercise reads the side through `HandSideStabilizer`, which ignores the
+    /// brief chirality flips Vision makes while fingers curl or touch.
     private func attributedToExercisedHand(_ hand: HandEvidence?) -> HandEvidence? {
-        guard activity.kind == .forearmRotation, let hand else {
-            return hand
+        guard let hand else {
+            return nil
         }
+
+        guard activity.kind == .forearmRotation else {
+            return sideStabilizer.stabilize(hand)
+        }
+
         return hand.assigning(side: routine.side)
     }
 

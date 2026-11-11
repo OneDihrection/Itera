@@ -26,7 +26,7 @@ Prefer generous spacing and readable multiline declarations, calls, expressions,
 
 Components/TherapyFeedback.swift owns value-driven progress rings, a timer-only countdown with accessible pause/end actions, bounded success confetti, and large feeling choices. Primary green, secondary sage, and tertiary peach roles are defined in TherapyPalette; mediaBackground matches the fixed rendered hand studio. No component owns session timing, tracking, or persistence.
 
-Components/TherapyProgressArtwork.swift supplies value-driven medallions and native Charts visuals without history/achievement logic. Components/TherapyButtonFeedback.swift supplies a primitive button style whose activation calls an injected environment feedback action, then the original action. The composition root injects the sole audio owner's click method. Controls retain native disabled/activation behavior.
+Components/TherapyButtonFeedback.swift supplies a primitive button style whose activation calls an injected environment feedback action, then the original action. The composition root injects the sole audio owner's click method. Controls retain native disabled/activation behavior.
 
 TMTherapyIconButton in Components/TherapyControls.swift provides a large icon action with an explicit localized accessibility label.
 
@@ -40,7 +40,7 @@ TMTherapyIconButton in Components/TherapyControls.swift provides a large icon ac
 
 `TMSessionStageSurface` provides the reference experience’s full-screen surface, 48-point inset, 24-point section spacing, and continuous 36-point border. It accepts content and controls without knowing about session state. `TMSessionCelebration` provides a cancellable three-second visual celebration and pauses its animation timeline afterward; the caller handles Reduce Motion. Its particle layout was adapted from VisionPoc’s `TherapyClosingSection.swift`.
 
-`TMTherapyGuideBubble` displays supplied hold progress without owning tracking or timers. `TMTherapyAwardReveal` combines the shared badge and bounded confetti with a Reduce Motion-aware entrance. Button activation uses a short press response without changing the original action or accessibility activation.
+`TMTherapyGuideBubble` displays supplied hold progress without owning tracking or timers. Button activation uses a short press response without changing the original action or accessibility activation.
 
 `TMTherapyGuideBubble` accepts an optional diameter and outline-only styling for enclosing indicators. Its explicit `showsTimer` input enables the progress arc. The full arc marks completion.
 
@@ -48,7 +48,6 @@ TMTherapyIconButton in Components/TherapyControls.swift provides a large icon ac
 
 `TMTherapyMetric` supports compact label spacing for horizontal session headers, retaining its large numeric value and combined accessibility label.
 
-`TMTherapyAchievementShareSheet` renders a value-driven badge card in memory and exposes the native iPad sharing controller. The shared router owns presentation and completion; the component has no achievement eligibility or persistence logic. Its completion reports actual sharing errors separately from ordinary cancellation.
 
 ## Monochrome pages
 
@@ -60,7 +59,7 @@ Components/TherapyPageLayout.swift owns `TMTherapyPageHeader` (centered title wi
 
 Components/TherapySessionStatus.swift owns `TMTherapyCompletionMark`, `TMTherapyTargetTile`, `TMTherapyNumberedSteps`, `TMTherapySetRow` (done, next or upcoming) and `TMTherapyRestCountdown`. They display supplied values only; set progress, rest timing and skipping stay in the session.
 
-Components/TherapyProgressSummary.swift owns `TMTherapyWeekSummary` (headline band plus seven day cells), `TMTherapyChallengeCard` (segmented up to ten steps, continuous beyond) and `TMTherapyAchievementRow`. Callers pass formatted text; no history or achievement rules live here.
+Components/TherapyProgressSummary.swift owns `TMTherapyWeekSummary`, `TMTherapyProgressSessionCard` and `TMTherapyWeeklyRepetitionChart`. Callers pass formatted values.
 
 ### Human Interface Guidelines choices
 
@@ -114,6 +113,7 @@ Components/TherapyExerciseScreens.swift owns the five screens every exercise sha
 - `TMTherapyExerciseLiveLayout`: heading with trailing accessories, the camera slot with the cue bubble, the "Ikuti gerakan ini" demonstration column, repetition and set counters, and Pause (`TMTherapyButton(pill:brand:)`) and End. The camera keeps one position, so callers layer stage pages and dialogs over it without remounting the preview.
   Heights are proportional: the heading takes about 12% of the screen height, the counters and buttons about 20%, and the camera and demo row the rest, with minimums for small iPads. Counter text and button padding scale with the screen.
 - The attached video layout uses a centered heading, enlarged counters, taller controls, and a black caption aligned to the visible video. Finger, Balancing and light guided sessions share these settings. `TMTherapyVideoFooter` also hosts the guided calibration cards that require measured reading.
+- `TMTherapyLongRest` presents a breathing cue over orange waves and uses static waves under Reduce Motion. The daily plan supplies timing and actions.
 - `TMTherapyPauseDialog`: a frosted backdrop with the paused card (set, title, practice time mm:ss, end with an inline confirmation, resume) and an `Extra` slot for caregiver recovery. `confirmingEndInitially` opens it on the confirmation when it came from an End button. It hugs its content and scrolls only when it does not fit.
 - `TMTherapySetSummary` with `TherapySetResult`: the set-done and all-done page (rust check, headline, message, results panel, total, optional rest line and actions).
 - `TMTherapyFinishActions`: the way on from the all-done page (prominent button, optional repeat link, a slot above for saving or errors). Every exercise, the finger exercises included (`TMFingerSessionCompleteView`), ends on `TMTherapySetSummary` with this block.

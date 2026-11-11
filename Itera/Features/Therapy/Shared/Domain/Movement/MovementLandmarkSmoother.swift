@@ -11,7 +11,7 @@ import Foundation
 struct MovementLandmarkSmoother {
     private let minimumConfidence: Float
     private let limbMinimumConfidence: Float
-    private var filters: [BodyJoint: OneEuroFilter] = [:]
+    private var filters: [BodyJoint: JointSmoothingState] = [:]
     private var lastTimestamp: Double?
     private var lastGeneration: UUID?
     private var lastEpoch = 0
@@ -63,14 +63,6 @@ struct MovementLandmarkSmoother {
             filters.removeAll(keepingCapacity: true)
         }
 
-        for joint in BodyJoint.allCases {
-            if let landmark = observation.joints[joint], isUsable(landmark, joint: joint) {
-                continue
-            }
-
-            filters[joint] = nil
-        }
-
         let aspect = observation.aspect
         var joints = observation.joints
 
@@ -79,7 +71,7 @@ struct MovementLandmarkSmoother {
                 continue
             }
 
-            var filter = filters[joint] ?? OneEuroFilter(parameters: .bodyJoint)
+            var filter = filters[joint] ?? JointSmoothingState()
             let position = filter.consume(
                 TherapyPoint(
                     x: landmark.position.x * aspect,
@@ -127,5 +119,42 @@ struct MovementLandmarkSmoother {
             && landmark.position.y.isFinite
             && (0...1).contains(landmark.position.x)
             && (0...1).contains(landmark.position.y)
+    }
+}
+
+/// Keeps the One Euro estimate through brief confidence loss and rejects an isolated detector jump.
+private struct JointSmoothingState {
+    private var filter = OneEuroFilter(parameters: .bodyJoint)
+    private var previousRaw: TherapyPoint?
+    private var previousOutput: TherapyPoint?
+    private var previousTimestamp: Double?
+    private var heldJump: TherapyPoint?
+
+    private static let outlierDistance = 0.15
+    private static let confirmationDistance = 0.06
+
+    mutating func consume(_ value: TherapyPoint, at time: Double) -> TherapyPoint {
+        if let previousTimestamp, time - previousTimestamp > 0.3 {
+            self = JointSmoothingState()
+        }
+
+        if let previousRaw, let previousOutput {
+            let isJump = (value - previousRaw).length > Self.outlierDistance
+            let confirmsJump = heldJump.map {
+                (value - $0).length <= Self.confirmationDistance
+            } ?? false
+
+            if isJump && !confirmsJump {
+                heldJump = value
+                return previousOutput
+            }
+        }
+
+        heldJump = nil
+        let output = filter.consume(value, at: time)
+        previousRaw = value
+        previousOutput = output
+        previousTimestamp = time
+        return output
     }
 }

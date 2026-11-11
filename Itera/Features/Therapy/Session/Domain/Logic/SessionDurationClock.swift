@@ -68,3 +68,48 @@ struct RestBreath: Equatable {
         intensity = 0.25 + 0.75 * (1 - cos(expansion * .pi)) / 2
     }
 }
+
+/// The long-rest reference rhythm. The short break between sets uses RestBreath.
+struct LongRestBreath {
+    enum Phase {
+        case inhale, hold, exhale, settle
+    }
+
+    static let count = 6
+    static let inhaleSeconds = 3.0
+    static let holdSeconds = 2.0
+    static let exhaleSeconds = 5.0
+    static let settleSeconds = 2.0
+    static let cycleDuration = inhaleSeconds + holdSeconds + exhaleSeconds + settleSeconds
+    static let duration = Double(count) * cycleDuration
+
+    let number: Int
+    let phase: Phase
+    let intensity: Double
+
+    init(elapsed: Double) {
+        let elapsed = min(max(0, elapsed), Self.duration.nextDown)
+        number = Int(elapsed / Self.cycleDuration) + 1
+        let position = elapsed.truncatingRemainder(dividingBy: Self.cycleDuration)
+        let exhaleStart = Self.inhaleSeconds + Self.holdSeconds
+        let settleStart = exhaleStart + Self.exhaleSeconds
+        let expansion: Double
+
+        switch position {
+        case ..<Self.inhaleSeconds:
+            phase = .inhale
+            expansion = position / Self.inhaleSeconds
+        case ..<exhaleStart:
+            phase = .hold
+            expansion = 1
+        case ..<settleStart:
+            phase = .exhale
+            expansion = 1 - (position - exhaleStart) / Self.exhaleSeconds
+        default:
+            phase = .settle
+            expansion = 0
+        }
+
+        intensity = 0.25 + 0.75 * (1 - cos(expansion * .pi)) / 2
+    }
+}

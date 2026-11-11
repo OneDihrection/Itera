@@ -42,6 +42,7 @@ final class ExerciseMusicPlayer {
     private let defaults: UserDefaults
     private let resource: (String) -> URL?
     private var subscription: AnyCancellable?
+    private var startupCheck: Task<Void, Never>?
     private var player: AVAudioPlayer?
     private var track: ExerciseMusicTrack?
     private var active = false
@@ -67,6 +68,7 @@ final class ExerciseMusicPlayer {
 
     func pause() {
         paused = true
+        cancelStartupCheck()
         player?.pause()
     }
 
@@ -77,6 +79,7 @@ final class ExerciseMusicPlayer {
     func stop() {
         active = false
         paused = true
+        cancelStartupCheck()
         player?.stop()
         player = nil
         track = nil
@@ -98,6 +101,7 @@ final class ExerciseMusicPlayer {
         let selected = defaults.string(forKey: ExerciseMusicTrack.storageKey)
             .flatMap(ExerciseMusicTrack.init(rawValue:)) ?? .floats
         if track != selected || (player == nil && selected != .off) {
+            cancelStartupCheck()
             player?.stop()
             player = nil
             track = selected
@@ -110,9 +114,30 @@ final class ExerciseMusicPlayer {
                 }
             }
         }
-        if !paused, player?.isPlaying == false {
-            player?.play()
+        if !paused, let player, !player.isPlaying, startupCheck == nil {
+            player.play()
+            // Capture and speech recognition can change the audio route during session entry.
+            // Check once after startup settles, without restarting a playing track.
+            startupCheck = Task { [weak self, weak player] in
+                do {
+                    try await Task.sleep(for: .milliseconds(500))
+                } catch {
+                    return
+                }
+                guard let self, !Task.isCancelled else {
+                    return
+                }
+                self.startupCheck = nil
+                if let player, self.player === player, !self.paused, !player.isPlaying {
+                    player.play()
+                }
+            }
         }
+    }
+
+    private func cancelStartupCheck() {
+        startupCheck?.cancel()
+        startupCheck = nil
     }
 
     // Music stays audible but well under narration, so speech stays clear and loud.

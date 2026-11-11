@@ -48,14 +48,6 @@ enum AppRouterView {
                 .environment(\.locale, AppLanguage.selected.locale)
         case .reports:
             TMFingerReportsView()
-        case .achievements:
-            TMPracticeAchievementsView()
-        case .achievementCelebration:
-            TMAchievementCelebrationView()
-        case .achievement(let id):
-            TMPracticeAchievementDetailView(id: id)
-        case .achievementShare(let id):
-            TMAchievementShareDestination(id: id)
         case .report(let id):
             TMFingerReportDetailView(id: id)
         case .fingerSession:

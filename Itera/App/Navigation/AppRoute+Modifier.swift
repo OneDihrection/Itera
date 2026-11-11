@@ -99,7 +99,7 @@ private struct TMModalStackModifier: ViewModifier {
     private func modalContent(_ item: RoutePresentation) -> some View {
         Group {
             if isCover {
-                AppRouterView.destination(item.route)
+                TMFullScreenRouteContent(presentation: item)
                     .modifier(TMModalStackModifier(index: 0, isCover: false, sheetHostCoverID: item.id))
             } else {
                 NavigationStack {
@@ -116,6 +116,37 @@ private struct TMModalStackModifier: ViewModifier {
         .environment(\.buttonFeedback, buttonFeedback)
         .typography(.body)
         .buttonStyle(TMTherapySoundButtonStyle())
+    }
+}
+
+/// A full-screen presentation stays mounted while its destination changes.
+private struct TMFullScreenRouteContent: View {
+    @Environment(NavigationRouter.self) private var router
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    let presentation: RoutePresentation
+    @State private var displayedRoute: AppRoute?
+
+    private var currentRoute: AppRoute? {
+        router.presentedFullScreenCovers.first { $0.id == presentation.id }?.route
+    }
+
+    var body: some View {
+        let route = displayedRoute ?? presentation.route
+
+        ZStack {
+            TherapyPalette.canvas.ignoresSafeArea()
+            AppRouterView.destination(route)
+                .id(route)
+                .transition(.opacity)
+        }
+        .onChange(of: currentRoute, initial: true) { _, route in
+            guard let route else {
+                return
+            }
+            withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.25)) {
+                displayedRoute = route
+            }
+        }
     }
 }
 

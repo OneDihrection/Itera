@@ -191,15 +191,15 @@ final class BalanceSessionViewModel {
         tracking.start()
         clock.resume(at: Self.now)
         audio.prepare()
+        if !paused, !allSetsDone {
+            audio.startMusic()
+        }
         let microphone = await permissions.request(.microphone)
         let speech = await permissions.request(.speechRecognition)
         if microphone == .authorized, speech == .authorized {
             startVoiceListening()
         } else {
             voiceAvailable = false
-        }
-        if !paused, !allSetsDone {
-            audio.startMusic()
         }
     }
 
@@ -394,6 +394,9 @@ final class BalanceSessionViewModel {
             let result = await audio.startListening()
             guard started else { return }
             voiceListening = result == .started
+            if !paused, !allSetsDone {
+                audio.startMusic()
+            }
             if result != .started {
                 voiceAvailable = false
             }

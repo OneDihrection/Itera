@@ -11,7 +11,6 @@ import Observation
 @MainActor
 @Observable
 final class AppDependencies: HistoryRecovering {
-    let progress: PracticeProgressViewModel
     let home: FingerHomeViewModel
     let forearm: FingerHomeViewModel
     private(set) var session: FingerSessionViewModel?
@@ -55,7 +54,6 @@ final class AppDependencies: HistoryRecovering {
             category: .forearm, repository: forearmRepository,
             routineRepository: LocalFingerRoutineRepository(category: .forearm)
         )
-        progress = PracticeProgressViewModel(history: repository, repository: LocalAchievementRepository())
     }
 
     func playButtonClick() {
@@ -68,20 +66,6 @@ final class AppDependencies: HistoryRecovering {
         }
 
         fingerAudio.playButtonClick()
-    }
-
-    func playAchievementCue() {
-        guard UserDefaults.standard.object(forKey: PracticePreferences.celebrationSounds) as? Bool ?? true else {
-            return
-        }
-        // Wait (briefly) for narration to finish rather than playing over it.
-        Task { @MainActor [weak self] in
-            for _ in 0..<30 where self?.audio.isNarrating == true {
-                try? await Task.sleep(for: .milliseconds(100))
-            }
-
-            self?.fingerAudio.playAchievementCue()
-        }
     }
 
     func routineModel(for category: TherapyCategory) -> RoutineViewModel {

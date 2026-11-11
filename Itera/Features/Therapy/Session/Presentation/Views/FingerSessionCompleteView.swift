@@ -12,6 +12,7 @@ import SwiftUI
 struct TMFingerSessionCompleteView: View {
     @Environment(AppDependencies.self) private var dependencies
     @Environment(NavigationRouter.self) private var router
+    @Environment(\.scenePhase) private var scenePhase
     @State private var savingFinished = false
 
     private var summary: FingerSessionSummary? {
@@ -35,21 +36,45 @@ struct TMFingerSessionCompleteView: View {
         .environment(\.locale, dependencies.session?.sessionLanguage.locale ?? AppLanguage.selected.locale)
         .interactiveDismissDisabled()
         .task { await saveSummary() }
+        .task(id: savingFinished && scenePhase == .active && automaticallyRests) {
+            guard savingFinished, scenePhase == .active, automaticallyRests else {
+                return
+            }
+
+            try? await Task.sleep(for: DailyPlanViewModel.completionPreviewDuration)
+
+            guard !Task.isCancelled, scenePhase == .active, automaticallyRests else {
+                return
+            }
+
+            close()
+        }
     }
 
     /// The way on appears once saving has finished, whether or not it succeeded, so the
     /// patient is never stuck on this page.
+    @ViewBuilder
     private var closingAction: some View {
-        TMTherapyFinishActions(
-            title: closingTitle,
-            symbol: dependencies.dailyPlan.isRunning ? "play.fill" : nil,
-            disabled: !savingFinished,
-            action: close
-        ) {
+        if automaticallyRests {
             if !savingFinished {
-                ProgressView()
+                ProgressView("session.saving")
+            }
+        } else {
+            TMTherapyFinishActions(
+                title: closingTitle,
+                symbol: dependencies.dailyPlan.isRunning ? "play.fill" : nil,
+                disabled: !savingFinished,
+                action: close
+            ) {
+                if !savingFinished {
+                    ProgressView()
+                }
             }
         }
+    }
+
+    private var automaticallyRests: Bool {
+        completed && dependencies.dailyPlan.hasAutomaticRest
     }
 
     /// Every set of every movement. Finger sets end only when the goal is reached, so a finished

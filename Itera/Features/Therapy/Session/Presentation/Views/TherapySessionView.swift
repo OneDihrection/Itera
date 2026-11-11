@@ -131,6 +131,12 @@ struct TMTherapySessionView: View {
         .task(id: model.snapshot.stage == .preparing) {
             await revealCameraRecoveryAfterDelay()
         }
+        .task(id: canAutomaticallyContinuePlan && scenePhase == .active) {
+            guard canAutomaticallyContinuePlan, scenePhase == .active else { return }
+            try? await Task.sleep(for: DailyPlanViewModel.completionPreviewDuration)
+            guard !Task.isCancelled, canAutomaticallyContinuePlan, let summary = model.snapshot.summary else { return }
+            leaveSummary(summary)
+        }
         .onDisappear { if !presentationOnly { model.exit() } }
         .onChange(of: scenePhase) { _, phase in
             guard !presentationOnly else { return }
@@ -618,7 +624,7 @@ struct TMTherapySessionView: View {
             TMTowelDemonstrationView()
         }
 
-        if let activity = model.snapshot.activity, activity.kind == .armRaise || activity.kind == .elbowBend {
+        if let activity = model.snapshot.activity, activity.kind == .armRaise || activity.kind == .elbowBend || activity.kind == .directionalReach {
             let mode: TherapyAnimationPlayback = {
                 if model.snapshot.stage == .demonstration {
                     return .looping
@@ -633,7 +639,7 @@ struct TMTherapySessionView: View {
                 return .looping
             }()
             TMExerciseExample(
-                asset: activity.kind == .armRaise ? .armRaise : .elbowBend,
+                asset: activity.kind == .armRaise ? .armRaise : activity.kind == .elbowBend ? .elbowBend : .directionalReach,
                 mirrored: activity.side == .left,
                 mode: mode
             )
@@ -812,9 +818,11 @@ struct TMTherapySessionView: View {
             Section {
                 Text("session.summaryCaution")
                 if model.saving { ProgressView("session.saving") }
-                Button(summaryExitTitle) { leaveSummary(summary) }
-                    .buttonStyle(TMSessionButtonStyle())
-                    .disabled(model.saving || model.saveFailure != nil)
+                if !automaticallyRests(after: summary) {
+                    Button(summaryExitTitle) { leaveSummary(summary) }
+                        .buttonStyle(TMSessionButtonStyle())
+                        .disabled(model.saving || model.saveFailure != nil)
+                }
             }
         }
         .listStyle(.insetGrouped)
@@ -829,13 +837,24 @@ struct TMTherapySessionView: View {
         dependencies.dailyPlan.isRunning ? "plan.nextContinue" : "session.restart"
     }
 
+    private var canAutomaticallyContinuePlan: Bool {
+        guard !presentationOnly, let summary = model.snapshot.summary else {
+            return false
+        }
+        return automaticallyRests(after: summary) && !model.saving && model.saveFailure == nil
+    }
+
+    func automaticallyRests(after summary: SessionSummary) -> Bool {
+        dependencies.dailyPlan.hasAutomaticRest && !summary.stopped && !summary.interrupted
+    }
+
     func leaveSummary(_ summary: SessionSummary) {
         guard dependencies.dailyPlan.isRunning else {
             router.pop()
             return
         }
 
-        dependencies.dailyPlan.finish(completed: !summary.stopped, router: router)
+        dependencies.dailyPlan.finish(completed: !summary.stopped && !summary.interrupted, router: router)
     }
 
     /// Leaving before the session could start ends a running plan instead of skipping ahead.
