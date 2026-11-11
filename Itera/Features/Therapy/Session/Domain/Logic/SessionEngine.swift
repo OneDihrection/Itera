@@ -729,8 +729,44 @@ struct SessionEngine {
             routeActivityCommand(.retryStep)
         case .skipStep:
             routeActivityCommand(.skipStep)
+        #if DEBUG
+        case .debugFinish:
+            finishActivityForDebug()
+        #endif
         }
     }
+
+    #if DEBUG
+    /// Records the current activity's remaining sets as completed at their goal. The summary block
+    /// in `handle` finalizes after the last activity; otherwise an elapsed rest starts the next one.
+    private mutating func finishActivityForDebug() {
+        if pausedSince != nil {
+            pausedSince = nil
+            endSuspension()
+        }
+
+        effects.append(.cancelSpeech)
+        guidance = nil
+        speechTimeout = nil
+        deadline = nil
+        snapshot.restBreath = nil
+        snapshot.assistanceKey = nil
+
+        progress.completeCurrentActivityForDebug(at: now, date: Date())
+
+        // Invented sets carry no metrics or key-repetition skeletons.
+        recorder = nil
+        effects.append(.checkpoint(checkpoint))
+
+        guard progress.summary == nil else {
+            return
+        }
+
+        snapshot.stage = .rest
+        snapshot.instruction = "session.rest"
+        snapshot.seconds = 0
+    }
+    #endif
 
     /// Help text exists only for the dark-layout therapies; the light-layout ones show no Help.
     private var currentAssistanceKey: String? {

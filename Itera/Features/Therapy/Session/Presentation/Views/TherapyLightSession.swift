@@ -46,6 +46,21 @@ extension TMTherapySessionView {
         .accessibilityHidden(hasFullScreenPresentation || model.snapshot.paused)
     }
 
+    /// Debug builds only. Drawn over the header's trailing corner, above stage pages and the pause
+    /// dialog, rather than in `accessories`, which would move the centred heading.
+    @ViewBuilder
+    var lightDebugFinishButton: some View {
+        #if DEBUG
+        if usesLightLayout, model.snapshot.summary == nil, !model.entryFailure {
+            TMDebugActionButton(title: "debug.finishExercise", symbol: "forward.end.fill") {
+                model.command(.debugFinish)
+            }
+            .padding(.top, 12)
+            .padding(.trailing, 20)
+        }
+        #endif
+    }
+
     private var usesCalibrationOpening: Bool {
         switch model.snapshot.activity?.kind {
         case .armRaise, .elbowBend, .directionalReach: return true

@@ -835,6 +835,27 @@ final class FingerSessionViewModel {
         else { Task { await saveCheckpoint() } }
     }
 
+    #if DEBUG
+    /// Developer shortcut: records the current exercise as completed at its goal, like a real finish.
+    func finishExerciseForDebug() {
+        guard !hasFinished, !engine.finished else {
+            return
+        }
+
+        engine.completeCurrentForDebug()
+        calibrationNeedsHelp = false
+        trackingRecoveryPaused = false
+        trackingRecovery.reset()
+        previousInstruction = ""
+
+        if engine.finished {
+            finish(completed: true)
+        } else {
+            Task { await saveCheckpoint() }
+        }
+    }
+    #endif
+
     func remeasureRange() {
         engine.remeasureRange()
         previousInstruction = ""

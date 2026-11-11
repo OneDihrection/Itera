@@ -85,8 +85,26 @@ struct TMFingerSessionView: View {
                 }
             }
         }
+        .overlay(alignment: .topTrailing) {
+            debugFinishButton(model)
+        }
         .environment(\.colorScheme, .light)
         .statusBarHidden(false)
+    }
+
+    /// Debug builds only. Over the header's trailing corner, above stage pages and the pause
+    /// dialog, rather than in `accessories`, which would move the centred heading.
+    @ViewBuilder
+    private func debugFinishButton(_ model: FingerSessionViewModel) -> some View {
+        #if DEBUG
+        if !model.hasFinished {
+            TMDebugActionButton(title: "debug.finishExercise", symbol: "forward.end.fill") {
+                model.finishExerciseForDebug()
+            }
+            .padding(.top, 12)
+            .padding(.trailing, 20)
+        }
+        #endif
     }
 
     private func heading(_ model: FingerSessionViewModel) -> TMTherapyExerciseHeading {

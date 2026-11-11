@@ -129,5 +129,9 @@ Compatible additions: `TMTherapyCompletionMark(tint:)` (the screens pass `brand`
 
 `TMRepValueChart` (Components/RepValueChart.swift) is a single-series Swift Charts bar strip, one bar per repetition. Emphasized bars use `brand` and carry a text marker above, so emphasis is never color alone; the rest use `progressSoftBar`, matching the weekly chart. The caller supplies values, markers and the unit.
 
+## Debug-only UI (2026-11-12)
+
+Components/DebugRibbon.swift exists only in debug builds (`#if DEBUG`). `.debugOnly()` marks any debug control with a dashed `TherapyPalette.debugAccent` (system orange) outline and a diagonal "DEBUG" corner ribbon (`TMDebugRibbon`); the decoration takes no taps and is hidden from VoiceOver, which hears a "Debug only" hint instead. `TMDebugActionButton` is `TMTherapyTextButton` with that marker. Every debug control must sit inside `#if DEBUG` and wear `.debugOnly()`. Session screens overlay their debug "Finish exercise" action on the header's trailing corner, above stage pages and the pause dialog, instead of using `TMTherapyExerciseLiveLayout`'s `accessories`, which would shift the centred heading.
+
 `TMTherapyProgressMetric` (Components/TherapyProgressSummary.swift) is the Progress pages' metric tile: a terracotta icon in a soft square, a large value and a muted unit. `TMTherapyProgressSessionCard` and the movement report share it.
 

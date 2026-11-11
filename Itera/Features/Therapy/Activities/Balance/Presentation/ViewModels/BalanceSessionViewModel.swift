@@ -317,6 +317,37 @@ final class BalanceSessionViewModel {
         openingCue = .countdown
     }
 
+    #if DEBUG
+    /// Developer shortcut: records every remaining set as completed at the goal, then ends like the
+    /// last set does. The credited work is invented, so this exists only in debug builds.
+    func finishExerciseForDebug() {
+        guard !allSetsDone else {
+            return
+        }
+
+        restTask?.cancel()
+        restTask = nil
+        restRemaining = nil
+        paused = false
+        audio.cancelSpeech()
+
+        while !allSetsDone {
+            setNumber = setResults.count + 1
+            setResults.append(settings.repetitions)
+
+            // Invented sets carry no metrics or key-repetition skeletons.
+            recorder = KeyRepRecorder(activity: log.activity)
+            recordSet(outcome: .completed, completedWork: settings.repetitions)
+        }
+
+        finishLog(stopped: false)
+        clock.pause(at: Self.now)
+        tracking.stop()
+        clearLivePose()
+        audio.stopMusic()
+    }
+    #endif
+
     /// The camera frame in points, so the engine sizes bubbles like the other exercises.
     func viewport(_ size: CGSize) {
         guard size.width > 0, size.height > 0 else {

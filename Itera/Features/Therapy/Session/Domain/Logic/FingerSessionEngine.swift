@@ -12,6 +12,10 @@ struct FingerSessionEngine {
     private(set) var activity: FingerActivity
     private(set) var paused = false
     private(set) var finished = false
+    #if DEBUG
+    /// Exercises finished with the debug shortcut, whose results must not be recaptured.
+    private var debugCompletedKinds: Set<FingerExercise> = []
+    #endif
 
     init(routine: FingerRoutine, checkpoint: FingerSessionSummary? = nil) {
         summary = checkpoint ?? FingerSessionSummary(
@@ -90,13 +94,7 @@ struct FingerSessionEngine {
             return
         }
         captureCurrent()
-        if summary.exerciseIndex + 1 < summary.routine.exercises.count {
-            summary.exerciseIndex += 1
-            activity = FingerActivity(kind: summary.routine.exercises[summary.exerciseIndex], routine: summary.routine,
-                                      restAfterFinalSet: summary.exerciseIndex < summary.routine.exercises.count - 1)
-        } else {
-            finished = true
-        }
+        advanceExercise()
     }
 
     mutating func skipCurrent() {
@@ -108,13 +106,44 @@ struct FingerSessionEngine {
            !summary.results[index].completed {
             summary.results[index].skipped = true
         }
-        if summary.exerciseIndex + 1 < summary.routine.exercises.count {
-            summary.exerciseIndex += 1
-            activity = FingerActivity(kind: summary.routine.exercises[summary.exerciseIndex], routine: summary.routine,
-                                      restAfterFinalSet: summary.exerciseIndex < summary.routine.exercises.count - 1)
-        } else {
-            finished = true
+        advanceExercise()
+    }
+
+    #if DEBUG
+    /// Developer shortcut: records the current exercise as every set completed at the goal, then
+    /// moves on like a real finish. The credited work is invented, so this exists only in debug builds.
+    mutating func completeCurrentForDebug() {
+        guard !finished else {
+            return
         }
+
+        let routine = summary.routine
+        let result = FingerExerciseResult(
+            kind: activity.kind,
+            completedSets: routine.sets,
+            repetitions: routine.sets * routine.repetitions,
+            activeSeconds: activity.activeSeconds,
+            observedGain: activity.observedGain,
+            completed: true
+        )
+
+        summary.results.removeAll { $0.kind == activity.kind }
+        summary.results.append(result)
+        debugCompletedKinds.insert(activity.kind)
+
+        advanceExercise()
+    }
+    #endif
+
+    private mutating func advanceExercise() {
+        guard summary.exerciseIndex + 1 < summary.routine.exercises.count else {
+            finished = true
+            return
+        }
+
+        summary.exerciseIndex += 1
+        activity = FingerActivity(kind: summary.routine.exercises[summary.exerciseIndex], routine: summary.routine,
+                                  restAfterFinalSet: summary.exerciseIndex < summary.routine.exercises.count - 1)
     }
 
     mutating func snapshot(outcome: SessionOutcome) -> FingerSessionSummary {
@@ -128,6 +157,12 @@ struct FingerSessionEngine {
         if summary.results.contains(where: { $0.kind == activity.kind && $0.skipped }) {
             return
         }
+        #if DEBUG
+        // Keep the invented result instead of the activity's real, unfinished work.
+        if debugCompletedKinds.contains(activity.kind) {
+            return
+        }
+        #endif
         let result = FingerExerciseResult(
             kind: activity.kind, completedSets: activity.completedSets,
             repetitions: activity.totalRepetitions, activeSeconds: activity.activeSeconds,

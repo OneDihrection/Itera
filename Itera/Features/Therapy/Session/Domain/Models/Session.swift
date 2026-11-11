@@ -20,6 +20,10 @@ enum SessionCommand {
     case retryCalibration
     case skip
     case timedPractice
+    #if DEBUG
+    /// Developer shortcut: records the current activity's remaining sets as completed at their goal.
+    case debugFinish
+    #endif
 }
 
 enum ActivityOutcome: String, Codable {

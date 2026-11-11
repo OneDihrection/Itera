@@ -56,6 +56,9 @@ struct TMBalanceSessionView: View {
                 pauseDialog
                     .zIndex(3)
             }
+
+            debugFinishButton
+                .zIndex(4)
         }
         .animation(.easeOut(duration: 0.28), value: model.allSetsDone)
         .background(TherapyPalette.canvas)
@@ -103,6 +106,24 @@ struct TMBalanceSessionView: View {
 
     private var title: Text {
         Text(LocalizedStringKey(model.exercise.key("title")))
+    }
+
+    // MARK: - Debug
+
+    /// Debug builds only. Pinned to the header's trailing corner, above rest, countdown and the
+    /// pause dialog, rather than in the live layout's `accessories`, which would move the heading.
+    @ViewBuilder
+    private var debugFinishButton: some View {
+        #if DEBUG
+        if !model.allSetsDone, !model.permissionDenied {
+            TMDebugActionButton(title: "debug.finishExercise", symbol: "forward.end.fill") {
+                model.finishExerciseForDebug()
+            }
+            .padding(.top, 12)
+            .padding(.trailing, 20)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
+        }
+        #endif
     }
 
     // MARK: - Live

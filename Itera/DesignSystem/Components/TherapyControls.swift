@@ -35,6 +35,8 @@ enum TherapyPalette {
             ? UIColor(red: 1, green: 0.72, blue: 0.51, alpha: 1)
             : UIColor(red: 0.55, green: 0.22, blue: 0.12, alpha: 1)
     })
+    /// Marks debug-only UI (`.debugOnly()`). Fixed orange so it never blends into the app's palette.
+    static let debugAccent = Color(uiColor: .systemOrange)
     static let primary = green
     static let secondary = mint
     static let tertiary = peach

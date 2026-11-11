@@ -90,6 +90,9 @@ struct TMTherapySessionView: View {
                 lightPauseDialog
             }
         }
+        .overlay(alignment: .topTrailing) {
+            lightDebugFinishButton
+        }
         .overlay {
             if let celebrationStart, !reduceMotion, !calmMode {
                 TMSessionCelebration(start: celebrationStart).ignoresSafeArea()

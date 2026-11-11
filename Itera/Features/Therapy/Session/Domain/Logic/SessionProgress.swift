@@ -140,6 +140,47 @@ struct SessionProgress {
             && setNumber < activity.sets
     }
 
+    #if DEBUG
+    /// Developer shortcut: records every remaining set of the current activity as completed at its
+    /// goal, then ends the session after the last activity or rests until the next one.
+    /// The credited work is invented, so this exists only in debug builds.
+    mutating func completeCurrentActivityForDebug(at time: Double, date: Date) {
+        guard time.isFinite, let activity = currentActivity else {
+            return
+        }
+
+        pausedAt = nil
+
+        // In feedback or rest the current set is already recorded; continue from the next one.
+        let currentSetRecorded = results.contains { $0.executionID == executionID }
+        let firstSet = currentSetRecorded ? setNumber + 1 : setNumber
+
+        if firstSet <= activity.sets {
+            for number in firstSet...activity.sets {
+                results.append(
+                    SessionActivityResult(
+                        executionID: number == setNumber ? executionID : UUID(),
+                        activity: activity,
+                        outcome: .completed,
+                        completedWork: activity.goal,
+                        setNumber: number
+                    )
+                )
+            }
+        }
+
+        setNumber = activity.sets
+
+        guard index + 1 < routine.activities.count else {
+            finalize(stopped: false, date: date)
+            return
+        }
+
+        // An elapsed rest moves `tick` straight on to the next activity.
+        stage = .rest(deadline: time)
+    }
+    #endif
+
     mutating func finalize(stopped: Bool, date: Date) {
         guard summary == nil else {
             return
