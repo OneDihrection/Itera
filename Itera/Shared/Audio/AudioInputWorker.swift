@@ -24,7 +24,7 @@ final class AudioInputWorker: @unchecked Sendable {
             queue.async { [self] in
                 do {
                     // The same configuration the narrators use, so nothing flips mid-playback.
-                    try NarrationAudioSession.activate(listening: true)
+                    try NarrationAudioSession.activate()
                     let input = self.engine.inputNode
                     self.enableVoiceProcessingIfNeeded(on: input)
                     let format = input.outputFormat(forBus: 0)
@@ -63,13 +63,14 @@ final class AudioInputWorker: @unchecked Sendable {
         }
     }
 
-    /// Echo cancellation and noise suppression let the microphone hear the patient while the
-    /// speaker plays narration and music. By default voice processing also ducks every other
-    /// sound hard; minimum ducking keeps narration and music at normal volume.
+    /// Echo cancellation and noise suppression, off by default. Voice processing routes all
+    /// output through the call-style voice path, which made narration and music noticeably
+    /// quieter once listening started (and only in sessions using this worker), even with
+    /// minimum ducking. Debug builds can enable it to compare recognition on a device.
     ///
     /// Configured once, before the engine first starts; a failure leaves listening without it.
     private func enableVoiceProcessingIfNeeded(on input: AVAudioInputNode) {
-        guard !voiceProcessingConfigured, !Self.voiceProcessingDisabled else {
+        guard !voiceProcessingConfigured, Self.voiceProcessingRequested else {
             return
         }
 
@@ -88,10 +89,10 @@ final class AudioInputWorker: @unchecked Sendable {
         }
     }
 
-    /// Debug launch argument to compare listening and loudness without voice processing.
-    private static var voiceProcessingDisabled: Bool {
+    /// Debug launch argument to compare listening and loudness with voice processing.
+    private static var voiceProcessingRequested: Bool {
         #if DEBUG
-        return ProcessInfo.processInfo.arguments.contains("-IteraNoVoiceProcessing")
+        return ProcessInfo.processInfo.arguments.contains("-IteraVoiceProcessing")
         #else
         return false
         #endif

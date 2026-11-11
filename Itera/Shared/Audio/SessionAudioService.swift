@@ -87,6 +87,7 @@ final class SessionAudioService: NSObject, VoiceReadinessProviding, AVSpeechSynt
         routeObserver = NotificationCenter.default.addObserver(
             forName: AVAudioSession.routeChangeNotification, object: nil, queue: .main
         ) { [weak self] _ in
+            NarrationAudioSession.handleRouteChange()
             Task { @MainActor in self?.logAudioConfiguration("route changed") }
         }
         interruption = NotificationCenter.default.addObserver(
@@ -177,7 +178,7 @@ final class SessionAudioService: NSObject, VoiceReadinessProviding, AVSpeechSynt
 
     func prepareRestNarration() {
         prepare()
-        try? NarrationAudioSession.activate(listening: false)
+        try? NarrationAudioSession.activate()
     }
 
     func cancelSpeech() {
@@ -674,10 +675,10 @@ final class SessionAudioService: NSObject, VoiceReadinessProviding, AVSpeechSynt
         events.send(.listening(false))
     }
 
-    func startMusic(listening: Bool = true) {
+    func startMusic() {
         do {
-            // Keep the same audio configuration as the current session or standalone narration.
-            try NarrationAudioSession.activate(listening: listening)
+            // The one app-wide configuration, so music never switches the narration route.
+            try NarrationAudioSession.activate()
             music.start()
         } catch {
             music.pause()

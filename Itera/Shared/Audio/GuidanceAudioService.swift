@@ -43,6 +43,7 @@ final class GuidanceAudioService: NSObject, AVSpeechSynthesizerDelegate {
     private var audioSessionActive = false
     private var lastButtonSound = 0.0
     private var interruption: NSObjectProtocol?
+    private var routeObserver: NSObjectProtocol?
     private var tapInstalled = false
     private(set) var voiceEnabled = false
     private var locale = "id-ID"
@@ -67,11 +68,20 @@ final class GuidanceAudioService: NSObject, AVSpeechSynthesizerDelegate {
                 self?.events.send(.interrupted)
             }
         }
+        routeObserver = NotificationCenter.default.addObserver(
+            forName: AVAudioSession.routeChangeNotification, object: nil, queue: .main
+        ) { _ in
+            NarrationAudioSession.handleRouteChange()
+        }
     }
 
     deinit {
         if let interruption {
             NotificationCenter.default.removeObserver(interruption)
+        }
+
+        if let routeObserver {
+            NotificationCenter.default.removeObserver(routeObserver)
         }
     }
 
@@ -79,8 +89,7 @@ final class GuidanceAudioService: NSObject, AVSpeechSynthesizerDelegate {
         locale = language
         voice = NarrationVoice.best(for: language)
         vocabulary = VoiceCommandVocabulary()
-        try applySessionMode(listening: voiceEnabled)
-        audioSessionActive = true
+        try activateSession()
     }
 
     /// Speaks one cue. When every line has a bundled recording, those play in order;
@@ -193,7 +202,9 @@ final class GuidanceAudioService: NSObject, AVSpeechSynthesizerDelegate {
         }
         lastButtonSound = now
         do {
-            try prepareOptionalPlayback()
+            if !audioSessionActive {
+                try activateSession()
+            }
             if buttonPlayer == nil, let url = Bundle.main.url(forResource: "button-click", withExtension: "wav") {
                 buttonPlayer = try AVAudioPlayer(contentsOf: url)
                 buttonPlayer?.volume = 0.18
@@ -205,16 +216,6 @@ final class GuidanceAudioService: NSObject, AVSpeechSynthesizerDelegate {
             // Optional touch reinforcement must not disable an action or interrupt narration.
             buttonPlayer = nil
         }
-    }
-
-    private func prepareOptionalPlayback() throws {
-        guard !audioSessionActive else {
-            return
-        }
-        let session = AVAudioSession.sharedInstance()
-        try session.setCategory(.ambient, mode: .default, options: [.mixWithOthers])
-        try session.setActive(true)
-        audioSessionActive = true
     }
 
     func playCue(_ cue: GuidanceSound) {
@@ -305,7 +306,7 @@ final class GuidanceAudioService: NSObject, AVSpeechSynthesizerDelegate {
         recognizer = candidate
         voiceEnabled = true
         do {
-            try applySessionMode(listening: true)
+            try activateSession()
             try beginRecognition()
             return true
         } catch {
@@ -327,14 +328,14 @@ final class GuidanceAudioService: NSObject, AVSpeechSynthesizerDelegate {
             engine.inputNode.removeTap(onBus: 0)
             tapInstalled = false
         }
-        // Spoken-audio playback once nothing is listening.
-        if audioSessionActive {
-            try? applySessionMode(listening: false)
-        }
+        // The session keeps its configuration: switching category here changed loudness.
     }
 
-    private func applySessionMode(listening: Bool) throws {
-        try NarrationAudioSession.activate(listening: listening, allowsBluetoothMicrophone: true)
+    /// The shared configuration, so narration stays on the same loud route whether or not
+    /// voice commands are listening.
+    private func activateSession() throws {
+        try NarrationAudioSession.activate(allowsBluetoothMicrophone: true)
+        audioSessionActive = true
     }
 
     private func beginRecognition() throws {
@@ -456,8 +457,7 @@ final class GuidanceAudioService: NSObject, AVSpeechSynthesizerDelegate {
 
     func startMusic() {
         do {
-            try applySessionMode(listening: voiceEnabled)
-            audioSessionActive = true
+            try activateSession()
             music.start()
         } catch {
             music.pause()
@@ -471,8 +471,7 @@ final class GuidanceAudioService: NSObject, AVSpeechSynthesizerDelegate {
         music.stop()
         buttonPlayer?.stop()
         audioSessionActive = false
-        try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
-        NarrationAudioSession.noteDeactivated()
+        NarrationAudioSession.deactivate()
     }
 
     nonisolated func speechSynthesizer(_ synthesizer: AVSpeechSynthesizer, didFinish utterance: AVSpeechUtterance) {

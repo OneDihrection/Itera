@@ -102,7 +102,7 @@ struct TMDailyPlanNextView: View {
         }
 
         if !showingNextIntro {
-            dependencies.audio.startMusic(listening: false)
+            dependencies.audio.startMusic()
         }
 
         var startedAt = ProcessInfo.processInfo.systemUptime - elapsed
