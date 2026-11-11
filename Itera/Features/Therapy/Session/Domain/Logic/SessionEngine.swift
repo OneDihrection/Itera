@@ -93,6 +93,13 @@ struct SessionEngine {
     private var calibrationInvalidatedBetweenSets = false
     /// Per-repetition metrics and key-repetition skeletons for the current set.
     private var recorder: KeyRepRecorder?
+    /// When a stale-frame rejection was last logged, so the log stays at most one line every 3 s.
+    private var lastStaleLog = -Double.infinity
+
+    /// How long the session keeps guidance running without a scoring-fresh frame before it waits
+    /// for the camera. Scoring still rejects frames older than 300 ms; this only stops a brief
+    /// inference or main-thread hitch from cancelling narration and replaying it on every gap.
+    static let cameraWaitGrace = 1.0
 
     init(routine: Routine = .demo(), date: Date = Date()) {
         progress = SessionProgress(routine: routine, startedAt: date)
@@ -236,6 +243,14 @@ struct SessionEngine {
     }
 
     private mutating func observation(_ frame: TrackingObservation) {
+        // The tracking service delivers frames up to 0.8 s old, but scoring accepts only 0.3 s.
+        // Frames in between still draw the live skeleton while the activity sees nothing, so log
+        // them to tell a slow pipeline apart from a body the detector cannot see.
+        if captureReady, frame.generation == generation, now - frame.timestamp > 0.3, now - lastStaleLog >= 3 {
+            lastStaleLog = now
+            NSLog("Session frame rejected as stale age=%.3f", now - frame.timestamp)
+        }
+
         guard captureReady, frame.generation == generation,
             frame.timestamp.isFinite, frame.width > 0, frame.height > 0,
             now - frame.timestamp <= 0.3, now >= frame.timestamp
@@ -313,8 +328,11 @@ struct SessionEngine {
     }
 
     private mutating func updateReadiness() {
+        // Activities receive no frames during a gap, so holds freeze and no time is credited.
         let ready =
-            captureReady && previewReady && (lastTimestamp.map({ now - $0 <= 0.3 }) ?? false)
+            captureReady
+            && previewReady
+            && (lastTimestamp.map({ now - $0 <= Self.cameraWaitGrace }) ?? false)
         if !ready {
             if waitingSince == nil {
                 waitingSince = now

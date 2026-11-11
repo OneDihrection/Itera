@@ -120,8 +120,23 @@ final class TherapySessionViewModel {
             guard let self, self.live else {
                 return
             }
-            self.personVisible = frame.personCount == 1
-            self.livePose = self.livePoseTracker.skeleton(for: frame)
+            // Observation notifies on every assignment, so unchanged values are not written back.
+            let visible = frame.personCount == 1
+            if self.personVisible != visible {
+                self.personVisible = visible
+            }
+
+            // The tracker sees every frame so its smoother stays warm, but the skeleton is published
+            // only while it is drawn, before the activity shows its own guide.
+            // Mirrors the camera view, which prefers the guide only during the activity stage.
+            let skeleton = self.livePoseTracker.skeleton(for: frame)
+            let guideShown = self.snapshot.stage == .activity && self.snapshot.presentation?.guide != nil
+            if !guideShown {
+                self.livePose = skeleton
+            } else if self.livePose != nil {
+                self.livePose = nil
+            }
+
             var observation = frame
             observation.workspaceMirrored = true
             self.send(.observation(observation))

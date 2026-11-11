@@ -202,6 +202,8 @@ struct BalanceOverlay: Equatable {
     var isCalibrationHold = false
     /// Whether the shoulder-hip box is drawn; a side-on chain of joints does not use it.
     var showsTorso = true
+    /// Where the wrist should head while the comfortable end is calibrated; nil hides the cue.
+    var calibrationTip: TherapyPoint? = nil
 }
 
 struct BalanceSnapshot: Equatable {

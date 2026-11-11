@@ -67,7 +67,8 @@ struct LivePose {
         let guide = SessionPoseGuide(
             torso: torso,
             midline: midline,
-            limbs: limbs
+            limbs: limbs,
+            emphasis: .ambient
         )
         return Skeleton(guide: guide, aspect: smoothed.aspect)
     }

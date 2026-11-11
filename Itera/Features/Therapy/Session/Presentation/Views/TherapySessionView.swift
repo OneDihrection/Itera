@@ -508,16 +508,9 @@ struct TMTherapySessionView: View {
                     let guide = model.snapshot.presentation?.guide
                 {
                     targetOverlay(guide, size: geometry.size)
-                } else if !model.snapshot.paused, !model.snapshot.cameraWaiting,
-                    let skeleton = model.livePose
-                {
+                } else if !model.snapshot.paused, !model.snapshot.cameraWaiting {
                     // Until the activity draws its guide, the tracked body shows tracking has begun.
-                    TMSessionTargetOverlay(
-                        imageSize: skeleton.imageSize,
-                        bubbleGuide: nil,
-                        poseGuide: skeleton.guide,
-                        mirrored: true
-                    )
+                    TMLiveSkeletonLayer(model: model)
                 }
                 if !model.snapshot.paused, !model.snapshot.cameraWaiting,
                    model.snapshot.stage == .activity,
@@ -948,8 +941,16 @@ struct TMTherapySessionView: View {
             radius: guide.radius,
             activeZone: guide.targetActive ? .target : .start,
             trackedJointInside: inside,
-            dwellProgress: guide.jointHold ? 0 : guide.progress
+            dwellProgress: guide.jointHold ? 0 : guide.progress,
+            pivot: guide.pivot.map(normalized)
         )
+        let movementCue = guide.calibrationTip.map { tip in
+            SessionMovementCue(
+                tail: normalized(guide.tracked),
+                tip: normalized(tip),
+                pivot: guide.pivot.map(normalized)
+            )
+        }
         let direction = (guide.directionOnly || guide.directionTip != nil) ? SessionDirectionGuide(
             origin: normalized(guide.start),
             tip: normalized(guide.directionTip ?? guide.target),
@@ -966,7 +967,28 @@ struct TMTherapySessionView: View {
             holdProgress: guide.progress,
             holdRadius: guide.radius,
             directionGuide: direction,
+            movementCue: movementCue,
             mirrored: true
         )
+    }
+}
+
+/// The live skeleton, in its own view so only this layer reads `livePose`.
+///
+/// The skeleton changes every camera frame. Reading it in the session screen's body would rebuild
+/// the whole screen 30 times a second on the main thread, delaying camera frames until the session
+/// rejects them as stale and reports the arm as missing.
+private struct TMLiveSkeletonLayer: View {
+    let model: TherapySessionViewModel
+
+    var body: some View {
+        if let skeleton = model.livePose {
+            TMSessionTargetOverlay(
+                imageSize: skeleton.imageSize,
+                bubbleGuide: nil,
+                poseGuide: skeleton.guide,
+                mirrored: true
+            )
+        }
     }
 }

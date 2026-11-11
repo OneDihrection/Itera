@@ -85,6 +85,13 @@ struct TMBodyCameraPreview: UIViewRepresentable {
                 && previewLayer.isPreviewing
             guard ready != reportedReady else { return }
             reportedReady = ready
+
+            // A replaced view leaving its window must not clear readiness its successor reported,
+            // which would leave the session waiting for the camera with frames still arriving.
+            guard ready || Self.active === self || Self.active == nil else {
+                return
+            }
+
             NSLog("Body preview rendering=%@ attached=%@", ready.description, (window != nil).description)
             onReady?(ready)
         }

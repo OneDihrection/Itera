@@ -198,14 +198,11 @@ struct TMBalanceSessionView: View {
 
             if let overlay = model.snapshot.overlay {
                 targetOverlay(overlay)
-            } else if !model.cameraWaiting, let pose = model.livePose {
-                livePoseOverlay(pose)
+            } else if !model.cameraWaiting {
+                TMBalanceLiveSkeletonLayer(model: model)
             }
 
-            if model.cameraWaiting {
-                TMTherapyFeedbackPill(text: "balance.cameraWaiting")
-                    .padding(20)
-            }
+            cameraStatus
         }
         .background(TherapyPalette.canvas)
         .background {
@@ -220,14 +217,22 @@ struct TMBalanceSessionView: View {
         .accessibilityLabel(model.exercise.localized("cameraAccessibility"))
     }
 
-    /// The tracked skeleton alone, before the engine draws targets over it.
-    private func livePoseOverlay(_ skeleton: LivePose.Skeleton) -> some View {
-        TMSessionTargetOverlay(
-            imageSize: skeleton.imageSize,
-            bubbleGuide: nil,
-            poseGuide: skeleton.guide,
-            mirrored: true
-        )
+    /// A camera failure offers a retry; otherwise waiting shows the calm camera message.
+    @ViewBuilder
+    private var cameraStatus: some View {
+        if model.failure != nil {
+            VStack(spacing: 12) {
+                TMTherapyFeedbackPill(text: "session.captureError")
+
+                TMTherapyTextButton(title: "action.retry", symbol: "arrow.clockwise") {
+                    model.retryCamera()
+                }
+            }
+            .padding(20)
+        } else if model.cameraWaiting {
+            TMTherapyFeedbackPill(text: "balance.cameraWaiting")
+                .padding(20)
+        }
     }
 
     /// The standard pose, target bubble, hold ring and countdown shared with the movement exercises.
@@ -258,10 +263,21 @@ struct TMBalanceSessionView: View {
             }
         }
 
+        // While the comfortable end is shown, a curved arrow points the way from the wrist.
+        let movementCue: SessionMovementCue? = {
+            guard let wrist = overlay.wrist,
+                  let tip = overlay.calibrationTip else {
+                return nil
+            }
+
+            return SessionMovementCue(tail: normalized(wrist), tip: normalized(tip))
+        }()
+
         guard let target = overlay.target else {
             return TMSessionTargetOverlay(
                 imageSize: imageSize,
                 bubbleGuide: nil,
+                movementCue: movementCue,
                 poseGuide: pose,
                 mirrored: true
             )
@@ -416,5 +432,24 @@ struct TMBalanceSessionView: View {
         }
 
         dependencies.dailyPlan.end(router: router)
+    }
+}
+
+/// The tracked skeleton alone, before the engine draws targets over it.
+///
+/// It is its own view so only this layer reads `livePose`, which changes every camera frame;
+/// reading it in the session screen's body would rebuild the whole screen 30 times a second.
+private struct TMBalanceLiveSkeletonLayer: View {
+    let model: BalanceSessionViewModel
+
+    var body: some View {
+        if let skeleton = model.livePose {
+            TMSessionTargetOverlay(
+                imageSize: skeleton.imageSize,
+                bubbleGuide: nil,
+                poseGuide: skeleton.guide,
+                mirrored: true
+            )
+        }
     }
 }

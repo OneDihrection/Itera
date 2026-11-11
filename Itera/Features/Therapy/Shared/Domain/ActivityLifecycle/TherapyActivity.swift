@@ -29,6 +29,10 @@ struct TargetGuide {
     var savedStart = false
     var farthest: TherapyPoint? = nil
     var acceptedInside: Bool? = nil
+    /// The joint the tracked limb turns around, so the guidance arrow can follow that turn.
+    var pivot: TherapyPoint? = nil
+    /// Where the tracked joint should head while a target is calibrated; nil hides the cue.
+    var calibrationTip: TherapyPoint? = nil
 }
 
 enum ActivityStatus { case preparing, running, suspended, finished }

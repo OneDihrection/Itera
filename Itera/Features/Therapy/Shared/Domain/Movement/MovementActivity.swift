@@ -11,7 +11,10 @@ struct MovementActivity: TherapyActivity {
     private let configuration: SessionActivity
     private var snapshot = MovementSnapshot()
     private var hold = StableHold()
-    private var landmarkSmoother = MovementLandmarkSmoother()
+    private var landmarkSmoother = MovementLandmarkSmoother(
+        minimumConfidence: Self.jointConfidence,
+        limbMinimumConfidence: Self.limbConfidence
+    )
     private var start: TherapyPoint?
     private var target: TherapyPoint?
     private var limb = 0.0
@@ -26,6 +29,23 @@ struct MovementActivity: TherapyActivity {
     private var cueHolding = false
     private var cueCandidate = false
     private var cueSince: Double?
+    /// Turn direction of the calibration arrow, decided once per target capture.
+    private var calibrationTurnSign: Double?
+    private var calibrationCueVisible = true
+    /// When usable evidence went missing, and when it came back while the message still shows.
+    private var missingSince: Double?
+    private var recoveringSince: Double?
+
+    /// Confidence floor for the hip and shoulders.
+    private static let jointConfidence: Float = 0.3
+    /// Confidence floor for the elbow and wrist. It matches the live skeleton's floor, so an arm the
+    /// patient sees drawn is never reported as missing; a wrist hanging beside the hip or folded in
+    /// front of the body often scores below 0.5. The smoother's jump gate damps the extra noise.
+    private static let limbConfidence: Float = 0.2
+    /// Missing evidence shows the tracking message only after this long, so a dropped frame never
+    /// swaps the cue text; good evidence clears it after `trackingRecoveryDelay`.
+    private static let trackingMessageDelay = 1.0
+    private static let trackingRecoveryDelay = 0.5
 
     /// The start bubble, target bubble and calibration ring all use the shared bubble size, so
     /// they match and stay clearly larger than the 28 pt joint marker.
@@ -142,7 +162,8 @@ struct MovementActivity: TherapyActivity {
             }
             if let lastValid, time - lastValid > 0.5 {
                 phase = 0
-                snapshot.trackingMessage = "session.movementTrackingLost"
+                // Without frames the loss began when evidence was last good.
+                noteTrackingLoss(at: time, since: lastValid)
 
                 if !holdSurvivesLoss(at: time) {
                     dwell.reset()
@@ -199,6 +220,51 @@ struct MovementActivity: TherapyActivity {
         cueHolding = false
         cueCandidate = false
         cueSince = nil
+        calibrationTurnSign = nil
+        calibrationCueVisible = true
+        missingSince = nil
+        recoveringSince = nil
+    }
+
+    /// Shows the tracking message only after evidence has been missing for
+    /// `trackingMessageDelay`, so a single weak frame never swaps the cue text.
+    private mutating func noteTrackingLoss(at time: Double, since start: Double? = nil) {
+        recoveringSince = nil
+        let since = missingSince ?? start ?? time
+        missingSince = since
+
+        if time - since >= Self.trackingMessageDelay {
+            snapshot.trackingMessage = "session.movementTrackingLost"
+        }
+    }
+
+    /// Hides the tracking message only after evidence has stayed good for a moment.
+    private mutating func noteTrackingRecovery(at time: Double) {
+        missingSince = nil
+
+        guard snapshot.trackingMessage != nil else {
+            recoveringSince = nil
+            return
+        }
+
+        let since = recoveringSince ?? time
+        recoveringSince = since
+
+        if time - since >= Self.trackingRecoveryDelay {
+            snapshot.trackingMessage = nil
+            recoveringSince = nil
+        }
+    }
+
+    /// Reads a joint at its own floor: the elbow and wrist at `limbConfidence`, others at
+    /// `jointConfidence`, the same split the smoother uses.
+    private func point(_ joint: BodyJoint, in frame: TrackingObservation) -> TherapyPoint? {
+        switch joint {
+        case .leftElbow, .rightElbow, .leftWrist, .rightWrist:
+            return frame.point(joint, minimumConfidence: Self.limbConfidence)
+        default:
+            return frame.point(joint, minimumConfidence: Self.jointConfidence)
+        }
     }
 
     /// A hold freezes, rather than clears, while tracking is briefly lost.
@@ -220,7 +286,7 @@ struct MovementActivity: TherapyActivity {
 
     private mutating func loseTracking(at time: Double) {
         dwell.interrupt(at: time, grace: Self.dwellTrackingGrace)
-        snapshot.trackingMessage = "session.movementTrackingLost"
+        noteTrackingLoss(at: time)
 
         if lastValid.map({ time - $0 > 0.5 }) == true {
             phase = 0
@@ -234,6 +300,17 @@ struct MovementActivity: TherapyActivity {
         dwell.reset()
         snapshot.progress = 0
         snapshot.guide = nil
+    }
+
+    /// The arm is in view but the tracked segment is too short to measure, such as a forearm
+    /// pointing at the camera. Nothing is credited: the dwell freezes and a capture hold earns no
+    /// time (it restarts by itself if the gap outlasts its grace). The arm is not reported
+    /// missing, and the indicator stays on the joint.
+    private mutating func freezeForShortSegment(at time: Double, tracked: TherapyPoint) {
+        dwell.interrupt(at: time, grace: Self.dwellTrackingGrace)
+        noteTrackingRecovery(at: time)
+        lastValid = time
+        snapshot.guide?.tracked = tracked
     }
 
     private mutating func consume(_ frame: TrackingObservation) {
@@ -258,19 +335,23 @@ struct MovementActivity: TherapyActivity {
         let trackedJoint: BodyJoint =
             configuration.kind == .armRaise
             ? (left ? .leftElbow : .rightElbow) : (left ? .leftWrist : .rightWrist)
-        guard let reference = frame.point(referenceJoint),
-            let anchor = frame.point(anchorJoint),
-            let tracked = frame.point(trackedJoint)
+        guard let reference = point(referenceJoint, in: frame),
+            let anchor = point(anchorJoint, in: frame),
+            let tracked = point(trackedJoint, in: frame)
         else {
             loseTracking(at: time)
             return
         }
         let scale = (reference - anchor).length
-        guard scale > 0.03, (tracked - anchor).length > 0.03 else {
+        guard scale > 0.03 else {
             loseTracking(at: time)
             return
         }
-        snapshot.trackingMessage = nil
+        guard (tracked - anchor).length > 0.03 else {
+            freezeForShortSegment(at: time, tracked: tracked)
+            return
+        }
+        noteTrackingRecovery(at: time)
         if lastValid.map({ time - $0 > 0.5 }) == true {
             phase = 0
             dwell.reset()
@@ -283,8 +364,24 @@ struct MovementActivity: TherapyActivity {
                 start: start.map { anchor + $0.scaled(scale) } ?? tracked, target: tracked, tracked: tracked,
                 radius: zoneRadius(aspect: frame.aspect),
                 targetActive: false, progress: 0, aspect: frame.aspect,
-                capturing: true, savedStart: start != nil
+                capturing: true, savedStart: start != nil,
+                pivot: anchor
             )
+
+            // Once the start is saved, a curved arrow shows which way to move. Its turn direction
+            // is decided once per capture, so joint jitter cannot swing it from side to side.
+            var turnTip: TherapyPoint?
+
+            if start != nil {
+                let sign = calibrationTurnSign ?? calibrationTurnSign(
+                    anchor: anchor,
+                    reference: reference,
+                    tracked: tracked,
+                    otherShoulder: point(left ? .rightShoulder : .leftShoulder, in: frame)
+                )
+                calibrationTurnSign = sign
+                turnTip = calibrationTip(anchor: anchor, reference: reference, tracked: tracked, sign: sign)
+            }
 
             if let start, (offset - start).length <= limb * 0.4 {
                 hold.clear()
@@ -293,6 +390,8 @@ struct MovementActivity: TherapyActivity {
                 cueHolding = false
                 cueCandidate = false
                 cueSince = nil
+                calibrationCueVisible = true
+                snapshot.guide?.calibrationTip = turnTip
                 snapshot.instruction = "session.farther"
                 return
             }
@@ -307,6 +406,16 @@ struct MovementActivity: TherapyActivity {
                 wobbleGrace: InterruptibleHold.zoneExitGrace
             )
             snapshot.progress = hold.progress
+
+            // Hide the arrow only after half a second of real stillness, and bring it back only
+            // when the hold restarts, so ordinary movement never makes it blink.
+            if hold.progress >= Self.calibrationCueHideProgress {
+                calibrationCueVisible = false
+            } else if hold.progress == 0 {
+                calibrationCueVisible = true
+            }
+
+            snapshot.guide?.calibrationTip = calibrationCueVisible ? turnTip : nil
             let candidate = hold.progress > 0
             if cueCandidate != candidate || cueSince == nil {
                 cueCandidate = candidate
@@ -328,6 +437,7 @@ struct MovementActivity: TherapyActivity {
                 snapshot.instruction = "parity.moveComfortably"
             } else if let start, (mean - start).length > limb * 0.4 {
                 target = start + (mean - start).scaled(Self.targetFraction)
+                calibrationTurnSign = nil
                 snapshot.instruction = "session.returnStart"
                 returningBeforePractice = true
                 snapshot.countingDown = false
@@ -373,7 +483,8 @@ struct MovementActivity: TherapyActivity {
         snapshot.progress = progress
         snapshot.guide = TargetGuide(
             start: startCenter, target: targetCenter, tracked: tracked, radius: radius,
-            targetActive: phase == 1, progress: progress, aspect: frame.aspect)
+            targetActive: phase == 1, progress: progress, aspect: frame.aspect,
+            pivot: anchor)
         guard progress >= 1 else {
             return
         }
@@ -390,5 +501,104 @@ struct MovementActivity: TherapyActivity {
         } else {
             phase = phase == 0 ? 1 : 2
         }
+    }
+
+    // MARK: - Calibration cue
+
+    /// Largest turn, in radians, the calibration arrow asks of the limb.
+    private static let calibrationTurn = Double.pi / 3
+    /// Within this angle of the reference line the turn's sign is unreliable, in radians.
+    private static let ambiguousTurn = 15 * Double.pi / 180
+    /// Gap kept from the reference line so an elbow-bend arrow never crosses the upper arm.
+    private static let turnMargin = 10 * Double.pi / 180
+
+    /// Calibration arrow hides once the hold reaches this progress: half a second of stillness.
+    private static let calibrationCueHideProgress = 0.25
+
+    /// Which way the calibration arrow turns the limb around the anchor (+1 counterclockwise):
+    /// away from the hip for an arm raise, toward the shoulder for an elbow bend.
+    ///
+    /// When the limb lies almost along its reference line, which way it bends cannot be told from
+    /// the image, so an arm raise turns outward (away from the other shoulder) and an elbow bend
+    /// inward. The caller keeps the result for the whole capture.
+    private func calibrationTurnSign(
+        anchor: TherapyPoint,
+        reference: TherapyPoint,
+        tracked: TherapyPoint,
+        otherShoulder: TherapyPoint?
+    ) -> Double {
+        let segment = tracked - anchor
+        let toward = reference - anchor
+        let cross = toward.x * segment.y - toward.y * segment.x
+        let raising = configuration.kind == .armRaise
+        let angle = Self.angleFromReference(segment, reference: toward)
+        let ambiguous = raising
+            ? angle < Self.ambiguousTurn
+            : angle > .pi - Self.ambiguousTurn
+
+        if ambiguous, let otherShoulder {
+            let outward = anchor - otherShoulder
+            let counterclockwise = Self.rotated(segment, by: Self.calibrationTurn)
+            let clockwise = Self.rotated(segment, by: -Self.calibrationTurn)
+            let counterclockwiseIsOutward =
+                counterclockwise.x * outward.x + counterclockwise.y * outward.y
+                >= clockwise.x * outward.x + clockwise.y * outward.y
+            let outwardSign = counterclockwiseIsOutward ? 1.0 : -1.0
+
+            return raising ? outwardSign : -outwardSign
+        }
+
+        // With a positive cross, a counterclockwise turn moves away from the reference.
+        let awaySign = cross >= 0 ? 1.0 : -1.0
+
+        return raising ? awaySign : -awaySign
+    }
+
+    /// Where the tracked joint should head: the joint turned `sign`-wise around the anchor by up to
+    /// `calibrationTurn`. An elbow-bend turn shrinks near the upper arm and stops before crossing
+    /// it, so the arrow disappears there instead of pointing through the shoulder.
+    private func calibrationTip(
+        anchor: TherapyPoint,
+        reference: TherapyPoint,
+        tracked: TherapyPoint,
+        sign: Double
+    ) -> TherapyPoint {
+        let segment = tracked - anchor
+        let toward = reference - anchor
+        var turn = Self.calibrationTurn
+
+        if configuration.kind != .armRaise {
+            let cross = toward.x * segment.y - toward.y * segment.x
+            let angle = Self.angleFromReference(segment, reference: toward)
+            let turnsTowardReference = (cross >= 0 ? -1.0 : 1.0) == sign
+            // Turning "away" from a nearly straight arm still swings round toward the shoulder on
+            // the other side; only a forearm already folded past the upper arm has no room.
+            let room: Double
+
+            if turnsTowardReference {
+                room = angle - Self.turnMargin
+            } else {
+                room = angle >= .pi / 2 ? Self.calibrationTurn : 0
+            }
+
+            turn = max(0, min(turn, room))
+        }
+
+        return anchor + Self.rotated(segment, by: sign * turn)
+    }
+
+    /// 0 along the reference line, π pointing away from it.
+    private static func angleFromReference(_ segment: TherapyPoint, reference: TherapyPoint) -> Double {
+        let cross = reference.x * segment.y - reference.y * segment.x
+        let dot = reference.x * segment.x + reference.y * segment.y
+
+        return atan2(abs(cross), dot)
+    }
+
+    private static func rotated(_ vector: TherapyPoint, by angle: Double) -> TherapyPoint {
+        TherapyPoint(
+            x: vector.x * cos(angle) - vector.y * sin(angle),
+            y: vector.x * sin(angle) + vector.y * cos(angle)
+        )
     }
 }

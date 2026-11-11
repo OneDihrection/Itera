@@ -234,6 +234,8 @@ struct ArmMovementEngine: BalanceMovementEngine {
     private var minimumTargetAngle: Double { isFlexion ? 30 : 12 }
     private var maximumTargetAngle: Double { isFlexion ? 170 : 90 }
     private let rangeHoldDuration = 3.0
+    /// The range-calibration arrow hides after half a second of steady holding.
+    private var rangeCueHideProgress: Double { 0.5 / rangeHoldDuration }
     private var rangeTolerance: Double { isFlexion ? 12 : 10 }
     private let trackingGracePeriod = 0.40
     private let exitRadiusScale = 1.25
@@ -535,7 +537,12 @@ struct ArmMovementEngine: BalanceMovementEngine {
         let angle = rotationAngle(geometry, neutral: neutral)
         let offset = geometry.local(geometry.wrist - geometry.reference)
         snapshot.rotationDegrees = max(0, angle)
-        publishOverlay(geometry, frame: frame, neutral: neutral)
+
+        // Published once this frame's hold is known, so the ring and arrow never lag a frame.
+        defer {
+            publishOverlay(geometry, frame: frame, neutral: neutral)
+        }
+
         guard angle >= minimumTargetAngle else {
             resetRange()
             snapshot.calibrationProgress = 0
@@ -930,6 +937,7 @@ struct ArmMovementEngine: BalanceMovementEngine {
         var target: TherapyPoint?
         var isReturn = false
         var calibrationHold = false
+        var calibrationTip: TherapyPoint?
         var radius = bubbleRadius(aspect: frame.aspect)
 
         if snapshot.phase == .calibrating, snapshot.calibrationCountdown != nil {
@@ -951,6 +959,12 @@ struct ArmMovementEngine: BalanceMovementEngine {
                 if snapshot.calibrationCountdown != nil {
                     target = geometry.wrist
                     calibrationHold = true
+                }
+
+                // The arrow stays until half a second of steady holding, so a hold that keeps
+                // restarting while the patient moves never makes it blink.
+                if snapshot.calibrationProgress < rangeCueHideProgress {
+                    calibrationTip = rangeCalibrationTip(geometry, neutral: neutral)
                 }
             } else if snapshot.phase != .complete {
                 target = targetCenter(geometry, neutral: neutral)
@@ -980,9 +994,21 @@ struct ArmMovementEngine: BalanceMovementEngine {
             compensationWarning: snapshot.compensation.isCompensating,
             armChain: [geometry.shoulder, geometry.elbow, geometry.wrist],
             showsMidline: false,
-            isCalibrationHold: calibrationHold
+            isCalibrationHold: calibrationHold,
+            calibrationTip: calibrationTip
         )
         lastOverlayTimestamp = frame.timestamp
+    }
+
+    /// Where the wrist should head while the comfortable end is shown: sideways along the shoulder
+    /// line for rotation (out or in), up along the spine for flexion. The forearm turns edge-on to
+    /// the camera and a forward lift is foreshortened, so neither is drawn as a turn around a joint.
+    private func rangeCalibrationTip(_ geometry: Geometry, neutral: Neutral) -> TherapyPoint {
+        if isFlexion {
+            return geometry.wrist + geometry.spineUnit.scaled(neutral.armLength * 0.5)
+        }
+
+        return geometry.wrist + geometry.outward.scaled(sign * neutral.upperArm * 0.9)
     }
 
     private func holdSecondsRemaining(at time: Double, visible: Bool, isReturn: Bool) -> Int? {

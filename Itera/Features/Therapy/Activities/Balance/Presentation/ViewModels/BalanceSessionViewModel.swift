@@ -163,7 +163,15 @@ final class BalanceSessionViewModel {
             .receive(on: DispatchQueue.main)
             .sink { [weak self] frame in
                 guard let self else { return }
-                self.livePose = self.livePoseTracker.skeleton(for: frame)
+
+                // The tracker sees every frame so its smoother stays warm, but the skeleton is
+                // published only while it is drawn, before the engine shows its own overlay.
+                let skeleton = self.livePoseTracker.skeleton(for: frame)
+                if self.snapshot.overlay == nil {
+                    self.livePose = skeleton
+                } else if self.livePose != nil {
+                    self.livePose = nil
+                }
 
                 guard self.advanceOpeningIfReady(at: frame.timestamp) else {
                     if self.paused {
@@ -194,6 +202,7 @@ final class BalanceSessionViewModel {
                 switch availability {
                 case .ready:
                     self.cameraWaiting = false
+                    self.failure = nil
                 case .waiting:
                     self.cameraWaiting = true
                     self.clearLivePose()
@@ -364,6 +373,16 @@ final class BalanceSessionViewModel {
 
     func orientationChanged(right: Bool) {
         tracking.configure(landscapeRight: right)
+    }
+
+    /// Restarts capture after a camera failure; the next first frame clears the failure.
+    func retryCamera() {
+        guard !allSetsDone else {
+            return
+        }
+
+        failure = nil
+        tracking.start()
     }
 
     func restart() {
