@@ -23,6 +23,9 @@ final class TherapySessionViewModel {
     private(set) var towelInterpolates = false
     @ObservationIgnored private var towelSmoother = TowelPresentationSmoother()
     private(set) var personVisible = false
+    /// The tracked skeleton from the first camera frame, shown until the activity draws its guide.
+    private(set) var livePose: LivePose.Skeleton?
+    @ObservationIgnored private var livePoseTracker = LivePose()
     private(set) var cameraDenied = false
     private(set) var failure: String?
     private(set) var saveFailure: String?
@@ -118,6 +121,7 @@ final class TherapySessionViewModel {
                 return
             }
             self.personVisible = frame.personCount == 1
+            self.livePose = self.livePoseTracker.skeleton(for: frame)
             var observation = frame
             observation.workspaceMirrored = true
             self.send(.observation(observation))
@@ -128,8 +132,16 @@ final class TherapySessionViewModel {
             self.failure = error.isEmpty ? explanation : explanation + "\n" + error
             self.send(.availability(.waiting))
         }.store(in: &subscriptions)
-        tracking.availability.receive(on: DispatchQueue.main).sink { [weak self] in
-            self?.send(.availability($0))
+        tracking.availability.receive(on: DispatchQueue.main).sink { [weak self] availability in
+            guard let self else { return }
+
+            switch availability {
+            case .ready:
+                break
+            case .waiting, .discontinuity:
+                self.clearLivePose()
+            }
+            self.send(.availability(availability))
         }.store(in: &subscriptions)
         audio.events.sink { [weak self] event in self?.receive(event) }.store(in: &subscriptions)
         send(.command(.pause))
@@ -246,6 +258,7 @@ final class TherapySessionViewModel {
         send(.availability(.discontinuity))
         voiceReady = false
         tracking.stop()
+        clearLivePose()
         audio.stop()
     }
 
@@ -423,12 +436,18 @@ final class TherapySessionViewModel {
         }
     }
 
+    private func clearLivePose() {
+        livePose = nil
+        livePoseTracker.reset()
+    }
+
     private func cleanup(preserveClosing: Bool = false) {
         guard live else {
             return
         }
         live = false
         tracking.stop()
+        clearLivePose()
         tracking.requireHand(false)
         if preserveClosing { audio.stopListening() } else { audio.stop() }
         timer?.cancel()

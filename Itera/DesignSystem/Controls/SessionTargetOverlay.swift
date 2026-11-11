@@ -34,6 +34,8 @@ struct SessionPoseGuide {
     var torso: [CGPoint] = []
     var midline: (base: CGPoint, top: CGPoint)?
     var chain: [CGPoint] = []
+    /// Further joint chains drawn like `chain`, such as both arms of a whole-body skeleton.
+    var limbs: [[CGPoint]] = []
     /// Draws the box and midline in orange instead of yellow.
     var warning = false
 }
@@ -320,15 +322,25 @@ struct TMSessionTargetOverlay: View {
             )
         }
 
-        guard pose.chain.count > 1 else {
+        for joints in [pose.chain] + pose.limbs {
+            drawChain(joints, point: point, context: &context)
+        }
+    }
+
+    private func drawChain(
+        _ joints: [CGPoint],
+        point: (CGPoint) -> CGPoint,
+        context: inout GraphicsContext
+    ) {
+        guard joints.count > 1 else {
             return
         }
 
         var chain = Path()
-        chain.move(to: point(pose.chain[0]))
-        pose.chain.dropFirst().forEach { chain.addLine(to: point($0)) }
+        chain.move(to: point(joints[0]))
+        joints.dropFirst().forEach { chain.addLine(to: point($0)) }
         strokeWithUnderlay(chain, color: .white, width: 6, context: &context)
-        pose.chain.forEach { drawJoint(point($0), context: &context) }
+        joints.forEach { drawJoint(point($0), context: &context) }
     }
 
     /// The count sits just outside the bubble, above it unless that would leave the picture.

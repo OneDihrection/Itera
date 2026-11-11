@@ -13,6 +13,9 @@ import UIKit
 @Observable
 final class BalanceSessionViewModel {
     private(set) var snapshot = BalanceSnapshot()
+    /// The tracked skeleton from the first camera frame, shown until the engine draws its own overlay.
+    private(set) var livePose: LivePose.Skeleton?
+    @ObservationIgnored private var livePoseTracker = LivePose()
     private(set) var permissionDenied = false
     private(set) var cameraWaiting = true
     private(set) var failure: String?
@@ -160,9 +163,13 @@ final class BalanceSessionViewModel {
             .receive(on: DispatchQueue.main)
             .sink { [weak self] frame in
                 guard let self else { return }
+                self.livePose = self.livePoseTracker.skeleton(for: frame)
+
                 guard self.advanceOpeningIfReady(at: frame.timestamp) else {
                     if self.paused {
                         self.engine.consume(frame, scoringEnabled: false)
+                    } else if !self.cameraWaiting {
+                        self.showSkeletonWhileGated(frame)
                     }
                     return
                 }
@@ -189,9 +196,11 @@ final class BalanceSessionViewModel {
                     self.cameraWaiting = false
                 case .waiting:
                     self.cameraWaiting = true
+                    self.clearLivePose()
                     self.interruptOpening()
                 case .discontinuity:
                     self.cameraWaiting = true
+                    self.clearLivePose()
                     self.recorder.discardCurrentRep()
                     self.resetOpening()
                     self.engine.invalidateCalibration()
@@ -402,6 +411,7 @@ final class BalanceSessionViewModel {
             snapshot = engine.snapshot
         }
         tracking.stop()
+        clearLivePose()
         audio.stop()
         voiceListening = false
     }
@@ -417,6 +427,7 @@ final class BalanceSessionViewModel {
         restTask = nil
         clock.pause(at: Self.now)
         tracking.stop()
+        clearLivePose()
         audio.stop()
         subscriptions.removeAll()
         UIApplication.shared.isIdleTimerDisabled = wasIdleTimerDisabled
@@ -505,6 +516,23 @@ final class BalanceSessionViewModel {
         practiceCountdown = remaining
         speakCountdown(remaining)
         return false
+    }
+
+    private func clearLivePose() {
+        livePose = nil
+        livePoseTracker.reset()
+    }
+
+    /// Shows the live skeleton while spoken guidance or the countdown holds practice back, so the
+    /// patient sees tracking at once. Scoring stays off, so calibration and holds do not advance.
+    private func showSkeletonWhileGated(_ frame: TrackingObservation) {
+        // Sit-to-stand suspends its activity on unscored frames and draws no overlay from them.
+        guard !exercise.isSitToStand else {
+            return
+        }
+
+        engine.consume(frame, scoringEnabled: false)
+        snapshot.overlay = engine.snapshot.overlay
     }
 
     private func updateCalibrationTransition(_ frame: TrackingObservation) -> Bool {

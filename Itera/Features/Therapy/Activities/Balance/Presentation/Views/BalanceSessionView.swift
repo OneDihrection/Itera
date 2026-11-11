@@ -177,6 +177,8 @@ struct TMBalanceSessionView: View {
 
             if let overlay = model.snapshot.overlay {
                 targetOverlay(overlay)
+            } else if !model.cameraWaiting, let pose = model.livePose {
+                livePoseOverlay(pose)
             }
 
             if model.cameraWaiting {
@@ -195,6 +197,16 @@ struct TMBalanceSessionView: View {
             }
         }
         .accessibilityLabel(model.exercise.localized("cameraAccessibility"))
+    }
+
+    /// The tracked skeleton alone, before the engine draws targets over it.
+    private func livePoseOverlay(_ skeleton: LivePose.Skeleton) -> some View {
+        TMSessionTargetOverlay(
+            imageSize: skeleton.imageSize,
+            bubbleGuide: nil,
+            poseGuide: skeleton.guide,
+            mirrored: true
+        )
     }
 
     /// The standard pose, target bubble, hold ring and countdown shared with the movement exercises.

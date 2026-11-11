@@ -505,6 +505,16 @@ struct TMTherapySessionView: View {
                     let guide = model.snapshot.presentation?.guide
                 {
                     targetOverlay(guide, size: geometry.size)
+                } else if !model.snapshot.paused, !model.snapshot.cameraWaiting,
+                    let skeleton = model.livePose
+                {
+                    // Until the activity draws its guide, the tracked body shows tracking has begun.
+                    TMSessionTargetOverlay(
+                        imageSize: skeleton.imageSize,
+                        bubbleGuide: nil,
+                        poseGuide: skeleton.guide,
+                        mirrored: true
+                    )
                 }
                 if !model.snapshot.paused, !model.snapshot.cameraWaiting,
                    model.snapshot.stage == .activity,

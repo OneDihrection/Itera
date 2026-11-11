@@ -4,278 +4,6 @@
     "" : {
 
     },
-    "history.bothSides" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Left & right"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Kiri & Kanan"
-          }
-        }
-      }
-    },
-    "history.report.kneeExtension" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Knee straightening"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Lutut lurus"
-          }
-        }
-      }
-    },
-    "history.saveFailed" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "This session could not be saved to history."
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Sesi ini tidak dapat disimpan ke riwayat."
-          }
-        }
-      }
-    },
-    "history.card.repetitions %lld %lld" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%1$lld / %2$lld repetitions"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%1$lld / %2$lld repetisi"
-          }
-        }
-      }
-    },
-    "history.card.viewMovement" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "View movement"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Lihat gerakan"
-          }
-        }
-      }
-    },
-    "history.report.aboutMeasurement" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "About these measurements"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Tentang pengukuran"
-          }
-        }
-      }
-    },
-    "history.report.averageDuration" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Average time per repetition"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Rata-rata durasi"
-          }
-        }
-      }
-    },
-    "history.report.chooseRep" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Repetition to replay"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Repetisi yang diputar"
-          }
-        }
-      }
-    },
-    "history.report.delete" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Delete session"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Hapus sesi"
-          }
-        }
-      }
-    },
-    "history.report.highestPeak" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Highest angle"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Sudut tertinggi"
-          }
-        }
-      }
-    },
-    "history.report.lowTracking" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "The camera did not see this movement clearly."
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Gerakan ini kurang terlihat jelas oleh kamera."
-          }
-        }
-      }
-    },
-    "history.report.repCaption %lld %@" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Repetition %1$lld · %2$@ s"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Repetisi %1$lld · %2$@ dtk"
-          }
-        }
-      }
-    },
-    "history.report.repCaptionPeak %lld %@ %lld" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Repetition %1$lld · %2$@ s · ≈ %3$lld°"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Repetisi %1$lld · %2$@ dtk · ≈ %3$lld°"
-          }
-        }
-      }
-    },
-    "history.report.repDetails" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Details per repetition"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Detail per repetisi"
-          }
-        }
-      }
-    },
-    "history.report.seconds %@" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%@ s"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%@ dtk"
-          }
-        }
-      }
-    },
-    "history.someUnreadable %lld" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%lld older saved sessions could not be read and are not shown."
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%lld sesi lama tidak dapat dibaca dan tidak ditampilkan."
-          }
-        }
-      }
-    },
     "%lld / %lld" : {
       "comment" : "A sublabel showing the number of completed repetitions and the total number of repetitions.",
       "isCommentAutoGenerated" : true,
@@ -3717,6 +3445,57 @@
         }
       }
     },
+    "history.bothSides" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Left & right"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kiri & Kanan"
+          }
+        }
+      }
+    },
+    "history.card.repetitions %lld %lld" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$lld / %2$lld repetitions"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$lld / %2$lld repetisi"
+          }
+        }
+      }
+    },
+    "history.card.viewMovement" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "View movement"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lihat gerakan"
+          }
+        }
+      }
+    },
     "history.note.faster %@" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -3802,6 +3581,74 @@
         }
       }
     },
+    "history.report.aboutMeasurement" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "About these measurements"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tentang pengukuran"
+          }
+        }
+      }
+    },
+    "history.report.averageDuration" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Average time per repetition"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rata-rata durasi"
+          }
+        }
+      }
+    },
+    "history.report.chooseRep" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Repetition to replay"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Repetisi yang diputar"
+          }
+        }
+      }
+    },
+    "history.report.delete" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Delete session"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hapus sesi"
+          }
+        }
+      }
+    },
     "history.report.disclaimer" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -3815,6 +3662,57 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Sudut adalah perkiraan kamera (≈), bukan pengukuran klinis. Bandingkan tren, bukan nilai tunggal."
+          }
+        }
+      }
+    },
+    "history.report.highestPeak" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Highest angle"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sudut tertinggi"
+          }
+        }
+      }
+    },
+    "history.report.kneeExtension" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Knee straightening"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lutut lurus"
+          }
+        }
+      }
+    },
+    "history.report.lowTracking" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The camera did not see this movement clearly."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gerakan ini kurang terlihat jelas oleh kamera."
           }
         }
       }
@@ -3887,6 +3785,57 @@
         }
       }
     },
+    "history.report.repCaption %lld %@" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Repetition %1$lld · %2$@ s"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Repetisi %1$lld · %2$@ dtk"
+          }
+        }
+      }
+    },
+    "history.report.repCaptionPeak %lld %@ %lld" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Repetition %1$lld · %2$@ s · ≈ %3$lld°"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Repetisi %1$lld · %2$@ dtk · ≈ %3$lld°"
+          }
+        }
+      }
+    },
+    "history.report.repDetails" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Details per repetition"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Detail per repetisi"
+          }
+        }
+      }
+    },
     "history.report.replayLabel %lld %@" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -3917,6 +3866,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Rekaman gerakan tidak dapat dimuat."
+          }
+        }
+      }
+    },
+    "history.report.seconds %@" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ s"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ dtk"
           }
         }
       }
@@ -3985,6 +3951,40 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Terakhir"
+          }
+        }
+      }
+    },
+    "history.saveFailed" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This session could not be saved to history."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sesi ini tidak dapat disimpan ke riwayat."
+          }
+        }
+      }
+    },
+    "history.someUnreadable %lld" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld older saved sessions could not be read and are not shown."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld sesi lama tidak dapat dibaca dan tidak ditampilkan."
           }
         }
       }
@@ -11770,6 +11770,7 @@
       }
     },
     "session.loading" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
