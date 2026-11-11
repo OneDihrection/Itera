@@ -365,14 +365,7 @@ final class TherapySessionViewModel {
                 var text = Int(key).map(String.init)
                     ?? NarrationText.resolve(key, bundle: sessionLanguage.resourceBundle, locale: sessionLocale)
                 if key == "session.guidance", let activity = snapshot.activity {
-                    let kindKey: String
-                    switch activity.kind {
-                    case .armRaise: kindKey = "session.armRaise"
-                    case .elbowBend: kindKey = "session.elbowBend"
-                    case .directionalReach: kindKey = "session.directionalReach"
-                    case .foldTowel: kindKey = "session.foldTowel"
-                    case .sitToStand: kindKey = "session.sitToStand"
-                    }
+                    let kindKey = activity.kind.titleKey
                     let sideKey = activity.side == .left ? "session.left" : "session.right"
                     let kindText = String(localized: String.LocalizationValue(kindKey), bundle: sessionLanguage.resourceBundle, locale: sessionLocale)
                     let sideText = String(localized: String.LocalizationValue(sideKey), bundle: sessionLanguage.resourceBundle, locale: sessionLocale)
@@ -388,7 +381,7 @@ final class TherapySessionViewModel {
                 }
             case .audio(let id, let cue): audio.play(id: id, cue: cue)
             case .cancelSpeech: audio.cancelSpeech()
-            case .checkpoint, .finalize: pendingSaves.append(effect)
+            case .checkpoint, .finalize, .saveKeyReps: pendingSaves.append(effect)
             }
         }
         drainSaves()
@@ -410,6 +403,14 @@ final class TherapySessionViewModel {
                     switch effect {
                     case .checkpoint(let checkpoint): try await repository.checkpoint(checkpoint)
                     case .finalize(let summary): try await repository.finalize(summary)
+                    case .saveKeyReps(let sessionID, let keyReps):
+                        // Replays help review but are not session history: a failed save is
+                        // logged and must not pause therapy or block later saves.
+                        do {
+                            try await repository.saveKeyReps(keyReps, sessionID: sessionID)
+                        } catch {
+                            NSLog("Key repetition save failed: %@", error.localizedDescription)
+                        }
                     default: break
                     }
                     pendingSaves.removeFirst()
@@ -461,9 +462,12 @@ final class TherapySessionViewModel {
 #if DEBUG
 private actor PresentationFixtureRepository: SessionRepository {
     func history() async throws -> [SessionSummary] { [] }
+    func unreadableHistoryCount() -> Int { 0 }
     func delete(id: UUID) async throws {}
     func recoverInterrupted() {}
     func checkpoint(_ value: SessionCheckpoint) {}
     func finalize(_ value: SessionSummary) {}
+    func saveKeyReps(_ value: ActivityKeyReps, sessionID: UUID) {}
+    func keyReps(sessionID: UUID) -> [ActivityKeyReps] { [] }
 }
 #endif

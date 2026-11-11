@@ -122,3 +122,12 @@ Components/TherapyExerciseScreens.swift owns the five screens every exercise sha
 Compatible additions: `TMTherapyCompletionMark(tint:)` (the screens pass `brand`), `TMTherapyButton(brand:)` for a rust pill, and `TherapyPalette.planPanel`, the warm grey behind demonstration media and the results panel.
 
 `Tools/generate_plan_art.py` draws the plan illustrations for the exercises added on 2026-11-09 (each finger movement, forearm rotation, elbow bend, directional reach, internal rotation and shoulder flexion) from the same figure shapes and colours as the first six, so all `plan-<id>` images match. Rerun it after changing a pose, then `xcodegen generate`.
+
+## Clinician session report (2026-11-12)
+
+`TMSkeletonReplay` (Components/SkeletonReplay.swift) replays supplied poses as a stick figure on a `progressPanel`, with a 52-point terracotta play/pause circle and a scrubber. Poses are normalized points (origin bottom-left, unmirrored), bones are index pairs, and emphasized joints draw the moving limb in `emphasisColor` (default `brand`) over a white underlay, with white-ringed joints; the rest of the body is `planTrack`. It frames the union of all poses, loops while playing, mirrors by default to match the live preview, and starts paused at the midpoint under Reduce Motion. It knows nothing about exercises.
+
+`TMRepValueChart` (Components/RepValueChart.swift) is a single-series Swift Charts bar strip, one bar per repetition. Emphasized bars use `brand` and carry a text marker above, so emphasis is never color alone; the rest use `progressSoftBar`, matching the weekly chart. The caller supplies values, markers and the unit.
+
+`TMTherapyProgressMetric` (Components/TherapyProgressSummary.swift) is the Progress pages' metric tile: a terracotta icon in a soft square, a large value and a muted unit. `TMTherapyProgressSessionCard` and the movement report share it.
+

@@ -244,14 +244,7 @@ struct SitToStandActivity {
     }
 
     private func angle(at vertex: TherapyPoint, _ a: TherapyPoint, _ b: TherapyPoint) -> Double? {
-        let u = a - vertex
-        let v = b - vertex
-        let length = u.length * v.length
-        guard length > 0.0001 else {
-            return nil
-        }
-        let cosine = (u.x * v.x + u.y * v.y) / length
-        return acos(max(-1, min(1, cosine))) * 180 / .pi
+        JointAngle.degrees(at: vertex, a, b)
     }
 
     private mutating func pose(in frame: TrackingObservation) -> Pose? {

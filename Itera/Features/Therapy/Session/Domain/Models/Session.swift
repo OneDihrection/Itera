@@ -38,7 +38,8 @@ struct SessionActivityResult: Codable, Equatable {
     var practiceSeconds: Double = 0
     /// Absent in summaries saved before per-exercise sets were introduced.
     var setNumber: Int? = nil
-
+    /// One entry per credited repetition; absent in summaries saved before repetition metrics.
+    var repMetrics: [RepMetrics]? = nil
 }
 
 struct SessionSummary: Codable, Equatable, Identifiable {

@@ -137,18 +137,25 @@ struct TMTherapyProgressSessionCard: View {
     }
 
     private var exercises: some View {
-        metric("waveform.path", value: Text("progress.exercisesDone \(completed) \(planned)"), title: "progress.exerciseUnit")
+        TMTherapyProgressMetric(icon: "waveform.path", value: Text("progress.exercisesDone \(completed) \(planned)"), title: "progress.exerciseUnit")
     }
 
     private var duration: some View {
-        metric("clock", value: Text(minutes, format: .number), title: "progress.minuteUnit")
+        TMTherapyProgressMetric(icon: "clock", value: Text(minutes, format: .number), title: "progress.minuteUnit")
     }
 
     private var repetitionsMetric: some View {
-        metric("repeat", value: Text(repetitions, format: .number), title: "progress.repetitionUnit")
+        TMTherapyProgressMetric(icon: "repeat", value: Text(repetitions, format: .number), title: "progress.repetitionUnit")
     }
+}
 
-    private func metric(_ icon: String, value: Text, title: LocalizedStringKey) -> some View {
+/// A terracotta icon tile over a large value and a muted unit, as used across the Progress pages.
+struct TMTherapyProgressMetric: View {
+    let icon: String
+    let value: Text
+    let title: LocalizedStringKey
+
+    var body: some View {
         VStack(spacing: 8) {
             Image(systemName: icon)
                 .foregroundStyle(TherapyPalette.brand)

@@ -919,13 +919,7 @@ struct TMTherapySessionView: View {
     }
 
     func kindKeyName(_ kind: TherapyKind) -> String {
-        switch kind {
-        case .armRaise: return "session.armRaise"
-        case .elbowBend: return "session.elbowBend"
-        case .directionalReach: return "session.directionalReach"
-        case .foldTowel: return "session.foldTowel"
-        case .sitToStand: return "session.sitToStand"
-        }
+        kind.titleKey
     }
 
     private func targetOverlay(_ guide: TargetGuide, size: CGSize) -> some View {

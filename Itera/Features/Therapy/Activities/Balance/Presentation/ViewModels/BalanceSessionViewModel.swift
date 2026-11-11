@@ -82,9 +82,29 @@ final class BalanceSessionViewModel {
     @ObservationIgnored private var clock = SessionDurationClock()
     @ObservationIgnored private var restTask: Task<Void, Never>?
 
+    // MARK: History
+
+    /// A summary could not be saved; the completion page offers a retry.
+    private(set) var historySaveFailed = false
+    @ObservationIgnored private let repository: any SessionRepository
+    @ObservationIgnored private let settings: BalancePracticeSettings
+    @ObservationIgnored private var log: BalanceSessionLog
+    /// Per-repetition metrics and key-repetition skeletons for the current set.
+    @ObservationIgnored private var recorder: KeyRepRecorder
+    @ObservationIgnored private var pendingSaves: [PendingSave] = []
+    @ObservationIgnored private var saving = false
+    @ObservationIgnored private var recovered = false
+
+    private enum PendingSave {
+        case checkpoint(SessionCheckpoint)
+        case finalize(SessionSummary)
+        case keyReps(sessionID: UUID, ActivityKeyReps)
+    }
+
     init(
         tracking: BodyTrackingService,
         audio: SessionAudioService,
+        repository: any SessionRepository,
         settings: BalancePracticeSettings,
         exercise: BalanceExercise = .crossMidline
     ) {
@@ -94,6 +114,11 @@ final class BalanceSessionViewModel {
 
         self.tracking = tracking
         self.audio = audio
+        self.repository = repository
+        self.settings = settings
+        let log = Self.makeLog(exercise: exercise, settings: settings)
+        self.log = log
+        recorder = KeyRepRecorder(activity: log.activity)
         self.holdSeconds = min(20, max(3, holdSeconds))
         self.exercise = exercise
         totalSets = settings.sets
@@ -144,6 +169,7 @@ final class BalanceSessionViewModel {
                 let previous = self.snapshot
                 self.engine.consume(frame, scoringEnabled: !self.paused)
                 self.snapshot = self.engine.snapshot
+                self.record(frame, previous: previous)
                 if self.updateCalibrationTransition(frame) {
                     return
                 }
@@ -166,6 +192,7 @@ final class BalanceSessionViewModel {
                     self.interruptOpening()
                 case .discontinuity:
                     self.cameraWaiting = true
+                    self.recorder.discardCurrentRep()
                     self.resetOpening()
                     self.engine.invalidateCalibration()
                     self.snapshot = self.engine.snapshot
@@ -217,8 +244,10 @@ final class BalanceSessionViewModel {
     /// Records the finished set, then rests before the next one, or ends after the last.
     private func finishSet() {
         setResults.append(snapshot.metrics.completedTouches)
+        recordSet(outcome: .completed, completedWork: snapshot.metrics.completedTouches)
 
         guard !allSetsDone else {
+            finishLog(stopped: false)
             clock.pause(at: Self.now)
             tracking.stop()
             audio.stopMusic()
@@ -298,6 +327,10 @@ final class BalanceSessionViewModel {
     }
 
     func restart() {
+        // A repeat is a new session; whatever was practiced before is saved first.
+        finishLog(stopped: !allSetsDone)
+        log = Self.makeLog(exercise: exercise, settings: settings)
+        recorder = KeyRepRecorder(activity: log.activity)
         restTask?.cancel()
         restTask = nil
         restRemaining = nil
@@ -325,6 +358,7 @@ final class BalanceSessionViewModel {
     func pause() {
         guard !paused else { return }
         paused = true
+        recorder.discardCurrentRep()
         clock.pause(at: Self.now)
         audio.pauseMusic()
         interruptOpening()
@@ -359,6 +393,7 @@ final class BalanceSessionViewModel {
 
     func background() {
         paused = true
+        recorder.discardCurrentRep()
         clock.pause(at: Self.now)
         cameraWaiting = true
         if !allSetsDone, restRemaining == nil {
@@ -377,6 +412,7 @@ final class BalanceSessionViewModel {
     }
 
     func stop() {
+        saveUnfinishedSession()
         restTask?.cancel()
         restTask = nil
         clock.pause(at: Self.now)
@@ -662,5 +698,166 @@ final class BalanceSessionViewModel {
         return snapshot.armSelection == .both
             ? exercise.key("voice.returnAndSwitch")
             : exercise.key("voice.returnSameSide")
+    }
+
+    // MARK: - Recording and history
+
+    private static func makeLog(exercise: BalanceExercise, settings: BalancePracticeSettings) -> BalanceSessionLog {
+        BalanceSessionLog(
+            exercise: exercise,
+            side: settings.armSelection.initialArm.therapySide,
+            alternatesSides: settings.armSelection == .both,
+            goal: settings.repetitions,
+            sets: settings.sets,
+            restSeconds: settings.restSeconds
+        )
+    }
+
+    /// Feeds the recorder once calibration and the countdown are over. The frame that completes
+    /// the set still counts, because it credits the last repetition.
+    private func record(_ frame: TrackingObservation, previous: BalanceSnapshot) {
+        let practicing: Bool
+
+        switch snapshot.phase {
+        case .reaching, .holding:
+            practicing = true
+        case .returning:
+            // Sit-to-stand returns to the seat only before practice.
+            practicing = !exercise.isSitToStand
+        case .complete:
+            practicing = previous.phase != .complete
+        case .findingBody, .calibrating, .calibratingRange:
+            practicing = false
+        }
+
+        let counted = practicing
+            && calibrationFinished
+            && openingCue == nil
+            && practiceCountdown == nil
+            && !paused
+        let tracked = snapshot.overlay != nil
+
+        recorder.observe(
+            frame,
+            counted: counted,
+            count: snapshot.metrics.completedTouches,
+            angle: tracked ? recordedAngle : nil,
+            side: exercise.isSitToStand ? nil : snapshot.activeArm.therapySide
+        )
+    }
+
+    /// The engine's own estimate: forearm rotation or shoulder lift, or knee extension for
+    /// sit-to-stand. Cross-midline has no single angle.
+    private var recordedAngle: Double? {
+        switch exercise {
+        case .externalRotation, .internalRotation, .shoulderFlexion:
+            return snapshot.rotationDegrees
+        case .sitToStand:
+            return snapshot.kneeAngle > 0 ? snapshot.kneeAngle : nil
+        case .crossMidline:
+            return nil
+        }
+    }
+
+    /// Adds a set to the session history with its metrics and replays, then starts a fresh recorder.
+    private func recordSet(outcome: ActivityOutcome, completedWork: Int) {
+        let metrics = recorder.metrics
+        let executionID = log.recordSet(
+            number: setNumber,
+            completedWork: completedWork,
+            outcome: outcome,
+            repMetrics: metrics.isEmpty ? nil : metrics
+        )
+
+        if let keyReps = recorder.keyReps(executionID: executionID, setNumber: setNumber) {
+            queue(.keyReps(sessionID: log.id, keyReps))
+        }
+
+        queue(.checkpoint(log.checkpoint))
+        recorder = KeyRepRecorder(activity: log.activity)
+    }
+
+    private func finishLog(stopped: Bool) {
+        guard let summary = log.finalize(stopped: stopped) else {
+            return
+        }
+
+        queue(.finalize(summary))
+    }
+
+    /// Leaving early keeps the credited repetitions of the set in progress, labeled interrupted.
+    private func saveUnfinishedSession() {
+        guard !log.finalized else {
+            return
+        }
+
+        let inProgress = restRemaining == nil && !allSetsDone
+        let work = snapshot.metrics.completedTouches
+
+        if inProgress, work > 0 {
+            recordSet(outcome: .interrupted, completedWork: work)
+        }
+
+        finishLog(stopped: true)
+    }
+
+    func retryHistorySave() {
+        historySaveFailed = false
+        drainSaves()
+    }
+
+    private func queue(_ save: PendingSave) {
+        pendingSaves.append(save)
+        drainSaves()
+    }
+
+    /// Saves run one at a time, in order. A failed summary save stops the queue so a retry can
+    /// resume it; a failed replay save is logged and skipped, since replays are not history.
+    private func drainSaves() {
+        guard !saving, !historySaveFailed, !pendingSaves.isEmpty else {
+            return
+        }
+
+        saving = true
+
+        Task {
+            defer { saving = false }
+
+            do {
+                if !recovered {
+                    try await repository.recoverInterrupted()
+                    recovered = true
+                }
+            } catch {
+                historySaveFailed = true
+                return
+            }
+
+            while let save = pendingSaves.first {
+                do {
+                    try await perform(save)
+                } catch {
+                    if case .keyReps = save {
+                        NSLog("Key repetition save failed: %@", error.localizedDescription)
+                    } else {
+                        historySaveFailed = true
+                        return
+                    }
+                }
+
+                pendingSaves.removeFirst()
+            }
+        }
+    }
+
+    private func perform(_ save: PendingSave) async throws {
+        switch save {
+        case .checkpoint(let checkpoint):
+            try await repository.checkpoint(checkpoint)
+        case .finalize(let summary):
+            try await repository.finalize(summary)
+        case .keyReps(let sessionID, let keyReps):
+            try await repository.saveKeyReps(keyReps, sessionID: sessionID)
+        }
     }
 }

@@ -16,8 +16,15 @@ struct SessionCheckpoint: Codable {
 
 protocol SessionRepository: Sendable {
     func history() async throws -> [SessionSummary]
+    /// How many saved summaries the last `history()` call skipped because they could not be read.
+    func unreadableHistoryCount() async -> Int
     func delete(id: UUID) async throws
     func recoverInterrupted() async throws
     func checkpoint(_ value: SessionCheckpoint) async throws
     func finalize(_ value: SessionSummary) async throws
+    /// Saves one set's key repetitions beside the session's summary, replacing an earlier save
+    /// of the same set.
+    func saveKeyReps(_ value: ActivityKeyReps, sessionID: UUID) async throws
+    /// Every set's key repetitions for a session; empty when none were recorded.
+    func keyReps(sessionID: UUID) async throws -> [ActivityKeyReps]
 }

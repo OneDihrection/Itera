@@ -24,6 +24,8 @@ enum SessionEffect {
     case audio(UUID, SessionAudioCue)
     case checkpoint(SessionCheckpoint)
     case finalize(SessionSummary)
+    /// Key-repetition skeletons for one set, saved beside the session summary.
+    case saveKeyReps(sessionID: UUID, ActivityKeyReps)
 }
 
 struct SessionSnapshot {
@@ -89,6 +91,8 @@ struct SessionEngine {
     private var calibrationCompletionPending = false
     private var announcedCountdown: Int?
     private var calibrationInvalidatedBetweenSets = false
+    /// Per-repetition metrics and key-repetition skeletons for the current set.
+    private var recorder: KeyRepRecorder?
 
     init(routine: Routine = .demo(), date: Date = Date()) {
         progress = SessionProgress(routine: routine, startedAt: date)
@@ -190,14 +194,15 @@ struct SessionEngine {
         guard let configuration = progress.currentActivity else {
             return
         }
+        recorder = KeyRepRecorder(activity: configuration)
         switch configuration.kind {
         case .foldTowel: activity = FoldTowelActivity(configuration: configuration)
         case .armRaise: activity = ArmRaiseActivity(configuration: configuration)
         case .elbowBend: activity = ElbowBendActivity(configuration: configuration)
         case .directionalReach: activity = DirectionalReachActivity(configuration: configuration)
-        case .sitToStand:
-            // Kept only so routines and sessions saved before Trunk Control moved to the
-            // Balancing screens still decode; nothing offers it any more.
+        case .sitToStand, .crossMidline, .externalRotation, .internalRotation, .shoulderFlexion:
+            // Balancing exercises run on their own screens. Sit-to-stand stays only so routines
+            // saved before Trunk Control moved there still decode; nothing offers it any more.
             activity = nil
         }
         if let viewport { _ = activity?.handle(.viewport(viewport)) }
@@ -257,6 +262,7 @@ struct SessionEngine {
         }
         snapshot.presentation = result.presentation
         snapshot.instruction = result.presentation.instruction
+        recorder?.observe(frame, presentation: result.presentation)
         if result.status == .finished {
             record(.completed)
             if case .towel = result.presentation {
@@ -312,6 +318,7 @@ struct SessionEngine {
         if !ready {
             if waitingSince == nil {
                 waitingSince = now
+                recorder?.discardCurrentRep()
                 beginSuspension()
                 _ = activity?.handle(.suspend)
                 effects.append(.cancelSpeech)
@@ -606,7 +613,8 @@ struct SessionEngine {
             execution: progress.executionID, outcome: outcome,
             completedWork: presentation?.count ?? 0, reachOutcomes: reach?.outcomes ?? [],
             skippedReachSteps: reach?.caregiverSkippedSteps,
-            practiceSeconds: practicedSeconds)
+            practiceSeconds: practicedSeconds,
+            repMetrics: takeRecording(for: outcome))
         effects.append(.checkpoint(checkpoint))
         snapshot.stage = .feedback
         feedbackEnteredAt = now
@@ -621,6 +629,28 @@ struct SessionEngine {
         snapshot.instruction = outcome == .skipped ? "session.skipped" : "session.feedback"
         snapshot.assistanceKey = nil
         if canProgress { announce(snapshot.instruction, timed: true) }
+    }
+
+    /// Emits the set's key repetitions for saving and returns its per-repetition metrics, then
+    /// starts a fresh recorder for the next set. Skipped work and sets without a credited
+    /// repetition record nothing.
+    private mutating func takeRecording(for outcome: ActivityOutcome) -> [RepMetrics]? {
+        defer {
+            recorder = progress.currentActivity.map { KeyRepRecorder(activity: $0) }
+        }
+
+        guard outcome != .skipped,
+              let recorder,
+              !recorder.metrics.isEmpty
+        else {
+            return nil
+        }
+
+        if let keyReps = recorder.keyReps(executionID: progress.executionID, setNumber: progress.setNumber) {
+            effects.append(.saveKeyReps(sessionID: progress.id, keyReps))
+        }
+
+        return recorder.metrics
     }
 
     private mutating func commandReceived(_ command: SessionCommand) {
@@ -663,7 +693,8 @@ struct SessionEngine {
                     completedWork: activity?.presentation.count ?? 0,
                     reachOutcomes: reach?.outcomes ?? [],
                     skippedReachSteps: reach?.caregiverSkippedSteps,
-                    practiceSeconds: practicedSeconds
+                    practiceSeconds: practicedSeconds,
+                    repMetrics: takeRecording(for: .interrupted)
                 )
             }
             progress.finalize(stopped: true, date: Date())
@@ -705,7 +736,9 @@ struct SessionEngine {
     private var currentAssistanceKey: String? {
         switch progress.currentActivity?.kind {
         case .sitToStand: return "session.assistance.sitToStand"
-        case .armRaise, .elbowBend, .directionalReach, .foldTowel, nil: return nil
+        case .armRaise, .elbowBend, .directionalReach, .foldTowel,
+             .crossMidline, .externalRotation, .internalRotation, .shoulderFlexion, nil:
+            return nil
         }
     }
 
@@ -735,6 +768,7 @@ struct SessionEngine {
             return
         }
         pausedSince = now
+        recorder?.discardCurrentRep()
         beginSuspension()
         _ = activity?.handle(.suspend)
         effects.append(.cancelSpeech)
@@ -766,6 +800,7 @@ struct SessionEngine {
         awaitingCountdownGuidance = false
         announcedCountdown = nil
         evidenceBoundary = now
+        recorder?.discardCurrentRep()
         progress.retryExecution()
         _ = activity?.handle(.recalibrate)
         snapshot.presentation = activity?.presentation

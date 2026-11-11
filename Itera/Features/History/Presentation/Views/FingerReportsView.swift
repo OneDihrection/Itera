@@ -14,6 +14,9 @@ struct TMFingerReportsView: View {
     @Environment(\.locale) private var locale
     @State private var confirmingHistoryDeletion = false
     @State private var deletingHistory = false
+    /// Arm practice and the Balancing exercises are saved by the session repository; their
+    /// sessions join the same list.
+    @State private var armHistory: TaskReportsViewModel?
 
     var body: some View {
         let report = PracticeReport(history: dependencies.home.history)
@@ -32,7 +35,7 @@ struct TMFingerReportsView: View {
                 }
 
                 Divider()
-                historySection(report.sessions)
+                historySection(historyEntries(report.sessions))
             }
             .frame(maxWidth: 980)
             .padding(.horizontal, 32)
@@ -135,7 +138,15 @@ struct TMFingerReportsView: View {
         )
     }
 
-    private func historySection(_ sessions: [FingerSessionSummary]) -> some View {
+    /// Finger and arm sessions, newest first.
+    private func historyEntries(_ finger: [FingerSessionSummary]) -> [HistoryEntry] {
+        let arm = armHistory?.summaries ?? []
+
+        return (finger.map(HistoryEntry.finger) + arm.map(HistoryEntry.arm))
+            .sorted { $0.date > $1.date }
+    }
+
+    private func historySection(_ sessions: [HistoryEntry]) -> some View {
         VStack(alignment: .leading, spacing: 16) {
             HStack(alignment: .lastTextBaseline) {
                 sectionTitle("reports.history")
@@ -145,7 +156,7 @@ struct TMFingerReportsView: View {
                     .foregroundStyle(TherapyPalette.muted)
             }
 
-            if let error = dependencies.home.errorKey {
+            if let error = dependencies.home.errorKey ?? armHistory?.errorKey {
                 TMTherapyError(key: error)
                 TMTherapyButton(title: "action.retry", secondary: true, pill: true) {
                     Task { await refreshProgress() }
@@ -158,13 +169,23 @@ struct TMFingerReportsView: View {
                 historyDeletionControls
             }
 
-            ForEach(sessions) { summary in
-                Button {
-                    router.push(.report(summary.id))
-                } label: {
-                    TMFingerHistoryCard(summary: summary)
+            ForEach(sessions) { entry in
+                switch entry {
+                case .finger(let summary):
+                    Button {
+                        router.push(.report(summary.id))
+                    } label: {
+                        TMFingerHistoryCard(summary: summary)
+                    }
+                    .buttonStyle(TMTherapySoundButtonStyle())
+                case .arm(let summary):
+                    Button {
+                        router.push(.sessionReport(summary.id))
+                    } label: {
+                        TMMovementHistoryCard(summary: summary)
+                    }
+                    .buttonStyle(TMTherapySoundButtonStyle())
                 }
-                .buttonStyle(TMTherapySoundButtonStyle())
             }
         }
     }
@@ -197,7 +218,8 @@ struct TMFingerReportsView: View {
         deletingHistory = true
         defer { deletingHistory = false }
         await dependencies.home.deleteHistory()
-        if dependencies.home.errorKey == nil {
+        await armHistory?.deleteAll()
+        if dependencies.home.errorKey == nil, armHistory?.errorKey == nil {
             confirmingHistoryDeletion = false
         }
     }
@@ -208,6 +230,33 @@ struct TMFingerReportsView: View {
         }
 
         await dependencies.home.refresh()
+
+        if armHistory == nil {
+            armHistory = TaskReportsViewModel.movementHistory(repository: dependencies.sessions)
+        }
+        await armHistory?.load()
+    }
+}
+
+// MARK: - History entry
+
+/// One row of "Riwayat latihan": finger and arm sessions are saved separately but listed together.
+private enum HistoryEntry: Identifiable {
+    case finger(FingerSessionSummary)
+    case arm(SessionSummary)
+
+    var id: UUID {
+        switch self {
+        case .finger(let summary): return summary.id
+        case .arm(let summary): return summary.id
+        }
+    }
+
+    var date: Date {
+        switch self {
+        case .finger(let summary): return summary.started
+        case .arm(let summary): return summary.startedAt
+        }
     }
 }
 

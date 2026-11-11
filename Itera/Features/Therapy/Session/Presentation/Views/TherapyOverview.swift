@@ -41,8 +41,11 @@ private struct TMHomeContent: View {
                     .disabled(model.busy)
                 Text(LocalizedStringKey(category.positioningKey)).typography(.body)
                 exercises
-                if category == .taskOriented {
-                    TMTherapyButton(title: "towel.history", symbol: "chart.bar") { router.push(.taskReports) }
+                TMTherapyButton(
+                    title: category == .taskOriented ? "towel.history" : "history.arm.title",
+                    symbol: "chart.bar"
+                ) {
+                    router.push(.taskReports(category))
                 }
                 Label(
                     LocalizedStringKey(model.message),
@@ -122,6 +125,7 @@ private struct TMHomeContent: View {
         case .directionalReach: return "hand.point.up.left"
         case .foldTowel: return "square.stack.3d.up"
         case .sitToStand: return "figure.stand"
+        case .crossMidline, .externalRotation, .internalRotation, .shoulderFlexion: return kind.symbolName
         }
     }
 

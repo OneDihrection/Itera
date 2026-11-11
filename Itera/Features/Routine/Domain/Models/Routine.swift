@@ -16,16 +16,41 @@ enum TherapyKind: String, Codable, CaseIterable {
     case armRaise
     case elbowBend
     case directionalReach
-    /// No longer offered in routines: Trunk Control now runs on the Balancing screens. The case
-    /// stays so sessions and routines saved earlier still decode.
+    /// Trunk Control. No longer offered in routines: it runs on the Balancing screens, which
+    /// save their sessions with this kind. Routines saved earlier still decode.
     case sitToStand
     case foldTowel
+    /// Balancing-screen exercises. They are never part of a routine; the kind only names the
+    /// exercise in saved session history.
+    case crossMidline
+    case externalRotation
+    case internalRotation
+    case shoulderFlexion
 
     var category: TherapyCategory? {
         switch self {
         case .foldTowel: return .taskOriented
-        case .sitToStand: return nil
         case .armRaise, .elbowBend, .directionalReach: return .arm
+        case .sitToStand, .crossMidline, .externalRotation, .internalRotation, .shoulderFlexion: return nil
+        }
+    }
+
+    /// Exercises the guided session engine runs. The Balancing exercises have their own screens.
+    var runsInGuidedSession: Bool {
+        switch self {
+        case .armRaise, .elbowBend, .directionalReach, .foldTowel, .sitToStand: return true
+        case .crossMidline, .externalRotation, .internalRotation, .shoulderFlexion: return false
+        }
+    }
+
+    /// Exercises whose sessions keep per-repetition metrics and key-repetition replays.
+    var recordsMovement: Bool {
+        switch self {
+        case .armRaise, .elbowBend, .directionalReach, .sitToStand,
+             .crossMidline, .externalRotation, .internalRotation, .shoulderFlexion:
+            return true
+        case .foldTowel:
+            return false
         }
     }
 }
@@ -64,8 +89,10 @@ struct SessionActivity: Identifiable, Codable, Equatable {
     let side: TherapySide
     let goal: Int
     var sets: Int = 1
+    /// Both arms took turns (Balancing exercises set to "both"); `side` is the arm that started.
+    var alternatesSides = false
 
-    enum CodingKeys: String, CodingKey { case id, kind, side, goal, sets }
+    enum CodingKeys: String, CodingKey { case id, kind, side, goal, sets, alternatesSides }
 
     init(from decoder: Decoder) throws {
         let values = try decoder.container(keyedBy: CodingKeys.self)
@@ -74,7 +101,9 @@ struct SessionActivity: Identifiable, Codable, Equatable {
         side = try values.decode(TherapySide.self, forKey: .side)
         goal = try values.decode(Int.self, forKey: .goal)
         sets = try values.decodeIfPresent(Int.self, forKey: .sets) ?? 1
-        guard (1...5).contains(sets), kind != .sitToStand || sets == 1 else {
+        alternatesSides = try values.decodeIfPresent(Bool.self, forKey: .alternatesSides) ?? false
+        // Sit-to-stand once allowed a single set; Balancing sit-to-stand has sets like the others.
+        guard (1...5).contains(sets) else {
             throw DecodingError.dataCorruptedError(
                 forKey: .sets, in: values, debugDescription: "Invalid set count")
         }
@@ -83,12 +112,13 @@ struct SessionActivity: Identifiable, Codable, Equatable {
     /// Sit-to-stand has no trained side: the camera follows whichever leg it sees best.
     var hasSide: Bool { kind != .sitToStand }
 
-    init(kind: TherapyKind, side: TherapySide, goal: Int, sets: Int = 1) {
+    init(kind: TherapyKind, side: TherapySide, goal: Int, sets: Int = 1, alternatesSides: Bool = false) {
         id = UUID()
         self.kind = kind
         self.side = side
         self.goal = max(1, goal)
-        self.sets = kind == .sitToStand ? 1 : min(5, max(1, sets))
+        self.sets = min(5, max(1, sets))
+        self.alternatesSides = alternatesSides
     }
 }
 

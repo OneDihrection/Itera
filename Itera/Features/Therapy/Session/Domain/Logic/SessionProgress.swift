@@ -71,7 +71,8 @@ struct SessionProgress {
         completedWork: Int,
         reachOutcomes: [ReachOutcome] = [],
         skippedReachSteps: [ReachSkippedStep]? = nil,
-        practiceSeconds: Double = 0
+        practiceSeconds: Double = 0,
+        repMetrics: [RepMetrics]? = nil
     ) {
         guard pausedAt == nil,
             stage == .activity,
@@ -91,7 +92,8 @@ struct SessionProgress {
                 reachOutcomes: reachOutcomes,
                 skippedReachSteps: skippedReachSteps,
                 practiceSeconds: practiceSeconds,
-                setNumber: setNumber
+                setNumber: setNumber,
+                repMetrics: repMetrics
             )
         )
         stage = .feedback(UUID())

@@ -331,7 +331,14 @@ struct TMBalanceSessionView: View {
                     repeatTitle: "balance.completion.repeat",
                     onRepeat: model.restart,
                     action: endPractice
-                )
+                ) {
+                    if model.historySaveFailed {
+                        TMTherapyError(key: "history.saveFailed")
+                        TMTherapyTextButton(title: "action.retry", symbol: "arrow.clockwise") {
+                            model.retryHistorySave()
+                        }
+                    }
+                }
             }
         }
     }
