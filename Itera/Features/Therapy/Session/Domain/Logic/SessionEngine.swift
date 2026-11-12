@@ -26,6 +26,8 @@ enum SessionEffect {
     case finalize(SessionSummary)
     /// Key-repetition skeletons for one set, saved beside the session summary.
     case saveKeyReps(sessionID: UUID, ActivityKeyReps)
+    /// Keeps the privacy-filtered video of a repetition that was just credited.
+    case keepRepClip(KeyRepClipRequest)
 }
 
 struct SessionSnapshot {
@@ -277,7 +279,9 @@ struct SessionEngine {
         }
         snapshot.presentation = result.presentation
         snapshot.instruction = result.presentation.instruction
-        recorder?.observe(frame, presentation: result.presentation)
+        if let clip = recorder?.observe(frame, presentation: result.presentation) {
+            effects.append(.keepRepClip(clip))
+        }
         if result.status == .finished {
             record(.completed)
             if case .towel = result.presentation {

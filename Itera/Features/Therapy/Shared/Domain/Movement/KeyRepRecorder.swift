@@ -30,6 +30,9 @@ struct KeyRepRecorder {
     }
 
     private let activity: SessionActivity
+    /// Identifies this recorder's set to the clip source, so a set's clips can still be taken
+    /// after the next set has begun keeping its own.
+    let clipGroup = UUID()
     private var samples: [Sample] = []
     private var repStart: Double?
     private var aspect = 1.0
@@ -48,7 +51,8 @@ struct KeyRepRecorder {
     // MARK: - Input
 
     /// Records a guided-session frame, reading counted practice and the count from `presentation`.
-    mutating func observe(_ frame: TrackingObservation, presentation: ActivityPresentation) {
+    @discardableResult
+    mutating func observe(_ frame: TrackingObservation, presentation: ActivityPresentation) -> KeyRepClipRequest? {
         observe(frame, counted: isCountedPractice(presentation), count: presentation.count)
     }
 
@@ -57,17 +61,19 @@ struct KeyRepRecorder {
     /// - Parameters:
     ///   - angle: The engine's own movement angle for this frame, in degrees, when it has one.
     ///   - side: The arm moving in this frame, for exercises where both arms take turns.
+    /// - Returns: The clip to keep when this frame completed a repetition.
+    @discardableResult
     mutating func observe(
         _ frame: TrackingObservation,
         counted: Bool,
         count: Int,
         angle: Double? = nil,
         side: TherapySide? = nil
-    ) {
+    ) -> KeyRepClipRequest? {
         guard counted else {
             discardCurrentRep()
             lastCount = count
-            return
+            return nil
         }
 
         let previous = lastCount ?? count
@@ -80,9 +86,11 @@ struct KeyRepRecorder {
         lastCount = count
         append(frame, angle: angle, side: side, force: completesRep)
 
-        if completesRep {
-            completeRep(number: count)
+        guard completesRep else {
+            return nil
         }
+
+        return completeRep(number: count)
     }
 
     /// Drops the repetition in progress, for pauses, camera waits and recalibration.
@@ -120,7 +128,8 @@ struct KeyRepRecorder {
             executionID: executionID,
             activity: activity,
             setNumber: setNumber,
-            reps: reps
+            reps: reps,
+            clipGroup: clipGroup
         )
     }
 
@@ -186,12 +195,12 @@ struct KeyRepRecorder {
         return joints
     }
 
-    private mutating func completeRep(number: Int) {
+    private mutating func completeRep(number: Int) -> KeyRepClipRequest? {
         guard let start = repStart,
               let end = samples.last?.timestamp,
               let origin = samples.first?.timestamp
         else {
-            return
+            return nil
         }
 
         let angles = samples.map(angle(in:))
@@ -226,6 +235,14 @@ struct KeyRepRecorder {
 
         last = rep
         discardCurrentRep()
+
+        return KeyRepClipRequest(
+            group: clipGroup,
+            repNumber: number,
+            start: origin,
+            end: end,
+            retaining: Set([first, hardest, last].compactMap { $0?.metrics.repNumber })
+        )
     }
 
     // MARK: - Metrics

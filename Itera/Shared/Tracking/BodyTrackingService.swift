@@ -15,6 +15,8 @@ final class BodyTrackingService: NSObject, AVCaptureVideoDataOutputSampleBufferD
     let frames = PassthroughSubject<TrackingObservation, Never>()
     let failures = PassthroughSubject<String, Never>()
     let availability = PassthroughSubject<TrackingAvailability, Never>()
+    /// Privacy-filtered key-repetition video, fed from body inference while sessions enable it.
+    let clips = RepClipFrameSource()
 
     private let queue = DispatchQueue(label: "Itera.bodyTracking", qos: .userInitiated)
     private let inferenceQueue = DispatchQueue(label: "Itera.bodyInference", qos: .userInitiated)
@@ -368,6 +370,17 @@ final class BodyTrackingService: NSObject, AVCaptureVideoDataOutputSampleBufferD
                 generation: generation
             )
 
+            if !handEnabled, clips.claimFrame(at: time) {
+                // Every person's head, bystanders included, so no face is left unfiltered.
+                clips.offer(
+                    image,
+                    time: time,
+                    heads: clips.needsHeads
+                        ? personPoints.map { Self.clipHead(from: $0, originalY: originalY) }
+                        : []
+                )
+            }
+
             var joints: [BodyJoint: TrackingObservation.Landmark] = [:]
             if let subject {
                 let points = personPoints[subject]
@@ -599,5 +612,32 @@ final class BodyTrackingService: NSObject, AVCaptureVideoDataOutputSampleBufferD
         (.leftKnee, .leftKnee), (.rightKnee, .rightKnee),
         (.leftAnkle, .leftAnkle), (.rightAnkle, .rightAnkle),
     ]
+    private static let faceJoints: [VNHumanBodyPoseObservation.JointName] = [
+        .nose, .leftEye, .rightEye, .leftEar, .rightEar,
+    ]
+    /// Head points count from this confidence: a weakly seen face is still worth hiding.
+    private static let clipHeadConfidence: Float = 0.1
+
+    private static func clipHead(
+        from points: [VNHumanBodyPoseObservation.JointName: VNRecognizedPoint],
+        originalY: (Double) -> Double
+    ) -> RepClipHead {
+        func located(_ name: VNHumanBodyPoseObservation.JointName) -> CGPoint? {
+            guard let point = points[name], point.confidence >= clipHeadConfidence else {
+                return nil
+            }
+
+            let y = originalY(point.location.y)
+
+            guard y >= 0 else {
+                return nil
+            }
+
+            return CGPoint(x: point.location.x, y: y)
+        }
+
+        return RepClipHead(face: faceJoints.compactMap(located), neck: located(.neck))
+    }
+
     private enum TrackingError: Error { case cameraUnavailable }
 }

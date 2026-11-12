@@ -27,4 +27,8 @@ protocol SessionRepository: Sendable {
     func saveKeyReps(_ value: ActivityKeyReps, sessionID: UUID) async throws
     /// Every set's key repetitions for a session; empty when none were recorded.
     func keyReps(sessionID: UUID) async throws -> [ActivityKeyReps]
+    /// Saves the privacy-filtered clips of one set's key repetitions, keyed by repetition number.
+    func saveRepClips(_ clips: [Int: [RepClipFrame]], for keyReps: ActivityKeyReps, sessionID: UUID) async throws
+    /// Saved clip files by set execution identity and repetition number; empty when none exist.
+    func repClipURLs(sessionID: UUID) async -> [UUID: [Int: URL]]
 }

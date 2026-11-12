@@ -10,7 +10,7 @@ Build an iPad-only guided exercise app targeting iPadOS 17 or later. Support lan
 
 Include arm raises, elbow bends, and directional reaching. Tracking diagnostics and the separate head-interaction and extended rehabilitation demonstrations are outside this version. Camera-derived evidence is an exercise aid, not a validated clinical measurement.
 
-Support one patient per installation, without accounts, patient selection, or cloud synchronization. Save routines and completion history locally. Do not save video, microphone recordings, landmarks, or detailed measurement streams. The single exception is bounded key-repetition skeletons and per-repetition aggregates for arm practice (see "Key-repetition replays for clinicians"). Sessions work without internet after initial device voice setup; bundle all exercise and detection resources.
+Support one patient per installation, without accounts, patient selection, or cloud synchronization. Save routines and completion history locally. Do not save video, microphone recordings, landmarks, or detailed measurement streams. The exceptions are bounded key-repetition skeletons and per-repetition aggregates for arm practice (see "Key-repetition replays for clinicians"), and short privacy-filtered clips of the same key repetitions (see "Key-repetition clips"). Sessions work without internet after initial device voice setup; bundle all exercise and detection resources.
 
 Support Indonesian and English using String Catalogs. Follow the app's selected language for text and narration; freeze that selection during an active session. Voice command recognition and command phrases remain English (en-US) in both app languages. Use system speech for instructions and counts. Check voice resources before starting; readable guidance remains available if synthesis fails. Camera, microphone, and speech-recognition authorization and available English on-device command recognition are mandatory before therapy. There is no touch-only bypass. Setup returns to Home; an explicit Start Therapy action validates listening startup before navigation. Session entry independently validates readiness before capture, checkpoints, or progression. Home never continuously listens while idle.
 
@@ -514,7 +514,7 @@ Only rendered cursor position and fold progress interpolate, using interruptible
 
 SessionAudioService remains the sole audio owner. Identified grab, fold and completed-towel transitions select existing bundled button-click, target-reached and set-complete clips respectively, once per transition, without a backlog. Optional cues respect celebration-sound preferences and duck to 40% of their normal volume during foreground speech/counts. Live guidance replacement cancels obsolete narration before playing the new transition cue. English and Indonesian help explain direct grabbing and movement during narration.
 
-FoldTowelActivity owns evidence acceptance and lifecycle; TowelFoldSequence owns four-fold mechanics; TMTherapyFoldPanel is value-driven and independent of feature logic. Task history uses immutable summaries through SessionRepository. No detailed tracking streams or images are stored; arm practice keeps only the bounded key-repetition skeletons described in "Key-repetition replays for clinicians".
+FoldTowelActivity owns evidence acceptance and lifecycle; TowelFoldSequence owns four-fold mechanics; TMTherapyFoldPanel is value-driven and independent of feature logic. Task history uses immutable summaries through SessionRepository. No detailed tracking streams or images are stored; arm practice keeps only the bounded key-repetition skeletons described in "Key-repetition replays for clinicians" and the privacy-filtered clips described in "Key-repetition clips".
 
 Physical M1-iPad acceptance remains pending: verify both selected hands, both cameras, both landscape orientations, image/overlay alignment, visibility through overlapping panels, both languages, large text, Reduce Motion, grip occlusion and relaxed closure, speech/recognition during movement, route/interruption recovery, pause/background/restart, saved outcomes and two-minute capture-age/thermal measurements. Record device, OS, app version, scenario and observed result separately. Simulator builds and synthetic checks cannot establish these results.
 
@@ -950,3 +950,54 @@ Accepted at the product owner's request: the calibration cue drew the same curve
 - **Verification.** Simulator build only. Pending on the M1 iPad: alignment of the fixed arrow for both arms and mirrorings, the passed fade while moving, and whether calibration still reads as different from a repetition.
 
 Verification: Simulator build with IPHONEOS_DEPLOYMENT_TARGET=17.0 passed and `default.metallib` contains `calibrationWind`. A temporary harness over a copy of the resampler confirmed evenly spaced points with both ends kept. The cue was not viewed. Pending on the M1 iPad: whether the direction reads at 1.5–2.5 m on live video and in both mirrorings, whether patients see it as different from the practice arrow, Reduce Motion, and GPU and thermal cost during calibration.
+
+## Key-repetition clips (2026-11-12)
+
+Accepted at the product owner's request: the skeleton replay alone may not show a clinician enough of how the patient moved. Every exercise that records key-repetition skeletons (`TherapyKind.recordsMovement`) also keeps a short, low-resolution video of the same repetitions (first, hardest, last), filtered on the device before anything is held. This partially supersedes ADR-008 (see ADR-009).
+
+- **Filtering.** `RepClipFrameSource` (Shared/Tracking, owned by `BodyTrackingService` as `clips`) receives the original camera frame after body inference, with the nose, eye, ear and neck points (confidence 0.1 or more) of every detected person, bystanders included. On its own utility queue it scales the frame to 320 px wide (even height), runs `VNGeneratePersonSegmentationRequest` (`.fast`) and `VNDetectFaceRectanglesRequest` on the small image, and composites with one low-priority `CIContext`: the room blurred (sigma 10) under the people kept by the mask, and every head region pixelated over a softened copy. A head region is a square around the face points (at least 1.8 times their spread, 0.9 times the face-to-neck distance and 8% of the height), plus each detected face box enlarged by 30% per side. The frame is then encoded as JPEG (quality 0.6). No unfiltered frame is stored.
+- **Fail closed.** When segmentation or face detection fails, when no head is located, or when a detected person's face points are missing and face detection found no face, the frame reuses head regions seen in the last 0.3 s, otherwise the whole frame is blurred (sigma 16).
+- **Bounds.** Frames are taken at most every 0.1 s (with 10 ms slack for timestamp jitter, so every third 30 fps frame), one at a time; an offer while one is processing is dropped, so inference is never delayed and only one camera buffer is held. A ring keeps the last 35 s (longer than `KeyRepRecorder.maximumRepSeconds`). Hand inference never feeds clips.
+- **Which frames.** `KeyRepRecorder` returns a `KeyRepClipRequest` whenever it credits a repetition: the repetition's first and last recorded capture times and the repetition numbers still holding a key role. The guided engine forwards it as `SessionEffect.keepRepClip`; the Balancing view model calls the source directly. The source copies that range out of the ring and releases clips that lost their role, so the kept clips always match the saved skeletons. Each recorder (one per set) has its own `clipGroup`, so a set can be taken for saving after the next set has started; at most two groups are held.
+- **When recording runs.** Guided sessions enable the source only during the activity stage, not paused, not waiting for the camera and before the summary; Balancing enables it only while repetitions are counted. Disabling releases the ring (a pause discards the unfinished repetition anyway) but keeps clips already kept. A session start resets everything.
+- **Setting.** Settings › "Video latihan" (`PracticePreferences.recordsRepClips`, default on) turns clips off; skeletons and metrics are recorded either way. A session reads the setting once when it starts.
+- **Storage.** After a set's skeletons are saved, its clips are taken and written by `RepClipWriter` as silent H.264 MP4 (about 250 kbps, the capture times as presentation times) to `Sessions/<session id>.clips/<execution id>-r<repetition>.mp4`, written to a hidden temporary file and moved into place. A failed clip save is logged and never pauses therapy. Deleting a session deletes its clip folder. History never reads clips.
+- **Report.** When the selected repetition has a clip, the report shows a Video / Kerangka control above the replay, defaulting to Video, and `TMRepClipPlayer` (DesignSystem) plays it mirrored like the live preview; otherwise the skeleton replay is shown as before.
+
+Verification: Simulator build with IPHONEOS_DEPLOYMENT_TARGET=17.0 passed. Temporary harnesses on the development Mac over the production code:
+
+- `KeyRepRecorder`, six synthetic arm-raise reps with rep 3 the lowest: the requests kept {1}, {1, 2}, {1, 3} (releasing 2), then {1, 3, 4}, {1, 3, 5}, {1, 3, 6}; the saved roles were 1 first, 3 hardest, 6 last; a rep discarded at a pause did not leak into the next range; every range equals its saved duration.
+- `RepClipFrameSource`: the 50 ms rate limit; frames without heads blurred whole; the 35 s ring bound; role release; the two-group bound; disabling clears the ring; `RepClipWriter` wrote a 5 s 320×180 MP4 (synthetic frames) with no temporary file left.
+- A frame from the bundled arm-raise demonstration: real body pose found the head (five face points) and it was pixelated. Segmentation did not recognise the rendered mannequin as a person, so its body was blurred with the room (the fail-safe direction). The sharp-person path is therefore unverified.
+
+Pending on the M1 iPad: that segmentation keeps a real patient sharp; head coverage when the head is turned, lowered, in profile, partly out of frame or occluded by a raised arm, and a bystander's face; the `Body inference timing` log and `Session frame rejected as stale` counts with clips on and off (`age` p95 must not rise); thermal behaviour over two-minute runs; clip size per session; report playback in both languages; and that deleting a session removes its clips.
+
+### ADR-009 — Privacy-filtered key-repetition clips
+
+Accepted, 2026-11-12, partially superseding ADR-008. Keep a short, filtered video of each set's key repetitions beside the skeletons, on by default with a caregiver setting. The skeleton alone loses context a clinician uses (trunk lean, hand position, effort), and the clips stay small (about 320 px, 10 fps, three repetitions per set) and are deleted with their session. The cost: on-device blurring is a best-effort filter, not a guarantee. A missed face on a single frame, a recognisable body, clothing or silhouette, or a person segmentation does not detect can still identify someone, which the fail-closed rules reduce but do not remove. The app now stores images of the patient, which must be reflected in consent and the installation's backup policy (section 8).
+
+Amended 2026-11-13: a caregiver may also choose skeleton only, or turn either censor off. With a censor off, the app stores identifiable face or room images by the caregiver's choice; the settings page warns about it.
+
+## Recording options (2026-11-13)
+
+Accepted at the product owner's request. This supersedes the single "Video latihan" setting of "Key-repetition clips"; recording boundaries, retention, storage and the report are unchanged, and every mode records the same repetitions (first, hardest, last) with skeletons and metrics.
+
+- **Settings › Rekaman latihan.** "Rekam": Kerangka saja (skeleton only, no video) or Video (`PracticePreferences.recordsRepClips`). With Video, "Samarkan wajah" (`censorsFace`) and "Samarkan latar" (`censorsBackground`) are independent toggles. Defaults: Video with both on. The footer explains the choice; with either censor off it shows a warning naming what will be visible. Sessions read all three once at start; `RepClipFrameSource.configure(privacy:)` (`RepClipPrivacy`) is set after `reset()`, so one session never mixes modes.
+- **Filtering per option.** Only the Vision work a chosen filter needs is run, and `BodyTrackingService` builds head evidence only when faces are censored (`needsHeads`).
+
+| Face | Background | Vision | Output | Fail-closed |
+| --- | --- | --- | --- | --- |
+| on | on | segmentation + faces | people sharp over a blurred room, heads pixelated | whole frame blurred |
+| on | off | faces (with pose heads) | sharp frame, heads pixelated | whole frame blurred when no head is located (0.3 s head memory) |
+| off | on | segmentation | people sharp over a blurred room | whole frame blurred if segmentation fails |
+| off | off | none | plain 320 px frame | none |
+
+- **Smaller files.** `RepClipWriter` encodes HEVC at 120 kbps average with a keyframe every 30 frames (3 s), falling back to H.264 at 150 kbps when the writer rejects HEVC. Size (320 px) and rate (10 fps) are unchanged.
+
+Verification: Debug and Release Simulator builds with IPHONEOS_DEPLOYMENT_TARGET=17.0 passed. A temporary harness on the development Mac ran the production `RepClipFrameSource` and `RepClipWriter` on 50 frames of the bundled arm-raise demonstration:
+- Face only: the head was pixelated and the body stayed sharp.
+- Background only and both: the mannequin was not segmented as a person, so its body was blurred with the room, as on 2026-11-12.
+- Neither: the frame was unfiltered.
+
+With camera-like grain and a textured room added, HEVC files were 58% of the previous H.264 at 250 kbps (about 98 KB against 170 KB for 4.9 s unfiltered); censored clips were 8–12 KB for 4.9 s because blur removes the noise. The no-head fail-closed path was not re-exercised (face detection found the mannequin's face); the 2026-11-12 harness covers it. Pending on the M1 iPad: the settings page in both languages and with large text, clips from each mode in the report, real HEVC sizes per session, and inference timing in each mode.
+

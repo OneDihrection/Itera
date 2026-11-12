@@ -59,6 +59,8 @@ final class TherapySessionViewModel {
     @ObservationIgnored private var keepAwakeBeforeSession = false
     @ObservationIgnored private var recovered = false
     @ObservationIgnored private var allowUnreliableHistory = false
+    /// Read once at session start, so a settings change never affects a running session.
+    @ObservationIgnored private var recordsClips = false
 
     init(
         tracking: BodyTrackingService, audio: SessionAudioService, repository: any SessionRepository, routine: Routine
@@ -120,6 +122,9 @@ final class TherapySessionViewModel {
         live = true
         keepAwakeBeforeSession = UIApplication.shared.isIdleTimerDisabled
         UIApplication.shared.isIdleTimerDisabled = true
+        recordsClips = PracticePreferences.recordsRepClipsEnabled
+        tracking.clips.reset()
+        tracking.clips.configure(privacy: PracticePreferences.repClipPrivacy)
         tracking.frames.sink { [weak self] frame in
             guard let self, self.live else {
                 return
@@ -391,6 +396,7 @@ final class TherapySessionViewModel {
         if previousKind != snapshot.activity?.kind || previousSide != snapshot.activity?.side {
             updateHandRequirement()
         }
+        updateClipRecording()
         for effect in transition.effects {
             switch effect {
             case .speak(let id, let key):
@@ -413,6 +419,14 @@ final class TherapySessionViewModel {
                 }
             case .audio(let id, let cue): audio.play(id: id, cue: cue)
             case .cancelSpeech: audio.cancelSpeech()
+            case .keepRepClip(let request):
+                tracking.clips.keep(
+                    group: request.group,
+                    repNumber: request.repNumber,
+                    from: request.start,
+                    to: request.end,
+                    retaining: request.retaining
+                )
             case .checkpoint, .finalize, .saveKeyReps: pendingSaves.append(effect)
             }
         }
@@ -446,6 +460,8 @@ final class TherapySessionViewModel {
                         } catch {
                             NSLog("Key repetition save failed: %@", error.localizedDescription)
                         }
+
+                        await saveClips(for: keyReps, sessionID: sessionID)
                     default: break
                     }
                     pendingSaves.removeFirst()
@@ -455,6 +471,41 @@ final class TherapySessionViewModel {
                 if live { command(.pause) }
             }
             saving = false
+        }
+    }
+
+    // MARK: - Key-repetition clips
+
+    /// Clip frames are taken only while the patient can be credited with work, never during
+    /// pauses, camera waits, stage pages or after the summary.
+    private func updateClipRecording() {
+        let recording = recordsClips
+            && live
+            && snapshot.stage == .activity
+            && !snapshot.paused
+            && !snapshot.cameraWaiting
+            && snapshot.summary == nil
+            && snapshot.activity?.kind.recordsMovement == true
+
+        tracking.clips.setEnabled(recording)
+    }
+
+    /// Clips, like replays, help review but are not history: a failure is only logged.
+    private func saveClips(for keyReps: ActivityKeyReps, sessionID: UUID) async {
+        guard let group = keyReps.clipGroup else {
+            return
+        }
+
+        let clips = await tracking.clips.take(group: group)
+
+        guard !clips.isEmpty else {
+            return
+        }
+
+        do {
+            try await repository.saveRepClips(clips, for: keyReps, sessionID: sessionID)
+        } catch {
+            NSLog("Key repetition clip save failed: %@", String(describing: error))
         }
     }
 
@@ -468,6 +519,7 @@ final class TherapySessionViewModel {
             return
         }
         live = false
+        tracking.clips.setEnabled(false)
         tracking.stop()
         clearLivePose()
         tracking.requireHand(false)
@@ -510,6 +562,8 @@ private actor PresentationFixtureRepository: SessionRepository {
     func finalize(_ value: SessionSummary) {}
     func saveKeyReps(_ value: ActivityKeyReps, sessionID: UUID) {}
     func keyReps(sessionID: UUID) -> [ActivityKeyReps] { [] }
+    func saveRepClips(_ clips: [Int: [RepClipFrame]], for keyReps: ActivityKeyReps, sessionID: UUID) {}
+    func repClipURLs(sessionID: UUID) -> [UUID: [Int: URL]] { [:] }
 }
 #endif
 

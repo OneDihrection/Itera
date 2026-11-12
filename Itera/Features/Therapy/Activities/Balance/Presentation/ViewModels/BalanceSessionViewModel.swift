@@ -100,6 +100,9 @@ final class BalanceSessionViewModel {
     @ObservationIgnored private var saving = false
     @ObservationIgnored private var recovered = false
 
+    /// Read once at session start, so a settings change never affects a running session.
+    @ObservationIgnored private var recordsClips = false
+
     private enum PendingSave {
         case checkpoint(SessionCheckpoint)
         case finalize(SessionSummary)
@@ -160,6 +163,9 @@ final class BalanceSessionViewModel {
         started = true
         wasIdleTimerDisabled = UIApplication.shared.isIdleTimerDisabled
         UIApplication.shared.isIdleTimerDisabled = true
+        recordsClips = PracticePreferences.recordsRepClipsEnabled
+        tracking.clips.reset()
+        tracking.clips.configure(privacy: PracticePreferences.repClipPrivacy)
 
         tracking.frames
             .receive(on: DispatchQueue.main)
@@ -479,6 +485,7 @@ final class BalanceSessionViewModel {
         restTask?.cancel()
         restTask = nil
         clock.pause(at: Self.now)
+        tracking.clips.setEnabled(false)
         tracking.stop()
         clearLivePose()
         audio.stop()
@@ -818,13 +825,26 @@ final class BalanceSessionViewModel {
             && !paused
         let tracked = snapshot.overlay != nil
 
-        recorder.observe(
+        let clip = recorder.observe(
             frame,
             counted: counted,
             count: snapshot.metrics.completedTouches,
             angle: tracked ? recordedAngle : nil,
             side: exercise.isSitToStand ? nil : snapshot.activeArm.therapySide
         )
+
+        // Kept before recording stops, so the set's last repetition still finds its frames.
+        if let clip {
+            tracking.clips.keep(
+                group: clip.group,
+                repNumber: clip.repNumber,
+                from: clip.start,
+                to: clip.end,
+                retaining: clip.retaining
+            )
+        }
+
+        tracking.clips.setEnabled(recordsClips && counted)
     }
 
     /// The engine's own estimate: forearm rotation or shoulder lift, or knee extension for
@@ -939,6 +959,26 @@ final class BalanceSessionViewModel {
             try await repository.finalize(summary)
         case .keyReps(let sessionID, let keyReps):
             try await repository.saveKeyReps(keyReps, sessionID: sessionID)
+            await saveClips(for: keyReps, sessionID: sessionID)
+        }
+    }
+
+    /// Clips, like replays, help review but are not history: a failure is only logged.
+    private func saveClips(for keyReps: ActivityKeyReps, sessionID: UUID) async {
+        guard let group = keyReps.clipGroup else {
+            return
+        }
+
+        let clips = await tracking.clips.take(group: group)
+
+        guard !clips.isEmpty else {
+            return
+        }
+
+        do {
+            try await repository.saveRepClips(clips, for: keyReps, sessionID: sessionID)
+        } catch {
+            NSLog("Key repetition clip save failed: %@", String(describing: error))
         }
     }
 }

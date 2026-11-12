@@ -102,6 +102,8 @@ private struct TMSetReportSection: View {
     let result: SessionActivityResult
     let model: SessionReportViewModel
     @State private var role: KeyRepRole?
+    /// Clips are shown first when a repetition has one; the skeleton stays one tap away.
+    @State private var showsSkeleton = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
@@ -203,16 +205,7 @@ private struct TMSetReportSection: View {
                     .pickerStyle(.segmented)
                 }
 
-                TMSkeletonReplay(
-                    poses: rep.frames.map(\.pose),
-                    bones: BodyJoint.replayBones,
-                    aspectRatio: rep.aspectRatio,
-                    emphasizedJoints: BodyJoint.movingChain(for: result.activity, side: rep.metrics.side),
-                    height: 320,
-                    accessibilityLabel: Text("history.report.replayLabel \(rep.metrics.repNumber) \(Self.seconds(rep.metrics.duration))")
-                )
-                // A new identity restarts playback when another repetition is chosen.
-                .id(rep.metrics.repNumber)
+                replayMedia(for: rep)
 
                 Text(caption(for: rep))
                     .typography(.body)
@@ -228,6 +221,36 @@ private struct TMSetReportSection: View {
             Text("history.report.noReplays")
                 .typography(.body)
                 .foregroundStyle(TherapyPalette.muted)
+        }
+    }
+
+    @ViewBuilder
+    private func replayMedia(for rep: KeyRep) -> some View {
+        let clip = model.clipURL(for: rep, in: result)
+        let label = Text("history.report.replayLabel \(rep.metrics.repNumber) \(Self.seconds(rep.metrics.duration))")
+
+        if clip != nil {
+            Picker("history.report.viewMode", selection: $showsSkeleton) {
+                Text("history.report.viewVideo").tag(false)
+                Text("history.report.viewSkeleton").tag(true)
+            }
+            .pickerStyle(.segmented)
+        }
+
+        // A new identity restarts playback when another repetition is chosen.
+        if let clip, !showsSkeleton {
+            TMRepClipPlayer(url: clip, accessibilityLabel: label)
+                .id(clip)
+        } else {
+            TMSkeletonReplay(
+                poses: rep.frames.map(\.pose),
+                bones: BodyJoint.replayBones,
+                aspectRatio: rep.aspectRatio,
+                emphasizedJoints: BodyJoint.movingChain(for: result.activity, side: rep.metrics.side),
+                height: 320,
+                accessibilityLabel: label
+            )
+            .id(rep.metrics.repNumber)
         }
     }
 

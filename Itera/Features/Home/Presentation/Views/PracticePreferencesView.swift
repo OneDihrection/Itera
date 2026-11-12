@@ -16,6 +16,9 @@ struct TMPracticePreferencesView: View {
 
     @AppStorage(PracticePreferences.celebrationSounds) private var celebrationSounds = true
     @AppStorage(PracticePreferences.patientName) private var patientName = ""
+    @AppStorage(PracticePreferences.recordsRepClips) private var recordsRepClips = true
+    @AppStorage(PracticePreferences.censorsFace) private var censorsFace = true
+    @AppStorage(PracticePreferences.censorsBackground) private var censorsBackground = true
     @AppStorage(AppLanguage.storageKey) private var language = AppLanguage.selected.rawValue
     @Environment(\.scenePhase) private var scenePhase
     @State private var voice: NarrationVoice.Summary?
@@ -68,6 +71,7 @@ struct TMPracticePreferencesView: View {
             } footer: {
                 Text("settings.patientNameHelp").typography(.body)
             }
+            recordingSection
             Section {
                 Toggle("cognitive.calm", isOn: $calmMode)
                     .frame(minHeight: 64)
@@ -115,6 +119,55 @@ struct TMPracticePreferencesView: View {
             if phase == .active {
                 refreshVoice()
             }
+        }
+    }
+
+    // MARK: - Recording
+
+    /// Skeleton replays are always kept; video adds a clip of the same key repetitions, with
+    /// face and background censoring chosen separately.
+    private var recordingSection: some View {
+        Section {
+            Picker("settings.recordingMode", selection: $recordsRepClips) {
+                Text("settings.recordingSkeleton").tag(false)
+                Text("settings.recordingVideo").tag(true)
+            }
+            .frame(minHeight: 64)
+
+            if recordsRepClips {
+                Toggle("settings.censorFace", isOn: $censorsFace)
+                    .frame(minHeight: 64)
+                Toggle("settings.censorBackground", isOn: $censorsBackground)
+                    .frame(minHeight: 64)
+            }
+        } header: {
+            Text("settings.recordingTitle").typography(.headline)
+        } footer: {
+            recordingFooter
+        }
+    }
+
+    @ViewBuilder
+    private var recordingFooter: some View {
+        if !recordsRepClips {
+            Text("settings.recordingSkeletonHelp").typography(.body)
+        } else if censorsFace, censorsBackground {
+            Text("settings.recordingVideoHelp").typography(.body)
+        } else {
+            Label(uncensoredWarning, systemImage: "exclamationmark.triangle")
+                .typography(.body)
+                .foregroundStyle(TherapyPalette.warning)
+        }
+    }
+
+    private var uncensoredWarning: LocalizedStringKey {
+        switch (censorsFace, censorsBackground) {
+        case (false, false):
+            return "settings.recordingWarningBoth"
+        case (false, true):
+            return "settings.recordingWarningFace"
+        default:
+            return "settings.recordingWarningBackground"
         }
     }
 

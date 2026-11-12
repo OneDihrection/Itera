@@ -4001,6 +4001,57 @@
         }
       }
     },
+    "history.report.viewMode" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Replay view"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tampilan rekaman"
+          }
+        }
+      }
+    },
+    "history.report.viewSkeleton" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Skeleton"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kerangka"
+          }
+        }
+      }
+    },
+    "history.report.viewVideo" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Video"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Video"
+          }
+        }
+      }
+    },
     "history.role.first" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -13465,6 +13516,40 @@
         }
       }
     },
+    "settings.censorBackground" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Censor background"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Samarkan latar"
+          }
+        }
+      }
+    },
+    "settings.censorFace" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Censor face"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Samarkan wajah"
+          }
+        }
+      }
+    },
     "settings.exerciseHelp" : {
       "localizations" : {
         "en" : {
@@ -13541,6 +13626,159 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Nama pasien"
+          }
+        }
+      }
+    },
+    "settings.recordingMode" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Record"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rekam"
+          }
+        }
+      }
+    },
+    "settings.recordingSkeleton" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Skeleton only"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kerangka saja"
+          }
+        }
+      }
+    },
+    "settings.recordingSkeletonHelp" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The report replays the first, hardest and last repetition of each set as a moving skeleton. No video is saved."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Laporan memutar repetisi pertama, tersulit, dan terakhir setiap set sebagai kerangka bergerak. Tidak ada video yang disimpan."
+          }
+        }
+      }
+    },
+    "settings.recordingTitle" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Exercise recording"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rekaman latihan"
+          }
+        }
+      }
+    },
+    "settings.recordingVideo" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Video"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Video"
+          }
+        }
+      }
+    },
+    "settings.recordingVideoHelp" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Also keeps a short, low-resolution video of the first, hardest and last repetition of each set. Faces are pixelated and the room is blurred on this iPad before anything is saved."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Juga menyimpan video singkat beresolusi rendah dari repetisi pertama, tersulit, dan terakhir setiap set. Wajah disamarkan dan ruangan dikaburkan di iPad ini sebelum disimpan."
+          }
+        }
+      }
+    },
+    "settings.recordingWarningBackground" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The room will be visible in saved videos. Faces are still pixelated."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ruangan akan terlihat di video yang disimpan. Wajah tetap disamarkan."
+          }
+        }
+      }
+    },
+    "settings.recordingWarningBoth" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Faces and the room will be visible in saved videos, without any censoring. Turn this on only with the patient's consent."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wajah dan ruangan akan terlihat di video yang disimpan tanpa disamarkan. Aktifkan hanya dengan persetujuan pasien."
+          }
+        }
+      }
+    },
+    "settings.recordingWarningFace" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Faces will be visible in saved videos. Turn this on only with the patient's consent."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wajah akan terlihat di video yang disimpan. Aktifkan hanya dengan persetujuan pasien."
           }
         }
       }

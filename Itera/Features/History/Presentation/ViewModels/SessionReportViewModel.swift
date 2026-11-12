@@ -30,6 +30,8 @@ final class SessionReportViewModel {
     /// The replay file exists but could not be read; the metrics are still shown.
     private(set) var replaysUnavailable = false
     private var keyReps: [ActivityKeyReps] = []
+    /// Privacy-filtered clips by set execution and repetition number.
+    private var clipURLs: [UUID: [Int: URL]] = [:]
     @ObservationIgnored private let repository: any SessionRepository
 
     init(sessionID: UUID, repository: any SessionRepository) {
@@ -64,6 +66,8 @@ final class SessionReportViewModel {
             keyReps = []
             replaysUnavailable = true
         }
+
+        clipURLs = await repository.repClipURLs(sessionID: sessionID)
     }
 
     // MARK: - Set summary
@@ -89,6 +93,11 @@ final class SessionReportViewModel {
 
     func highestPeak(for result: SessionActivityResult) -> Double? {
         result.repMetrics?.compactMap(\.peakAngle).max()
+    }
+
+    /// The saved clip of `rep`, when one was recorded.
+    func clipURL(for rep: KeyRep, in result: SessionActivityResult) -> URL? {
+        clipURLs[result.executionID]?[rep.metrics.repNumber]
     }
 
     func isTrackingLow(_ rep: KeyRep) -> Bool {

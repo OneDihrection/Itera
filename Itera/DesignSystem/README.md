@@ -127,6 +127,8 @@ Compatible additions: `TMTherapyCompletionMark(tint:)` (the screens pass `brand`
 
 `TMSkeletonReplay` (Components/SkeletonReplay.swift) replays supplied poses as a stick figure on a `progressPanel`, with a 52-point terracotta play/pause circle and a scrubber. Poses are normalized points (origin bottom-left, unmirrored), bones are index pairs, and emphasized joints draw the moving limb in `emphasisColor` (default `brand`) over a white underlay, with white-ringed joints; the rest of the body is `planTrack`. It frames the union of all poses, loops while playing, mirrors by default to match the live preview, and starts paused at the midpoint under Reduce Motion. It knows nothing about exercises.
 
+`TMRepClipPlayer` (Components/RepClipPlayer.swift) plays a supplied short silent clip with the same 52-point play/pause circle and scrubber as `TMSkeletonReplay`, on the same `progressPanel` with 24-point corners. It fits the whole frame (`resizeAspect`), loops while playing, mirrors by default to match the live preview, and starts paused at the midpoint under Reduce Motion. It takes a file URL and knows nothing about how the clip was made.
+
 `TMRepValueChart` (Components/RepValueChart.swift) is a single-series Swift Charts bar strip, one bar per repetition. Emphasized bars use `brand` and carry a text marker above, so emphasis is never color alone; the rest use `progressSoftBar`, matching the weekly chart. The caller supplies values, markers and the unit.
 
 ## Debug-only UI (2026-11-12)

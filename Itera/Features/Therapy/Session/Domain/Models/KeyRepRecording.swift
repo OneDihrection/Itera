@@ -62,4 +62,19 @@ struct ActivityKeyReps: Equatable {
     let activity: SessionActivity
     let setNumber: Int
     let reps: [KeyRep]
+    /// The recorder's clip group while the set is being saved; nil once read back from storage.
+    var clipGroup: UUID? = nil
+}
+
+/// Asks the clip source to keep the video of a repetition that was just completed.
+///
+/// Times are the monotonic capture timestamps of the repetition's first and last recorded
+/// frames. `retaining` names every repetition of the set that still holds a key role (first,
+/// hardest or last), so clips that lost their role can be released at once.
+struct KeyRepClipRequest: Equatable {
+    let group: UUID
+    let repNumber: Int
+    let start: Double
+    let end: Double
+    let retaining: Set<Int>
 }

@@ -17,6 +17,7 @@ actor LocalSessionRepository: SessionRepository {
     private let directory: URL
     private var activeURL: URL { directory.appendingPathComponent("active.json") }
     private static let keyRepsSuffix = ".reps.json"
+    private static let clipsSuffix = ".clips"
     /// Summaries the last `history()` call could not read.
     private var unreadableCount = 0
 
@@ -96,6 +97,11 @@ actor LocalSessionRepository: SessionRepository {
         if FileManager.default.fileExists(atPath: keyRepsURL.path) {
             try FileManager.default.removeItem(at: keyRepsURL)
         }
+
+        let clipsURL = clipsDirectory(for: id)
+        if FileManager.default.fileExists(atPath: clipsURL.path) {
+            try FileManager.default.removeItem(at: clipsURL)
+        }
     }
 
     func checkpoint(_ value: SessionCheckpoint) throws {
@@ -142,6 +148,53 @@ actor LocalSessionRepository: SessionRepository {
         }
 
         return record
+    }
+
+    // MARK: - Key-repetition clips
+
+    /// Clips live in a per-session folder, one file per repetition, named
+    /// `<execution id>-r<repetition>.mp4`. Each is written whole and moved into place.
+    func saveRepClips(_ clips: [Int: [RepClipFrame]], for keyReps: ActivityKeyReps, sessionID: UUID) async throws {
+        let folder = clipsDirectory(for: sessionID)
+        try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+
+        for rep in keyReps.reps {
+            guard let frames = clips[rep.metrics.repNumber], !frames.isEmpty else {
+                continue
+            }
+
+            let url = folder.appendingPathComponent(
+                "\(keyReps.executionID.uuidString)-r\(rep.metrics.repNumber).mp4"
+            )
+            try await RepClipWriter.write(frames, to: url)
+        }
+    }
+
+    func repClipURLs(sessionID: UUID) -> [UUID: [Int: URL]] {
+        let files = (try? FileManager.default.contentsOfDirectory(
+            at: clipsDirectory(for: sessionID),
+            includingPropertiesForKeys: nil
+        )) ?? []
+        var result: [UUID: [Int: URL]] = [:]
+
+        for url in files where url.pathExtension == "mp4" {
+            let name = url.deletingPathExtension().lastPathComponent
+
+            guard let separator = name.range(of: "-r", options: .backwards),
+                  let executionID = UUID(uuidString: String(name[..<separator.lowerBound])),
+                  let repNumber = Int(name[separator.upperBound...])
+            else {
+                continue
+            }
+
+            result[executionID, default: [:]][repNumber] = url
+        }
+
+        return result
+    }
+
+    private func clipsDirectory(for id: UUID) -> URL {
+        directory.appendingPathComponent(id.uuidString + Self.clipsSuffix, isDirectory: true)
     }
 
     private func keyRepsURL(for id: UUID) -> URL {
