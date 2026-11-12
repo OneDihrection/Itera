@@ -204,6 +204,9 @@ struct BalanceOverlay: Equatable {
     var showsTorso = true
     /// Where the wrist should head while the comfortable end is calibrated; nil hides the cue.
     var calibrationTip: TherapyPoint? = nil
+    /// Where the calibration cue starts: the wrist's resting position, fixed to the body so the
+    /// cue stays put while the wrist moves through it.
+    var calibrationTail: TherapyPoint? = nil
 }
 
 struct BalanceSnapshot: Equatable {

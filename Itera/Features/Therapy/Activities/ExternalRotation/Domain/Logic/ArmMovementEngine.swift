@@ -938,6 +938,7 @@ struct ArmMovementEngine: BalanceMovementEngine {
         var isReturn = false
         var calibrationHold = false
         var calibrationTip: TherapyPoint?
+        var calibrationTail: TherapyPoint?
         var radius = bubbleRadius(aspect: frame.aspect)
 
         if snapshot.phase == .calibrating, snapshot.calibrationCountdown != nil {
@@ -964,7 +965,9 @@ struct ArmMovementEngine: BalanceMovementEngine {
                 // The arrow stays until half a second of steady holding, so a hold that keeps
                 // restarting while the patient moves never makes it blink.
                 if snapshot.calibrationProgress < rangeCueHideProgress {
-                    calibrationTip = rangeCalibrationTip(geometry, neutral: neutral)
+                    let home = homeCenter(geometry, neutral: neutral)
+                    calibrationTail = home
+                    calibrationTip = rangeCalibrationTip(from: home, geometry, neutral: neutral)
                 }
             } else if snapshot.phase != .complete {
                 target = targetCenter(geometry, neutral: neutral)
@@ -995,20 +998,27 @@ struct ArmMovementEngine: BalanceMovementEngine {
             armChain: [geometry.shoulder, geometry.elbow, geometry.wrist],
             showsMidline: false,
             isCalibrationHold: calibrationHold,
-            calibrationTip: calibrationTip
+            calibrationTip: calibrationTip,
+            calibrationTail: calibrationTail
         )
         lastOverlayTimestamp = frame.timestamp
     }
 
-    /// Where the wrist should head while the comfortable end is shown: sideways along the shoulder
-    /// line for rotation (out or in), up along the spine for flexion. The forearm turns edge-on to
-    /// the camera and a forward lift is foreshortened, so neither is drawn as a turn around a joint.
-    private func rangeCalibrationTip(_ geometry: Geometry, neutral: Neutral) -> TherapyPoint {
+    /// Where the calibration cue ends, measured from the wrist's resting position `home`: sideways
+    /// along the shoulder line for rotation (out or in), up along the spine for flexion. The cue is
+    /// fixed to the body, so it reaches past where a comfortable end usually lies. The forearm
+    /// turns edge-on to the camera and a forward lift is foreshortened, so neither is drawn as a
+    /// turn around a joint.
+    private func rangeCalibrationTip(
+        from home: TherapyPoint,
+        _ geometry: Geometry,
+        neutral: Neutral
+    ) -> TherapyPoint {
         if isFlexion {
-            return geometry.wrist + geometry.spineUnit.scaled(neutral.armLength * 0.5)
+            return home + geometry.spineUnit.scaled(neutral.armLength * 0.6)
         }
 
-        return geometry.wrist + geometry.outward.scaled(sign * neutral.upperArm * 0.9)
+        return home + geometry.outward.scaled(sign * neutral.upperArm * 1.1)
     }
 
     private func holdSecondsRemaining(at time: Double, visible: Bool, isReturn: Bool) -> Int? {

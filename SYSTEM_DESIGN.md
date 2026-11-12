@@ -898,3 +898,55 @@ Verification: Simulator build with IPHONEOS_DEPLOYMENT_TARGET=17.0 passed. A tem
 At the product owner's request, the orange waves of the long breathing rest between daily-plan exercises move smoothly. The rest loop samples the breath every 80 ms, and the earlier `Canvas` redrew only when that sample changed, so the waves rose and fell in about 12 visible steps per second and stood still between them. `TMTherapyLongRestWaves` (DesignSystem) now draws them with a SwiftUI Metal shader (`LongRestWaves.metal`, `colorEffect`, iOS 17) inside `TimelineView(.animation)` capped at 60 fps. The breath expansion (0 at rest, 1 at a full breath, from the existing intensity) is an animatable shader argument interpolated linearly over 0.12 s toward each sample; edges are feathered over about 1.5 pt; each crest sways by about 1% of the height on a clock that stops while paused, so resuming never jumps. To make expanding and shrinking clearly visible, inhale lifts the three bands by 20%, 16% and 12% of the height (back to front, so they fan apart, replacing the shared 10.5% rise), swells each crest from 5% to 10% of the height at the centre (was a fixed 7%) and brightens the bands up to 10% toward white; exhale reverses it. Colours and band positions at rest are unchanged. Reduce Motion draws static waves at rest height. Breath timing, narration and the 80 ms loop in `DailyPlanNextView` are unchanged.
 
 Verification: Simulator build with IPHONEOS_DEPLOYMENT_TARGET=17.0 passed and `default.metallib` is in the app; the waves were not viewed. Pending on the M1 iPad: perceived smoothness and strength of the breath motion through inhale, hold, exhale and settle, pause and resume, Reduce Motion, GPU and thermal cost over the full rest, and Mac Catalyst rendering.
+
+## Calibration wind cue (2026-11-12)
+
+Accepted at the product owner's request: the calibration cue drew the same curved arrow as practice, so calibrating looked like one more repetition. For every exercise that passes `SessionMovementCue` to `TMSessionTargetOverlay` (arm raise, elbow bend, external and internal rotation, shoulder flexion), this supersedes "draws the same arrow" in the "Calibration cue" bullet of "Curved guidance arrow". The practice arrow, directional reach's assessment ghost and arrow, and fold towel are unchanged.
+
+- **Look.** The `calibrationWind` Metal shader (`DesignSystem/Controls/CalibrationWind.metal`) fills a 72 pt band along the same path the arrow would take (the same pivot turn or bow, the gap outside the hold ring and the 90 pt minimum length). Five lanes of soft comet streaks with white cores and a blue glow flow from the joint at about 90–130 pt/s, at staggered spacings with a slight wobble. The streaks fade in just past the hold ring, then spread apart and dissolve over the last 30%, so there is no head and no end point that could be read as a target.
+- **Direction and visibility.** Each comet is brightest at its front, so a single frame still shows the way. Under Reduce Motion the streaks stand still. A faint dark haze (0.35 at the centre line, fading to the band edges) takes the place of the stroked underlay of "Calm guidance visibility" for this cue. Cores are about 3–7 pt wide, thinner than the 6 pt arrow minimum, and get their contrast from the glow and the haze.
+- **Unchanged.** Cue tips, turn directions, when the cue shows and hides, the 0.25 s fade, and all domain and view-model code. The shader runs only on the band's pixels, inside the overlay's existing 30 fps timeline.
+
+**Softer, pointier, longer (2026-11-12, later).** At the product owner's request, this supersedes the look above:
+- **Streaks.** Each streak is now a needle about 110–150 pt long (spacing 150–200 pt, speed about 110–150 pt/s). It starts as a hairline tail, is widest (a 5 pt core) 80% of the way along, and narrows to a sharp point at its head.
+- **Softer.** Cores peak at 0.8 opacity. The glow is 0.35, reaching about 10 pt. The haze is 0.25. The wobble is 2 pt.
+- **Shape.** The lanes converge to 35% of their spread over the far end, so the whole wind tapers to a point instead of scattering.
+- **Length.** It dissolves over the last 20%. The cue is lengthened to at least 160 pt beyond the hold ring (was 90 pt), still capped at a 150° turn around a pivot.
+
+**Wavy wisps (2026-11-12, later).** At the product owner's request, the wind should look softer and wavier, like the guiding wind in Ghost of Tsushima. This supersedes the needle look and the opacities in the note above.
+- **Ripple.** Each wisp ripples sideways as it flies. The ripple is a long S-curve (about 120 pt, 5–7 pt by lane) plus a finer 55 pt ripple, and its phase travels with the wisp. It is 40% strength near the joint, full strength past the middle, and calms again near the tip, so the converging point stays clean.
+- **Softness.** Cores are a soft line about 3 pt wide at 0.6 opacity. The glow is pale blue at 0.18 and reaches about 12 pt. Each wisp's tail fades out slowly behind it and its front ends in a soft point; it is brightest about 70% of the way along, toward the front. The haze is 0.15 with a quadratic falloff, and the band is 88 pt wide.
+- **Uneven gusts.** Each gust gets its own strength (0.45–1) from a stateless hash.
+- **Visibility.** At the product owner's request, the cue is now further below the "Calm guidance visibility" minimums.
+
+**Wind fixed to the body (2026-11-12, later).** At the product owner's request, the wind is no longer pinned to the tracked joint. Pinned, it followed the hand like the practice arrow, so calibration still felt like chasing a pointer. This supersedes "draws the same arrow from the tracked joint" and the 60° per-frame tip in "Curved guidance arrow".
+- **Arm raise and elbow bend.** The wind starts at the saved start position (`TargetGuide.start`). It turns around the live pivot (shoulder or elbow) by up to 120° (`MovementActivity.calibrationSweep`), in the direction already latched per capture. The elbow-bend room limit still stops it before it crosses the upper arm. The sign is now judged from the saved start; the 60° `calibrationTurn` remains only for that judgement.
+- **Rotations and flexion.** The wind starts at the wrist's resting position (`BalanceOverlay.calibrationTail`, from `homeCenter`). For rotation it runs 1.1 upper-arm lengths out or in along the shoulder line; for flexion it runs 0.6 arm lengths up the spine.
+- **Following the body.** The pivot and the body frame are live, so the wind follows the body if the patient shifts, but not the moving limb.
+- **Passed stretch.** The overlay projects the joint onto the wind's line (`SessionMovementCue.joint`), and the shader fades out the stretch behind it, so wind only blows ahead of the limb.
+- **Drawing.** The wind is drawn under the hold ring and hold count and starts just outside the saved start bubble.
+- **Unchanged.** When the cue shows and hides, and acceptance.
+- **Verification.** Simulator build only. No harness exercised the new tail and tip. Pending on the M1 iPad: alignment with the arm for both sides and mirrorings, behaviour when the patient leans, and whether patients follow a fixed path.
+
+**Prominent gusts (2026-11-12, later).** At the product owner's request, the wind is more prominent and its motion follows the principles of animation. This supersedes the constant-speed wisp train and the opacities in "Wavy wisps"; the fixed path and the passed-stretch fade are unchanged.
+- **Timing and staging.** Wind blows in bursts. Every 2.4 s, five lanes launch gusts that cross the whole path in 1.7 s whatever its length, followed by a short calm.
+- **Slow in, slow out.** A gust's head follows an ease-in-out cubic.
+- **Overlapping action.** The centre lead gust launches first at full strength, and the outer lanes launch 0.05–0.15 s later at 0.75.
+- **Anticipation.** For 0.35 s before a burst a soft glow gathers at the start, then releases over 0.25 s.
+- **Squash and stretch.** A gust is 0.12 of the path long at launch and arrival and up to 0.35 mid-flight, and slightly thinner when stretched.
+- **Exaggeration and follow-through.** The launch ripple is 1.3×. On arrival the ripple grows to 1.5× and curls, then the gust fades over the end of its life.
+- **Secondary action.** Eight 2.5 pt dust motes drift along the band, brighter while a gust passes.
+- **Prominence.** Lines are about 5 pt at up to 0.95 opacity with a 0.45 `guidanceBlue` glow reaching about 14 pt. The haze is 0.3 and the band is 100 pt wide.
+- **Entrance.** On appearing, the wind unrolls from the start over 0.6 s with ease-out. Hiding stays a 0.25 s fade.
+- **Frame rate.** The overlay's timeline runs at 60 fps while a cue is shown (30 fps otherwise).
+- **Reduce Motion.** A still frame with the lead gust mid-path.
+- **Verification.** Simulator build passed. A temporary harness over copies of the timing arithmetic confirmed the head moves monotonically from 0 to 1, the gust length stays within 0.12–0.35, at most one gust per lane is alive at a time (the shader checks two), and the 960 s clock wrap is a whole number of periods. Not viewed. Pending on the M1 iPad: prominence and feel on live video at 1.5–2.5 m, and GPU and thermal cost at 60 fps.
+
+**Calibration arrow restored (2026-11-12, later).** At the product owner's request, the calibration cue is the curved arrow again. This supersedes the wind look ("Calibration wind cue" bullets, "Softer, pointier, longer", "Wavy wisps" and "Prominent gusts"). The `calibrationWind` shader and its drawing code are removed.
+- **Positioning kept.** The positioning from "Wind fixed to the body" stays, now for the arrow. It runs from the saved start (or the wrist's resting position) to the sweep tip, turning around the live pivot, and does not follow the hand.
+- **Passed stretch.** The shaft behind the tracked joint (`SessionMovementCue.joint`, measured by arc length) is drawn at 0.2 strength. The travelling highlight runs only ahead of the joint, and the chevron stays full strength.
+- **Drawing.** The arrow is drawn under the hold ring and hold count, starts just outside the saved start bubble and is at least 160 pt long. The overlay is back to 30 fps.
+- **Shared look.** The arrow's look matches the practice arrow, and that arrow is unchanged.
+- **Verification.** Simulator build only. Pending on the M1 iPad: alignment of the fixed arrow for both arms and mirrorings, the passed fade while moving, and whether calibration still reads as different from a repetition.
+
+Verification: Simulator build with IPHONEOS_DEPLOYMENT_TARGET=17.0 passed and `default.metallib` contains `calibrationWind`. A temporary harness over a copy of the resampler confirmed evenly spaced points with both ends kept. The cue was not viewed. Pending on the M1 iPad: whether the direction reads at 1.5–2.5 m on live video and in both mirrorings, whether patients see it as different from the practice arrow, Reduce Motion, and GPU and thermal cost during calibration.

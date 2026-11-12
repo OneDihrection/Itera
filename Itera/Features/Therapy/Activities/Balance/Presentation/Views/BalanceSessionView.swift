@@ -265,14 +265,19 @@ struct TMBalanceSessionView: View {
             }
         }
 
-        // While the comfortable end is shown, a curved arrow points the way from the wrist.
+        // While the comfortable end is shown, wind flows from the wrist's resting position; the
+        // wrist moves through it.
         let movementCue: SessionMovementCue? = {
             guard let wrist = overlay.wrist,
                   let tip = overlay.calibrationTip else {
                 return nil
             }
 
-            return SessionMovementCue(tail: normalized(wrist), tip: normalized(tip))
+            return SessionMovementCue(
+                tail: normalized(overlay.calibrationTail ?? wrist),
+                tip: normalized(tip),
+                joint: normalized(wrist)
+            )
         }()
 
         guard let target = overlay.target else {

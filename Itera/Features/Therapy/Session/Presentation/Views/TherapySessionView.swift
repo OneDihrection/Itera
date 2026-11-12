@@ -931,11 +931,14 @@ struct TMTherapySessionView: View {
             dwellProgress: guide.jointHold ? 0 : guide.progress,
             pivot: guide.pivot.map(normalized)
         )
+        // The cue starts at the saved start, fixed to the body; the joint only marks how far along
+        // it the limb has come.
         let movementCue = guide.calibrationTip.map { tip in
             SessionMovementCue(
-                tail: normalized(guide.tracked),
+                tail: normalized(guide.start),
                 tip: normalized(tip),
-                pivot: guide.pivot.map(normalized)
+                pivot: guide.pivot.map(normalized),
+                joint: normalized(guide.tracked)
             )
         }
         // A farthest marker alone still needs a direction guide to carry it; its arrow stays hidden

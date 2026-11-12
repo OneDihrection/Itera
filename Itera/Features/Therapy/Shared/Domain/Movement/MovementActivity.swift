@@ -368,19 +368,22 @@ struct MovementActivity: TherapyActivity {
                 pivot: anchor
             )
 
-            // Once the start is saved, a curved arrow shows which way to move. Its turn direction
-            // is decided once per capture, so joint jitter cannot swing it from side to side.
+            // Once the start is saved, the calibration cue shows which way to move. It is a fixed
+            // path from the saved start around the pivot, so the limb moves through it instead of
+            // the cue following the limb. Its turn direction is decided once per capture, so joint
+            // jitter cannot swing it from side to side.
             var turnTip: TherapyPoint?
 
-            if start != nil {
+            if let start {
+                let startPoint = anchor + start.scaled(scale)
                 let sign = calibrationTurnSign ?? calibrationTurnSign(
                     anchor: anchor,
                     reference: reference,
-                    tracked: tracked,
+                    tracked: startPoint,
                     otherShoulder: point(left ? .rightShoulder : .leftShoulder, in: frame)
                 )
                 calibrationTurnSign = sign
-                turnTip = calibrationTip(anchor: anchor, reference: reference, tracked: tracked, sign: sign)
+                turnTip = calibrationTip(anchor: anchor, reference: reference, from: startPoint, sign: sign)
             }
 
             if let start, (offset - start).length <= limb * 0.4 {
@@ -505,8 +508,11 @@ struct MovementActivity: TherapyActivity {
 
     // MARK: - Calibration cue
 
-    /// Largest turn, in radians, the calibration arrow asks of the limb.
+    /// Turn, in radians, used to tell which way the limb bends when choosing the cue's direction.
     private static let calibrationTurn = Double.pi / 3
+    /// How far the calibration cue's fixed path sweeps from the saved start, in radians: past
+    /// where a comfortable end usually lies, so the limb stays inside it.
+    private static let calibrationSweep = 2 * Double.pi / 3
     /// Within this angle of the reference line the turn's sign is unreliable, in radians.
     private static let ambiguousTurn = 15 * Double.pi / 180
     /// Gap kept from the reference line so an elbow-bend arrow never crosses the upper arm.
@@ -554,18 +560,18 @@ struct MovementActivity: TherapyActivity {
         return raising ? awaySign : -awaySign
     }
 
-    /// Where the tracked joint should head: the joint turned `sign`-wise around the anchor by up to
-    /// `calibrationTurn`. An elbow-bend turn shrinks near the upper arm and stops before crossing
-    /// it, so the arrow disappears there instead of pointing through the shoulder.
+    /// Where the calibration cue ends: the saved start turned `sign`-wise around the anchor by up
+    /// to `calibrationSweep`. An elbow-bend turn shrinks near the upper arm and stops before
+    /// crossing it, so the cue never points through the shoulder.
     private func calibrationTip(
         anchor: TherapyPoint,
         reference: TherapyPoint,
-        tracked: TherapyPoint,
+        from startPoint: TherapyPoint,
         sign: Double
     ) -> TherapyPoint {
-        let segment = tracked - anchor
+        let segment = startPoint - anchor
         let toward = reference - anchor
-        var turn = Self.calibrationTurn
+        var turn = Self.calibrationSweep
 
         if configuration.kind != .armRaise {
             let cross = toward.x * segment.y - toward.y * segment.x
@@ -578,7 +584,7 @@ struct MovementActivity: TherapyActivity {
             if turnsTowardReference {
                 room = angle - Self.turnMargin
             } else {
-                room = angle >= .pi / 2 ? Self.calibrationTurn : 0
+                room = angle >= .pi / 2 ? Self.calibrationSweep : 0
             }
 
             turn = max(0, min(turn, room))

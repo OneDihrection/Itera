@@ -23,11 +23,16 @@ struct SessionBubbleGuide {
 }
 
 /// Which way to move a limb when there is no bubble yet, such as while a target is calibrated.
+///
+/// The cue is a fixed path from `tail` (the limb's start, fixed to the body) to `tip`; the limb
+/// moves along it rather than the cue following the limb.
 struct SessionMovementCue {
     let tail: CGPoint
     let tip: CGPoint
     /// The joint the limb turns around; nil draws a gentle bow from `tail` to `tip`.
     var pivot: CGPoint? = nil
+    /// The tracked joint; the stretch of the path it has already passed fades out.
+    var joint: CGPoint? = nil
 }
 
 struct SessionDirectionGuide {
@@ -79,7 +84,8 @@ struct TMSessionTargetOverlay: View {
     /// Hold ring radius in normalized image height, like a bubble radius; nil keeps the default size.
     var holdRadius: Double? = nil
     var directionGuide: SessionDirectionGuide? = nil
-    /// Drawn at full strength whatever the stage, because it guides calibration.
+    /// Drawn at full strength whatever the stage, because it guides calibration. Drawn as the
+    /// curved arrow along a fixed path from the limb's start, which the joint moves along.
     var movementCue: SessionMovementCue? = nil
     var poseGuide: SessionPoseGuide? = nil
     var holdCountdown: SessionHoldCountdown? = nil
@@ -238,6 +244,29 @@ struct TMSessionTargetOverlay: View {
                 drawPop(pop, scale: scale, imageHeight: image.height, at: point(pop.center), now: now, context: &context)
             }
 
+            // The calibration arrow is a fixed path the joint moves along, so it sits under the hold
+            // ring and the hold count, which stay crisp on top of it.
+            if let cue = movementCue ?? cueMemory.cue {
+                cueMemory.cue = cue
+
+                // Start just outside the saved start bubble when one is drawn.
+                let gap = bubbleGuide.map { $0.radius * image.height * scale + 6 } ?? 26
+
+                drawCurvedArrow(
+                    from: point(cue.tail),
+                    to: point(cue.tip),
+                    pivot: cue.pivot.map(point),
+                    trimStart: gap,
+                    trimEnd: 0,
+                    minimumVisible: Self.cueMinimumLength,
+                    passed: cue.joint.map(point),
+                    fade: cueOpacity(at: now),
+                    bounds: imageBounds,
+                    now: now,
+                    context: &context
+                )
+            }
+
             if let holdCountdown {
                 drawCountdown(
                     holdCountdown,
@@ -260,26 +289,6 @@ struct TMSessionTargetOverlay: View {
                 )
             }
 
-            // Above the hold ring, so the joint indicator never covers it.
-            if let cue = movementCue ?? cueMemory.cue {
-                cueMemory.cue = cue
-
-                // Start just outside the ring's outer edge (half its 22 pt stroke) when one is drawn.
-                let gap = captureJoint == nil ? 26 : holdRingRadius + 11 + 6
-
-                drawCurvedArrow(
-                    from: point(cue.tail),
-                    to: point(cue.tip),
-                    pivot: cue.pivot.map(point),
-                    trimStart: gap,
-                    trimEnd: 0,
-                    minimumVisible: 90,
-                    fade: cueOpacity(at: now),
-                    bounds: imageBounds,
-                    now: now,
-                    context: &context
-                )
-            }
         }
     }
 
@@ -737,7 +746,9 @@ struct TMSessionTargetOverlay: View {
     /// and `trimEnd` keep the arrow clear of the joint and of the bubble it points at, cut at the
     /// exact crossing so the arrow slides smoothly as the joint moves. A positive
     /// `minimumVisible` lengthens a short arrow in the same direction, so at least that much shows
-    /// beyond `trimStart`; arrows that must end at a bubble pass zero.
+    /// beyond `trimStart`; arrows that must end at a bubble pass zero. A fixed arrow that a joint
+    /// moves along passes that joint as `passed`: the shaft behind it fades and the travelling
+    /// highlight runs only ahead of it.
     private func drawCurvedArrow(
         from tail: CGPoint,
         to tip: CGPoint,
@@ -745,30 +756,23 @@ struct TMSessionTargetOverlay: View {
         trimStart: Double,
         trimEnd: Double,
         minimumVisible: Double = 0,
+        passed: CGPoint? = nil,
         fade: Double,
         bounds: CGRect,
         now: Date,
         context: inout GraphicsContext
     ) {
-        guard fade > 0 else {
-            return
-        }
-
-        let end = minimumVisible > 0
-            ? extendedTip(from: tail, to: tip, pivot: pivot, trim: trimStart, visible: minimumVisible)
-            : tip
-        let curve = curvePoints(from: tail, to: end, pivot: pivot, bounds: bounds)
-
-        // The end is trimmed by trimming the reversed curve from its start.
-        guard let afterTail = trimmed(curve, outside: tail, radius: trimStart),
-              let beforeEnd = trimmed(Array(afterTail.reversed()), outside: end, radius: trimEnd) else {
-            return
-        }
-
-        let points = Array(beforeEnd.reversed())
-
-        guard let point = points.last,
-              polylineLength(points) >= 30 else {
+        guard fade > 0,
+              let points = guidePoints(
+                  from: tail,
+                  to: tip,
+                  pivot: pivot,
+                  trimStart: trimStart,
+                  trimEnd: trimEnd,
+                  minimumVisible: minimumVisible,
+                  bounds: bounds
+              ),
+              let point = points.last else {
             return
         }
 
@@ -802,21 +806,33 @@ struct TMSessionTargetOverlay: View {
         let head = arrowHead(at: point, direction: direction)
         let round = StrokeStyle(lineWidth: Self.arrowUnderlayWidth, lineCap: .round, lineJoin: .round)
 
+        // The part of the shaft the joint has already moved past, as a fraction of its length.
+        let behind = passed.map { arcFraction(of: $0, along: shaftPoints) } ?? 0
+        let ahead = shaft.trimmedPath(from: behind, to: 1)
+
+        if behind > 0 {
+            context.drawLayer { layer in
+                layer.opacity = fade * Self.passedShaftOpacity
+                drawShaft(shaft.trimmedPath(from: 0, to: behind), round: round, layer: &layer)
+            }
+        }
+
         context.drawLayer { layer in
             layer.opacity = fade
 
-            layer.stroke(shaft, with: .color(TherapyPalette.calmUnderlay), style: round)
+            layer.stroke(ahead, with: .color(TherapyPalette.calmUnderlay), style: round)
             layer.stroke(head, with: .color(TherapyPalette.calmUnderlay), style: round)
 
             var line = round
             line.lineWidth = Self.arrowShaftWidth
-            layer.stroke(shaft, with: .color(.white.opacity(reduceMotion ? 1 : 0.55)), style: line)
+            layer.stroke(ahead, with: .color(.white.opacity(reduceMotion ? 1 : 0.55)), style: line)
 
             if !reduceMotion {
-                // A stretch a quarter of the shaft long enters at the tail and leaves at the head.
+                // A stretch a quarter of the shaft long enters at the tail (or the joint) and leaves
+                // at the head.
                 let front = (now.timeIntervalSinceReferenceDate / arrowSweepPeriod)
                     .truncatingRemainder(dividingBy: 1) * 1.25
-                let highlight = shaft.trimmedPath(from: max(0, front - 0.25), to: min(1, front))
+                let highlight = ahead.trimmedPath(from: max(0, front - 0.25), to: min(1, front))
                 layer.stroke(highlight, with: .color(.white), style: line)
             }
 
@@ -824,6 +840,87 @@ struct TMSessionTargetOverlay: View {
             layer.stroke(head, with: .color(.white), style: line)
         }
     }
+
+    /// Strokes a shaft stretch with its dark underlay under a full-strength white line.
+    private func drawShaft(_ path: Path, round: StrokeStyle, layer: inout GraphicsContext) {
+        var line = round
+        line.lineWidth = Self.arrowShaftWidth
+
+        layer.stroke(path, with: .color(TherapyPalette.calmUnderlay), style: round)
+        layer.stroke(path, with: .color(.white), style: line)
+    }
+
+    /// How far along the polyline, by arc length, the point nearest to `point` lies, 0...1.
+    private func arcFraction(of point: CGPoint, along line: [CGPoint]) -> Double {
+        let total = polylineLength(line)
+
+        guard line.count > 1, total > 0 else {
+            return 0
+        }
+
+        var walked = 0.0
+        var best = (distance: Double.infinity, arc: 0.0)
+
+        for index in 1..<line.count {
+            let start = line[index - 1]
+            let end = line[index]
+            let dx = end.x - start.x
+            let dy = end.y - start.y
+            let segment = hypot(dx, dy)
+            let t = segment > 0
+                ? min(1, max(0, ((point.x - start.x) * dx + (point.y - start.y) * dy) / (segment * segment)))
+                : 0
+            let distance = hypot(point.x - (start.x + dx * t), point.y - (start.y + dy * t))
+
+            if distance < best.distance {
+                best = (distance, walked + segment * t)
+            }
+
+            walked += segment
+        }
+
+        return best.arc / total
+    }
+
+    /// The arrow's centre line: lengthened to `minimumVisible` when
+    /// positive, curved around `pivot` or bowed, and trimmed clear of the tail and the end. Nil when
+    /// too little would show.
+    private func guidePoints(
+        from tail: CGPoint,
+        to tip: CGPoint,
+        pivot: CGPoint?,
+        trimStart: Double,
+        trimEnd: Double,
+        minimumVisible: Double,
+        bounds: CGRect
+    ) -> [CGPoint]? {
+        let end = minimumVisible > 0
+            ? extendedTip(from: tail, to: tip, pivot: pivot, trim: trimStart, visible: minimumVisible)
+            : tip
+        let curve = curvePoints(from: tail, to: end, pivot: pivot, bounds: bounds)
+
+        // The end is trimmed by trimming the reversed curve from its start.
+        guard let afterTail = trimmed(curve, outside: tail, radius: trimStart),
+              let beforeEnd = trimmed(Array(afterTail.reversed()), outside: end, radius: trimEnd) else {
+            return nil
+        }
+
+        let points = Array(beforeEnd.reversed())
+
+        guard polylineLength(points) >= 30 else {
+            return nil
+        }
+
+        return points
+    }
+
+    // MARK: - Calibration cue
+
+    /// Shortest calibration arrow shown beyond its start, in points; a shorter cue is lengthened
+    /// along its turn.
+    private static let cueMinimumLength = 160.0
+    /// Strength of the stretch of the calibration arrow the joint has already passed.
+    private static let passedShaftOpacity = 0.2
 
     /// Whether the arrow can turn around `pivot`: both ends must sit clearly away from it.
     private func usesPivot(_ pivot: CGPoint?, tail: CGPoint, tip: CGPoint) -> Bool {
