@@ -105,31 +105,7 @@ struct TMTherapyLongRest: View {
 
     var body: some View {
         ZStack(alignment: .bottom) {
-            Color(red: 0.50, green: 0.16, blue: 0.05)
-                .overlay {
-                    Canvas { context, size in
-                        let rise = reduceMotion ? 0 : CGFloat(intensity - 0.25) * size.height * 0.14
-                        let colors = [
-                            Color(red: 0.63, green: 0.19, blue: 0.06),
-                            Color(red: 0.72, green: 0.22, blue: 0.05),
-                            Color(red: 0.82, green: 0.26, blue: 0.04)
-                        ]
-                        for (index, color) in colors.enumerated() {
-                            let edge = size.height * (0.28 + CGFloat(index) * 0.23) - rise
-                            var wave = Path()
-                            wave.move(to: CGPoint(x: 0, y: edge))
-                            wave.addQuadCurve(
-                                to: CGPoint(x: size.width, y: edge),
-                                control: CGPoint(x: size.width / 2, y: edge - size.height * 0.14)
-                            )
-                            wave.addLine(to: CGPoint(x: size.width, y: size.height))
-                            wave.addLine(to: CGPoint(x: 0, y: size.height))
-                            wave.closeSubpath()
-                            context.fill(wave, with: .color(color))
-                        }
-                    }
-                    .accessibilityHidden(true)
-                }
+            TMTherapyLongRestWaves(intensity: intensity, paused: paused)
                 .ignoresSafeArea()
 
             VStack(spacing: 16) {
