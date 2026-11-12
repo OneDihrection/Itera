@@ -19,7 +19,10 @@ enum AppRoute: Hashable {
     case balanceSession(exercise: BalanceExercise, settings: BalancePracticeSettings)
     case plan(ExerciseCategory)
     case reports
-    case taskReports
+    /// Session history for one routine category.
+    case taskReports(TherapyCategory)
+    /// One arm-practice session with its key-repetition replays.
+    case sessionReport(UUID)
     case report(UUID)
     case fingerSession
     case sessionComplete

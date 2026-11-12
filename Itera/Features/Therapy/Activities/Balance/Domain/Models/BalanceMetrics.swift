@@ -77,6 +77,34 @@ enum BalanceExercise: String, Hashable {
     }
 }
 
+extension BalanceExercise {
+    /// The kind a saved session uses for this exercise.
+    var therapyKind: TherapyKind {
+        switch self {
+        case .crossMidline: return .crossMidline
+        case .externalRotation: return .externalRotation
+        case .internalRotation: return .internalRotation
+        case .shoulderFlexion: return .shoulderFlexion
+        case .sitToStand: return .sitToStand
+        }
+    }
+
+    init?(kind: TherapyKind) {
+        switch kind {
+        case .crossMidline: self = .crossMidline
+        case .externalRotation: self = .externalRotation
+        case .internalRotation: self = .internalRotation
+        case .shoulderFlexion: self = .shoulderFlexion
+        case .sitToStand: self = .sitToStand
+        case .armRaise, .elbowBend, .directionalReach, .foldTowel: return nil
+        }
+    }
+}
+
+extension CrossingArm {
+    var therapySide: TherapySide { self == .left ? .left : .right }
+}
+
 enum RotationDirection {
     /// Away from the body: external rotation.
     case outward
@@ -174,6 +202,8 @@ struct BalanceOverlay: Equatable {
     var isCalibrationHold = false
     /// Whether the shoulder-hip box is drawn; a side-on chain of joints does not use it.
     var showsTorso = true
+    /// Where the wrist should head while the comfortable end is calibrated; nil hides the cue.
+    var calibrationTip: TherapyPoint? = nil
 }
 
 struct BalanceSnapshot: Equatable {

@@ -16,6 +16,9 @@ actor LocalSessionRepository: SessionRepository {
     private let storage = AtomicFileStorage()
     private let directory: URL
     private var activeURL: URL { directory.appendingPathComponent("active.json") }
+    private static let keyRepsSuffix = ".reps.json"
+    /// Summaries the last `history()` call could not read.
+    private var unreadableCount = 0
 
     init(directory: URL) { self.directory = directory }
 
@@ -52,18 +55,46 @@ actor LocalSessionRepository: SessionRepository {
         guard FileManager.default.fileExists(atPath: directory.path) else { return [] }
         let urls = try FileManager.default.contentsOfDirectory(
             at: directory, includingPropertiesForKeys: nil
-        ).filter { $0.pathExtension == "json" && $0.lastPathComponent != "active.json" }
-        return try urls.map { url in
-            let record = try storage.read(Record<SessionSummary>.self, from: url)
-            guard record.version == 1 else { throw StorageError.unsupportedVersion }
-            return record.value
-        }.sorted { $0.startedAt > $1.startedAt }
+        ).filter {
+            $0.pathExtension == "json"
+                && $0.lastPathComponent != "active.json"
+                && !$0.lastPathComponent.hasSuffix(Self.keyRepsSuffix)
+        }
+        // One unreadable summary must not hide every other session; it is logged and counted.
+        var summaries: [SessionSummary] = []
+        unreadableCount = 0
+
+        for url in urls {
+            do {
+                let record = try storage.read(Record<SessionSummary>.self, from: url)
+
+                guard record.version == 1 else {
+                    throw StorageError.unsupportedVersion
+                }
+
+                summaries.append(record.value)
+            } catch {
+                unreadableCount += 1
+                NSLog("Session history skipped %@: %@", url.lastPathComponent, String(describing: error))
+            }
+        }
+
+        return summaries.sorted { $0.startedAt > $1.startedAt }
+    }
+
+    func unreadableHistoryCount() -> Int {
+        unreadableCount
     }
 
     func delete(id: UUID) throws {
         let url = directory.appendingPathComponent(id.uuidString + ".json")
         if FileManager.default.fileExists(atPath: url.path) {
             try FileManager.default.removeItem(at: url)
+        }
+
+        let keyRepsURL = keyRepsURL(for: id)
+        if FileManager.default.fileExists(atPath: keyRepsURL.path) {
+            try FileManager.default.removeItem(at: keyRepsURL)
         }
     }
 
@@ -81,6 +112,40 @@ actor LocalSessionRepository: SessionRepository {
             guard record.version == 1 else { throw StorageError.unsupportedVersion }
             if record.value.id == value.id { try FileManager.default.removeItem(at: activeURL) }
         }
+    }
+
+    // MARK: - Key repetitions
+
+    /// Skeletons live in their own file so history never decodes them. An unreadable file is
+    /// reported, never replaced, so earlier replays are not silently lost.
+    func saveKeyReps(_ value: ActivityKeyReps, sessionID: UUID) throws {
+        var record = try readKeyReps(sessionID: sessionID) ?? KeyRepRecord(sessionID: sessionID)
+        record.upsert(value)
+        try write(record, to: keyRepsURL(for: sessionID))
+    }
+
+    func keyReps(sessionID: UUID) throws -> [ActivityKeyReps] {
+        try readKeyReps(sessionID: sessionID)?.domain() ?? []
+    }
+
+    private func readKeyReps(sessionID: UUID) throws -> KeyRepRecord? {
+        let url = keyRepsURL(for: sessionID)
+
+        guard FileManager.default.fileExists(atPath: url.path) else {
+            return nil
+        }
+
+        let record = try storage.read(KeyRepRecord.self, from: url)
+
+        guard record.version == KeyRepRecord.currentVersion, record.sessionID == sessionID else {
+            throw StorageError.unsupportedVersion
+        }
+
+        return record
+    }
+
+    private func keyRepsURL(for id: UUID) -> URL {
+        directory.appendingPathComponent(id.uuidString + Self.keyRepsSuffix)
     }
 
     private func write<T: Encodable>(_ value: T, to url: URL) throws {

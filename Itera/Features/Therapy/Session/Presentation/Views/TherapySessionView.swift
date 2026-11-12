@@ -90,6 +90,9 @@ struct TMTherapySessionView: View {
                 lightPauseDialog
             }
         }
+        .overlay(alignment: .topTrailing) {
+            lightDebugFinishButton
+        }
         .overlay {
             if let celebrationStart, !reduceMotion, !calmMode {
                 TMSessionCelebration(start: celebrationStart).ignoresSafeArea()
@@ -505,6 +508,9 @@ struct TMTherapySessionView: View {
                     let guide = model.snapshot.presentation?.guide
                 {
                     targetOverlay(guide, size: geometry.size)
+                } else if !model.snapshot.paused, !model.snapshot.cameraWaiting {
+                    // Until the activity draws its guide, the tracked body shows tracking has begun.
+                    TMLiveSkeletonLayer(model: model)
                 }
                 if !model.snapshot.paused, !model.snapshot.cameraWaiting,
                    model.snapshot.stage == .activity,
@@ -625,23 +631,10 @@ struct TMTherapySessionView: View {
         }
 
         if let activity = model.snapshot.activity, activity.kind == .armRaise || activity.kind == .elbowBend || activity.kind == .directionalReach {
-            let mode: TherapyAnimationPlayback = {
-                if model.snapshot.stage == .demonstration {
-                    return .looping
-                }
-                if case .movement(let value) = model.snapshot.presentation {
-                    switch value.pose {
-                    case .start: return .staticStart
-                    case .peak: return .staticPeak
-                    case .looping: return .looping
-                    }
-                }
-                return .looping
-            }()
             TMExerciseExample(
                 asset: activity.kind == .armRaise ? .armRaise : activity.kind == .elbowBend ? .elbowBend : .directionalReach,
                 mirrored: activity.side == .left,
-                mode: mode
+                mode: model.demoPlayback
             )
                 .id(activity.id)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -919,13 +912,7 @@ struct TMTherapySessionView: View {
     }
 
     func kindKeyName(_ kind: TherapyKind) -> String {
-        switch kind {
-        case .armRaise: return "session.armRaise"
-        case .elbowBend: return "session.elbowBend"
-        case .directionalReach: return "session.directionalReach"
-        case .foldTowel: return "session.foldTowel"
-        case .sitToStand: return "session.sitToStand"
-        }
+        kind.titleKey
     }
 
     private func targetOverlay(_ guide: TargetGuide, size: CGSize) -> some View {
@@ -941,15 +928,33 @@ struct TMTherapySessionView: View {
             radius: guide.radius,
             activeZone: guide.targetActive ? .target : .start,
             trackedJointInside: inside,
-            dwellProgress: guide.jointHold ? 0 : guide.progress
+            dwellProgress: guide.jointHold ? 0 : guide.progress,
+            pivot: guide.pivot.map(normalized)
         )
-        let direction = (guide.directionOnly || guide.directionTip != nil) ? SessionDirectionGuide(
+        let movementCue = guide.calibrationTip.map { tip in
+            SessionMovementCue(
+                tail: normalized(guide.tracked),
+                tip: normalized(tip),
+                pivot: guide.pivot.map(normalized)
+            )
+        }
+        // A farthest marker alone still needs a direction guide to carry it; its arrow stays hidden
+        // so the bubble guide's arrow remains the only one.
+        let carriesArrow = guide.directionOnly || guide.directionTip != nil
+        let direction = (carriesArrow || guide.farthest != nil) ? SessionDirectionGuide(
             origin: normalized(guide.start),
             tip: normalized(guide.directionTip ?? guide.target),
             trackedJoint: normalized(guide.tracked),
-            showsArrow: guide.showsDirectionArrow,
+            showsArrow: carriesArrow && guide.showsDirectionArrow,
             farthestPosition: guide.farthest.map(normalized)
         ) : nil
+        let countdown = guide.countdownSeconds.map { seconds in
+            SessionHoldCountdown(
+                seconds: seconds,
+                center: normalized(guide.tracked),
+                radius: guide.radius
+            )
+        }
         return TMSessionTargetOverlay(
             imageSize: CGSize(width: guide.aspect, height: 1),
             bubbleGuide: guide.capturing ? (guide.savedStart ? bubble : nil) : (guide.directionOnly ? nil : bubble),
@@ -959,7 +964,29 @@ struct TMTherapySessionView: View {
             holdProgress: guide.progress,
             holdRadius: guide.radius,
             directionGuide: direction,
+            movementCue: movementCue,
+            holdCountdown: countdown,
             mirrored: true
         )
+    }
+}
+
+/// The live skeleton, in its own view so only this layer reads `livePose`.
+///
+/// The skeleton changes every camera frame. Reading it in the session screen's body would rebuild
+/// the whole screen 30 times a second on the main thread, delaying camera frames until the session
+/// rejects them as stale and reports the arm as missing.
+private struct TMLiveSkeletonLayer: View {
+    let model: TherapySessionViewModel
+
+    var body: some View {
+        if let skeleton = model.livePose {
+            TMSessionTargetOverlay(
+                imageSize: skeleton.imageSize,
+                bubbleGuide: nil,
+                poseGuide: skeleton.guide,
+                mirrored: true
+            )
+        }
     }
 }

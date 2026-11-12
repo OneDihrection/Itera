@@ -13,7 +13,7 @@ struct TMBalanceExerciseDemonstrationView: View {
     let paused: Bool
     /// The arm being exercised, which picks the recording for that arm.
     var arm: CrossingArm?
-    /// The patient's arm choice; with both arms chosen, the right-arm recording plays beside its reflection.
+    /// The patient's arm choice; with both arms chosen, the demonstration follows the active arm.
     var selection: BalanceArmSelection?
 
     /// The bundled recording for this exercise; every arm clip shows the right arm.
@@ -55,8 +55,7 @@ struct TMBalanceExerciseDemonstrationView: View {
         TMShoulderRotationMovieView(
             resource: resource,
             paused: paused,
-            mirrored: selection != .both && (arm ?? selection?.initialArm) == .left,
-            bothArms: selection == .both && exercise != .sitToStand,
+            mirrored: (arm ?? selection?.initialArm) == .left,
             accessibilityKey: accessibilityKey
         )
     }

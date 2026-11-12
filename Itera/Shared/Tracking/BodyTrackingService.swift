@@ -30,9 +30,11 @@ final class BodyTrackingService: NSObject, AVCaptureVideoDataOutputSampleBufferD
     private var hasInitialOrientation = false
     private var timestampOffset: Double?
     private var lastStaleLog = 0.0
+    /// Per-stage inference timing, logged every 10 s. Confined to `queue`.
+    private var timing = BodyInferenceTiming()
     /// Oldest inference result still worth showing, in seconds.
     private static let maximumFrameAge = 0.8
-    /// Keeps tracking the patient while bystanders are in view. Confined to `queue`.
+    /// Keeps tracking the patient while bystanders are in view. Confined to `inferenceQueue`.
     private var subjects = BodySubjectSelector()
     private var lastInferenceFailure = 0.0
     private var watchdogIdentity = UUID()
@@ -61,7 +63,9 @@ final class BodyTrackingService: NSObject, AVCaptureVideoDataOutputSampleBufferD
             guard let self, self.normalLens != enabled else { return }
             self.normalLens = enabled
             guard self.configured else { return }
-            self.availability.send(.discontinuity)
+            // The lens changes only when a new activity starts, before it has any calibration, so
+            // this is a camera wait rather than a discontinuity that pauses the session.
+            self.availability.send(.waiting)
             self.session.stopRunning()
             self.cancelFrameWatchdog()
             self.session.beginConfiguration()
@@ -98,6 +102,10 @@ final class BodyTrackingService: NSObject, AVCaptureVideoDataOutputSampleBufferD
                     self.cancelFrameWatchdog()
                     self.invalidateGeneration()
                     self.availability.send(.discontinuity)
+
+                    // Frames can resume without an interruption-ended notification; the first one
+                    // must still announce the new generation, or every later frame is rejected.
+                    self.awaitingFirstFrame = true
                 }
             })
         notifications.append(
@@ -119,17 +127,18 @@ final class BodyTrackingService: NSObject, AVCaptureVideoDataOutputSampleBufferD
                 guard let self else {
                     return
                 }
+                let error = notification.userInfo?[AVCaptureSessionErrorKey] as? NSError
+                NSLog("Body capture runtime error domain=%@ code=%ld", error?.domain ?? "unknown", error?.code ?? 0)
                 self.queue.async {
                     self.cancelFrameWatchdog()
                     self.invalidateGeneration()
                     self.session.stopRunning()
                     self.restoreCenterStage()
                     self.availability.send(.discontinuity)
+                    // Sent from `queue` so it always follows the discontinuity.
+                    self.failures.send(error?.localizedDescription ?? "")
+                    self.restartOnceAfterFailure()
                 }
-                let error = notification.userInfo?[AVCaptureSessionErrorKey] as? NSError
-                NSLog("Body capture runtime error domain=%@ code=%ld", error?.domain ?? "unknown", error?.code ?? 0)
-                self.failures.send(
-                    error?.localizedDescription ?? "")
             })
     }
 
@@ -146,6 +155,8 @@ final class BodyTrackingService: NSObject, AVCaptureVideoDataOutputSampleBufferD
                 return
             }
             self.wantsCapture = true
+            // The service outlives sessions, so each explicit start earns a fresh automatic restart.
+            self.watchdogRestarts = 0
             self.startIfRequested()
         }
     }
@@ -333,10 +344,18 @@ final class BodyTrackingService: NSObject, AVCaptureVideoDataOutputSampleBufferD
         do {
             // Vision reports in the padded frame when padding is used; `originalY` maps back.
             var paddedImage: CVPixelBuffer?
-            if !handEnabled {
-                if Self.padsFrames {
-                    paddedImage = framePadder.padded(image)
+            var paddingTime: Double?
+            if !handEnabled, Self.padsFrames {
+                let paddingStart = ProcessInfo.processInfo.systemUptime
+                paddedImage = framePadder.padded(image)
+
+                if paddedImage != nil {
+                    paddingTime = ProcessInfo.processInfo.systemUptime - paddingStart
                 }
+            }
+
+            let inferenceStart = ProcessInfo.processInfo.systemUptime
+            if !handEnabled {
                 try VNImageRequestHandler(cvPixelBuffer: paddedImage ?? image, orientation: .up).perform([request])
             }
             let originalY: (Double) -> Double = paddedImage == nil ? { $0 } : BodyFramePadder.originalY
@@ -393,7 +412,10 @@ final class BodyTrackingService: NSObject, AVCaptureVideoDataOutputSampleBufferD
                     joints: joints,
                     hand: hand,
                     subjectEpoch: subjects.epoch
-                ))
+                ),
+                padding: paddingTime,
+                inference: ProcessInfo.processInfo.systemUptime - inferenceStart
+            )
         } catch {
             if time - lastInferenceFailure >= 5 {
                 lastInferenceFailure = time
@@ -408,19 +430,29 @@ final class BodyTrackingService: NSObject, AVCaptureVideoDataOutputSampleBufferD
         }
     }
 
-    private func deliver(_ frame: TrackingObservation) {
+    /// - Parameters:
+    ///   - padding: seconds spent padding the frame, nil when it was not padded.
+    ///   - inference: seconds spent in Vision and selection, nil when inference failed.
+    private func deliver(_ frame: TrackingObservation, padding: Double? = nil, inference: Double? = nil) {
         queue.async { [weak self] in
             guard let self, self.wantsCapture, self.generation == frame.generation else { return }
-            let age = ProcessInfo.processInfo.systemUptime - frame.timestamp
+            let now = ProcessInfo.processInfo.systemUptime
+            let age = now - frame.timestamp
 
             // Inference takes noticeable time on Mac; a frame slightly late is still far better
             // than none, since a dropped frame looks to the patient like lost tracking.
             guard age <= Self.maximumFrameAge else {
+                self.timing.recordDropped(now: now)
+
                 if ProcessInfo.processInfo.systemUptime - self.lastStaleLog >= 3 {
                     self.lastStaleLog = ProcessInfo.processInfo.systemUptime
                     NSLog("Body frame dropped as stale age=%.3f", age)
                 }
                 return
+            }
+
+            if let inference {
+                self.timing.record(padding: padding, vision: inference, age: age, now: now)
             }
 
             self.enqueueDelivery(frame)
@@ -479,36 +511,33 @@ final class BodyTrackingService: NSObject, AVCaptureVideoDataOutputSampleBufferD
 
         return BodySubjectSelector.Candidate(
             torso: center,
-            size: bodySize(points, torso: torso, aspect: aspect, originalY: originalY),
+            size: shoulderWidth(points, aspect: aspect, originalY: originalY),
             centerOffset: abs(center.x / max(aspect, 0.0001) - 0.5)
         )
     }
 
     /// Shoulder width: visible for every upper-body exercise, unchanged by arm movement, and
-    /// steadier than a box that grows when hips appear or disappear behind a table. Falls
-    /// back to the torso box when a shoulder is not visible.
-    private static func bodySize(
+    /// steadier than a box that grows when hips appear or disappear behind a table. Returns 0
+    /// (unknown) when a shoulder is not confidently visible. A fallback measure such as the torso
+    /// box differs from shoulder width by far more than the selector's size tolerance, so a raised
+    /// arm hiding one shoulder used to make the patient look like a different person.
+    private static func shoulderWidth(
         _ points: [VNHumanBodyPoseObservation.JointName: VNRecognizedPoint],
-        torso: [TherapyPoint],
         aspect: Double,
         originalY: (Double) -> Double
     ) -> Double {
-        if let left = points[.leftShoulder], let right = points[.rightShoulder],
-           left.confidence >= 0.3, right.confidence >= 0.3 {
-            let width = TherapyPoint(
-                x: (left.location.x - right.location.x) * aspect,
-                y: originalY(left.location.y) - originalY(right.location.y)
-            )
-            return width.length
+        guard let left = points[.leftShoulder],
+              let right = points[.rightShoulder],
+              left.confidence >= 0.3,
+              right.confidence >= 0.3 else {
+            return 0
         }
 
-        let xs = torso.map(\.x)
-        let ys = torso.map(\.y)
-        let diagonal = TherapyPoint(
-            x: (xs.max() ?? 0) - (xs.min() ?? 0),
-            y: (ys.max() ?? 0) - (ys.min() ?? 0)
+        let width = TherapyPoint(
+            x: (left.location.x - right.location.x) * aspect,
+            y: originalY(left.location.y) - originalY(right.location.y)
         )
-        return diagonal.length
+        return width.length
     }
 
     private func invalidateGeneration() {
@@ -542,20 +571,24 @@ final class BodyTrackingService: NSObject, AVCaptureVideoDataOutputSampleBufferD
             NSLog("Body capture frame timeout firstFrame=%@ generation=%@", firstFrame.description, expectedGeneration.uuidString)
             self.availability.send(.discontinuity)
             self.failures.send(firstFrame ? "Camera did not deliver a startup frame." : "Camera frames stopped arriving.")
-
-            // Try once to bring the camera back without waiting for a manual retry; the session
-            // still pauses on the discontinuity and resumes only on explicit request.
-            guard self.watchdogRestarts < 1 else {
-                return
-            }
-
-            self.watchdogRestarts += 1
-            self.queue.asyncAfter(deadline: .now() + 0.5) { [weak self] in
-                self?.startIfRequested()
-            }
+            self.restartOnceAfterFailure()
         }
         frameWatchdog = work
         queue.asyncAfter(deadline: .now() + (firstFrame ? 3.0 : 1.0), execute: work)
+    }
+
+    /// Tries once to bring the camera back without waiting for a manual retry; the session still
+    /// pauses on the discontinuity and resumes only on explicit request. The count resets when a
+    /// frame arrives or capture is started explicitly, so a dead camera is reported, not looped.
+    private func restartOnceAfterFailure() {
+        guard watchdogRestarts < 1 else {
+            return
+        }
+
+        watchdogRestarts += 1
+        queue.asyncAfter(deadline: .now() + 0.5) { [weak self] in
+            self?.startIfRequested()
+        }
     }
 
     private static let jointMap: [(BodyJoint, VNHumanBodyPoseObservation.JointName)] = [

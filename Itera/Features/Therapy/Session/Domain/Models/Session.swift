@@ -20,6 +20,10 @@ enum SessionCommand {
     case retryCalibration
     case skip
     case timedPractice
+    #if DEBUG
+    /// Developer shortcut: records the current activity's remaining sets as completed at their goal.
+    case debugFinish
+    #endif
 }
 
 enum ActivityOutcome: String, Codable {
@@ -38,7 +42,8 @@ struct SessionActivityResult: Codable, Equatable {
     var practiceSeconds: Double = 0
     /// Absent in summaries saved before per-exercise sets were introduced.
     var setNumber: Int? = nil
-
+    /// One entry per credited repetition; absent in summaries saved before repetition metrics.
+    var repMetrics: [RepMetrics]? = nil
 }
 
 struct SessionSummary: Codable, Equatable, Identifiable {

@@ -23,11 +23,18 @@ final class TherapySessionViewModel {
     private(set) var towelInterpolates = false
     @ObservationIgnored private var towelSmoother = TowelPresentationSmoother()
     private(set) var personVisible = false
+    /// The tracked skeleton from the first camera frame, shown until the activity draws its guide.
+    private(set) var livePose: LivePose.Skeleton?
+    @ObservationIgnored private var livePoseTracker = LivePose()
     private(set) var cameraDenied = false
     private(set) var failure: String?
     private(set) var saveFailure: String?
     private(set) var voiceReady = false
     private(set) var listening = false
+    /// Increases each time the live demonstration moves to a new step, so the screen can highlight it.
+    private(set) var demoRevision = 0
+    /// The last example step the live screen has shown, pulsed or accepted silently.
+    @ObservationIgnored fileprivate var announcedDemoStep: DemoStep?
 
     @ObservationIgnored let tracking: BodyTrackingService
     @ObservationIgnored private let audio: SessionAudioService
@@ -117,7 +124,23 @@ final class TherapySessionViewModel {
             guard let self, self.live else {
                 return
             }
-            self.personVisible = frame.personCount == 1
+            // Observation notifies on every assignment, so unchanged values are not written back.
+            let visible = frame.personCount == 1
+            if self.personVisible != visible {
+                self.personVisible = visible
+            }
+
+            // The tracker sees every frame so its smoother stays warm, but the skeleton is published
+            // only while it is drawn, before the activity shows its own guide.
+            // Mirrors the camera view, which prefers the guide only during the activity stage.
+            let skeleton = self.livePoseTracker.skeleton(for: frame)
+            let guideShown = self.snapshot.stage == .activity && self.snapshot.presentation?.guide != nil
+            if !guideShown {
+                self.livePose = skeleton
+            } else if self.livePose != nil {
+                self.livePose = nil
+            }
+
             var observation = frame
             observation.workspaceMirrored = true
             self.send(.observation(observation))
@@ -128,8 +151,16 @@ final class TherapySessionViewModel {
             self.failure = error.isEmpty ? explanation : explanation + "\n" + error
             self.send(.availability(.waiting))
         }.store(in: &subscriptions)
-        tracking.availability.receive(on: DispatchQueue.main).sink { [weak self] in
-            self?.send(.availability($0))
+        tracking.availability.receive(on: DispatchQueue.main).sink { [weak self] availability in
+            guard let self else { return }
+
+            switch availability {
+            case .ready:
+                break
+            case .waiting, .discontinuity:
+                self.clearLivePose()
+            }
+            self.send(.availability(availability))
         }.store(in: &subscriptions)
         audio.events.sink { [weak self] event in self?.receive(event) }.store(in: &subscriptions)
         send(.command(.pause))
@@ -246,6 +277,7 @@ final class TherapySessionViewModel {
         send(.availability(.discontinuity))
         voiceReady = false
         tracking.stop()
+        clearLivePose()
         audio.stop()
     }
 
@@ -365,14 +397,7 @@ final class TherapySessionViewModel {
                 var text = Int(key).map(String.init)
                     ?? NarrationText.resolve(key, bundle: sessionLanguage.resourceBundle, locale: sessionLocale)
                 if key == "session.guidance", let activity = snapshot.activity {
-                    let kindKey: String
-                    switch activity.kind {
-                    case .armRaise: kindKey = "session.armRaise"
-                    case .elbowBend: kindKey = "session.elbowBend"
-                    case .directionalReach: kindKey = "session.directionalReach"
-                    case .foldTowel: kindKey = "session.foldTowel"
-                    case .sitToStand: kindKey = "session.sitToStand"
-                    }
+                    let kindKey = activity.kind.titleKey
                     let sideKey = activity.side == .left ? "session.left" : "session.right"
                     let kindText = String(localized: String.LocalizationValue(kindKey), bundle: sessionLanguage.resourceBundle, locale: sessionLocale)
                     let sideText = String(localized: String.LocalizationValue(sideKey), bundle: sessionLanguage.resourceBundle, locale: sessionLocale)
@@ -388,9 +413,12 @@ final class TherapySessionViewModel {
                 }
             case .audio(let id, let cue): audio.play(id: id, cue: cue)
             case .cancelSpeech: audio.cancelSpeech()
-            case .checkpoint, .finalize: pendingSaves.append(effect)
+            case .checkpoint, .finalize, .saveKeyReps: pendingSaves.append(effect)
             }
         }
+        // After the effects, so the chime starts beneath the new step's narration instead of
+        // being faded out by it.
+        updateDemoStep()
         drainSaves()
         if snapshot.summary != nil { cleanup(preserveClosing: true) }
     }
@@ -410,6 +438,14 @@ final class TherapySessionViewModel {
                     switch effect {
                     case .checkpoint(let checkpoint): try await repository.checkpoint(checkpoint)
                     case .finalize(let summary): try await repository.finalize(summary)
+                    case .saveKeyReps(let sessionID, let keyReps):
+                        // Replays help review but are not session history: a failed save is
+                        // logged and must not pause therapy or block later saves.
+                        do {
+                            try await repository.saveKeyReps(keyReps, sessionID: sessionID)
+                        } catch {
+                            NSLog("Key repetition save failed: %@", error.localizedDescription)
+                        }
                     default: break
                     }
                     pendingSaves.removeFirst()
@@ -422,12 +458,18 @@ final class TherapySessionViewModel {
         }
     }
 
+    private func clearLivePose() {
+        livePose = nil
+        livePoseTracker.reset()
+    }
+
     private func cleanup(preserveClosing: Bool = false) {
         guard live else {
             return
         }
         live = false
         tracking.stop()
+        clearLivePose()
         tracking.requireHand(false)
         if preserveClosing { audio.stopListening() } else { audio.stop() }
         timer?.cancel()
@@ -461,9 +503,116 @@ final class TherapySessionViewModel {
 #if DEBUG
 private actor PresentationFixtureRepository: SessionRepository {
     func history() async throws -> [SessionSummary] { [] }
+    func unreadableHistoryCount() -> Int { 0 }
     func delete(id: UUID) async throws {}
     func recoverInterrupted() {}
     func checkpoint(_ value: SessionCheckpoint) {}
     func finalize(_ value: SessionSummary) {}
+    func saveKeyReps(_ value: ActivityKeyReps, sessionID: UUID) {}
+    func keyReps(sessionID: UUID) -> [ActivityKeyReps] { [] }
 }
 #endif
+
+// MARK: - Demonstration step
+
+extension TherapySessionViewModel {
+    /// What the arm raise and elbow bend example shows: it loops on the demonstration card and
+    /// in practice, and holds the start or peak pose while that pose is being calibrated.
+    var demoPlayback: TherapyAnimationPlayback {
+        if snapshot.stage == .demonstration {
+            return .looping
+        }
+
+        guard case .movement(let movement) = snapshot.presentation else {
+            return .looping
+        }
+
+        switch movement.pose {
+        case .start:
+            return .staticStart
+        case .peak:
+            return .staticPeak
+        case .looping:
+            return .looping
+        }
+    }
+
+    /// The demonstration column's title, naming the pose the example is holding.
+    var demoTitleKey: String {
+        guard showsMovementExample else {
+            return "session.followMovement"
+        }
+
+        switch demoPlayback {
+        case .staticStart:
+            return "demo.step.start"
+        case .staticPeak:
+            return "demo.step.peak"
+        case .looping:
+            return "session.followMovement"
+        }
+    }
+
+    /// Only arm raise and elbow bend change their example by step; reach and towel keep one.
+    private var showsMovementExample: Bool {
+        switch snapshot.activity?.kind {
+        case .armRaise, .elbowBend:
+            return true
+        default:
+            return false
+        }
+    }
+
+    /// Highlights and chimes when the live screen shows an example step it has not shown yet.
+    ///
+    /// Every held start or peak pose pulses as soon as it is visible, even if it first appeared
+    /// behind a stage page, since that is when the patient must make a new movement. A looping
+    /// step pulses only as a change within the same activity and set (the return to start after
+    /// the peak); the first looping step of an activity or set is accepted silently. Nothing is
+    /// shown while paused, waiting for the camera or behind a stage page, so a step reached then
+    /// pulses once the live screen returns.
+    fileprivate func updateDemoStep() {
+        guard showsMovementExample, let activity = snapshot.activity else {
+            announcedDemoStep = nil
+            return
+        }
+
+        let watchingLiveScreen = snapshot.stage == .activity
+            && !snapshot.paused
+            && !snapshot.cameraWaiting
+
+        guard watchingLiveScreen else {
+            return
+        }
+
+        let step = DemoStep(
+            activityID: activity.id,
+            setNumber: snapshot.setNumber,
+            playback: demoPlayback
+        )
+
+        guard step != announcedDemoStep else {
+            return
+        }
+
+        let previous = announcedDemoStep
+        announcedDemoStep = step
+
+        let sameRun = previous?.activityID == step.activityID
+            && previous?.setNumber == step.setNumber
+
+        guard step.playback != .looping || sameRun else {
+            return
+        }
+
+        demoRevision += 1
+        audio.play(id: UUID(), cue: .demoChanged)
+    }
+}
+
+/// The example's identity for change detection.
+fileprivate struct DemoStep: Equatable {
+    let activityID: UUID
+    let setNumber: Int
+    let playback: TherapyAnimationPlayback
+}

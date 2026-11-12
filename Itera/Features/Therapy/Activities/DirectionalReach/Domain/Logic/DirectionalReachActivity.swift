@@ -28,6 +28,9 @@ struct DirectionalReachActivity: TherapyActivity {
     private var peakForward = 0.0
     /// Shoulder-relative wrist position at `peakForward`.
     private var peakPoint: TherapyPoint?
+    /// Recent valid outward samples, at most `peakWindow` old, so a single-frame extreme never
+    /// becomes the peak.
+    private var recentReach: [(point: TherapyPoint, time: Double)] = []
 
     /// Seconds the wrist holds inside the target or start bubble before it is accepted.
     private static let dwellDuration = 2.0
@@ -50,8 +53,15 @@ struct DirectionalReachActivity: TherapyActivity {
     private static let trackingMessageDelay = 1.0
     /// Seconds evidence must stay good before the tracking message is hidden again.
     private static let trackingRecoveryDelay = 0.5
-    /// Usable seconds without any accepted endpoint before a direction is left unscored.
-    private static let assessmentIdleLimit = 30.0
+    /// Seconds without any frame before a tick clears holds and dwells. Frames arrive up to 0.3 s
+    /// late, so a shorter limit would keep wiping holds that are still being fed.
+    private static let trackingLossReset = 1.0
+    /// Usable seconds each direction is assessed for; the farthest sustained reach becomes its target.
+    private static let assessmentWindow = 8.0
+    /// Seconds of trailing samples averaged into one reach candidate.
+    private static let peakWindow = 0.4
+    /// Seconds the trailing samples must span before their mean can become the peak.
+    private static let peakMinimumSpan = 0.3
 
     init(configuration: SessionActivity) { self.configuration = configuration }
     var presentation: ActivityPresentation {
@@ -125,7 +135,9 @@ struct DirectionalReachActivity: TherapyActivity {
             awaitingGuidance = true
             clearEvidence()
         case .tick(let time):
-            if last.map({ time - $0 > 0.3 }) == true { clearEvidence() }
+            if let last, time - last > Self.trackingLossReset {
+                clearEvidence()
+            }
             if !suspended { advanceCountdown(at: time) }
         case .observation(let frame):
             if !suspended { consume(landmarkSmoother.consume(frame)) }
@@ -259,6 +271,7 @@ struct DirectionalReachActivity: TherapyActivity {
     private mutating func clearEvidence() {
         hold.clear()
         dwell.reset()
+        recentReach.removeAll(keepingCapacity: true)
         last = nil
         snapshot.guide = nil
         snapshot.progress = 0
@@ -269,6 +282,7 @@ struct DirectionalReachActivity: TherapyActivity {
     /// The bubble stays at its last position with its ring paused, and no time is credited.
     private mutating func freezeEvidence(at time: Double) {
         hold.clear()
+        recentReach.removeAll(keepingCapacity: true)
 
         guard dwell.isHolding,
               dwell.interrupt(at: time, grace: Self.dwellTrackingGrace) else {
@@ -307,8 +321,6 @@ struct DirectionalReachActivity: TherapyActivity {
         }
     }
 
-    /// Seconds the wrist settles near its farthest reach before the assessment accepts it.
-    private static let settleDuration = 1.5
     /// Share of the measured maximum reach used as the practice target, so it can be hit repeatedly.
     private static let practiceTargetFraction = 0.85
     /// Seconds allowed to reach the practice target before the attempt counts as not reached.
@@ -396,6 +408,7 @@ struct DirectionalReachActivity: TherapyActivity {
         let delta = gap > 0 && gap <= 0.3 ? min(0.2, gap) : 0
         if gap > 0.3 {
             hold.clear()
+            recentReach.removeAll(keepingCapacity: true)
         }
         last = time
         if radius == 0 {
@@ -408,10 +421,21 @@ struct DirectionalReachActivity: TherapyActivity {
         case .start:
             snapshot.instruction = "session.reachStart"
             guard !awaitingGuidance else { return }
-            hold.consume(relative, time: time, duration: Self.holdDuration, tolerance: radius * 0.5, maximumGap: 0.3, wobbleGrace: 0.3)
+
+            // The drawn bubble is the tolerance, so staying inside the ring the patient sees is
+            // enough; a body-scaled tolerance was smaller than detector jitter.
+            let tolerance = sharedBubbleRadius(aspect: frame.aspect, viewport: viewport)
+            hold.consume(
+                relative,
+                time: time,
+                duration: Self.holdDuration,
+                tolerance: tolerance,
+                maximumGap: 0.3,
+                wobbleGrace: 0.3
+            )
             snapshot.progress = hold.progress
             snapshot.guide = TargetGuide(
-                start: wrist, target: wrist, tracked: wrist, radius: radius,
+                start: wrist, target: wrist, tracked: wrist, radius: tolerance,
                 targetActive: false, progress: hold.progress, aspect: frame.aspect
             )
             if hold.progress >= 1, let mean = hold.mean {
@@ -438,45 +462,27 @@ struct DirectionalReachActivity: TherapyActivity {
             snapshot.guide = TargetGuide(
                 start: shoulder + start, target: shoulder + ghost,
                 tracked: wrist, radius: radius, targetActive: true,
-                progress: hold.progress, aspect: frame.aspect, jointHold: true
+                progress: snapshot.progress, aspect: frame.aspect, jointHold: true
             )
-            guard !awaitingGuidance else { return }
+            snapshot.guide?.farthest = peakPoint.map { shoulder + $0 }
+
+            guard !awaitingGuidance else {
+                return
+            }
+
+            // A fixed window of usable time: the patient reaches as far as they can, and the
+            // farthest sustained point becomes the target once it ends.
             elapsed += delta
+            snapshot.seconds = max(0, Int(ceil(Self.assessmentWindow - elapsed)))
+            snapshot.progress = min(1, elapsed / Self.assessmentWindow)
+            snapshot.guide?.progress = snapshot.progress
+            snapshot.guide?.countdownSeconds = snapshot.seconds
 
-            // Reach is measured from the user's own range: the farthest point along the direction.
-            let displacement = relative - start
-            let forward = displacement.x * vector.x + displacement.y * vector.y
-            let orthogonal = abs(displacement.x * vector.y - displacement.y * vector.x)
-            let movedOut = forward > radius * 2 && forward >= orthogonal
+            recordReach(relative, start: start, time: time)
 
-            if movedOut, forward > peakForward {
-                peakForward = forward
-                peakPoint = relative
+            if elapsed >= Self.assessmentWindow {
+                finishAssessmentWindow()
             }
-
-            // Still moving farther out is not a settled endpoint; the hold restarts.
-            let stillExtending = forward > peakForward + radius * 0.25 || peakForward - forward > radius * 2
-
-            guard movedOut, !stillExtending else {
-                hold.clear()
-                snapshot.progress = 0
-                snapshot.guide?.progress = 0
-                finishAssessmentIfIdle()
-                return
-            }
-
-            hold.consume(
-                relative, time: time, duration: Self.settleDuration, tolerance: radius,
-                maximumGap: 0.3, wobbleGrace: 0.3)
-            snapshot.progress = hold.progress
-            snapshot.guide?.progress = hold.progress
-
-            if hold.progress >= 1, let mean = hold.mean {
-                commitTarget(measured: mean, start: start)
-                return
-            }
-
-            finishAssessmentIfIdle()
         case .assessReturn:
             snapshot.instruction = "session.returnStart"
             if arrive(
@@ -568,12 +574,66 @@ struct DirectionalReachActivity: TherapyActivity {
         resetAttempt()
     }
 
-    /// After the idle limit, keeps the farthest reach seen; with no outward movement the direction stays unscored.
-    private mutating func finishAssessmentIfIdle() {
-        guard elapsed >= Self.assessmentIdleLimit else {
+    /// Feeds one shoulder-relative sample into the trailing window and raises the peak when the
+    /// window's mean reaches farther.
+    ///
+    /// Reach is measured from the shoulder, like the ghost: a sample counts when the wrist lies
+    /// within 45° of the direction seen from the shoulder and is out past the resting position by
+    /// more than two body radii. Measuring from the hanging resting wrist instead put a reach at
+    /// shoulder height exactly on the 45° edge, so reaching to or past the ghost was rejected.
+    ///
+    /// Any other sample empties the window, so the peak is always a reach sustained for
+    /// `peakMinimumSpan`, never a single noisy frame.
+    private mutating func recordReach(_ relative: TherapyPoint, start: TherapyPoint, time: Double) {
+        let forward = shoulderForward(relative)
+        let orthogonal = abs(relative.x * vector.y - relative.y * vector.x)
+
+        guard forward > shoulderForward(start) + radius * 2,
+              forward >= orthogonal
+        else {
+            recentReach.removeAll(keepingCapacity: true)
             return
         }
 
+        recentReach.append((relative, time))
+        recentReach.removeAll { time - $0.time > Self.peakWindow }
+
+        guard let oldest = recentReach.first,
+              time - oldest.time >= Self.peakMinimumSpan
+        else {
+            return
+        }
+
+        // The least extended sample is how far the wrist stayed out for the whole span, so a
+        // spike inside the window cannot pull the candidate outward.
+        var candidate = relative
+        var candidateForward = forward
+
+        for sample in recentReach {
+            let sampleForward = shoulderForward(sample.point)
+
+            if sampleForward < candidateForward {
+                candidate = sample.point
+                candidateForward = sampleForward
+            }
+        }
+
+        guard candidateForward > peakForward else {
+            return
+        }
+
+        peakForward = candidateForward
+        peakPoint = candidate
+    }
+
+    /// Distance along the current direction of a shoulder-relative point.
+    private func shoulderForward(_ point: TherapyPoint) -> Double {
+        point.x * vector.x + point.y * vector.y
+    }
+
+    /// Ends the direction's window: the farthest sustained reach becomes its target; with no
+    /// outward reach the direction stays unscored. Either way the patient returns to start.
+    private mutating func finishAssessmentWindow() {
         if let start, let peakPoint {
             commitTarget(measured: peakPoint, start: start)
             return
@@ -606,6 +666,7 @@ struct DirectionalReachActivity: TherapyActivity {
         elapsed = 0
         peakForward = 0
         peakPoint = nil
+        recentReach.removeAll(keepingCapacity: true)
         hold.clear()
         dwell.reset()
         last = nil

@@ -18,7 +18,7 @@ enum SessionPresentationFixtures {
 
     static var all: [Fixture] {
         var fixtures: [Fixture] = []
-        for kind in TherapyKind.allCases {
+        for kind in TherapyKind.allCases where kind.runsInGuidedSession {
             for side in [TherapySide.left, .right] {
                 let activity = SessionActivity(kind: kind, side: side, goal: 5)
                 let plans = kind == .armRaise || kind == .elbowBend
@@ -121,7 +121,7 @@ enum SessionPresentationFixtures {
             }
             fixtures.append(Fixture(id: "session-\(stage)", snapshot: value))
         }
-        for kind in TherapyKind.allCases {
+        for kind in TherapyKind.allCases where kind.runsInGuidedSession {
             var paused = base(SessionActivity(kind: kind, side: .left, goal: 3))
             paused.paused = true
             paused.assistanceKey = assistanceKey(for: kind)
@@ -137,7 +137,9 @@ enum SessionPresentationFixtures {
     private static func assistanceKey(for kind: TherapyKind) -> String? {
         switch kind {
         case .sitToStand: return "session.assistance.sitToStand"
-        case .armRaise, .elbowBend, .directionalReach, .foldTowel: return nil
+        case .armRaise, .elbowBend, .directionalReach, .foldTowel,
+             .crossMidline, .externalRotation, .internalRotation, .shoulderFlexion:
+            return nil
         }
     }
 

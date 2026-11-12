@@ -43,8 +43,11 @@ enum AppRouterView {
                 .environment(\.locale, AppLanguage.selected.locale)
         case .plan(let category):
             TMFingerPlanView(category: category)
-        case .taskReports:
-            TMTaskReportsDestination()
+        case .taskReports(let category):
+            TMTaskReportsDestination(category: category)
+                .environment(\.locale, AppLanguage.selected.locale)
+        case .sessionReport(let id):
+            TMSessionReportDestination(id: id)
                 .environment(\.locale, AppLanguage.selected.locale)
         case .reports:
             TMFingerReportsView()
@@ -127,6 +130,7 @@ private struct TMBalanceSessionDestination: View {
         TMBalanceSessionView(model: BalanceSessionViewModel(
             tracking: dependencies.tracking,
             audio: dependencies.audio,
+            repository: dependencies.sessions,
             settings: settings,
             exercise: exercise
         ))
@@ -134,9 +138,19 @@ private struct TMBalanceSessionDestination: View {
 }
 
 private struct TMTaskReportsDestination: View {
+    let category: TherapyCategory
     @Environment(AppDependencies.self) private var dependencies
 
     var body: some View {
-        TMTaskReportsView(model: TaskReportsViewModel(repository: dependencies.sessions))
+        TMTaskReportsView(model: TaskReportsViewModel(category: category, repository: dependencies.sessions))
+    }
+}
+
+private struct TMSessionReportDestination: View {
+    let id: UUID
+    @Environment(AppDependencies.self) private var dependencies
+
+    var body: some View {
+        TMSessionReportView(model: SessionReportViewModel(sessionID: id, repository: dependencies.sessions))
     }
 }

@@ -56,6 +56,9 @@ struct TMBalanceSessionView: View {
                 pauseDialog
                     .zIndex(3)
             }
+
+            debugFinishButton
+                .zIndex(4)
         }
         .animation(.easeOut(duration: 0.28), value: model.allSetsDone)
         .background(TherapyPalette.canvas)
@@ -105,6 +108,24 @@ struct TMBalanceSessionView: View {
         Text(LocalizedStringKey(model.exercise.key("title")))
     }
 
+    // MARK: - Debug
+
+    /// Debug builds only. Pinned to the header's trailing corner, above rest, countdown and the
+    /// pause dialog, rather than in the live layout's `accessories`, which would move the heading.
+    @ViewBuilder
+    private var debugFinishButton: some View {
+        #if DEBUG
+        if !model.allSetsDone, !model.permissionDenied {
+            TMDebugActionButton(title: "debug.finishExercise", symbol: "forward.end.fill") {
+                model.finishExerciseForDebug()
+            }
+            .padding(.top, 12)
+            .padding(.trailing, 20)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
+        }
+        #endif
+    }
+
     // MARK: - Live
 
     private var live: some View {
@@ -121,6 +142,8 @@ struct TMBalanceSessionView: View {
             endTitle: "session.endAction",
             pauseDisabled: model.paused,
             calibrating: model.calibrationMessage != nil,
+            demoRevision: model.demoRevision,
+            demoAnnouncement: String(localized: "demo.step.otherArm"),
             onPause: model.pause,
             onEnd: requestEnd
         ) {
@@ -177,12 +200,11 @@ struct TMBalanceSessionView: View {
 
             if let overlay = model.snapshot.overlay {
                 targetOverlay(overlay)
+            } else if !model.cameraWaiting {
+                TMBalanceLiveSkeletonLayer(model: model)
             }
 
-            if model.cameraWaiting {
-                TMTherapyFeedbackPill(text: "balance.cameraWaiting")
-                    .padding(20)
-            }
+            cameraStatus
         }
         .background(TherapyPalette.canvas)
         .background {
@@ -195,6 +217,24 @@ struct TMBalanceSessionView: View {
             }
         }
         .accessibilityLabel(model.exercise.localized("cameraAccessibility"))
+    }
+
+    /// A camera failure offers a retry; otherwise waiting shows the calm camera message.
+    @ViewBuilder
+    private var cameraStatus: some View {
+        if model.failure != nil {
+            VStack(spacing: 12) {
+                TMTherapyFeedbackPill(text: "session.captureError")
+
+                TMTherapyTextButton(title: "action.retry", symbol: "arrow.clockwise") {
+                    model.retryCamera()
+                }
+            }
+            .padding(20)
+        } else if model.cameraWaiting {
+            TMTherapyFeedbackPill(text: "balance.cameraWaiting")
+                .padding(20)
+        }
     }
 
     /// The standard pose, target bubble, hold ring and countdown shared with the movement exercises.
@@ -225,10 +265,21 @@ struct TMBalanceSessionView: View {
             }
         }
 
+        // While the comfortable end is shown, a curved arrow points the way from the wrist.
+        let movementCue: SessionMovementCue? = {
+            guard let wrist = overlay.wrist,
+                  let tip = overlay.calibrationTip else {
+                return nil
+            }
+
+            return SessionMovementCue(tail: normalized(wrist), tip: normalized(tip))
+        }()
+
         guard let target = overlay.target else {
             return TMSessionTargetOverlay(
                 imageSize: imageSize,
                 bubbleGuide: nil,
+                movementCue: movementCue,
                 poseGuide: pose,
                 mirrored: true
             )
@@ -331,7 +382,14 @@ struct TMBalanceSessionView: View {
                     repeatTitle: "balance.completion.repeat",
                     onRepeat: model.restart,
                     action: endPractice
-                )
+                ) {
+                    if model.historySaveFailed {
+                        TMTherapyError(key: "history.saveFailed")
+                        TMTherapyTextButton(title: "action.retry", symbol: "arrow.clockwise") {
+                            model.retryHistorySave()
+                        }
+                    }
+                }
             }
         }
     }
@@ -376,5 +434,24 @@ struct TMBalanceSessionView: View {
         }
 
         dependencies.dailyPlan.end(router: router)
+    }
+}
+
+/// The tracked skeleton alone, before the engine draws targets over it.
+///
+/// It is its own view so only this layer reads `livePose`, which changes every camera frame;
+/// reading it in the session screen's body would rebuild the whole screen 30 times a second.
+private struct TMBalanceLiveSkeletonLayer: View {
+    let model: BalanceSessionViewModel
+
+    var body: some View {
+        if let skeleton = model.livePose {
+            TMSessionTargetOverlay(
+                imageSize: skeleton.imageSize,
+                bubbleGuide: nil,
+                poseGuide: skeleton.guide,
+                mirrored: true
+            )
+        }
     }
 }

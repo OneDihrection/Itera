@@ -34,7 +34,7 @@ final class NavigationRouter {
         case .reports:
             selectedTab = .reports
             reportsPath.removeAll()
-        case .report:
+        case .report, .sessionReport:
             selectedTab = .reports
             reportsPath.append(route)
         case .plan:

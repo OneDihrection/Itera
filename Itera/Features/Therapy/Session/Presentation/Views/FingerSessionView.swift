@@ -47,7 +47,7 @@ struct TMFingerSessionView: View {
             heading: heading(model),
             cue: cue(model),
             cuePlacement: .video(videoBounds),
-            demoTitle: "session.followMovement",
+            demoTitle: LocalizedStringKey(model.demoTitleKey),
             repetitions: (model.activity.repetitions, model.routine.repetitions),
             sets: (model.activity.set, model.routine.sets),
             pauseTitle: "session.pauseAction",
@@ -55,6 +55,8 @@ struct TMFingerSessionView: View {
             pauseDisabled: model.paused,
             calibrating: model.isCalibrating,
             demoWidthFraction: 0.94,
+            demoRevision: model.demoRevision,
+            demoAnnouncement: model.demoAnnouncement,
             onPause: { model.handleCommand(.pause) },
             onEnd: {
                 endRequested = true
@@ -85,8 +87,26 @@ struct TMFingerSessionView: View {
                 }
             }
         }
+        .overlay(alignment: .topTrailing) {
+            debugFinishButton(model)
+        }
         .environment(\.colorScheme, .light)
         .statusBarHidden(false)
+    }
+
+    /// Debug builds only. Over the header's trailing corner, above stage pages and the pause
+    /// dialog, rather than in `accessories`, which would move the centred heading.
+    @ViewBuilder
+    private func debugFinishButton(_ model: FingerSessionViewModel) -> some View {
+        #if DEBUG
+        if !model.hasFinished {
+            TMDebugActionButton(title: "debug.finishExercise", symbol: "forward.end.fill") {
+                model.finishExerciseForDebug()
+            }
+            .padding(.top, 12)
+            .padding(.trailing, 20)
+        }
+        #endif
     }
 
     private func heading(_ model: FingerSessionViewModel) -> TMTherapyExerciseHeading {

@@ -14,8 +14,6 @@ struct TMShoulderRotationMovieView: View {
     let resource: String
     let paused: Bool
     var mirrored: Bool = false
-    /// Shows the right-arm recording beside its reflection, depicting both arms.
-    var bothArms: Bool = false
     var accessibilityKey: LocalizedStringKey = "rotation.animationAccessibility"
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
@@ -23,17 +21,8 @@ struct TMShoulderRotationMovieView: View {
         let holdsPose = paused || reduceMotion
 
         ZStack {
-            if bothArms {
-                HStack(spacing: 0) {
-                    TMShoulderRotationPlayer(resource: resource, paused: holdsPose, fitsFigure: true)
-
-                    TMShoulderRotationPlayer(resource: resource, paused: holdsPose, fitsFigure: true)
-                        .scaleEffect(x: -1, y: 1)
-                }
-            } else {
-                TMShoulderRotationPlayer(resource: resource, paused: holdsPose)
-                    .scaleEffect(x: mirrored ? -1 : 1, y: 1)
-            }
+            TMShoulderRotationPlayer(resource: resource, paused: holdsPose)
+                .scaleEffect(x: mirrored ? -1 : 1, y: 1)
 
             TMTherapyDemoCaption(paused: holdsPose)
         }
@@ -51,15 +40,12 @@ struct TMShoulderRotationMovieView: View {
 private struct TMShoulderRotationPlayer: UIViewRepresentable {
     let resource: String
     let paused: Bool
-    /// Letterboxes instead of cropping, so a half-width figure stays whole.
-    var fitsFigure = false
 
     func makeUIView(context: Context) -> TMLoopingMovieView {
         TMLoopingMovieView()
     }
 
     func updateUIView(_ view: TMLoopingMovieView, context: Context) {
-        view.fitsFigure = fitsFigure
         view.configure(resource: resource, paused: paused)
     }
 
@@ -74,12 +60,6 @@ private final class TMLoopingMovieView: UIView {
     private var player: AVQueuePlayer?
     private var looper: AVPlayerLooper?
     private var loadedResource: String?
-
-    var fitsFigure = false {
-        didSet {
-            playerLayer.videoGravity = fitsFigure ? .resizeAspect : .resizeAspectFill
-        }
-    }
 
     override init(frame: CGRect) {
         super.init(frame: frame)

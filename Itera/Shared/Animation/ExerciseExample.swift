@@ -13,7 +13,6 @@ struct TMExerciseExample: View {
     let mode: TherapyAnimationPlayback
     @Environment(\.accessibilityReduceMotion) private var reducedMotion
     @State private var failed = false
-    @State private var ready = false
 
     var body: some View {
         ZStack {
@@ -23,10 +22,9 @@ struct TMExerciseExample: View {
                 }
                 .scaleEffect(x: mirrored ? -1 : 1, y: 1)
             }
+            // No loading indicator: the clip is bundled, and a spinner would sit on top of it.
             if failed {
                 Text("session.animationFallback").padding()
-            } else if !ready {
-                ProgressView().accessibilityLabel(Text("session.loading"))
             }
         }
         .accessibilityElement(children: .ignore)
@@ -35,7 +33,7 @@ struct TMExerciseExample: View {
 
     private func handle(_ event: ExerciseVideoEvent) {
         switch event {
-        case .ready: ready = true
+        case .ready: break
         case .failed: failed = true
         }
     }

@@ -48,6 +48,10 @@ enum DebugScreenLauncher {
 struct TMDebugScreenGallery: View {
     let screen: String
 
+    /// Bumped by the live screen's debug button to show the demonstration step highlight.
+    @State private var demoRevision = 0
+    @State private var demoStepped = false
+
     private let results = [
         TherapySetResult(number: 1, done: 8, goal: 8, state: .done),
         TherapySetResult(number: 2, done: 8, goal: 8, state: .done),
@@ -103,11 +107,13 @@ struct TMDebugScreenGallery: View {
         TMTherapyExerciseLiveLayout(
             heading: heading,
             cue: Text("plan.purpose.crossMidline"),
-            demoTitle: "session.followMovement",
+            demoTitle: demoStepped ? "demo.step.peak" : "demo.step.start",
             repetitions: (3, 8),
             sets: (1, 3),
             pauseTitle: "session.pauseAction",
             endTitle: "session.endAction",
+            demoRevision: demoRevision,
+            demoAnnouncement: String(localized: demoStepped ? "demo.step.peak" : "demo.step.start"),
             onPause: {},
             onEnd: {}
         ) {
@@ -116,6 +122,14 @@ struct TMDebugScreenGallery: View {
             TMBalanceExerciseDemonstrationView(exercise: .crossMidline, paused: false)
         } accessories: {
             EmptyView()
+        }
+        .overlay(alignment: .topTrailing) {
+            TMDebugActionButton(title: "debug.highlightDemo", symbol: "sparkles") {
+                demoStepped.toggle()
+                demoRevision += 1
+            }
+            .padding(.top, 12)
+            .padding(.trailing, 20)
         }
     }
 }

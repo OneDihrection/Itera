@@ -7,7 +7,7 @@
 
 import Foundation
 
-enum BodyJoint: String, CaseIterable {
+enum BodyJoint: String, CaseIterable, Codable {
     case nose, neck, root, leftShoulder, rightShoulder, leftElbow, rightElbow
     case leftWrist, rightWrist, leftHip, rightHip
     case leftKnee, rightKnee, leftAnkle, rightAnkle

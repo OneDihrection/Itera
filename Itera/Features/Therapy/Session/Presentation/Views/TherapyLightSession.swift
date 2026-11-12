@@ -26,13 +26,15 @@ extension TMTherapySessionView {
                 : lightHeading,
             cue: showsCalibrationCard ? nil : lightCue,
             cuePlacement: .video(videoBounds),
-            demoTitle: "session.followMovement",
+            demoTitle: LocalizedStringKey(model.demoTitleKey),
             repetitions: (model.snapshot.presentation?.count ?? 0, model.snapshot.activity?.goal ?? 0),
             sets: (model.snapshot.setNumber, model.snapshot.activity?.sets ?? 1),
             pauseTitle: "session.pauseAction",
             endTitle: "session.endAction",
             pauseDisabled: model.snapshot.paused,
             calibrating: isCalibrationLayout,
+            demoRevision: model.demoRevision,
+            demoAnnouncement: lightString(model.demoTitleKey),
             onPause: { model.command(.pause) },
             onEnd: requestEnd
         ) {
@@ -44,6 +46,21 @@ extension TMTherapySessionView {
             EmptyView()
         }
         .accessibilityHidden(hasFullScreenPresentation || model.snapshot.paused)
+    }
+
+    /// Debug builds only. Drawn over the header's trailing corner, above stage pages and the pause
+    /// dialog, rather than in `accessories`, which would move the centred heading.
+    @ViewBuilder
+    var lightDebugFinishButton: some View {
+        #if DEBUG
+        if usesLightLayout, model.snapshot.summary == nil, !model.entryFailure {
+            TMDebugActionButton(title: "debug.finishExercise", symbol: "forward.end.fill") {
+                model.command(.debugFinish)
+            }
+            .padding(.top, 12)
+            .padding(.trailing, 20)
+        }
+        #endif
     }
 
     private var usesCalibrationOpening: Bool {
