@@ -31,6 +31,10 @@ final class TherapySessionViewModel {
     private(set) var saveFailure: String?
     private(set) var voiceReady = false
     private(set) var listening = false
+    /// Increases each time the live demonstration moves to a new step, so the screen can highlight it.
+    private(set) var demoRevision = 0
+    /// The last example step the live screen has shown, pulsed or accepted silently.
+    @ObservationIgnored fileprivate var announcedDemoStep: DemoStep?
 
     @ObservationIgnored let tracking: BodyTrackingService
     @ObservationIgnored private let audio: SessionAudioService
@@ -412,6 +416,9 @@ final class TherapySessionViewModel {
             case .checkpoint, .finalize, .saveKeyReps: pendingSaves.append(effect)
             }
         }
+        // After the effects, so the chime starts beneath the new step's narration instead of
+        // being faded out by it.
+        updateDemoStep()
         drainSaves()
         if snapshot.summary != nil { cleanup(preserveClosing: true) }
     }
@@ -505,3 +512,107 @@ private actor PresentationFixtureRepository: SessionRepository {
     func keyReps(sessionID: UUID) -> [ActivityKeyReps] { [] }
 }
 #endif
+
+// MARK: - Demonstration step
+
+extension TherapySessionViewModel {
+    /// What the arm raise and elbow bend example shows: it loops on the demonstration card and
+    /// in practice, and holds the start or peak pose while that pose is being calibrated.
+    var demoPlayback: TherapyAnimationPlayback {
+        if snapshot.stage == .demonstration {
+            return .looping
+        }
+
+        guard case .movement(let movement) = snapshot.presentation else {
+            return .looping
+        }
+
+        switch movement.pose {
+        case .start:
+            return .staticStart
+        case .peak:
+            return .staticPeak
+        case .looping:
+            return .looping
+        }
+    }
+
+    /// The demonstration column's title, naming the pose the example is holding.
+    var demoTitleKey: String {
+        guard showsMovementExample else {
+            return "session.followMovement"
+        }
+
+        switch demoPlayback {
+        case .staticStart:
+            return "demo.step.start"
+        case .staticPeak:
+            return "demo.step.peak"
+        case .looping:
+            return "session.followMovement"
+        }
+    }
+
+    /// Only arm raise and elbow bend change their example by step; reach and towel keep one.
+    private var showsMovementExample: Bool {
+        switch snapshot.activity?.kind {
+        case .armRaise, .elbowBend:
+            return true
+        default:
+            return false
+        }
+    }
+
+    /// Highlights and chimes when the live screen shows an example step it has not shown yet.
+    ///
+    /// Every held start or peak pose pulses as soon as it is visible, even if it first appeared
+    /// behind a stage page, since that is when the patient must make a new movement. A looping
+    /// step pulses only as a change within the same activity and set (the return to start after
+    /// the peak); the first looping step of an activity or set is accepted silently. Nothing is
+    /// shown while paused, waiting for the camera or behind a stage page, so a step reached then
+    /// pulses once the live screen returns.
+    fileprivate func updateDemoStep() {
+        guard showsMovementExample, let activity = snapshot.activity else {
+            announcedDemoStep = nil
+            return
+        }
+
+        let watchingLiveScreen = snapshot.stage == .activity
+            && !snapshot.paused
+            && !snapshot.cameraWaiting
+
+        guard watchingLiveScreen else {
+            return
+        }
+
+        let step = DemoStep(
+            activityID: activity.id,
+            setNumber: snapshot.setNumber,
+            playback: demoPlayback
+        )
+
+        guard step != announcedDemoStep else {
+            return
+        }
+
+        let previous = announcedDemoStep
+        announcedDemoStep = step
+
+        let sameRun = previous?.activityID == step.activityID
+            && previous?.setNumber == step.setNumber
+
+        guard step.playback != .looping || sameRun else {
+            return
+        }
+
+        demoRevision += 1
+        audio.play(id: UUID(), cue: .demoChanged)
+    }
+}
+
+/// The example's identity for change detection.
+fileprivate struct DemoStep: Equatable {
+    let activityID: UUID
+    let setNumber: Int
+    let playback: TherapyAnimationPlayback
+}

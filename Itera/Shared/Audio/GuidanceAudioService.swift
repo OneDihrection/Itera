@@ -14,6 +14,8 @@ enum GuidanceSound {
     case countdown
     case holdCompleted
     case setCompleted
+    /// The live demonstration moved to a new step.
+    case demoChanged
 }
 
 enum GuidanceAudioEvent {
@@ -224,6 +226,7 @@ final class GuidanceAudioService: NSObject, AVSpeechSynthesizerDelegate {
         case .countdown: name = "countdown"
         case .holdCompleted: name = "target-reached"
         case .setCompleted: name = "set-complete"
+        case .demoChanged: name = DemoChangeSound.resourceName
         }
         guard let url = Bundle.main.url(forResource: name, withExtension: "wav") else {
             return

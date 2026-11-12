@@ -70,6 +70,7 @@ final class SessionAudioService: NSObject, VoiceReadinessProviding, AVSpeechSynt
     private var voice: AVSpeechSynthesisVoice?
     private var clips: [String: PreparedAudioClip] = [:]
     private var targetEffect: PreparedAudioClip?
+    private var demoEffect: PreparedAudioClip?
     private var towelEffects: [String: PreparedAudioClip] = [:]
     private var activeClip: PreparedAudioClip?
     private var clipID: UUID?
@@ -130,6 +131,9 @@ final class SessionAudioService: NSObject, VoiceReadinessProviding, AVSpeechSynt
         if let url = Bundle.main.url(forResource: "target-reached", withExtension: "wav") {
             targetEffect = try? PreparedAudioClip(url: url)
         }
+        if let url = Bundle.main.url(forResource: DemoChangeSound.resourceName, withExtension: "wav") {
+            demoEffect = try? PreparedAudioClip(url: url)
+        }
     }
 
     /// True while a cue, count or narration clip is being spoken or queued.
@@ -138,6 +142,7 @@ final class SessionAudioService: NSObject, VoiceReadinessProviding, AVSpeechSynt
     }
 
     /// Short effects never play over speech: fade them out before any narration begins.
+    /// The demonstration chime is exempt: it is meant to sound, ducked, beneath its step's narration.
     private func stopEffects() {
         targetEffect?.stop()
         towelEffects.values.forEach { $0.stop() }
@@ -189,6 +194,7 @@ final class SessionAudioService: NSObject, VoiceReadinessProviding, AVSpeechSynt
         speechWatchdog?.cancel()
         speechWatchdog = nil
         targetEffect?.stop()
+        demoEffect?.stop()
         towelEffects.values.forEach { $0.stop() }
         clipID = nil
         clipWatchdog?.cancel()
@@ -251,6 +257,18 @@ final class SessionAudioService: NSObject, VoiceReadinessProviding, AVSpeechSynt
             let volume: Float = utteranceIDs.isEmpty && clipID == nil ? 0.8 : 0.4
             guard let targetEffect,
                   targetEffect.play(id: id, volume: volume, completion: { [weak self] _, success in
+                      if !success { self?.events.send(.feedbackUnavailable) }
+                  }) else {
+                events.send(.feedbackUnavailable)
+                return
+            }
+        case .demoChanged:
+            // Guidance, not celebration, so it ignores the celebration-sounds preference.
+            // Played after the step's narration has started, ducked beneath it.
+            let volume: Float = utteranceIDs.isEmpty && clipID == nil ? 0.6 : 0.26
+            demoEffect?.stop()
+            guard let demoEffect,
+                  demoEffect.play(id: id, volume: volume, completion: { [weak self] _, success in
                       if !success { self?.events.send(.feedbackUnavailable) }
                   }) else {
                 events.send(.feedbackUnavailable)

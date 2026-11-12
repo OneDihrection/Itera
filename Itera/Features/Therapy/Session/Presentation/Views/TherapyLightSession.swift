@@ -26,13 +26,15 @@ extension TMTherapySessionView {
                 : lightHeading,
             cue: showsCalibrationCard ? nil : lightCue,
             cuePlacement: .video(videoBounds),
-            demoTitle: "session.followMovement",
+            demoTitle: LocalizedStringKey(model.demoTitleKey),
             repetitions: (model.snapshot.presentation?.count ?? 0, model.snapshot.activity?.goal ?? 0),
             sets: (model.snapshot.setNumber, model.snapshot.activity?.sets ?? 1),
             pauseTitle: "session.pauseAction",
             endTitle: "session.endAction",
             pauseDisabled: model.snapshot.paused,
             calibrating: isCalibrationLayout,
+            demoRevision: model.demoRevision,
+            demoAnnouncement: lightString(model.demoTitleKey),
             onPause: { model.command(.pause) },
             onEnd: requestEnd
         ) {

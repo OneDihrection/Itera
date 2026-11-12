@@ -339,12 +339,18 @@ struct TMTherapyExerciseLiveLayout<Camera: View, Demo: View, Accessories: View>:
     var pauseDisabled = false
     var calibrating = false
     var demoWidthFraction: CGFloat = 0.9
+    /// Changes whenever the demonstration moves to a new step, which highlights the panel.
+    var demoRevision = 0
+    /// Spoken to VoiceOver when `demoRevision` changes, usually the new `demoTitle`.
+    var demoAnnouncement: String? = nil
     let onPause: () -> Void
     let onEnd: () -> Void
     @ViewBuilder let camera: Camera
     @ViewBuilder let demo: Demo
     /// Small trailing controls beside the heading, such as music or voice.
     @ViewBuilder let accessories: Accessories
+
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     // The heading and the counters/buttons row take fixed shares of the height (about 12% and
     // 20%); the camera and demo row takes the rest. The minimums keep a two-line heading and
@@ -444,6 +450,8 @@ struct TMTherapyExerciseLiveLayout<Camera: View, Demo: View, Accessories: View>:
             Text(demoTitle)
                 .typography(size: 24, weight: .bold, relativeTo: .title3)
                 .foregroundStyle(TherapyPalette.ink)
+                .contentTransition(.opacity)
+                .animation(reduceMotion ? nil : .easeInOut(duration: 0.3), value: demoRevision)
                 .offset(y: demoTitleOffset)
 
             Color.clear
@@ -455,6 +463,7 @@ struct TMTherapyExerciseLiveLayout<Camera: View, Demo: View, Accessories: View>:
                         .environment(\.therapyDemoCaptionHidden, true)
                 }
                 .clipShape(RoundedRectangle(cornerRadius: 24))
+                .therapyDemoHighlight(revision: demoRevision, announcement: demoAnnouncement)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
     }

@@ -135,3 +135,7 @@ Components/DebugRibbon.swift exists only in debug builds (`#if DEBUG`). `.debugO
 
 `TMTherapyProgressMetric` (Components/TherapyProgressSummary.swift) is the Progress pages' metric tile: a terracotta icon in a soft square, a large value and a muted unit. `TMTherapyProgressSessionCard` and the movement report share it.
 
+
+## Demonstration step highlight (2026-11-12)
+
+`TMTherapyDemoHighlight` (Components/TherapyDemoHighlight.swift, `.therapyDemoHighlight(revision:announcement:)`) calls attention to a demonstration panel whose content moved to a new step. Each change of `revision` (never the first value seen) draws a thin 3 pt rust `brand` outline over a 5 pt `calmUnderlay` for about four seconds and pulses the panel gently three times (1.1 s each): a faint ring (55% opacity, 3 to 1 pt) ripples about 10 pt outward from the edge and fades, while the outline glows softly and the panel swells to 1.01. The motion is the signal; there is no badge. It posts the announcement to VoiceOver. Under Reduce Motion only the static outline shows. The ripple draws outside the panel, so callers leave about 10 pt around it. It takes no taps and knows nothing about exercises; the caller decides what a new step is. `TMTherapyExerciseLiveLayout` applies it to its demonstration through `demoRevision` and `demoAnnouncement`, and crossfades `demoTitle` when the revision changes.

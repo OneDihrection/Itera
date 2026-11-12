@@ -142,6 +142,8 @@ struct TMBalanceSessionView: View {
             endTitle: "session.endAction",
             pauseDisabled: model.paused,
             calibrating: model.calibrationMessage != nil,
+            demoRevision: model.demoRevision,
+            demoAnnouncement: String(localized: "demo.step.otherArm"),
             onPause: model.pause,
             onEnd: requestEnd
         ) {

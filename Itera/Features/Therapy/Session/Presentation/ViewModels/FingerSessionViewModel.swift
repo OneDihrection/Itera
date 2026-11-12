@@ -74,6 +74,12 @@ final class FingerSessionViewModel {
     @ObservationIgnored private var previousInstruction = ""
     @ObservationIgnored private var lastRecoverySpoken: String?
     @ObservationIgnored private var previousProgress = -1
+    /// Increases each time the live demonstration moves to a new step, so the screen can highlight it.
+    private(set) var demoRevision = 0
+    /// What VoiceOver hears for the latest step change.
+    private(set) var demoAnnouncementKey = "session.followMovement"
+    /// The last example step the live screen has shown, pulsed or accepted silently.
+    @ObservationIgnored fileprivate var announcedDemoStep: FingerDemoStep?
     @ObservationIgnored private var previousExercise = 0
     @ObservationIgnored private var wasIdleTimerDisabled = false
     @ObservationIgnored private var language = "id-ID"
@@ -617,6 +623,11 @@ final class FingerSessionViewModel {
     }
 
     private func updateGuidance() {
+        // Runs on every exit, after any new narration has started, so the chime sits beneath it.
+        defer {
+            updateDemoStep()
+        }
+
         guard !paused, previewAttached,
               ProcessInfo.processInfo.systemUptime - lastFrame <= 0.3 else { return }
 
@@ -1030,4 +1041,95 @@ final class FingerSessionViewModel {
         audio.stop()
         UIApplication.shared.isIdleTimerDisabled = wasIdleTimerDisabled
     }
+}
+
+// MARK: - Demonstration step
+
+extension FingerSessionViewModel {
+    /// The demonstration column's title, naming the pose the example is holding.
+    var demoTitleKey: String {
+        switch demoPose {
+        case .start:
+            return "demo.step.start"
+        case .target:
+            return "demo.step.peak"
+        case .intro, .practice, .other:
+            return "session.followMovement"
+        }
+    }
+
+    var demoAnnouncement: String {
+        localized(demoAnnouncementKey)
+    }
+
+    /// The example's step, matching what `TMFingerExampleView` is given: the looping intro while
+    /// calibration is introduced, held poses while they are calibrated, then practice.
+    fileprivate var demoPose: FingerDemoStep.Pose {
+        if calibrationMessage == "calibration.intro" {
+            return .intro
+        }
+
+        switch activity.phase {
+        case .baseline:
+            return .start
+        case .target, .range:
+            return .target
+        case .active:
+            return .practice
+        case .rangeResult, .demonstration, .countdown, .feedback, .rest, .finished:
+            return .other
+        }
+    }
+
+    /// Highlights and chimes when the live screen shows an example step it has not shown yet.
+    ///
+    /// Every held start or target pose pulses as soon as it is visible, since that is when the
+    /// patient must make a new movement. The looping intro and practice pulse only when the
+    /// finger changes within the same exercise and set; practice after the countdown is accepted
+    /// silently. The move and return halves of each repetition are not steps. Nothing is shown
+    /// while paused, waiting for the camera or behind a countdown, rest or result page, so a step
+    /// reached then pulses once the live screen returns.
+    fileprivate func updateDemoStep() {
+        let step = FingerDemoStep(
+            exerciseIndex: engine.summary.exerciseIndex,
+            setNumber: activity.set,
+            pose: demoPose,
+            finger: activity.kind.isSequential ? activity.finger : 0
+        )
+
+        guard step.pose != .other,
+              !paused,
+              !waitingForCamera,
+              step != announcedDemoStep else {
+            return
+        }
+
+        let previous = announcedDemoStep
+        announcedDemoStep = step
+
+        let samePoseRun = previous?.exerciseIndex == step.exerciseIndex
+            && previous?.setNumber == step.setNumber
+            && previous?.pose == step.pose
+        let heldPose = step.pose == .start || step.pose == .target
+
+        guard heldPose || samePoseRun else {
+            return
+        }
+
+        demoAnnouncementKey = samePoseRun ? "demo.step.nextFinger" : demoTitleKey
+        demoRevision += 1
+        audio.playCue(.demoChanged)
+    }
+}
+
+/// The finger example's identity for change detection.
+fileprivate struct FingerDemoStep: Equatable {
+    enum Pose {
+        case intro, start, target, practice, other
+    }
+
+    let exerciseIndex: Int
+    let setNumber: Int
+    let pose: Pose
+    let finger: Int
 }

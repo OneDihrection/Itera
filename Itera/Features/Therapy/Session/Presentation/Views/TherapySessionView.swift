@@ -631,23 +631,10 @@ struct TMTherapySessionView: View {
         }
 
         if let activity = model.snapshot.activity, activity.kind == .armRaise || activity.kind == .elbowBend || activity.kind == .directionalReach {
-            let mode: TherapyAnimationPlayback = {
-                if model.snapshot.stage == .demonstration {
-                    return .looping
-                }
-                if case .movement(let value) = model.snapshot.presentation {
-                    switch value.pose {
-                    case .start: return .staticStart
-                    case .peak: return .staticPeak
-                    case .looping: return .looping
-                    }
-                }
-                return .looping
-            }()
             TMExerciseExample(
                 asset: activity.kind == .armRaise ? .armRaise : activity.kind == .elbowBend ? .elbowBend : .directionalReach,
                 mirrored: activity.side == .left,
-                mode: mode
+                mode: model.demoPlayback
             )
                 .id(activity.id)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)

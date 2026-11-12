@@ -23,6 +23,8 @@ final class BalanceSessionViewModel {
     private(set) var voiceListening = false
     private(set) var voiceAvailable = true
     private(set) var requestedExit = false
+    /// Increases when the demonstration switches to the other arm, so the screen can highlight it.
+    private(set) var demoRevision = 0
     let holdSeconds: Int
     let exercise: BalanceExercise
 
@@ -189,6 +191,7 @@ final class BalanceSessionViewModel {
                     return
                 }
                 self.updateAudio(from: previous, to: self.snapshot)
+                self.updateDemoArm(from: previous)
                 if previous.phase != .complete, self.snapshot.phase == .complete {
                     self.finishSet()
                 }
@@ -937,5 +940,22 @@ final class BalanceSessionViewModel {
         case .keyReps(let sessionID, let keyReps):
             try await repository.saveKeyReps(keyReps, sessionID: sessionID)
         }
+    }
+}
+
+// MARK: - Demonstration step
+
+extension BalanceSessionViewModel {
+    /// With both arms chosen, the demonstration mirrors to follow the active arm. Highlight and
+    /// chime that switch, after the frame's own cue has started so the chime sits beneath it.
+    fileprivate func updateDemoArm(from previous: BalanceSnapshot) {
+        guard previous.activeArm != snapshot.activeArm,
+              !paused,
+              !cameraWaiting else {
+            return
+        }
+
+        demoRevision += 1
+        audio.play(id: UUID(), cue: .demoChanged)
     }
 }
