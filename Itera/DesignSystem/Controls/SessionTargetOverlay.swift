@@ -360,28 +360,48 @@ struct TMSessionTargetOverlay: View {
         )
     }
 
+    /// The farthest reach so far: a hollow blue ring around a white point, with a label in the hold
+    /// count's badge style below it.
+    ///
+    /// Hollow and much smaller than a bubble, so it reads as a reference rather than a destination,
+    /// and its color and shape keep it apart from the yellow joint disc.
     private func drawFarthest(_ point: CGPoint, bounds: CGRect, context: inout GraphicsContext) {
-        var diamond = Path()
-        diamond.move(to: CGPoint(x: point.x, y: point.y - 22))
-        diamond.addLine(to: CGPoint(x: point.x + 22, y: point.y))
-        diamond.addLine(to: CGPoint(x: point.x, y: point.y + 22))
-        diamond.addLine(to: CGPoint(x: point.x - 22, y: point.y))
-        diamond.closeSubpath()
-        context.fill(diamond, with: .color(TherapyPalette.guidanceBlue.opacity(0.7)))
-        strokeWithUnderlay(diamond, color: .white, width: 4, context: &context)
+        let ringRadius = 18.0
+        let ring = Path(ellipseIn: CGRect(
+            x: point.x - ringRadius,
+            y: point.y - ringRadius,
+            width: ringRadius * 2,
+            height: ringRadius * 2
+        ))
+        strokeWithUnderlay(ring, color: TherapyPalette.guidanceBlue, width: 6, context: &context)
 
-        let text = context.resolve(AppTypography.overlayText("parity.farthest", size: 30, weight: .bold))
+        let dot = CGRect(x: point.x - 5, y: point.y - 5, width: 10, height: 10)
+        context.fill(Path(ellipseIn: dot.insetBy(dx: -3, dy: -3)), with: .color(TherapyPalette.calmUnderlay))
+        context.fill(Path(ellipseIn: dot), with: .color(.white))
+
+        let text = context.resolve(AppTypography.overlayText("parity.farthest", size: 22, weight: .semiBold))
         let measured = text.measure(in: CGSize(width: max(1, bounds.width - 16), height: .infinity))
-        let width = min(max(0, bounds.width - 16), measured.width + 20)
-        let height = min(max(0, bounds.height - 16), measured.height + 10)
-        guard width > 0, height > 0 else { return }
-        // Only the label moves at the image edge; the measured diamond stays put.
+        let width = min(max(0, bounds.width - 16), measured.width + 28)
+        let height = min(max(0, bounds.height - 16), measured.height + 12)
+
+        guard width > 0, height > 0 else {
+            return
+        }
+
+        // Only the label moves at the image edge; the mark stays on the measured point. Below the
+        // mark unless that leaves the picture, then above it, so the label never covers the mark.
+        let below = point.y + ringRadius + 12
+        let above = point.y - ringRadius - 12 - height
+        let top = below + height <= bounds.maxY - 8 ? below : above
         let rect = CGRect(
             x: min(max(point.x - width / 2, bounds.minX + 8), bounds.maxX - width - 8),
-            y: min(max(point.y + 32, bounds.minY + 8), bounds.maxY - height - 8),
-            width: width, height: height
+            y: min(max(top, bounds.minY + 8), bounds.maxY - height - 8),
+            width: width,
+            height: height
         )
-        context.fill(Path(roundedRect: rect, cornerRadius: 12), with: .color(.black.opacity(0.75)))
+        let badge = Path(roundedRect: rect, cornerRadius: height / 2)
+        context.fill(badge, with: .color(TherapyPalette.calmUnderlay))
+        context.stroke(badge, with: .color(TherapyPalette.guidanceBlue), lineWidth: 3)
         context.draw(text, at: CGPoint(x: rect.midX, y: rect.midY))
     }
 

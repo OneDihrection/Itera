@@ -938,13 +938,23 @@ struct TMTherapySessionView: View {
                 pivot: guide.pivot.map(normalized)
             )
         }
-        let direction = (guide.directionOnly || guide.directionTip != nil) ? SessionDirectionGuide(
+        // A farthest marker alone still needs a direction guide to carry it; its arrow stays hidden
+        // so the bubble guide's arrow remains the only one.
+        let carriesArrow = guide.directionOnly || guide.directionTip != nil
+        let direction = (carriesArrow || guide.farthest != nil) ? SessionDirectionGuide(
             origin: normalized(guide.start),
             tip: normalized(guide.directionTip ?? guide.target),
             trackedJoint: normalized(guide.tracked),
-            showsArrow: guide.showsDirectionArrow,
+            showsArrow: carriesArrow && guide.showsDirectionArrow,
             farthestPosition: guide.farthest.map(normalized)
         ) : nil
+        let countdown = guide.countdownSeconds.map { seconds in
+            SessionHoldCountdown(
+                seconds: seconds,
+                center: normalized(guide.tracked),
+                radius: guide.radius
+            )
+        }
         return TMSessionTargetOverlay(
             imageSize: CGSize(width: guide.aspect, height: 1),
             bubbleGuide: guide.capturing ? (guide.savedStart ? bubble : nil) : (guide.directionOnly ? nil : bubble),
@@ -955,6 +965,7 @@ struct TMTherapySessionView: View {
             holdRadius: guide.radius,
             directionGuide: direction,
             movementCue: movementCue,
+            holdCountdown: countdown,
             mirrored: true
         )
     }

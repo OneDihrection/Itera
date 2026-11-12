@@ -33,6 +33,8 @@ struct TargetGuide {
     var pivot: TherapyPoint? = nil
     /// Where the tracked joint should head while a target is calibrated; nil hides the cue.
     var calibrationTip: TherapyPoint? = nil
+    /// Seconds left in a timed calibration window, drawn beside the tracked joint; nil hides it.
+    var countdownSeconds: Int? = nil
 }
 
 enum ActivityStatus { case preparing, running, suspended, finished }
