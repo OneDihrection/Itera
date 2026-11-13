@@ -35,19 +35,6 @@ enum NarrationVoice {
         return pool.max(by: isLowerQuality) ?? AVSpeechSynthesisVoice(language: language)
     }
 
-    /// What Settings shows about the voice narration will use.
-    struct Summary: Equatable {
-        let name: String
-        /// Enhanced or premium; the standard compact voice sounds noticeably robotic.
-        let isHighQuality: Bool
-    }
-
-    static func summary(for language: String) -> Summary? {
-        best(for: language).map {
-            Summary(name: $0.name, isHighQuality: $0.quality != .default)
-        }
-    }
-
     /// An utterance with the shared voice and pacing.
     static func utterance(_ text: String, voice: AVSpeechSynthesisVoice) -> AVSpeechUtterance {
         let utterance = AVSpeechUtterance(string: text)

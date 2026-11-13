@@ -20,8 +20,6 @@ struct TMPracticePreferencesView: View {
     @AppStorage(PracticePreferences.replayRecording) private var replayRecording = PracticePreferences.replayRecordingLevel
     @AppStorage(PracticePreferences.videoCensoring) private var videoCensoring = PracticePreferences.videoCensoringChoice
     @AppStorage(AppLanguage.storageKey) private var language = AppLanguage.selected.rawValue
-    @Environment(\.scenePhase) private var scenePhase
-    @State private var voice: NarrationVoice.Summary?
 
     var body: some View {
         @Bindable var home = dependencies.home
@@ -60,7 +58,6 @@ struct TMPracticePreferencesView: View {
             } header: {
                 Text("language.title").typography(.headline)
             }
-            voiceSection
             Section {
                 TextField("settings.patientName", text: $patientName)
                     .textContentType(.name)
@@ -112,14 +109,6 @@ struct TMPracticePreferencesView: View {
         }
         .presentationDetents([.large])
         .onDisappear { Task { _ = await dependencies.home.saveRoutine() } }
-        .onAppear(perform: refreshVoice)
-        .onChange(of: language) { refreshVoice() }
-        // A voice downloaded in the iPad's Settings app shows up on return.
-        .onChange(of: scenePhase) { _, phase in
-            if phase == .active {
-                refreshVoice()
-            }
-        }
     }
 
     // MARK: - Recording
@@ -174,30 +163,5 @@ struct TMPracticePreferencesView: View {
         Label(key, systemImage: "exclamationmark.triangle")
             .typography(.body)
             .foregroundStyle(TherapyPalette.warning)
-    }
-
-    // MARK: - Voice
-
-    private var voiceSection: some View {
-        Section {
-            if let voice {
-                LabeledContent {
-                    Text(voice.isHighQuality ? "settings.voiceHigh" : "settings.voiceStandard")
-                } label: {
-                    Text(verbatim: voice.name)
-                }
-                .frame(minHeight: 64)
-            }
-        } header: {
-            Text("settings.voiceTitle").typography(.headline)
-        } footer: {
-            Text(voice?.isHighQuality == true ? "settings.voiceGood" : "settings.voiceTip")
-                .typography(.body)
-        }
-    }
-
-    private func refreshVoice() {
-        let selected = AppLanguage(rawValue: language) ?? .indonesian
-        voice = NarrationVoice.summary(for: selected.speechIdentifier)
     }
 }
