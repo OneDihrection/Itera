@@ -377,7 +377,7 @@ final class GuidanceAudioService: NSObject, AVSpeechSynthesizerDelegate {
                 // Rotating the request identity discards its later partial/final revisions.
                 let command = result.flatMap { self.vocabulary.command(in: $0.bestTranscription.formattedString) }
                 if let command {
-                    if result?.isFinal == true || command == .pause || command == .stop {
+                    if result?.isFinal == true || command == .pause {
                         self.consumeCommand(command, requestID: id)
                     } else {
                         self.scheduleCommand(command, requestID: id)
@@ -413,7 +413,7 @@ final class GuidanceAudioService: NSObject, AVSpeechSynthesizerDelegate {
             guard let self, !Task.isCancelled, self.pendingCommand == command else {
                 return
             }
-            // Resume/repeat must remain an exact phrase briefly; expanded conversation cancels it.
+            // Resume must remain an exact phrase briefly; expanded conversation cancels it.
             self.consumeCommand(command, requestID: requestID)
         }
     }

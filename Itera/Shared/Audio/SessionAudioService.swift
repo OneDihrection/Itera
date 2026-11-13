@@ -14,7 +14,7 @@ import OSLog
 enum AudioEvent {
     case completed(UUID, Bool)
     case cancelled(UUID)
-    case command(AudioCommand)
+    case command(VoiceCommand)
     case interrupted
     case voiceUnavailable
     case listening(Bool)
@@ -63,6 +63,7 @@ final class SessionAudioService: NSObject, VoiceReadinessProviding, AVSpeechSynt
     private var utteranceIDs: [ObjectIdentifier: UUID] = [:]
     private var interruption: NSObjectProtocol?
     private var consumed = false
+    private let vocabulary = VoiceCommandVocabulary()
     private var language = AppLanguage.selected
     // Command recognition stays English independently of narration language.
     private let recognitionLocale = Locale(identifier: "en-US")
@@ -601,6 +602,7 @@ final class SessionAudioService: NSObject, VoiceReadinessProviding, AVSpeechSynt
         let request = SFSpeechAudioBufferRecognitionRequest()
         request.requiresOnDeviceRecognition = true
         request.shouldReportPartialResults = true
+        request.contextualStrings = vocabulary.contextualStrings
         self.request = request
         consumed = false
         inputWorker.replaceRequest(request)
@@ -610,10 +612,8 @@ final class SessionAudioService: NSObject, VoiceReadinessProviding, AVSpeechSynt
                     return
                 }
                 if let result, !self.consumed {
-                    let words = result.bestTranscription.formattedString.lowercased()
-                        .trimmingCharacters(in: .whitespacesAndNewlines)
                     // Exact short utterances avoid substring triggers from app narration.
-                    if let command = self.command(words) {
+                    if let command = self.vocabulary.command(in: result.bestTranscription.formattedString) {
                         self.consumed = true
                         self.events.send(.command(command))
                         // Begin a fresh utterance after a command so the next command can interrupt it.
@@ -650,27 +650,6 @@ final class SessionAudioService: NSObject, VoiceReadinessProviding, AVSpeechSynt
         }
     }
 
-    private var commandBundle: Bundle {
-        guard let path = Bundle.main.path(forResource: "en", ofType: "lproj"),
-            let bundle = Bundle(path: path)
-        else { return .main }
-        return bundle
-    }
-
-    private func command(_ words: String) -> AudioCommand? {
-        let keys: [(String, AudioCommand)] = [
-            ("command.stop", .stop), ("command.pause", .pause), ("command.resume", .resume),
-            ("command.skip", .skip), ("command.repeat", .repeatInstruction), ("command.recalibrate", .retryCalibration),
-            ("command.help", .help), ("command.redo", .redo),
-            ("command.adjustTarget", .adjustTarget), ("command.retryStep", .retryStep),
-            ("command.skipStep", .skipStep), ("command.timedPractice", .timedPractice),
-        ]
-        return keys.first {
-            String(localized: String.LocalizationValue($0.0), bundle: commandBundle).lowercased() == words
-        }?.1
-    }
-
-    /// Logs configuration only; never logs recognized words or microphone samples.
     private func logAudioConfiguration(_ context: String) {
         let session = AVAudioSession.sharedInstance()
         let outputs = session.currentRoute.outputs.map { $0.portType.rawValue }.joined(separator: ",")

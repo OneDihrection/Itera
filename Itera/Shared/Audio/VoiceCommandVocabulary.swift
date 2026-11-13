@@ -7,35 +7,49 @@
 
 import Foundation
 
-enum VoiceCommand: Equatable { case pause, resume, stop, repeatInstruction }
+/// The only spoken commands: "stop" pauses and "go" resumes. Every other control is touch-only.
+enum VoiceCommand: Equatable {
+    case pause
+    case resume
+}
 
 /// Exact short phrases only: ordinary sentences and command substrings do not activate controls.
+///
+/// Phrases resolve from the English string table in both app languages, because recognition is en-US only.
 struct VoiceCommandVocabulary {
     private let commands: [String: VoiceCommand]
     var contextualStrings: [String] { commands.keys.sorted() }
 
     init(
-        pause: String = String(localized: "voice.command.pause"),
-        resume: String = String(localized: "voice.command.resume"),
-        stop: String = String(localized: "voice.command.stop"),
-        repeatInstruction: String = String(localized: "voice.command.repeat")
+        pause: String = String(localized: "voice.command.pause", bundle: Self.englishBundle),
+        resume: String = String(localized: "voice.command.resume", bundle: Self.englishBundle)
     ) {
         var mapping: [String: VoiceCommand] = [:]
-        for (command, phrases) in [
-            (VoiceCommand.repeatInstruction, repeatInstruction), (.resume, resume), (.pause, pause), (.stop, stop)
-        ] {
-            for phrase in phrases.split(separator: "|") {
-                let normalized = Self.normalize(String(phrase))
-                if !normalized.isEmpty {
-                    mapping[normalized] = command
-                }
+
+        for (command, phrase) in [(VoiceCommand.pause, pause), (.resume, resume)] {
+            let normalized = Self.normalize(phrase)
+
+            if !normalized.isEmpty {
+                mapping[normalized] = command
             }
         }
+
         commands = mapping
     }
 
     func command(in transcript: String) -> VoiceCommand? {
         commands[Self.normalize(transcript)]
+    }
+
+    private static var englishBundle: Bundle {
+        guard
+            let path = Bundle.main.path(forResource: "en", ofType: "lproj"),
+            let bundle = Bundle(path: path)
+        else {
+            return .main
+        }
+
+        return bundle
     }
 
     private static func normalize(_ text: String) -> String {

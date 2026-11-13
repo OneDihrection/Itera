@@ -75,10 +75,6 @@ struct TMBalanceSessionView: View {
             leave()
         }
         .onDisappear { model.stop() }
-        .onChange(of: model.requestedExit) { _, requested in
-            guard requested else { return }
-            leave()
-        }
         .onChange(of: scenePhase) { _, phase in
             switch phase {
             case .active: model.foreground(permissions: permissions)

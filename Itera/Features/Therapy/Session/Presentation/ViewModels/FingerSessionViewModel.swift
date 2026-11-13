@@ -760,8 +760,6 @@ final class FingerSessionViewModel {
         switch command {
         case .pause: pause()
         case .resume: resume()
-        case .stop: finish()
-        case .repeatInstruction: narrate()
         }
     }
 

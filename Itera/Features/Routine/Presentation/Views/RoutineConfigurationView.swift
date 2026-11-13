@@ -68,16 +68,6 @@ private struct TMRoutineEditor: View {
                 ForEach([
                     "routine.voicePhrase.pause",
                     "routine.voicePhrase.resume",
-                    "routine.voicePhrase.stop",
-                    "routine.voicePhrase.help",
-                    "routine.voicePhrase.repeat",
-                    "routine.voicePhrase.redo",
-                    "routine.voicePhrase.adjustTarget",
-                    "routine.voicePhrase.retryStep",
-                    "routine.voicePhrase.skipStep",
-                    "routine.voicePhrase.skipActivity",
-                    "routine.voicePhrase.recalibrate",
-                    "routine.voicePhrase.timedPractice",
                 ], id: \.self) { phrase in
                     Label(LocalizedStringKey(phrase), systemImage: "waveform")
                 }

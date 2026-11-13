@@ -22,7 +22,6 @@ final class BalanceSessionViewModel {
     private(set) var paused = false
     private(set) var voiceListening = false
     private(set) var voiceAvailable = true
-    private(set) var requestedExit = false
     /// Increases when the demonstration switches to the other arm, so the screen can highlight it.
     private(set) var demoRevision = 0
     let holdSeconds: Int
@@ -407,7 +406,6 @@ final class BalanceSessionViewModel {
         clock = SessionDurationClock()
         clock.resume(at: Self.now)
         paused = false
-        requestedExit = false
         cameraWaiting = true
         lastSpokenCountdown = nil
         audio.cancelSpeech()
@@ -517,12 +515,6 @@ final class BalanceSessionViewModel {
             pause()
         case .command(.resume):
             resume()
-        case .command(.stop):
-            requestedExit = true
-        case .command(.repeatInstruction):
-            if snapshot.phase == .complete {
-                restart()
-            }
         case .listening(let listening):
             voiceListening = listening
         case .voiceUnavailable:

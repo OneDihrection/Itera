@@ -705,23 +705,6 @@
         }
       }
     },
-    "balance.completion.voiceCommands" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Say “repeat” or “ulangi” to practice again. Say “end” or “akhiri” to return."
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ucapkan “ulangi” atau “repeat” untuk berlatih lagi. Ucapkan “akhiri” atau “end” untuk kembali."
-          }
-        }
-      }
-    },
     "balance.done" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -936,23 +919,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Silangkan tangan untuk menyentuh bahu yang berlawanan. Tuntun menghentikan penilaian saat tubuh terlalu miring atau berputar."
-          }
-        }
-      }
-    },
-    "balance.paused" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Paused — say “start” or “mulai”, or tap Play"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Dijeda — ucapkan “mulai” atau “start”, atau tekan Putar"
           }
         }
       }
@@ -1616,23 +1582,6 @@
         }
       }
     },
-    "balance.voiceCommands" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Say pause/start/end/repeat, or jeda/mulai/akhiri/ulangi"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ucapkan jeda/mulai/akhiri/ulangi, atau pause/start/end/repeat"
-          }
-        }
-      }
-    },
     "balance.voiceListening" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -2161,244 +2110,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Latihan %1$lld dari %2$lld"
-          }
-        }
-      }
-    },
-    "command.adjustTarget" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "adjust target"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "adjust target"
-          }
-        }
-      }
-    },
-    "command.end" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "end"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "akhiri"
-          }
-        }
-      }
-    },
-    "command.help" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "help"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "help"
-          }
-        }
-      }
-    },
-    "command.pause" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "pause"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "jeda"
-          }
-        }
-      }
-    },
-    "command.recalibrate" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "recalibrate"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "kalibrasi"
-          }
-        }
-      }
-    },
-    "command.redo" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "redo"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "redo"
-          }
-        }
-      }
-    },
-    "command.repeat" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "repeat"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "ulangi"
-          }
-        }
-      }
-    },
-    "command.resume" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "resume"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "lanjutkan"
-          }
-        }
-      }
-    },
-    "command.retryStep" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "retry step"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "retry step"
-          }
-        }
-      }
-    },
-    "command.skip" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "skip activity"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "lewati aktivitas"
-          }
-        }
-      }
-    },
-    "command.skipStep" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "skip step"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "skip step"
-          }
-        }
-      }
-    },
-    "command.start" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "start"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "mulai"
-          }
-        }
-      }
-    },
-    "command.stop" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "stop"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "berhenti"
-          }
-        }
-      }
-    },
-    "command.timedPractice" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "timed practice"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "timed practice"
           }
         }
       }
@@ -10977,104 +10688,19 @@
         }
       }
     },
-    "routine.voicePhrase.adjustTarget" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Adjust target"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Adjust target"
-          }
-        }
-      }
-    },
-    "routine.voicePhrase.help" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Help"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Help"
-          }
-        }
-      }
-    },
     "routine.voicePhrase.pause" : {
       "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Pause"
+            "value" : "“Stop” — pause"
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Pause"
-          }
-        }
-      }
-    },
-    "routine.voicePhrase.recalibrate" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Recalibrate"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Recalibrate"
-          }
-        }
-      }
-    },
-    "routine.voicePhrase.redo" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Redo"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Redo"
-          }
-        }
-      }
-    },
-    "routine.voicePhrase.repeat" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Repeat"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Repeat"
+            "value" : "“Stop” — jeda"
           }
         }
       }
@@ -11085,98 +10711,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Resume"
+            "value" : "“Go” — resume"
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Resume"
-          }
-        }
-      }
-    },
-    "routine.voicePhrase.retryStep" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Retry step"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Retry step"
-          }
-        }
-      }
-    },
-    "routine.voicePhrase.skipActivity" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Skip activity"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Skip activity"
-          }
-        }
-      }
-    },
-    "routine.voicePhrase.skipStep" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Skip step"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Skip step"
-          }
-        }
-      }
-    },
-    "routine.voicePhrase.stop" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Stop"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Stop"
-          }
-        }
-      }
-    },
-    "routine.voicePhrase.timedPractice" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Timed practice"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Timed practice"
+            "value" : "“Go” — lanjutkan"
           }
         }
       }
@@ -16782,29 +16323,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "pause|jeda"
+            "value" : "stop"
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "jeda|pause"
-          }
-        }
-      }
-    },
-    "voice.command.repeat" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "repeat|ulangi"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "ulangi|repeat"
+            "value" : "stop"
           }
         }
       }
@@ -16814,46 +16339,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "continue|resume|lanjut|lanjutkan"
+            "value" : "go"
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "lanjut|lanjutkan|continue|resume"
-          }
-        }
-      }
-    },
-    "voice.command.stop" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "stop|akhiri"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "akhiri|stop"
-          }
-        }
-      }
-    },
-    "voice.commands" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Say: “pause”, “resume”, “stop”, or “repeat”."
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ucapkan: “jeda”, “lanjut”, “akhiri”, atau “ulangi”."
+            "value" : "go"
           }
         }
       }
@@ -16888,23 +16380,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Kontrol suara: aktif"
-          }
-        }
-      }
-    },
-    "voice.pauseListening" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Listening. Say “continue” to return."
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Mendengarkan. Ucapkan “lanjut” untuk kembali."
           }
         }
       }

@@ -334,16 +334,6 @@ final class TherapySessionViewModel {
             switch command {
             case .pause: self.command(.pause)
             case .resume: self.command(.resume)
-            case .stop: self.command(.stop)
-            case .repeatInstruction: self.command(.repeatInstruction)
-            case .help: self.command(.help)
-            case .redo: self.command(.redo)
-            case .adjustTarget: self.command(.adjustTarget)
-            case .retryStep: self.command(.retryStep)
-            case .skipStep: self.command(.skipStep)
-            case .timedPractice: self.command(.timedPractice)
-            case .retryCalibration: self.command(.retryCalibration)
-            case .skip: self.command(.skip)
             }
         case .interrupted: blockReadiness()
         case .voiceUnavailable:
