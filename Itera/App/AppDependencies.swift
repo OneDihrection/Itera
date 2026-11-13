@@ -56,6 +56,12 @@ final class AppDependencies: HistoryRecovering {
         )
     }
 
+    /// Finger and forearm sessions share one folder, so either repository reads any session's
+    /// key-repetition replays.
+    var fingerReplays: any FingerSessionRepository {
+        repository
+    }
+
     func playButtonClick() {
         guard UserDefaults.standard.object(forKey: PracticePreferences.buttonSounds) as? Bool ?? true else {
             return

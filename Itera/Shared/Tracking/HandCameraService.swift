@@ -27,6 +27,8 @@ enum HandCameraEvent {
 final class HandCameraService: NSObject, AVCaptureVideoDataOutputSampleBufferDelegate {
     let session = AVCaptureSession()
     let events = PassthroughSubject<HandCameraEvent, Never>()
+    /// Filtered key-repetition video, fed from every inferred frame while a session enables it.
+    let clips = RepClipFrameSource()
     private let queue = DispatchQueue(label: "dev.itera.hand-camera", qos: .userInitiated)
     private let output = AVCaptureVideoDataOutput()
     private let request = VNDetectHumanHandPoseRequest()
@@ -181,6 +183,12 @@ final class HandCameraService: NSObject, AVCaptureVideoDataOutputSampleBufferDel
         guard timestamp - lastInference >= Self.inferenceInterval - 0.001,
               let pixelBuffer = CMSampleBufferGetImageBuffer(buffer) else { return }
         lastInference = timestamp
+
+        // The hand camera runs no body pose, so face detection alone censors faces in clips.
+        if clips.claimFrame(at: timestamp) {
+            clips.offer(pixelBuffer, time: timestamp, heads: nil)
+        }
+
         do {
             try VNImageRequestHandler(cvPixelBuffer: pixelBuffer, orientation: .up).perform([request])
             let hands = request.results ?? []

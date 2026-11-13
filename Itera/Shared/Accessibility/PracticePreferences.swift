@@ -15,21 +15,95 @@ enum PracticePreferences {
     /// How Home and Progress address the patient. Stored only on this device; empty means no name.
     static let patientName = "practice.patientName"
     static let dailyPlanSide = "practice.dailyPlanSide"
-    /// Whether key repetitions also keep a short video; off means skeleton replays only.
-    /// On unless turned off.
-    static let recordsRepClips = "practice.recordsRepClips"
-    /// Whether clips pixelate faces and blur the room. Both on unless turned off.
-    static let censorsFace = "practice.censorsFace"
-    static let censorsBackground = "practice.censorsBackground"
+    /// How much of each key repetition is saved; see `ReplayRecording`.
+    static let replayRecording = "practice.replayRecording"
+    /// What a saved video hides; see `VideoCensoring`.
+    static let videoCensoring = "practice.videoCensoring"
 
-    static var recordsRepClipsEnabled: Bool {
-        UserDefaults.standard.object(forKey: recordsRepClips) as? Bool ?? true
+    // Earlier settings, read only to carry a choice over when the new keys are missing.
+    private static let legacyRecordsRepClips = "practice.recordsRepClips"
+    private static let legacyCensorsFace = "practice.censorsFace"
+    private static let legacyCensorsBackground = "practice.censorsBackground"
+
+    static var replayRecordingLevel: ReplayRecording {
+        let defaults = UserDefaults.standard
+
+        if let raw = defaults.string(forKey: replayRecording),
+           let level = ReplayRecording(rawValue: raw)
+        {
+            return level
+        }
+
+        let recordedVideo = defaults.object(forKey: legacyRecordsRepClips) as? Bool ?? true
+        return recordedVideo ? .video : .skeleton
+    }
+
+    static var videoCensoringChoice: VideoCensoring {
+        let defaults = UserDefaults.standard
+
+        if let raw = defaults.string(forKey: videoCensoring),
+           let choice = VideoCensoring(rawValue: raw)
+        {
+            return choice
+        }
+
+        let face = defaults.object(forKey: legacyCensorsFace) as? Bool ?? true
+        let background = defaults.object(forKey: legacyCensorsBackground) as? Bool ?? true
+
+        switch (face, background) {
+        case (true, false):
+            return .face
+        case (false, true):
+            return .background
+        case (true, true):
+            return .both
+        case (false, false):
+            return .none
+        }
     }
 
     static var repClipPrivacy: RepClipPrivacy {
-        RepClipPrivacy(
-            blursFace: UserDefaults.standard.object(forKey: censorsFace) as? Bool ?? true,
-            blursBackground: UserDefaults.standard.object(forKey: censorsBackground) as? Bool ?? true
-        )
+        videoCensoringChoice.privacy
+    }
+}
+
+/// The caregiver's privacy level for key-repetition replays, from most to least private.
+/// Per-repetition numbers (duration, angle or reached range) are kept at every level.
+enum ReplayRecording: String, CaseIterable {
+    /// No skeleton and no video.
+    case off
+    /// Skeleton replays only.
+    case skeleton
+    /// Skeleton replays and a censored video.
+    case video
+
+    var savesSkeletons: Bool {
+        self != .off
+    }
+
+    var savesClips: Bool {
+        self == .video
+    }
+}
+
+/// What a saved video hides. Every choice except `none` hides something; `none` is an explicit
+/// caregiver choice that the settings page warns about.
+enum VideoCensoring: String, CaseIterable {
+    case face
+    case background
+    case both
+    case none
+
+    var privacy: RepClipPrivacy {
+        switch self {
+        case .face:
+            return RepClipPrivacy(blursFace: true, blursBackground: false)
+        case .background:
+            return RepClipPrivacy(blursFace: false, blursBackground: true)
+        case .both:
+            return RepClipPrivacy(blursFace: true, blursBackground: true)
+        case .none:
+            return RepClipPrivacy(blursFace: false, blursBackground: false)
+        }
     }
 }

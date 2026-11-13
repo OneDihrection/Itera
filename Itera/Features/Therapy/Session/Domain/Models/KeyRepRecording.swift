@@ -22,6 +22,9 @@ struct RepMetrics: Codable, Equatable {
     let trackingCoverage: Double
     /// The arm that moved, when the exercise lets both arms take turns.
     var side: TherapySide? = nil
+    /// Finger exercises: the share of the calibrated range reached at the target hold (1 is the
+    /// calibrated target). Sequential exercises report their weakest finger.
+    var peakFraction: Double? = nil
 
     var observedRange: Double? {
         guard let startAngle, let peakAngle else {
@@ -41,9 +44,15 @@ enum KeyRepRole: String, Codable, CaseIterable {
 /// One recorded pose: confidently tracked joints only, in Vision's normalized, unmirrored image
 /// space (origin bottom-left). A missing joint was not usable in that frame.
 struct SkeletonFrame: Equatable {
+    /// Number of hand joints, in `HandPoseExtractor` order: wrist, then four per finger.
+    static let handJointCount = 21
+
     /// Seconds since the first recorded frame of the repetition.
     let time: Double
     let joints: [BodyJoint: TherapyPoint]
+    /// Hand exercises: `handJointCount` points, nil where a joint was not usable; nil when the
+    /// hand was not seen in this frame.
+    var hand: [TherapyPoint?]? = nil
 }
 
 /// The skeleton of one repetition kept for replay. One repetition can hold several roles, for
@@ -60,6 +69,21 @@ struct KeyRep: Equatable {
 struct ActivityKeyReps: Equatable {
     let executionID: UUID
     let activity: SessionActivity
+    let setNumber: Int
+    let reps: [KeyRep]
+    /// The recorder's clip group while the set is being saved; nil once read back from storage.
+    var clipGroup: UUID? = nil
+}
+
+/// What a recorder records: a guided or Balancing activity, or one finger exercise.
+enum KeyRepSubject: Equatable {
+    case activity(SessionActivity)
+    case finger(FingerExercise, HandSide)
+}
+
+/// The key repetitions recorded for one set of one finger exercise.
+struct FingerKeyReps: Equatable {
+    let exercise: FingerExercise
     let setNumber: Int
     let reps: [KeyRep]
     /// The recorder's clip group while the set is being saved; nil once read back from storage.

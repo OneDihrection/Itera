@@ -40,6 +40,11 @@ final class FingerSessionViewModel {
     private(set) var calibrationNeedsHelp = false
     @ObservationIgnored private var instructionSince = 0.0
     @ObservationIgnored private var celebratedSets: [Int: Int] = [:]
+    /// Key repetitions of the current exercise and set; saved when either moves on.
+    @ObservationIgnored private var recorder: KeyRepRecorder?
+    @ObservationIgnored private var recordingKey: RecordingKey?
+    /// Read once at session start, so a settings change never affects a running session.
+    @ObservationIgnored private var replayRecording = ReplayRecording.off
     @ObservationIgnored private var lastCountdownCue = ""
     let camera: HandCameraService
     @ObservationIgnored private let audio: GuidanceAudioService
@@ -312,6 +317,9 @@ final class FingerSessionViewModel {
         guard !hasFinished else {
             return
         }
+        replayRecording = PracticePreferences.replayRecordingLevel
+        camera.clips.reset()
+        camera.clips.configure(privacy: PracticePreferences.repClipPrivacy)
         camera.track(side: routine.side)
         camera.start()
         if !paused {
@@ -471,6 +479,7 @@ final class FingerSessionViewModel {
                     audio.playCue(.holdCompleted)
                 }
             }
+            record(hand)
             updateRewards()
             updateGuidance()
         }
@@ -545,6 +554,7 @@ final class FingerSessionViewModel {
         }
         updateRewards()
         updateGuidance()
+        syncRecorder()
         let progress = engine.summary.exerciseIndex * 1000 + activity.totalRepetitions
         if progress != previousProgress {
             previousProgress = progress
@@ -1026,6 +1036,9 @@ final class FingerSessionViewModel {
     }
 
     func cleanup() {
+        flushRecording()
+        camera.clips.setEnabled(false)
+        camera.clips.releaseFrames()
         hasStarted = false
         let now = ProcessInfo.processInfo.systemUptime
         durationClock.pause(at: now)
@@ -1040,6 +1053,101 @@ final class FingerSessionViewModel {
         camera.stop()
         audio.stop()
         UIApplication.shared.isIdleTimerDisabled = wasIdleTimerDisabled
+    }
+
+    // MARK: - Key-repetition recording
+
+    private struct RecordingKey: Equatable {
+        let exercise: Int
+        let set: Int
+    }
+
+    /// Starts a recorder for the current exercise and set, first saving the previous one's key
+    /// repetitions when the exercise or set has moved on.
+    private func syncRecorder() {
+        let key = RecordingKey(exercise: engine.summary.exerciseIndex, set: activity.set)
+
+        guard recordingKey != key else {
+            return
+        }
+
+        flushRecording()
+        recordingKey = key
+        recorder = KeyRepRecorder(subject: .finger(activity.kind, routine.side))
+    }
+
+    /// Feeds the recorder while repetitions can be credited. Feedback still counts, because the
+    /// hold that credits a set's last repetition also ends the set; the frame after it closes
+    /// that repetition.
+    private func record(_ hand: HandEvidence) {
+        syncRecorder()
+
+        let counted = !paused
+            && trackingReady
+            && [.active, .feedback].contains(activity.phase)
+
+        camera.clips.setEnabled(replayRecording.savesClips && counted)
+
+        guard let clip = recorder?.observe(
+            hand: hand,
+            counted: counted,
+            count: activity.repetitions,
+            fraction: activity.repPeakFraction
+        ) else {
+            return
+        }
+
+        camera.clips.keep(
+            group: clip.group,
+            repNumber: clip.repNumber,
+            from: clip.start,
+            to: clip.end,
+            retaining: clip.retaining
+        )
+    }
+
+    /// Saves the finished recorder's key repetitions and then its clips, when the caregiver's
+    /// privacy level allows. Replays help review but are not history: failures are logged and
+    /// never interrupt the session.
+    private func flushRecording() {
+        defer {
+            recorder = nil
+            recordingKey = nil
+        }
+
+        guard replayRecording.savesSkeletons,
+              let recorder,
+              let recordingKey,
+              let keyReps = recorder.fingerKeyReps(setNumber: recordingKey.set),
+              let group = keyReps.clipGroup
+        else {
+            return
+        }
+
+        let sessionID = engine.summary.id
+        let repository = repository
+        let clips = camera.clips
+
+        Task {
+            do {
+                try await repository.saveKeyReps(keyReps, sessionID: sessionID)
+            } catch {
+                NSLog("Finger key repetition save failed: %@", String(describing: error))
+                return
+            }
+
+            let frames = await clips.take(group: group)
+
+            guard !frames.isEmpty else {
+                return
+            }
+
+            do {
+                try await repository.saveRepClips(frames, for: keyReps, sessionID: sessionID)
+            } catch {
+                NSLog("Finger key repetition clip save failed: %@", String(describing: error))
+            }
+        }
     }
 }
 

@@ -8,6 +8,8 @@
 import Foundation
 
 actor LocalFingerSessionRepository: FingerSessionRepository {
+    private static let keyRepsSuffix = ".reps.json"
+    private static let clipsSuffix = ".clips"
     private let folder: URL
     private let checkpointName: String
     private var checkpointURL: URL { folder.appendingPathComponent(checkpointName) }
@@ -76,10 +78,14 @@ actor LocalFingerSessionRepository: FingerSessionRepository {
             .sorted { $0.started > $1.started }
     }
 
-    func delete(_ id: UUID) throws { try FileManager.default.removeItem(at: file(id)) }
+    func delete(_ id: UUID) throws {
+        try FileManager.default.removeItem(at: file(id))
+        try removeIfPresent(keyRepsURL(for: id))
+        try removeIfPresent(clipsDirectory(for: id))
+    }
 
     func deleteHistory() throws {
-        for url in try historyFiles() {
+        for url in try historyFiles() + sidecars() {
             try FileManager.default.removeItem(at: url)
         }
     }
@@ -90,8 +96,113 @@ actor LocalFingerSessionRepository: FingerSessionRepository {
         }
 
         return try FileManager.default.contentsOfDirectory(at: folder, includingPropertiesForKeys: nil)
-            .filter { $0.pathExtension == "json" && !$0.lastPathComponent.hasPrefix("active") }
+            .filter {
+                $0.pathExtension == "json"
+                    && !$0.lastPathComponent.hasPrefix("active")
+                    && !$0.lastPathComponent.hasSuffix(Self.keyRepsSuffix)
+            }
     }
+
+    /// Replay files and clip folders of every session in the shared folder.
+    private func sidecars() throws -> [URL] {
+        guard FileManager.default.fileExists(atPath: folder.path) else {
+            return []
+        }
+
+        return try FileManager.default.contentsOfDirectory(at: folder, includingPropertiesForKeys: nil)
+            .filter {
+                $0.lastPathComponent.hasSuffix(Self.keyRepsSuffix)
+                    || $0.lastPathComponent.hasSuffix(Self.clipsSuffix)
+            }
+    }
+
+    private func removeIfPresent(_ url: URL) throws {
+        if FileManager.default.fileExists(atPath: url.path) {
+            try FileManager.default.removeItem(at: url)
+        }
+    }
+
+    // MARK: - Key repetitions
+
+    /// Skeletons live in their own file so history never decodes them. An unreadable file is
+    /// reported, never replaced, so earlier replays are not silently lost.
+    func saveKeyReps(_ value: FingerKeyReps, sessionID: UUID) throws {
+        var record = try readKeyReps(sessionID: sessionID) ?? FingerKeyRepRecord(sessionID: sessionID)
+        record.upsert(value)
+        try AtomicJSONFiles.write(record, to: keyRepsURL(for: sessionID))
+    }
+
+    func keyReps(sessionID: UUID) throws -> [FingerKeyReps] {
+        try readKeyReps(sessionID: sessionID)?.domain() ?? []
+    }
+
+    private func readKeyReps(sessionID: UUID) throws -> FingerKeyRepRecord? {
+        let url = keyRepsURL(for: sessionID)
+
+        guard FileManager.default.fileExists(atPath: url.path) else {
+            return nil
+        }
+
+        let record = try AtomicJSONFiles.read(FingerKeyRepRecord.self, from: url)
+
+        guard record.version == FingerKeyRepRecord.currentVersion, record.sessionID == sessionID else {
+            throw KeyRepError.unsupportedVersion
+        }
+
+        return record
+    }
+
+    /// One file per repetition, named `<exercise>-s<set>-r<repetition>.mp4`, each written whole
+    /// and moved into place.
+    func saveRepClips(_ clips: [Int: [RepClipFrame]], for keyReps: FingerKeyReps, sessionID: UUID) async throws {
+        let directory = clipsDirectory(for: sessionID)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+
+        for rep in keyReps.reps {
+            guard let frames = clips[rep.metrics.repNumber], !frames.isEmpty else {
+                continue
+            }
+
+            let name = "\(keyReps.exercise.rawValue)-s\(keyReps.setNumber)-r\(rep.metrics.repNumber).mp4"
+            try await RepClipWriter.write(frames, to: directory.appendingPathComponent(name))
+        }
+    }
+
+    func repClipURLs(sessionID: UUID) -> [FingerRepClipKey: URL] {
+        let files = (try? FileManager.default.contentsOfDirectory(
+            at: clipsDirectory(for: sessionID),
+            includingPropertiesForKeys: nil
+        )) ?? []
+        var result: [FingerRepClipKey: URL] = [:]
+
+        for url in files where url.pathExtension == "mp4" {
+            let parts = url.deletingPathExtension().lastPathComponent.components(separatedBy: "-")
+
+            guard parts.count == 3,
+                  let exercise = FingerExercise(rawValue: parts[0]),
+                  parts[1].hasPrefix("s"),
+                  parts[2].hasPrefix("r"),
+                  let setNumber = Int(parts[1].dropFirst()),
+                  let repNumber = Int(parts[2].dropFirst())
+            else {
+                continue
+            }
+
+            result[FingerRepClipKey(exercise: exercise, setNumber: setNumber, repNumber: repNumber)] = url
+        }
+
+        return result
+    }
+
+    private func keyRepsURL(for id: UUID) -> URL {
+        folder.appendingPathComponent(id.uuidString + Self.keyRepsSuffix)
+    }
+
+    private func clipsDirectory(for id: UUID) -> URL {
+        folder.appendingPathComponent(id.uuidString + Self.clipsSuffix, isDirectory: true)
+    }
+
+    private enum KeyRepError: Error { case unsupportedVersion }
 
     private func file(_ id: UUID) -> URL { folder.appendingPathComponent(id.uuidString + ".json") }
 

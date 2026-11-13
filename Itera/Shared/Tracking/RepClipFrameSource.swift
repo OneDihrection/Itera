@@ -20,6 +20,10 @@ import Vision
 /// seen within `headMemory`, and otherwise the whole picture is blurred. A frame is never kept
 /// with less censoring than was chosen.
 ///
+/// Hand cameras have no body pose and usually look at the hands, so their frames are offered
+/// without head evidence: only faces the detector finds are pixelated, and a frame with no
+/// detected face is kept sharp. This is the caregiver-accepted exception to failing closed.
+///
 /// Work is bounded and never delays inference: frames are taken at most every `frameInterval`,
 /// only one is processed at a time on a utility queue (later offers are dropped), the ring
 /// holds `ringSeconds`, and kept clips are limited to the key repetitions of two sets.
@@ -27,7 +31,7 @@ final class RepClipFrameSource: @unchecked Sendable {
     static let frameInterval = 0.1
     static let outputWidth = 320
     /// Longer than the longest recorded repetition (`KeyRepRecorder.maximumRepSeconds`).
-    private static let ringSeconds = 35.0
+    private static let ringSeconds = 65.0
     private static let headMemory = 0.3
     /// Sets whose clips are held; the older one is still waiting to be taken for saving.
     private static let maximumGroups = 2
@@ -59,19 +63,19 @@ final class RepClipFrameSource: @unchecked Sendable {
 
     // MARK: - Control
 
-    /// Starts or stops taking frames. Stopping releases the ring, since a pause or camera wait
-    /// discards the unfinished repetition anyway, but keeps clips already kept, so a set can
-    /// still be saved afterwards. Repeated calls with the same value do nothing.
+    /// Starts or stops taking frames. Stopping keeps the ring: the transition that ends a set
+    /// also credits its last repetition, whose `keep` may arrive just after recording stops. The
+    /// ring is bounded by time and `keep` copies by time range, so older frames never join a
+    /// later repetition.
     func setEnabled(_ value: Bool) {
-        let changed = lock.withLock {
-            defer { enabled = value }
-            return enabled != value
+        lock.withLock {
+            enabled = value
         }
+    }
 
-        guard changed, !value else {
-            return
-        }
-
+    /// Drops the ring at the end of a session, keeping clips already kept so pending saves can
+    /// still take them. Runs after any `keep` sent before it.
+    func releaseFrames() {
         queue.async { [weak self] in
             self?.ring.removeAll()
             self?.lastHeads = nil
@@ -131,8 +135,10 @@ final class RepClipFrameSource: @unchecked Sendable {
     }
 
     /// Filters and stores `image` after `claimFrame(at:)` returned true.
-    /// - Parameter heads: Head evidence for every detected person, bystanders included.
-    func offer(_ image: CVPixelBuffer, time: Double, heads: [RepClipHead]) {
+    /// - Parameter heads: Head evidence for every detected person, bystanders included, or nil
+    ///   from a hand camera, which has no body pose; face censoring then relies on face
+    ///   detection alone.
+    func offer(_ image: CVPixelBuffer, time: Double, heads: [RepClipHead]?) {
         let privacy = lock.withLock { self.privacy }
 
         queue.async { [weak self] in
@@ -214,7 +220,7 @@ final class RepClipFrameSource: @unchecked Sendable {
     private func filteredJPEG(
         from image: CVPixelBuffer,
         time: Double,
-        heads: [RepClipHead],
+        heads: [RepClipHead]?,
         privacy: RepClipPrivacy
     ) -> Data? {
         let source = CIImage(cvPixelBuffer: image)
@@ -237,7 +243,7 @@ final class RepClipFrameSource: @unchecked Sendable {
     private func filtered(
         _ image: CIImage,
         time: Double,
-        heads: [RepClipHead],
+        heads: [RepClipHead]?,
         privacy: RepClipPrivacy
     ) -> CIImage? {
         var requests: [VNRequest] = []
@@ -287,16 +293,23 @@ final class RepClipFrameSource: @unchecked Sendable {
 
     /// Pixel rectangles to pixelate, or nil when the frame must be blurred whole.
     private func headRegions(
-        heads: [RepClipHead],
+        heads: [RepClipHead]?,
         faces: [VNFaceObservation],
         size: CGSize,
         time: Double
     ) -> [CGRect]? {
-        let poseRegions = heads.map { Self.region(for: $0, size: size) }
         let faceRegions = faces.map { face in
             let box = VNImageRectForNormalizedRect(face.boundingBox, Int(size.width), Int(size.height))
             return box.insetBy(dx: -box.width * 0.3, dy: -box.height * 0.3)
         }
+
+        // Without body pose there is no way to know whether a person is in view, so the face
+        // detector alone decides (see the type's documentation).
+        guard let heads else {
+            return faceRegions
+        }
+
+        let poseRegions = heads.map { Self.region(for: $0, size: size) }
         let located = poseRegions.compactMap { $0 } + faceRegions
         // A person whose head was not located is covered only when face detection found one.
         let everyHeadCovered = !poseRegions.contains(nil) || !faceRegions.isEmpty

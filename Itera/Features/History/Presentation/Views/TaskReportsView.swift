@@ -37,10 +37,8 @@ struct TMTaskReportsView: View {
                     ForEach(model.results(in: summary), id: \.executionID) { result in
                         resultRow(result)
                     }
-                    if model.category == .arm {
-                        TMTherapyButton(title: "history.report.open", symbol: "figure.arms.open") {
-                            router.push(.sessionReport(summary.id))
-                        }
+                    TMTherapyButton(title: "history.report.open", symbol: "figure.arms.open") {
+                        router.push(.sessionReport(summary.id))
                     }
                     TMTherapyButton(title: "towel.deleteHistory", secondary: true) {
                         Task { await model.delete(summary.id) }

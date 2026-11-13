@@ -28,6 +28,11 @@ struct FingerActivity {
     private(set) var baselines = [Double](repeating: 0, count: 4)
     private(set) var targets = [Double](repeating: 0, count: 4)
     private(set) var best = [Double](repeating: 0, count: 4)
+    /// The share of the calibrated range reached at the target hold of the repetition being
+    /// built (1 is the calibrated target); a sequential exercise keeps its weakest finger. It is
+    /// replaced at the next repetition's first target hold, so it still describes a repetition
+    /// right after it is credited.
+    private(set) var repPeakFraction: Double?
     private(set) var holdCompletionID: UUID?
     private var holdCompletionWasPresented = false
     /// Credited hold time; survives brief tracking loss and zone wobble without crediting them.
@@ -529,6 +534,7 @@ struct FingerActivity {
                 awaitingStart = false
             } else if !returning {
                 best[finger] = max(best[finger], mean)
+                recordRepPeak(mean)
                 returning = true
             } else {
                 returning = false
@@ -553,6 +559,23 @@ struct FingerActivity {
             break
         }
         resetHold()
+    }
+
+    private mutating func recordRepPeak(_ mean: Double) {
+        let range = targets[finger] - baselines[finger]
+
+        guard range > 0 else {
+            return
+        }
+
+        let fraction = (mean - baselines[finger]) / range
+
+        // The first finger's target starts a repetition; later fingers keep the weakest.
+        if finger == 0 {
+            repPeakFraction = fraction
+        } else {
+            repPeakFraction = min(repPeakFraction ?? fraction, fraction)
+        }
     }
 
     /// Leaving the zone briefly (detector wobble at the edge) freezes the hold; staying out clears it.

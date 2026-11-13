@@ -16,9 +16,9 @@ struct TMPracticePreferencesView: View {
 
     @AppStorage(PracticePreferences.celebrationSounds) private var celebrationSounds = true
     @AppStorage(PracticePreferences.patientName) private var patientName = ""
-    @AppStorage(PracticePreferences.recordsRepClips) private var recordsRepClips = true
-    @AppStorage(PracticePreferences.censorsFace) private var censorsFace = true
-    @AppStorage(PracticePreferences.censorsBackground) private var censorsBackground = true
+    // Defaults carry over a choice made with the earlier settings.
+    @AppStorage(PracticePreferences.replayRecording) private var replayRecording = PracticePreferences.replayRecordingLevel
+    @AppStorage(PracticePreferences.videoCensoring) private var videoCensoring = PracticePreferences.videoCensoringChoice
     @AppStorage(AppLanguage.storageKey) private var language = AppLanguage.selected.rawValue
     @Environment(\.scenePhase) private var scenePhase
     @State private var voice: NarrationVoice.Summary?
@@ -124,21 +124,26 @@ struct TMPracticePreferencesView: View {
 
     // MARK: - Recording
 
-    /// Skeleton replays are always kept; video adds a clip of the same key repetitions, with
-    /// face and background censoring chosen separately.
+    /// A privacy ladder: no replay, skeleton only, or video with the skeleton. Video hides the
+    /// face, the room, both, or (with a warning) nothing. Repetition numbers are kept at every
+    /// level.
     private var recordingSection: some View {
         Section {
-            Picker("settings.recordingMode", selection: $recordsRepClips) {
-                Text("settings.recordingSkeleton").tag(false)
-                Text("settings.recordingVideo").tag(true)
+            Picker("settings.recordingMode", selection: $replayRecording) {
+                Text("settings.recordingOff").tag(ReplayRecording.off)
+                Text("settings.recordingSkeleton").tag(ReplayRecording.skeleton)
+                Text("settings.recordingVideo").tag(ReplayRecording.video)
             }
-            .frame(minHeight: 64)
+            .pickerStyle(.inline)
 
-            if recordsRepClips {
-                Toggle("settings.censorFace", isOn: $censorsFace)
-                    .frame(minHeight: 64)
-                Toggle("settings.censorBackground", isOn: $censorsBackground)
-                    .frame(minHeight: 64)
+            if replayRecording == .video {
+                Picker("settings.videoCensoring", selection: $videoCensoring) {
+                    Text("settings.censorFaceOnly").tag(VideoCensoring.face)
+                    Text("settings.censorBackgroundOnly").tag(VideoCensoring.background)
+                    Text("settings.censorBoth").tag(VideoCensoring.both)
+                    Text("settings.censorNone").tag(VideoCensoring.none)
+                }
+                .frame(minHeight: 64)
             }
         } header: {
             Text("settings.recordingTitle").typography(.headline)
@@ -149,26 +154,26 @@ struct TMPracticePreferencesView: View {
 
     @ViewBuilder
     private var recordingFooter: some View {
-        if !recordsRepClips {
+        switch (replayRecording, videoCensoring) {
+        case (.off, _):
+            Text("settings.recordingOffHelp").typography(.body)
+        case (.skeleton, _):
             Text("settings.recordingSkeletonHelp").typography(.body)
-        } else if censorsFace, censorsBackground {
+        case (.video, .both):
             Text("settings.recordingVideoHelp").typography(.body)
-        } else {
-            Label(uncensoredWarning, systemImage: "exclamationmark.triangle")
-                .typography(.body)
-                .foregroundStyle(TherapyPalette.warning)
+        case (.video, .face):
+            visibilityWarning("settings.recordingWarningBackground")
+        case (.video, .background):
+            visibilityWarning("settings.recordingWarningFace")
+        case (.video, .none):
+            visibilityWarning("settings.recordingWarningNone")
         }
     }
 
-    private var uncensoredWarning: LocalizedStringKey {
-        switch (censorsFace, censorsBackground) {
-        case (false, false):
-            return "settings.recordingWarningBoth"
-        case (false, true):
-            return "settings.recordingWarningFace"
-        default:
-            return "settings.recordingWarningBackground"
-        }
+    private func visibilityWarning(_ key: LocalizedStringKey) -> some View {
+        Label(key, systemImage: "exclamationmark.triangle")
+            .typography(.body)
+            .foregroundStyle(TherapyPalette.warning)
     }
 
     // MARK: - Voice

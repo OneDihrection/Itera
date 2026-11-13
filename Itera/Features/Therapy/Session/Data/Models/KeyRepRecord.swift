@@ -11,7 +11,10 @@ import Foundation
 ///
 /// The file names its joint order, coordinate space and scale so it can later be exported and
 /// read without the app's types. Each frame stores x, y pairs in `jointOrder`, quantized to
-/// `scale`; `missingValue` marks a joint that was not confidently tracked in that frame.
+/// `scale`; `missingValue` marks a joint that was not confidently tracked in that frame. Hand
+/// exercises (fold towel) also store `hand`: 21 x, y pairs per frame in `handJointOrder`, or an
+/// empty array for a frame without the hand. Files written before hands were recorded have no
+/// `hand` and still decode.
 struct KeyRepRecord: Codable {
     static let currentVersion = 1
     static let coordinateSpace = "vision-normalized-unmirrored-origin-bottom-left"
@@ -25,6 +28,16 @@ struct KeyRepRecord: Codable {
         let reps: [RepRecord]
     }
 
+    /// Names of the hand joints in stored order, matching `HandPoseExtractor`.
+    static let handJointOrder = [
+        "wrist",
+        "thumbCMC", "thumbMP", "thumbIP", "thumbTip",
+        "indexMCP", "indexPIP", "indexDIP", "indexTip",
+        "middleMCP", "middlePIP", "middleDIP", "middleTip",
+        "ringMCP", "ringPIP", "ringDIP", "ringTip",
+        "littleMCP", "littlePIP", "littleDIP", "littleTip",
+    ]
+
     struct RepRecord: Codable {
         let roles: [KeyRepRole]
         let metrics: RepMetrics
@@ -32,6 +45,8 @@ struct KeyRepRecord: Codable {
         /// Milliseconds since the repetition's first recorded frame.
         let frameTimes: [Int]
         let frames: [[Int16]]
+        /// Hand joints per frame; nil when the exercise recorded no hand.
+        var hand: [[Int16]]? = nil
     }
 
     let version: Int
@@ -64,13 +79,22 @@ struct KeyRepRecord: Codable {
                 executionID: activity.executionID,
                 activity: activity.activity,
                 setNumber: activity.setNumber,
-                reps: activity.reps.map(domainRep)
+                reps: activity.reps.map { Self.domainRep($0, jointOrder: jointOrder, scale: scale) }
             )
         }
     }
 
-    private func domainRep(_ rep: RepRecord) -> KeyRep {
-        let frames = zip(rep.frameTimes, rep.frames).compactMap { time, values -> SkeletonFrame? in
+    /// Maps a saved repetition back to the domain. Shared with `FingerKeyRepRecord`.
+    static func domainRep(_ rep: RepRecord, jointOrder: [BodyJoint], scale: Int) -> KeyRep {
+        let hands = rep.hand ?? []
+
+        let frames = rep.frameTimes.enumerated().compactMap { index, time -> SkeletonFrame? in
+            guard rep.frames.indices.contains(index) else {
+                return nil
+            }
+
+            let values = rep.frames[index]
+
             // A frame of the wrong width cannot be mapped onto the joint order, so it is skipped.
             guard values.count == jointOrder.count * 2 else {
                 return nil
@@ -78,21 +102,15 @@ struct KeyRepRecord: Codable {
 
             var joints: [BodyJoint: TherapyPoint] = [:]
 
-            for (index, joint) in jointOrder.enumerated() {
-                let x = values[index * 2]
-                let y = values[index * 2 + 1]
-
-                guard x != Self.missingValue, y != Self.missingValue else {
-                    continue
+            for (jointIndex, joint) in jointOrder.enumerated() {
+                if let point = point(values, at: jointIndex, scale: scale) {
+                    joints[joint] = point
                 }
-
-                joints[joint] = TherapyPoint(
-                    x: Double(x) / Double(scale),
-                    y: Double(y) / Double(scale)
-                )
             }
 
-            return SkeletonFrame(time: Double(time) / 1000, joints: joints)
+            let hand = hands.indices.contains(index) ? handPoints(hands[index], scale: scale) : nil
+
+            return SkeletonFrame(time: Double(time) / 1000, joints: joints, hand: hand)
         }
 
         return KeyRep(
@@ -103,21 +121,61 @@ struct KeyRepRecord: Codable {
         )
     }
 
+    private static func handPoints(_ values: [Int16], scale: Int) -> [TherapyPoint?]? {
+        guard values.count == SkeletonFrame.handJointCount * 2 else {
+            return nil
+        }
+
+        return (0..<SkeletonFrame.handJointCount).map { point(values, at: $0, scale: scale) }
+    }
+
+    private static func point(_ values: [Int16], at index: Int, scale: Int) -> TherapyPoint? {
+        let x = values[index * 2]
+        let y = values[index * 2 + 1]
+
+        guard x != missingValue, y != missingValue else {
+            return nil
+        }
+
+        return TherapyPoint(x: Double(x) / Double(scale), y: Double(y) / Double(scale))
+    }
+
     private static func record(_ value: ActivityKeyReps, jointOrder: [BodyJoint]) -> ActivityRecord {
         ActivityRecord(
             executionID: value.executionID,
             activity: value.activity,
             setNumber: value.setNumber,
-            reps: value.reps.map { rep in
-                RepRecord(
-                    roles: rep.roles,
-                    metrics: rep.metrics,
-                    aspectRatio: rep.aspectRatio,
-                    frameTimes: rep.frames.map { Int(($0.time * 1000).rounded()) },
-                    frames: rep.frames.map { quantized($0, jointOrder: jointOrder) }
-                )
-            }
+            reps: value.reps.map { repRecord($0, jointOrder: jointOrder) }
         )
+    }
+
+    /// Quantizes one repetition for saving. Shared with `FingerKeyRepRecord`.
+    static func repRecord(_ rep: KeyRep, jointOrder: [BodyJoint]) -> RepRecord {
+        let recordsHand = rep.frames.contains { $0.hand != nil }
+
+        return RepRecord(
+            roles: rep.roles,
+            metrics: rep.metrics,
+            aspectRatio: rep.aspectRatio,
+            frameTimes: rep.frames.map { Int(($0.time * 1000).rounded()) },
+            frames: rep.frames.map { quantized($0, jointOrder: jointOrder) },
+            hand: recordsHand ? rep.frames.map { quantizedHand($0.hand) } : nil
+        )
+    }
+
+    /// An empty array marks a frame without the hand.
+    private static func quantizedHand(_ points: [TherapyPoint?]?) -> [Int16] {
+        guard let points else {
+            return []
+        }
+
+        return points.flatMap { point -> [Int16] in
+            guard let point else {
+                return [missingValue, missingValue]
+            }
+
+            return [quantized(point.x), quantized(point.y)]
+        }
     }
 
     private static func quantized(_ frame: SkeletonFrame, jointOrder: [BodyJoint]) -> [Int16] {

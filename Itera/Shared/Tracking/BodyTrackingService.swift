@@ -370,15 +370,8 @@ final class BodyTrackingService: NSObject, AVCaptureVideoDataOutputSampleBufferD
                 generation: generation
             )
 
-            if !handEnabled, clips.claimFrame(at: time) {
-                // Every person's head, bystanders included, so no face is left unfiltered.
-                clips.offer(
-                    image,
-                    time: time,
-                    heads: clips.needsHeads
-                        ? personPoints.map { Self.clipHead(from: $0, originalY: originalY) }
-                        : []
-                )
+            if clips.claimFrame(at: time) {
+                clips.offer(image, time: time, heads: clipHeads(personPoints, originalY: originalY))
             }
 
             var joints: [BodyJoint: TrackingObservation.Landmark] = [:]
@@ -615,6 +608,24 @@ final class BodyTrackingService: NSObject, AVCaptureVideoDataOutputSampleBufferD
     private static let faceJoints: [VNHumanBodyPoseObservation.JointName] = [
         .nose, .leftEye, .rightEye, .leftEar, .rightEar,
     ]
+    /// Every person's head, bystanders included, so no face is left unfiltered. Hand mode runs no
+    /// body pose, so it reports nil and face detection alone censors faces. Confined to
+    /// `inferenceQueue`.
+    private func clipHeads(
+        _ people: [[VNHumanBodyPoseObservation.JointName: VNRecognizedPoint]],
+        originalY: (Double) -> Double
+    ) -> [RepClipHead]? {
+        guard !handEnabled else {
+            return nil
+        }
+
+        guard clips.needsHeads else {
+            return []
+        }
+
+        return people.map { Self.clipHead(from: $0, originalY: originalY) }
+    }
+
     /// Head points count from this confidence: a weakly seen face is still worth hiding.
     private static let clipHeadConfidence: Float = 0.1
 

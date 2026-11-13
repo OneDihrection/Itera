@@ -367,6 +367,7 @@ struct TMFingerReportDetailView: View {
     let id: UUID
     @Environment(AppDependencies.self) private var dependencies
     @Environment(NavigationRouter.self) private var router
+    @State private var replays: FingerReplayViewModel?
 
     private var summary: FingerSessionSummary? {
         dependencies.home.history.first { $0.id == id }
@@ -385,6 +386,10 @@ struct TMFingerReportDetailView: View {
         .navigationBarTitleDisplayMode(.inline)
         .task {
             await dependencies.home.refresh()
+
+            let replays = FingerReplayViewModel(sessionID: id, repository: dependencies.fingerReplays)
+            await replays.load()
+            self.replays = replays
         }
     }
 
@@ -439,6 +444,7 @@ struct TMFingerReportDetailView: View {
                     }
                 }
             }
+            replaySection(summary)
             Text("report.cameraNoteShort").typography(.footnote).foregroundStyle(TherapyPalette.muted)
             DisclosureGroup("report.measurementDetails") {
                 Text("report.measurementNote").typography(.body)
@@ -453,6 +459,57 @@ struct TMFingerReportDetailView: View {
                         router.push(.reports)
                     }
                 }
+            }
+        }
+    }
+
+    // MARK: - Key repetitions
+
+    /// The first, hardest and last repetition of every recorded set, as a hand replay or clip.
+    @ViewBuilder
+    private func replaySection(_ summary: FingerSessionSummary) -> some View {
+        if let replays {
+            let recorded = summary.results.filter { !replays.sets(for: $0.kind).isEmpty }
+
+            if !recorded.isEmpty {
+                Text("report.keyReps").typography(.title2)
+
+                ForEach(recorded) { result in
+                    ForEach(replays.sets(for: result.kind), id: \.setNumber) { set in
+                        replayCard(set, replays: replays)
+                    }
+                }
+            }
+
+            if replays.replaysUnavailable {
+                Text("history.report.replaysUnavailable")
+                    .typography(.body)
+                    .foregroundStyle(TherapyPalette.muted)
+            }
+        }
+    }
+
+    private func replayCard(_ set: FingerKeyReps, replays: FingerReplayViewModel) -> some View {
+        TMTherapyCard {
+            VStack(alignment: .leading, spacing: 14) {
+                HStack(spacing: 12) {
+                    Image(systemName: set.exercise.symbol)
+                        .foregroundStyle(TherapyPalette.green)
+                        .accessibilityHidden(true)
+                    Text(LocalizedStringKey(set.exercise.title))
+                        .typography(.headline)
+                    Spacer()
+                    Text("report.setNumber \(set.setNumber)")
+                        .typography(.body)
+                        .foregroundStyle(TherapyPalette.muted)
+                }
+
+                TMKeyRepReplaySection(
+                    reps: replays.reps(in: set),
+                    emphasizedJoints: { _ in HandSkeleton.emphasis(for: set.exercise) },
+                    clipURL: { replays.clipURL(for: $0, in: set) },
+                    isTrackingLow: replays.isTrackingLow
+                )
             }
         }
     }

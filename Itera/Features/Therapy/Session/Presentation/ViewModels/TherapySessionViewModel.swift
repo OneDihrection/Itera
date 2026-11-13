@@ -60,7 +60,7 @@ final class TherapySessionViewModel {
     @ObservationIgnored private var recovered = false
     @ObservationIgnored private var allowUnreliableHistory = false
     /// Read once at session start, so a settings change never affects a running session.
-    @ObservationIgnored private var recordsClips = false
+    @ObservationIgnored private var replayRecording = ReplayRecording.off
 
     init(
         tracking: BodyTrackingService, audio: SessionAudioService, repository: any SessionRepository, routine: Routine
@@ -122,7 +122,7 @@ final class TherapySessionViewModel {
         live = true
         keepAwakeBeforeSession = UIApplication.shared.isIdleTimerDisabled
         UIApplication.shared.isIdleTimerDisabled = true
-        recordsClips = PracticePreferences.recordsRepClipsEnabled
+        replayRecording = PracticePreferences.replayRecordingLevel
         tracking.clips.reset()
         tracking.clips.configure(privacy: PracticePreferences.repClipPrivacy)
         tracking.frames.sink { [weak self] frame in
@@ -396,7 +396,6 @@ final class TherapySessionViewModel {
         if previousKind != snapshot.activity?.kind || previousSide != snapshot.activity?.side {
             updateHandRequirement()
         }
-        updateClipRecording()
         for effect in transition.effects {
             switch effect {
             case .speak(let id, let key):
@@ -430,6 +429,9 @@ final class TherapySessionViewModel {
             case .checkpoint, .finalize, .saveKeyReps: pendingSaves.append(effect)
             }
         }
+        // After the effects, so the clip of a repetition credited by this transition is kept
+        // before recording stops for the set's end.
+        updateClipRecording()
         // After the effects, so the chime starts beneath the new step's narration instead of
         // being faded out by it.
         updateDemoStep()
@@ -453,6 +455,12 @@ final class TherapySessionViewModel {
                     case .checkpoint(let checkpoint): try await repository.checkpoint(checkpoint)
                     case .finalize(let summary): try await repository.finalize(summary)
                     case .saveKeyReps(let sessionID, let keyReps):
+                        // The repetition numbers are already in the result; the caregiver's
+                        // privacy level decides whether the replay itself is kept.
+                        guard replayRecording.savesSkeletons else {
+                            break
+                        }
+
                         // Replays help review but are not session history: a failed save is
                         // logged and must not pause therapy or block later saves.
                         do {
@@ -479,7 +487,7 @@ final class TherapySessionViewModel {
     /// Clip frames are taken only while the patient can be credited with work, never during
     /// pauses, camera waits, stage pages or after the summary.
     private func updateClipRecording() {
-        let recording = recordsClips
+        let recording = replayRecording.savesClips
             && live
             && snapshot.stage == .activity
             && !snapshot.paused
@@ -520,6 +528,7 @@ final class TherapySessionViewModel {
         }
         live = false
         tracking.clips.setEnabled(false)
+        tracking.clips.releaseFrames()
         tracking.stop()
         clearLivePose()
         tracking.requireHand(false)

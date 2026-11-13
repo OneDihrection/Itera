@@ -101,9 +101,6 @@ struct TMSessionReportView: View {
 private struct TMSetReportSection: View {
     let result: SessionActivityResult
     let model: SessionReportViewModel
-    @State private var role: KeyRepRole?
-    /// Clips are shown first when a repetition has one; the skeleton stays one tap away.
-    @State private var showsSkeleton = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
@@ -146,15 +143,23 @@ private struct TMSetReportSection: View {
         ViewThatFits(in: .horizontal) {
             HStack(spacing: 24) {
                 repetitionsMetric
-                Divider().frame(height: 64)
-                peakMetric
+
+                if showsPeak {
+                    Divider().frame(height: 64)
+                    peakMetric
+                }
+
                 Divider().frame(height: 64)
                 durationMetric
             }
 
             VStack(spacing: 18) {
                 repetitionsMetric
-                peakMetric
+
+                if showsPeak {
+                    peakMetric
+                }
+
                 durationMetric
             }
         }
@@ -169,6 +174,11 @@ private struct TMSetReportSection: View {
             value: Text(verbatim: "\(result.completedWork) / \(result.activity.goal)"),
             title: "progress.repetitionUnit"
         )
+    }
+
+    /// Fold towel has no angle, so its tile would only ever show a dash.
+    private var showsPeak: Bool {
+        result.activity.kind != .foldTowel
     }
 
     private var peakMetric: some View {
@@ -192,31 +202,14 @@ private struct TMSetReportSection: View {
     @ViewBuilder
     private var replay: some View {
         let reps = model.keyReps(for: result)
-        let selectedRole = role ?? model.defaultRole
 
-        if let rep = model.keyRep(selectedRole, for: result) {
-            VStack(alignment: .leading, spacing: 14) {
-                if reps.count > 1 {
-                    Picker("history.report.chooseRep", selection: Binding(get: { selectedRole }, set: { role = $0 })) {
-                        ForEach(KeyRepRole.allCases, id: \.self) { role in
-                            Text(LocalizedStringKey(role.titleKey)).tag(role)
-                        }
-                    }
-                    .pickerStyle(.segmented)
-                }
-
-                replayMedia(for: rep)
-
-                Text(caption(for: rep))
-                    .typography(.body)
-                    .foregroundStyle(TherapyPalette.muted)
-
-                if model.isTrackingLow(rep) {
-                    Label("history.report.lowTracking", systemImage: "eye.slash")
-                        .typography(.subheadline)
-                        .foregroundStyle(TherapyPalette.warning)
-                }
-            }
+        if !reps.isEmpty {
+            TMKeyRepReplaySection(
+                reps: reps,
+                emphasizedJoints: emphasizedJoints(for:),
+                clipURL: { model.clipURL(for: $0, in: result) },
+                isTrackingLow: model.isTrackingLow
+            )
         } else if !model.replaysUnavailable {
             Text("history.report.noReplays")
                 .typography(.body)
@@ -224,44 +217,13 @@ private struct TMSetReportSection: View {
         }
     }
 
-    @ViewBuilder
-    private func replayMedia(for rep: KeyRep) -> some View {
-        let clip = model.clipURL(for: rep, in: result)
-        let label = Text("history.report.replayLabel \(rep.metrics.repNumber) \(Self.seconds(rep.metrics.duration))")
-
-        if clip != nil {
-            Picker("history.report.viewMode", selection: $showsSkeleton) {
-                Text("history.report.viewVideo").tag(false)
-                Text("history.report.viewSkeleton").tag(true)
-            }
-            .pickerStyle(.segmented)
+    /// Fold towel records the hand; every other exercise records the body.
+    private func emphasizedJoints(for rep: KeyRep) -> Set<Int> {
+        guard result.activity.kind != .foldTowel else {
+            return HandSkeleton.towelEmphasis
         }
 
-        // A new identity restarts playback when another repetition is chosen.
-        if let clip, !showsSkeleton {
-            TMRepClipPlayer(url: clip, accessibilityLabel: label)
-                .id(clip)
-        } else {
-            TMSkeletonReplay(
-                poses: rep.frames.map(\.pose),
-                bones: BodyJoint.replayBones,
-                aspectRatio: rep.aspectRatio,
-                emphasizedJoints: BodyJoint.movingChain(for: result.activity, side: rep.metrics.side),
-                height: 320,
-                accessibilityLabel: label
-            )
-            .id(rep.metrics.repNumber)
-        }
-    }
-
-    private func caption(for rep: KeyRep) -> LocalizedStringResource {
-        let seconds = Self.seconds(rep.metrics.duration)
-
-        guard let peak = rep.metrics.peakAngle else {
-            return "history.report.repCaption \(rep.metrics.repNumber) \(seconds)"
-        }
-
-        return "history.report.repCaptionPeak \(rep.metrics.repNumber) \(seconds) \(Int(peak.rounded()))"
+        return BodyJoint.movingChain(for: result.activity, side: rep.metrics.side)
     }
 
     // MARK: Details
@@ -318,16 +280,6 @@ private struct TMSetReportSection: View {
 
 // MARK: - Presentation mapping
 
-private extension KeyRepRole {
-    var titleKey: String {
-        switch self {
-        case .first: return "history.role.first"
-        case .hardest: return "history.role.hardest"
-        case .last: return "history.role.last"
-        }
-    }
-}
-
 extension SessionActivity {
     /// "Exercise · Side": both sides when arms took turns, no side for sit-to-stand.
     var reportTitle: Text {
@@ -370,57 +322,5 @@ extension TherapyKind {
         case .sitToStand: return "figure.stand"
         case .crossMidline: return "figure.cross.training"
         }
-    }
-}
-
-private extension SkeletonFrame {
-    var pose: TMSkeletonPose {
-        TMSkeletonPose(
-            time: time,
-            points: BodyJoint.allCases.map { joint in
-                joints[joint].map { CGPoint(x: $0.x, y: $0.y) }
-            }
-        )
-    }
-}
-
-private extension BodyJoint {
-    private static let replayPairs: [(BodyJoint, BodyJoint)] = [
-        (.nose, .neck), (.neck, .leftShoulder), (.neck, .rightShoulder),
-        (.leftShoulder, .leftElbow), (.leftElbow, .leftWrist),
-        (.rightShoulder, .rightElbow), (.rightElbow, .rightWrist),
-        (.neck, .root), (.root, .leftHip), (.root, .rightHip),
-        (.leftShoulder, .leftHip), (.rightShoulder, .rightHip),
-        (.leftHip, .leftKnee), (.leftKnee, .leftAnkle),
-        (.rightHip, .rightKnee), (.rightKnee, .rightAnkle),
-    ]
-
-    static let replayBones = replayPairs.map { TMSkeletonBone(from: $0.0.index, to: $0.1.index) }
-
-    var index: Int {
-        Self.allCases.firstIndex(of: self) ?? 0
-    }
-
-    /// The trained limb, drawn emphasized; arm raise includes the hip it is measured against.
-    /// Sit-to-stand emphasizes both legs and the trunk. `side` is the arm that moved in this
-    /// repetition when both arms take turns.
-    static func movingChain(for activity: SessionActivity, side: TherapySide?) -> Set<Int> {
-        if activity.kind == .sitToStand {
-            let body: [BodyJoint] = [
-                .neck, .root, .leftHip, .rightHip, .leftKnee, .rightKnee, .leftAnkle, .rightAnkle,
-            ]
-            return Set(body.map(\.index))
-        }
-
-        let left = (side ?? activity.side) == .left
-        var joints: [BodyJoint] = left
-            ? [.leftShoulder, .leftElbow, .leftWrist]
-            : [.rightShoulder, .rightElbow, .rightWrist]
-
-        if activity.kind == .armRaise {
-            joints.append(left ? .leftHip : .rightHip)
-        }
-
-        return Set(joints.map(\.index))
     }
 }

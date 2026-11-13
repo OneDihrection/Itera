@@ -44,13 +44,12 @@ enum TherapyKind: String, Codable, CaseIterable {
     }
 
     /// Exercises whose sessions keep per-repetition metrics and key-repetition replays.
+    /// Every kind records; fold towel records the hand instead of the body.
     var recordsMovement: Bool {
         switch self {
-        case .armRaise, .elbowBend, .directionalReach, .sitToStand,
+        case .armRaise, .elbowBend, .directionalReach, .sitToStand, .foldTowel,
              .crossMidline, .externalRotation, .internalRotation, .shoulderFlexion:
             return true
-        case .foldTowel:
-            return false
         }
     }
 }

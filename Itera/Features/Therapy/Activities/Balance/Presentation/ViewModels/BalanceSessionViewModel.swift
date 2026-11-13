@@ -101,7 +101,7 @@ final class BalanceSessionViewModel {
     @ObservationIgnored private var recovered = false
 
     /// Read once at session start, so a settings change never affects a running session.
-    @ObservationIgnored private var recordsClips = false
+    @ObservationIgnored private var replayRecording = ReplayRecording.off
 
     private enum PendingSave {
         case checkpoint(SessionCheckpoint)
@@ -163,7 +163,7 @@ final class BalanceSessionViewModel {
         started = true
         wasIdleTimerDisabled = UIApplication.shared.isIdleTimerDisabled
         UIApplication.shared.isIdleTimerDisabled = true
-        recordsClips = PracticePreferences.recordsRepClipsEnabled
+        replayRecording = PracticePreferences.replayRecordingLevel
         tracking.clips.reset()
         tracking.clips.configure(privacy: PracticePreferences.repClipPrivacy)
 
@@ -486,6 +486,7 @@ final class BalanceSessionViewModel {
         restTask = nil
         clock.pause(at: Self.now)
         tracking.clips.setEnabled(false)
+        tracking.clips.releaseFrames()
         tracking.stop()
         clearLivePose()
         audio.stop()
@@ -844,7 +845,7 @@ final class BalanceSessionViewModel {
             )
         }
 
-        tracking.clips.setEnabled(recordsClips && counted)
+        tracking.clips.setEnabled(replayRecording.savesClips && counted)
     }
 
     /// The engine's own estimate: forearm rotation or shoulder lift, or knee extension for
@@ -870,7 +871,10 @@ final class BalanceSessionViewModel {
             repMetrics: metrics.isEmpty ? nil : metrics
         )
 
-        if let keyReps = recorder.keyReps(executionID: executionID, setNumber: setNumber) {
+        // The numbers above are kept at every privacy level; the replay only when allowed.
+        if replayRecording.savesSkeletons,
+           let keyReps = recorder.keyReps(executionID: executionID, setNumber: setNumber)
+        {
             queue(.keyReps(sessionID: log.id, keyReps))
         }
 

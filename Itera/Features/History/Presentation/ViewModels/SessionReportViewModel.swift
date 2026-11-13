@@ -18,10 +18,7 @@ final class SessionReportViewModel {
     private static let peakChangeDegrees = 5.0
     /// Below this share of usable frames a replay is flagged as unclear rather than shown with a
     /// percentage, so a reader is warned only when it matters.
-    private static let lowTrackingCoverage = 0.7
-
-    /// The hardest repetition is the one most worth a clinician's first look.
-    let defaultRole = KeyRepRole.hardest
+    private static let lowTrackingCoverage = 0.5
 
     let sessionID: UUID
     private(set) var summary: SessionSummary?
@@ -102,12 +99,6 @@ final class SessionReportViewModel {
 
     func isTrackingLow(_ rep: KeyRep) -> Bool {
         rep.metrics.trackingCoverage < Self.lowTrackingCoverage
-    }
-
-    /// The repetition holding `role`, falling back to the first recorded one.
-    func keyRep(_ role: KeyRepRole, for result: SessionActivityResult) -> KeyRep? {
-        let reps = keyReps(for: result)
-        return reps.first { $0.roles.contains(role) } ?? reps.first
     }
 
     /// Deletes the session and its replays; returns whether it succeeded.

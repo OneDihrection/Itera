@@ -3916,6 +3916,23 @@
         }
       }
     },
+    "history.report.repCaptionRange %lld %@ %lld" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Repetition %1$lld · %2$@ s · %3$lld%% of the calibrated range"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Repetisi %1$lld · %2$@ dtk · %3$lld%% dari rentang kalibrasi"
+          }
+        }
+      }
+    },
     "history.report.repDetails" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -8861,6 +8878,23 @@
         }
       }
     },
+    "report.keyReps" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Key repetitions"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Repetisi kunci"
+          }
+        }
+      }
+    },
     "report.measurementDetails" : {
       "localizations" : {
         "en" : {
@@ -8970,6 +9004,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Total pengulangan"
+          }
+        }
+      }
+    },
+    "report.setNumber %lld" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Set %lld"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Set %lld"
           }
         }
       }
@@ -13516,36 +13567,70 @@
         }
       }
     },
-    "settings.censorBackground" : {
+    "settings.censorBackgroundOnly" : {
       "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Censor background"
+            "value" : "Background"
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Samarkan latar"
+            "value" : "Latar"
           }
         }
       }
     },
-    "settings.censorFace" : {
+    "settings.censorBoth" : {
       "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Censor face"
+            "value" : "Face & background"
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Samarkan wajah"
+            "value" : "Wajah & latar"
+          }
+        }
+      }
+    },
+    "settings.censorFaceOnly" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Face"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wajah"
+          }
+        }
+      }
+    },
+    "settings.censorNone" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No blur"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tanpa samaran"
           }
         }
       }
@@ -13647,6 +13732,40 @@
         }
       }
     },
+    "settings.recordingOff" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No replay"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tanpa rekaman"
+          }
+        }
+      }
+    },
+    "settings.recordingOffHelp" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Only each repetition's numbers (time and range) are saved. No skeleton or video is kept."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hanya angka setiap repetisi (waktu dan rentang) yang disimpan. Tidak ada kerangka atau video yang disimpan."
+          }
+        }
+      }
+    },
     "settings.recordingSkeleton" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -13721,13 +13840,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Also keeps a short, low-resolution video of the first, hardest and last repetition of each set. Faces are pixelated and the room is blurred on this iPad before anything is saved."
+            "value" : "Also keeps a short, low-resolution video of the first, hardest and last repetition of each set. Faces are pixelated and the room is blurred on this iPad before anything is saved. Hand exercises see no body, so only faces the camera recognizes are pixelated there."
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Juga menyimpan video singkat beresolusi rendah dari repetisi pertama, tersulit, dan terakhir setiap set. Wajah disamarkan dan ruangan dikaburkan di iPad ini sebelum disimpan."
+            "value" : "Juga menyimpan video singkat beresolusi rendah dari repetisi pertama, tersulit, dan terakhir setiap set. Wajah disamarkan dan ruangan dikaburkan di iPad ini sebelum disimpan. Latihan tangan tidak melihat tubuh, jadi hanya wajah yang dikenali kamera yang disamarkan."
           }
         }
       }
@@ -13749,36 +13868,36 @@
         }
       }
     },
-    "settings.recordingWarningBoth" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Faces and the room will be visible in saved videos, without any censoring. Turn this on only with the patient's consent."
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Wajah dan ruangan akan terlihat di video yang disimpan tanpa disamarkan. Aktifkan hanya dengan persetujuan pasien."
-          }
-        }
-      }
-    },
     "settings.recordingWarningFace" : {
       "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Faces will be visible in saved videos. Turn this on only with the patient's consent."
+            "value" : "Faces will be visible in saved videos; the room is still blurred. Choose this only with the patient's consent."
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Wajah akan terlihat di video yang disimpan. Aktifkan hanya dengan persetujuan pasien."
+            "value" : "Wajah akan terlihat di video yang disimpan; ruangan tetap dikaburkan. Pilih ini hanya dengan persetujuan pasien."
+          }
+        }
+      }
+    },
+    "settings.recordingWarningNone" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Faces and the room will be visible in saved videos, without any blur. Choose this only with the patient's consent."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wajah dan ruangan akan terlihat di video yang disimpan tanpa samaran. Pilih ini hanya dengan persetujuan pasien."
           }
         }
       }
@@ -13811,6 +13930,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Ikuti pengaturan latihan"
+          }
+        }
+      }
+    },
+    "settings.videoCensoring" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Censor"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Samarkan"
           }
         }
       }
