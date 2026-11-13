@@ -32,6 +32,7 @@ struct TMKeyRepReplaySection: View {
         if let rep = selectedRep {
             VStack(alignment: .leading, spacing: 14) {
                 rolePicker
+                singleRepNote
                 media(for: rep)
 
                 Text(Self.caption(for: rep))
@@ -67,6 +68,17 @@ struct TMKeyRepReplaySection: View {
                 }
             }
             .pickerStyle(.segmented)
+        }
+    }
+
+    /// A set with one counted repetition (for example one directional-reach round) has no choice to
+    /// offer, so say that this repetition is the first, hardest and last.
+    @ViewBuilder
+    private var singleRepNote: some View {
+        if reps.count == 1, let rep = reps.first, rep.roles.count > 1 {
+            Text("history.report.singleRep")
+                .typography(.subheadline)
+                .foregroundStyle(TherapyPalette.muted)
         }
     }
 

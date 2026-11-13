@@ -3797,6 +3797,23 @@
         }
       }
     },
+    "history.report.singleRep" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Only one repetition was recorded in this set, so it is the first, hardest and last."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Set ini hanya merekam satu repetisi, jadi repetisi ini sekaligus yang pertama, tersulit, dan terakhir."
+          }
+        }
+      }
+    },
     "history.report.lowTracking" : {
       "extractionState" : "manual",
       "localizations" : {
