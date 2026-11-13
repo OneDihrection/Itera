@@ -154,9 +154,7 @@ struct SitToStandBalanceEngine: BalanceMovementEngine {
             holdSecondsRemaining: marker == nil ? nil : snapshot.calibrationCountdown,
             compensationWarning: value.cue != nil,
             armChain: [joints.shoulder, joints.hip, joints.knee, joints.ankle],
-            showsMidline: false,
-            isCalibrationHold: marker != nil,
-            showsTorso: false
+            isCalibrationHold: marker != nil
         )
     }
 }

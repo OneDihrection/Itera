@@ -52,11 +52,6 @@ struct LivePose {
             torso = [leftShoulder, rightShoulder, rightHip, leftHip]
         }
 
-        var midline: (base: CGPoint, top: CGPoint)?
-        if let neck = Self.point(.neck, in: smoothed), let root = Self.point(.root, in: smoothed) {
-            midline = (base: root, top: neck)
-        }
-
         let limbs: [[CGPoint]] = [
             Self.limb(from: leftShoulder, through: [.leftElbow, .leftWrist], in: smoothed),
             Self.limb(from: rightShoulder, through: [.rightElbow, .rightWrist], in: smoothed),
@@ -66,7 +61,6 @@ struct LivePose {
 
         let guide = SessionPoseGuide(
             torso: torso,
-            midline: midline,
             limbs: limbs,
             emphasis: .ambient
         )

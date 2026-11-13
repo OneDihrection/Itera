@@ -244,17 +244,7 @@ struct TMBalanceSessionView: View {
         }
 
         let imageSize = CGSize(width: overlay.aspect, height: 1)
-        let pose = SessionPoseGuide(
-            torso: overlay.showsTorso
-                ? [overlay.leftShoulder, overlay.rightShoulder, overlay.rightHip, overlay.leftHip]
-                    .map(normalized)
-                : [],
-            midline: overlay.showsMidline
-                ? (normalized(overlay.midlineBase), normalized(overlay.midlineTop))
-                : nil,
-            chain: overlay.armChain.map(normalized),
-            warning: overlay.compensationWarning
-        )
+        let pose = SessionPoseGuide(chain: overlay.armChain.map(normalized))
         let countdown = overlay.target.flatMap { target in
             overlay.holdSecondsRemaining.map { seconds in
                 SessionHoldCountdown(

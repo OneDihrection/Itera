@@ -43,17 +43,15 @@ struct SessionDirectionGuide {
     var farthestPosition: CGPoint?
 }
 
-/// The tracked body, in normalized image coordinates: an optional shoulder-hip box and midline,
-/// and a chain of joints such as shoulder, elbow and wrist.
+/// The tracked body, in normalized image coordinates: a chain of joints such as shoulder, elbow
+/// and wrist, and for the ambient skeleton an optional shoulder-hip outline.
 struct SessionPoseGuide {
-    /// Shoulders and hips in drawing order; fewer than three points draws no box.
+    /// Shoulders and hips in drawing order, outlined only by the ambient skeleton; fewer than three
+    /// points draws no outline.
     var torso: [CGPoint] = []
-    var midline: (base: CGPoint, top: CGPoint)?
     var chain: [CGPoint] = []
     /// Further joint chains drawn like `chain`, such as both arms of a whole-body skeleton.
     var limbs: [[CGPoint]] = []
-    /// Draws the box and midline in orange instead of yellow.
-    var warning = false
     /// How strongly the body is drawn: full guidance, or a quiet outline that only shows tracking.
     enum Emphasis { case guidance, ambient }
     var emphasis: Emphasis = .guidance
@@ -414,8 +412,8 @@ struct TMSessionTargetOverlay: View {
         context.draw(text, at: CGPoint(x: rect.midX, y: rect.midY))
     }
 
-    /// The body outline under the bubbles: a quiet shoulder-hip box and midline, and the joint
-    /// chain in the same dark-underlay style as every other line.
+    /// The body under the bubbles: the joint chains in the same dark-underlay style as every
+    /// other line. Guidance draws no torso, so only the moving limb stands out.
     private func drawPose(
         _ pose: SessionPoseGuide,
         point: (CGPoint) -> CGPoint,
@@ -424,30 +422,6 @@ struct TMSessionTargetOverlay: View {
         if pose.emphasis == .ambient {
             drawAmbientPose(pose, point: point, context: &context)
             return
-        }
-
-        let torsoColor = pose.warning ? Color.orange : TherapyPalette.guidanceYellow
-
-        if pose.torso.count > 2 {
-            var torso = Path()
-            torso.move(to: point(pose.torso[0]))
-            pose.torso.dropFirst().forEach { torso.addLine(to: point($0)) }
-            torso.closeSubpath()
-            context.fill(torso, with: .color(torsoColor.opacity(0.10)))
-            strokeWithUnderlay(torso, color: torsoColor.opacity(0.75), width: 3, context: &context)
-        }
-
-        if let midline = pose.midline {
-            var path = Path()
-            path.move(to: point(midline.base))
-            path.addLine(to: point(midline.top))
-            strokeWithUnderlay(
-                path,
-                color: torsoColor,
-                width: 5,
-                style: StrokeStyle(lineWidth: 5, lineCap: .round, dash: [12, 8]),
-                context: &context
-            )
         }
 
         for joints in [pose.chain] + pose.limbs {

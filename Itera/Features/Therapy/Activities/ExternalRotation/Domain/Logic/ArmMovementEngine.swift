@@ -996,7 +996,6 @@ struct ArmMovementEngine: BalanceMovementEngine {
             holdSecondsRemaining: secondsRemaining,
             compensationWarning: snapshot.compensation.isCompensating,
             armChain: [geometry.shoulder, geometry.elbow, geometry.wrist],
-            showsMidline: false,
             isCalibrationHold: calibrationHold,
             calibrationTip: calibrationTip,
             calibrationTail: calibrationTail
