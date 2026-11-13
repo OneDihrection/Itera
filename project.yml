@@ -43,7 +43,7 @@ targets:
         UIAppFonts:
           - PlusJakartaSans-Regular.ttf
           - PlusJakartaSans-Bold.ttf
-        CFBundleDisplayName: "TeMan: Terapi Mandiri"
+        CFBundleDisplayName: "Tuntun: Teman Terapi"
         LSApplicationCategoryType: public.app-category.healthcare-fitness
         ITSAppUsesNonExemptEncryption: false
         CFBundleShortVersionString: "$(MARKETING_VERSION)"

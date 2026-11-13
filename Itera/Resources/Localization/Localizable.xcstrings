@@ -929,13 +929,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Reach across your body to touch the opposite shoulder. TeMan pauses scoring when your trunk leans or turns too far."
+            "value" : "Reach across your body to touch the opposite shoulder. Tuntun pauses scoring when your trunk leans or turns too far."
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Silangkan tangan untuk menyentuh bahu yang berlawanan. TeMan menghentikan penilaian saat tubuh terlalu miring atau berputar."
+            "value" : "Silangkan tangan untuk menyentuh bahu yang berlawanan. Tuntun menghentikan penilaian saat tubuh terlalu miring atau berputar."
           }
         }
       }
@@ -5238,13 +5238,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Keep your elbow at your side, bent about 90°, and slowly turn your forearm inward toward your belly. First show how far you can comfortably turn; that becomes your target. TeMan pauses scoring when your elbow lifts away or your trunk leans or turns."
+            "value" : "Keep your elbow at your side, bent about 90°, and slowly turn your forearm inward toward your belly. First show how far you can comfortably turn; that becomes your target. Tuntun pauses scoring when your elbow lifts away or your trunk leans or turns."
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Jaga siku tetap menempel di sisi badan, tertekuk sekitar 90°, lalu putar lengan bawah ke dalam ke arah perut secara perlahan. Tunjukkan dulu seberapa jauh Anda nyaman berputar; itu menjadi target Anda. TeMan menghentikan penilaian bila siku menjauh atau badan miring atau berputar."
+            "value" : "Jaga siku tetap menempel di sisi badan, tertekuk sekitar 90°, lalu putar lengan bawah ke dalam ke arah perut secara perlahan. Tunjukkan dulu seberapa jauh Anda nyaman berputar; itu menjadi target Anda. Tuntun menghentikan penilaian bila siku menjauh atau badan miring atau berputar."
           }
         }
       }
@@ -10102,13 +10102,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Keep your elbow at your side, bent about 90°, and slowly turn your forearm outward. First show how far you can comfortably turn; that becomes your target. TeMan pauses scoring when your elbow lifts away or your trunk leans or turns."
+            "value" : "Keep your elbow at your side, bent about 90°, and slowly turn your forearm outward. First show how far you can comfortably turn; that becomes your target. Tuntun pauses scoring when your elbow lifts away or your trunk leans or turns."
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Jaga siku tetap menempel di sisi badan, tertekuk sekitar 90°, lalu putar lengan bawah ke luar secara perlahan. Tunjukkan dulu seberapa jauh Anda nyaman berputar; itu menjadi target Anda. TeMan menghentikan penilaian bila siku menjauh atau badan miring atau berputar."
+            "value" : "Jaga siku tetap menempel di sisi badan, tertekuk sekitar 90°, lalu putar lengan bawah ke luar secara perlahan. Tunjukkan dulu seberapa jauh Anda nyaman berputar; itu menjadi target Anda. Tuntun menghentikan penilaian bila siku menjauh atau badan miring atau berputar."
           }
         }
       }
@@ -14223,13 +14223,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Let your arm hang at your side, then slowly raise it forward with your palm turned up and the arm rotated outward. First show how high you can comfortably lift; that becomes your target. TeMan tracks how high your wrist rises and pauses scoring when your trunk leans or turns."
+            "value" : "Let your arm hang at your side, then slowly raise it forward with your palm turned up and the arm rotated outward. First show how high you can comfortably lift; that becomes your target. Tuntun tracks how high your wrist rises and pauses scoring when your trunk leans or turns."
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Biarkan lengan menggantung di sisi badan, lalu angkat perlahan ke depan dengan telapak tangan menghadap atas dan lengan diputar keluar. Pertama tunjukkan setinggi apa Anda nyaman mengangkat; itu menjadi target Anda. TeMan melacak setinggi apa pergelangan tangan naik dan menjeda penilaian saat badan Anda condong atau berputar."
+            "value" : "Biarkan lengan menggantung di sisi badan, lalu angkat perlahan ke depan dengan telapak tangan menghadap atas dan lengan diputar keluar. Pertama tunjukkan setinggi apa Anda nyaman mengangkat; itu menjadi target Anda. Tuntun melacak setinggi apa pergelangan tangan naik dan menjeda penilaian saat badan Anda condong atau berputar."
           }
         }
       }
@@ -14750,13 +14750,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Lean slightly forward, stand as far as you can, then sit back down slowly. TeMan counts a repetition when you lean before standing."
+            "value" : "Lean slightly forward, stand as far as you can, then sit back down slowly. Tuntun counts a repetition when you lean before standing."
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Condongkan badan sedikit ke depan, lalu berdiri sesuai kemampuan Anda dan duduk kembali perlahan. TeMan menghitung repetisi saat Anda condong dulu sebelum berdiri."
+            "value" : "Condongkan badan sedikit ke depan, lalu berdiri sesuai kemampuan Anda dan duduk kembali perlahan. Tuntun menghitung repetisi saat Anda condong dulu sebelum berdiri."
           }
         }
       }

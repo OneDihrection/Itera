@@ -1,6 +1,6 @@
 <!-- README.md — Created by Amelia Putri Aftiana on 29/10/2026. -->
 
-# TeMan: Terapi Mandiri
+# Tuntun: Teman Terapi
 
 Native iPad app for the five requested finger exercises: full fist and release, hook fist, thumb-to-finger opposition, finger spreading, and sequential finger extension. This branch implements the user's finger-only scope in place of the original arm/reach scope in SYSTEM_DESIGN.md, retaining the single target, router, domain ownership, local storage, and manual verification policy.
 
