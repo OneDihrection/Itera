@@ -120,3 +120,11 @@ Components/TherapyExerciseScreens.swift owns the five screens every exercise sha
 Compatible additions: `TMTherapyCompletionMark(tint:)` (the screens pass `brand`), `TMTherapyButton(brand:)` for a rust pill, and `TherapyPalette.planPanel`, the warm grey behind demonstration media and the results panel.
 
 `Tools/generate_plan_art.py` draws the plan illustrations for the exercises added on 2026-11-09 (each finger movement, forearm rotation, elbow bend, directional reach, cup, internal rotation and shoulder flexion) from the same figure shapes and colours as the first six, so all `plan-<id>` images match. Rerun it after changing a pose, then `xcodegen generate`.
+
+## Angle measurement (2026-11-11)
+
+Components/TherapyAngleMeasurement.swift owns `TMTherapyAngleReadout` (a large whole-degree value inside a blue hold ring, with a title and caption, or a dash without a value) and `TMTherapyAngleOverlay` (the measured bones as a yellow line over the dark underlay with blue joint dots and the degree label above the vertex, placed through `CameraDisplayGeometry` on a mirrored aspect-fit preview). `TMTherapyAngleText.format` rounds to whole degrees. They take values only; the measurement feature computes angles and holds. `TMTherapyAngleReportCard` with `TherapyAngleLine` shows one measured angle in a report: its name, a 2D/3D badge and labelled value lines (before practice, through practice, range change).
+
+## Pairing codes (2026-11-11)
+
+Components/TherapyQRCode.swift owns `TMTherapyQRCode` (a crisp black-on-white QR code from supplied text, drawn with Core Image) and `TMTherapyQRScanner` (VisionKit live QR scanning that reports each new payload once; `isAvailable` is false on the Simulator, older iPads and Mac Catalyst, where callers offer a typed code). They take values and a callback only; pairing logic stays in Features/Prescription.

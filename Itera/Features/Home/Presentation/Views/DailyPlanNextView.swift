@@ -20,6 +20,8 @@ struct TMDailyPlanNextView: View {
     }
 
     @State private var stage = Stage.opening
+    /// Set once from the finished item's prescription; zero skips the breathing rest.
+    @State private var breathCount: Int?
     @State private var elapsed = 0.0
     @State private var audioPrepared = false
     @State private var narrationID: UUID?
@@ -37,8 +39,12 @@ struct TMDailyPlanNextView: View {
         return max(1, Int(ceil(Self.countdownDuration - countdownElapsed)))
     }
 
+    private var breaths: Int {
+        breathCount ?? dependencies.dailyPlan.restBreaths
+    }
+
     private func remainingBreaths(afterStarting breath: LongRestBreath) -> Int {
-        LongRestBreath.count - breath.number + 1
+        breath.count - breath.number + 1
     }
 
     var body: some View {
@@ -59,7 +65,7 @@ struct TMDailyPlanNextView: View {
                     .environment(\.colorScheme, .light)
                     .transition(.opacity)
             } else {
-                let breath = stage == .breathing ? LongRestBreath(elapsed: elapsed) : nil
+                let breath = stage == .breathing ? LongRestBreath(elapsed: elapsed, count: breaths) : nil
                 let cue = text(for: restLine(breath: breath))
                 TMTherapyLongRest(
                     cue: Text(verbatim: cue),
@@ -90,6 +96,15 @@ struct TMDailyPlanNextView: View {
     }
 
     private func runTransition() async {
+        if breathCount == nil {
+            breathCount = dependencies.dailyPlan.restBreaths
+
+            // No breathing rest: announce the next exercise and count down to it.
+            if breaths == 0 {
+                stage = .nextExercise
+            }
+        }
+
         if !audioPrepared {
             // Let the previous exercise release its shared camera and audio.
             do {
@@ -125,7 +140,7 @@ struct TMDailyPlanNextView: View {
                     lastSpokenSecond = seconds
                 }
             } else {
-                let breath = stage == .breathing ? LongRestBreath(elapsed: elapsed) : nil
+                let breath = stage == .breathing ? LongRestBreath(elapsed: elapsed, count: breaths) : nil
                 let line = restLine(breath: breath)
                 let cue = text(for: line)
                 let cueID = breath.map { "\($0.number)-\($0.phase)-\(cue)" } ?? cue
@@ -156,7 +171,7 @@ struct TMDailyPlanNextView: View {
 
     private var nextStage: Stage? {
         if stage == .breathing {
-            return elapsed >= LongRestBreath.duration ? .closing : nil
+            return elapsed >= LongRestBreath.duration(count: breaths) ? .closing : nil
         }
         guard (elapsed >= 2 && narrationFinished) || elapsed >= 12 else {
             return nil
@@ -184,11 +199,14 @@ struct TMDailyPlanNextView: View {
         case .restInvitation:
             return NarrationLine(key: "rest.long.restInvitation")
         case .instructions:
-            return NarrationLine(key: "rest.long.instructions")
+            // The recorded opening line names six breaths; other counts use the counted line.
+            return breaths == LongRestBreath.defaultCount
+                ? NarrationLine(key: "rest.long.instructions")
+                : NarrationLine(key: Self.instructionsCountKey, argument: breaths)
         case .posture:
             return NarrationLine(key: "rest.long.posture")
         case .firstBreathCount:
-            return NarrationLine(key: Self.remainingKey, argument: LongRestBreath.count)
+            return NarrationLine(key: Self.remainingKey, argument: breaths)
         case .closing:
             return NarrationLine(key: "rest.long.closing")
         case .nextExercise:
@@ -212,8 +230,8 @@ struct TMDailyPlanNextView: View {
             switch breath.number {
             case 1:
                 return "rest.long.inhaleFirst"
-            case LongRestBreath.count:
-                let lastBreathStart = Double(LongRestBreath.count - 1) * LongRestBreath.cycleDuration
+            case breath.count:
+                let lastBreathStart = Double(breath.count - 1) * LongRestBreath.cycleDuration
                 return elapsed - lastBreathStart < 1.4 ? "rest.long.inhaleLast" : "rest.long.inhale"
             default:
                 return "rest.long.inhale"
@@ -221,13 +239,16 @@ struct TMDailyPlanNextView: View {
         case .hold:
             return "rest.long.hold"
         case .exhale:
+            // The last breath always gets its closing cue, whatever the doctor's count.
+            guard breath.number != breath.count else {
+                return "rest.long.exhaleLast"
+            }
+
             switch breath.number {
             case 1, 5:
                 return "rest.long.exhaleSlow"
             case 3:
                 return "rest.long.exhaleShoulders"
-            case LongRestBreath.count:
-                return "rest.long.exhaleLast"
             default:
                 return "rest.long.exhale"
             }
@@ -237,6 +258,7 @@ struct TMDailyPlanNextView: View {
     }
 
     private static let remainingKey = "rest.long.remaining %lld"
+    private static let instructionsCountKey = "rest.long.instructionsCount %lld"
 
     /// The displayed text of a line, with a format key's number filled in.
     private func text(for line: NarrationLine?) -> String {
@@ -266,7 +288,7 @@ struct TMDailyPlanNextView: View {
 
         // The breath count is spoken before the timed inhale so the longer cue has the full
         // phase. The two recordings play back to back; the stage waits for the second.
-        if let breath, breath.phase == .inhale, breath.number > 1, breath.number < LongRestBreath.count {
+        if let breath, breath.phase == .inhale, breath.number > 1, breath.number < breath.count {
             dependencies.audio.speak(
                 id: UUID(),
                 key: Self.remainingKey,

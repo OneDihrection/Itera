@@ -72,7 +72,8 @@ struct SessionProgress {
         reachOutcomes: [ReachOutcome] = [],
         skippedReachSteps: [ReachSkippedStep]? = nil,
         practiceSeconds: Double = 0,
-        cupOutcomes: [CupMilestone]? = nil
+        cupOutcomes: [CupMilestone]? = nil,
+        angles: [BodyAngleResult]? = nil
     ) {
         guard pausedAt == nil,
             stage == .activity,
@@ -93,7 +94,8 @@ struct SessionProgress {
                 skippedReachSteps: skippedReachSteps,
                 cupOutcomes: cupOutcomes,
                 practiceSeconds: practiceSeconds,
-                setNumber: setNumber
+                setNumber: setNumber,
+                angles: angles
             )
         )
         stage = .feedback(UUID())
@@ -129,6 +131,15 @@ struct SessionProgress {
         }
         executionID = UUID()
         stage = .activity
+    }
+
+    /// Completes a narrated rest whose clock is owned by the session's breathing sequence.
+    mutating func finishNarratedRest(at time: Double) {
+        guard pausedAt == nil, case .rest = stage else {
+            return
+        }
+        stage = .rest(deadline: time)
+        tick(at: time)
     }
 
     var hasNextSet: Bool {

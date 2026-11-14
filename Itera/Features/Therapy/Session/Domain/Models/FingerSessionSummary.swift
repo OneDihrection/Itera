@@ -35,6 +35,9 @@ struct FingerExerciseResult: Identifiable {
     let observedGain: Double?
     let completed: Bool
     var skipped = false
+    /// Held finger angles from calibration to the end of practice; empty for forearm rotation
+    /// and for sessions saved before angles were recorded.
+    var angles: [FingerAngleResult] = []
 }
 
 struct FingerSessionSummary: Identifiable {

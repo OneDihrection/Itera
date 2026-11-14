@@ -9,6 +9,9 @@ import Foundation
 
 struct MovementActivity: TherapyActivity {
     private let configuration: SessionActivity
+    private let scriptedGuidance: Bool
+    private var waitingForGuidance: Bool
+    private var setNumber = 1
     private var snapshot = MovementSnapshot()
     private var hold = StableHold()
     private var landmarkSmoother = MovementLandmarkSmoother()
@@ -28,9 +31,10 @@ struct MovementActivity: TherapyActivity {
     private var cueSince: Double?
 
     /// Seconds the patient holds inside the start or target bubble before it is accepted.
-    private static let dwellDuration = 2.0
+    private var dwellDuration: Double { scriptedGuidance ? 3 : 2 }
     /// Seconds the patient holds still to capture the start and target positions.
-    private static let captureDuration = 2.0
+    private var captureDuration: Double { scriptedGuidance ? 3 : 2 }
+    private var countdownDuration: Double { scriptedGuidance && setNumber > 1 ? 5 : 3 }
     /// Longest gap between fresh samples that still credits hold time. Slow frames with several
     /// people in view must not stop a hold from filling.
     private static let maximumCreditedStep = 0.3
@@ -41,7 +45,11 @@ struct MovementActivity: TherapyActivity {
     /// Longest tracking loss a repetition dwell survives. Matches the phase reset below.
     private static let dwellTrackingGrace = 0.5
 
-    init(configuration: SessionActivity) { self.configuration = configuration }
+    init(configuration: SessionActivity, scriptedGuidance: Bool = false) {
+        self.configuration = configuration
+        self.scriptedGuidance = scriptedGuidance
+        waitingForGuidance = scriptedGuidance
+    }
     var presentation: ActivityPresentation {
         var value = snapshot
         if snapshot.countingDown {
@@ -55,23 +63,31 @@ struct MovementActivity: TherapyActivity {
     }
 
     mutating func handle(_ event: ActivityEvent) -> ActivityTransition {
+        let oldPhase = phase
+        let oldCount = snapshot.count
+        let hadStart = start != nil
+        let hadTarget = target != nil
+        let wasCountingDown = snapshot.countingDown
         switch event {
         case .countdownReady(let time):
             if snapshot.countingDown {
-                countdown = time + 3
-                snapshot.seconds = 3
+                countdown = time + countdownDuration
+                snapshot.seconds = Int(countdownDuration)
             }
         case .nextSet:
+            setNumber += 1
             snapshot.count = 0
             interrupt()
             landmarkSmoother.reset()
             snapshot.countingDown = true
-            snapshot.seconds = 3
+            snapshot.seconds = Int(countdownDuration)
             snapshot.instruction = "session.countdown"
             countdown = nil
             returningBeforePractice = false
         case .guidanceCompleted:
-            break
+            waitingForGuidance = false
+            last = nil
+            lastValid = nil
         case .viewport(let value):
             if viewport != value {
                 viewport = value
@@ -102,7 +118,9 @@ struct MovementActivity: TherapyActivity {
             switch command {
             case .redo:
                 let currentViewport = viewport
-                self = MovementActivity(configuration: configuration)
+                let currentSet = setNumber
+                self = MovementActivity(configuration: configuration, scriptedGuidance: scriptedGuidance)
+                setNumber = currentSet
                 if let currentViewport {
                     _ = handle(.viewport(currentViewport))
                 }
@@ -148,10 +166,17 @@ struct MovementActivity: TherapyActivity {
                 }
             }
         case .observation(let frame):
-            if !suspended {
+            if !suspended, !waitingForGuidance {
                 let filtered = landmarkSmoother.consume(frame)
                 consume(filtered)
             }
+        }
+        if scriptedGuidance,
+           oldPhase != phase || oldCount != snapshot.count || hadStart != (start != nil)
+            || hadTarget != (target != nil) || (wasCountingDown && !snapshot.countingDown) {
+            waitingForGuidance = true
+            last = nil
+            lastValid = nil
         }
         let finished = snapshot.count >= configuration.goal
         return ActivityTransition(
@@ -169,7 +194,7 @@ struct MovementActivity: TherapyActivity {
 
         snapshot.instruction = "session.countdown"
         snapshot.seconds = max(0, Int(ceil(deadline - time)))
-        snapshot.progress = max(0, min(1, (deadline - time) / 3))
+        snapshot.progress = max(0, min(1, (deadline - time) / countdownDuration))
 
         guard time >= deadline else {
             return
@@ -179,6 +204,7 @@ struct MovementActivity: TherapyActivity {
         snapshot.countingDown = false
         snapshot.progress = 0
         phase = 1
+        snapshot.instruction = "session.moveTarget"
     }
 
     private mutating func interrupt() {
@@ -193,6 +219,9 @@ struct MovementActivity: TherapyActivity {
         cueHolding = false
         cueCandidate = false
         cueSince = nil
+        if scriptedGuidance {
+            waitingForGuidance = true
+        }
     }
 
     /// A hold freezes, rather than clears, while tracking is briefly lost.
@@ -283,7 +312,7 @@ struct MovementActivity: TherapyActivity {
             if let start, (offset - start).length <= limb * 0.4 {
                 hold.clear()
                 snapshot.progress = 0
-                snapshot.seconds = Int(Self.captureDuration)
+                snapshot.seconds = Int(captureDuration)
                 cueHolding = false
                 cueCandidate = false
                 cueSince = nil
@@ -294,7 +323,7 @@ struct MovementActivity: TherapyActivity {
             hold.consume(
                 offset,
                 time: time,
-                duration: Self.captureDuration,
+                duration: captureDuration,
                 tolerance: offset.length * 0.1,
                 maximumGap: InterruptibleHold.trackingGrace,
                 creditedStep: 0.15,
@@ -311,7 +340,7 @@ struct MovementActivity: TherapyActivity {
             }
             snapshot.instruction = start == nil ? "session.holdStart" : (cueHolding ? "session.holdTarget" : "parity.moveComfortably")
             snapshot.guide?.progress = hold.progress
-            snapshot.seconds = Int(ceil(Self.captureDuration * (1 - hold.progress)))
+            snapshot.seconds = Int(ceil(captureDuration * (1 - hold.progress)))
             guard hold.progress >= 1, let mean = hold.mean else {
                 return
             }
@@ -334,7 +363,7 @@ struct MovementActivity: TherapyActivity {
             snapshot.guide = nil
             return
         }
-        if countdown == -1 { countdown = time + 3 }
+        if countdown == -1 { countdown = time + countdownDuration }
         if countdown != nil {
             advanceCountdown(at: time)
 
@@ -364,7 +393,7 @@ struct MovementActivity: TherapyActivity {
             dwell.interrupt(at: time, grace: InterruptibleHold.zoneExitGrace)
         }
 
-        let progress = dwell.progress(duration: Self.dwellDuration)
+        let progress = dwell.progress(duration: dwellDuration)
         snapshot.instruction = phase == 1 ? "session.moveTarget" : "session.returnStart"
         snapshot.progress = progress
         snapshot.guide = TargetGuide(
@@ -376,9 +405,9 @@ struct MovementActivity: TherapyActivity {
         dwell.reset()
         if returningBeforePractice {
             returningBeforePractice = false
-            countdown = time + 3
+            countdown = time + countdownDuration
             snapshot.countingDown = true
-            snapshot.seconds = 3
+            snapshot.seconds = Int(countdownDuration)
             snapshot.guide = nil
         } else if phase == 2 {
             snapshot.count += 1

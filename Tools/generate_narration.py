@@ -54,12 +54,15 @@ FINGER_KEYS = (
 # Format keys with the values the app passes; FingerActivity holds for 2 seconds.
 FORMAT_KEYS = {
     "guide.holdDuration %lld": (2,),
-    # The long rest between plan exercises counts six breaths down to two (DailyPlanNextView).
-    "rest.long.remaining %lld": (2, 3, 4, 5, 6),
+    # The long rest between plan exercises counts breaths down to two (DailyPlanNextView). The
+    # doctor chooses 0-10 breaths per exercise (SYSTEM_DESIGN ADR-008).
+    "rest.long.remaining %lld": tuple(range(2, 11)),
+    # The opening line names the doctor's breath count; six keeps "rest.long.instructions".
+    "rest.long.instructionsCount %lld": tuple(range(1, 11)),
 }
 
 # Format keys whose number is read as an Indonesian word rather than a digit.
-SPELLED_FORMAT_KEYS = {"rest.long.remaining %lld"}
+SPELLED_FORMAT_KEYS = {"rest.long.remaining %lld", "rest.long.instructionsCount %lld"}
 
 # Arm, reaching, cup and balance sessions: keys spoken through SessionAudioService.
 BODY_KEYS = (

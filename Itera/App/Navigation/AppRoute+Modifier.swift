@@ -9,6 +9,7 @@ import SwiftUI
 
 private struct TMRouterViewModifier: ViewModifier {
     @Environment(NavigationRouter.self) private var router
+    @Environment(AppDependencies.self) private var dependencies
     @Environment(\.buttonFeedback) private var buttonFeedback
 
     func body(content: Content) -> some View {
@@ -29,17 +30,26 @@ private struct TMRouterViewModifier: ViewModifier {
                         AppRouterView.destination($0)
                     }
             }
-            .tabItem { Label("tab.home", systemImage: "house") }
+            .tabItem {
+                if dependencies.role == .doctor {
+                    Label("tab.patients", systemImage: "person.2")
+                } else {
+                    Label("tab.home", systemImage: "house")
+                }
+            }
             .tag(AppTab.home)
 
-            NavigationStack(path: $router.reportsPath) {
-                TMFingerReportsView()
-                    .navigationDestination(for: AppRoute.self) {
-                        AppRouterView.destination($0)
-                    }
+            // The doctor reads each patient's progress on their page; Progres is the patient's own.
+            if dependencies.role == .patient {
+                NavigationStack(path: $router.reportsPath) {
+                    TMFingerReportsView()
+                        .navigationDestination(for: AppRoute.self) {
+                            AppRouterView.destination($0)
+                        }
+                }
+                .tabItem { Label("tab.reports", systemImage: "chart.bar.xaxis") }
+                .tag(AppTab.reports)
             }
-            .tabItem { Label("tab.reports", systemImage: "chart.bar.xaxis") }
-            .tag(AppTab.reports)
         }
         // The system tab bar sits at the top on iPadOS 18 and at the bottom on iPadOS 17.
         .tint(TherapyPalette.action)

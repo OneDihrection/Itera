@@ -783,3 +783,241 @@ Accepted at the product owner's request: finger tracking flickered, worst in thu
 - Inference cadence and thermal behaviour at 30 Hz over two-minute finger runs.
 - Overlay smoothness in every exercise.
 - Whether very fast, jerky movements trigger the jump hold.
+
+## Tracking backends and joint-angle measurement (2026-11-11)
+
+Accepted at the product owner's request, on the `testing-pengukuran` branch. This departs from "Introduce no additional targets or packages" (section 3) by adding one Swift package, MediaPipe Tasks, and from "Domain coordinates are unmirrored, normalized image coordinates" (section 4) by adding optional metric 3D positions beside them.
+
+**Body backend flag.** `BodyPoseBackend` (Shared/Tracking/Models) selects `.vision2D` (`VNDetectHumanBodyPoseRequest`, the default) or `.vision3D` (`VNDetectHumanBodyPose3DRequest`, iOS 17). `BodyTrackingService(poseBackend:)` and `usePoseBackend(_:)` choose it; the saved value is `tracking.bodyPoseBackend` (Settings, "Pelacakan (uji coba)"), and Debug builds accept `-IteraBodyPose vision3D`. With 3D, `TrackingObservation.joints` comes from the request's own image projection (`pointInImage`), so every exercise keeps its 2D rules unchanged, and `TrackingObservation.world` adds each joint's position in meters relative to the hip root. Tradeoffs of 3D, to be weighed on the device:
+- It reports only the most prominent person, so `BodySubjectSelector` sees one candidate and the bystander rules ("Bystander tolerance", "Locked patient") cannot pick the patient over a nearer bystander.
+- All 17 joints come together with one whole-body confidence instead of per-joint confidence, so partial visibility (hips behind a table) either passes or fails as a whole.
+- It has no nose or neck: the head centre and the point between the shoulders stand in for them, which moves the "nose" up slightly for cross midline and reach.
+- Without LiDAR depth its scale assumes a 1.8 m body; angles are scale-free, but distances in meters are not reliable.
+- It costs more per frame than 2D. If the request fails (it is unsupported on the Simulator), the service logs once and uses 2D until the backend is chosen again.
+
+**Hand backend flag.** `HandPoseBackend` selects `.vision` (default) or `.mediaPipe` for `HandCameraService` (finger exercises), saved as `tracking.handPoseBackend`, Debug override `-IteraHandPose mediaPipe`. `MediaPipeHandDetector` runs the Hand Landmarker in video mode synchronously on the capture queue at the existing 30 Hz cap and returns `HandEvidence` in Vision's joint order (MediaPipe uses the same 21-joint order), converting the top-left origin, swapping handedness because MediaPipe assumes selfie-mirrored frames and Itera's are unmirrored, giving each joint confidence 0.9 because MediaPipe has no per-joint confidence, and filling `HandEvidence.world` from its world landmarks. The hand camera now captures 32BGRA, the only format MediaPipe reads. The towel's hand mode in `BodyTrackingService` stays on Vision. If the model cannot load or a frame fails, the service logs and uses Vision until the backend is chosen again.
+
+**Package.** project.yml pins `github.com/google-ai-edge/mediapipe` at revision `5d426da` (MediaPipe Tasks 1.2.2) and links `MediaPipeTasksVision` with `platformFilter: iOS`; its binaries have no Mac Catalyst slice, so Catalyst builds compile the detector out through `canImport` and offer Vision only. Its Simulator slice is arm64 only. The bundled model `Resources/Models/MediaPipe/hand_landmarker.task` (float16, 7.8 MB) is unchanged from Google's model storage; see the Models README.
+
+**Angle measurement.** Features/Measurement adds a trial page, opened from the angle button on Beranda's toolbar (`.angleMeasurement`, a full-screen cover through `NavigationRouter`). It measures elbow flexion, shoulder elevation and knee flexion on the selected side, and each finger joint's flexion (MCP, PIP, DIP; thumb MP and IP) or finger spread. `JointAngleCalculator` uses metric 3D joints when the backend provides them (`.world3D`) and aspect-corrected image points otherwise (`.image2D`, accurate only for movement parallel to the screen), with the exercises' 0.5 joint confidence. `AngleHoldEstimator` reports a held angle only after 0.8 s within 6° inside a one-second window, as the median of those samples, and records the smallest and largest held angles as the range of motion, so a fast swing or one misdetected frame never sets the range. A gap over 0.3 s or a change of source ends the hold. Readings live only while the page is open; nothing is saved, consistent with section 1. The page states that the values are camera estimates, not validated clinical measurements.
+
+Verification: Simulator (arm64, IPHONEOS_DEPLOYMENT_TARGET=17.0) and Mac Catalyst builds passed. A temporary harness over the production calculator and estimator showed 90.0° for an in-plane elbow, 90.0° from 3D but 0.0° from 2D for a forearm pointing at the camera, 90.0° shoulder elevation, 60.0° for a 3D index PIP, rejection of low-confidence joints, a held value of 89.7° for 90 ± 2° noise, no range change from a 0.2 s swing or a single 95° frame inside a 60° hold, and a cleared hold after a 0.5 s gap. Not checked anywhere: the Vision 3D request and MediaPipe on real frames (neither ran; the Simulator has no camera). Pending on the M1 iPad: whether 3D runs and at what inference rate and thermal cost; whether `pointInImage` aligns with the drawn preview; the MediaPipe handedness swap; MediaPipe cadence at 30 Hz; every exercise with each backend; and agreement with a goniometer for each angle, front-on and side-on, before any value appears in a report.
+
+**Finger angles in the progress report (2026-11-11).** At the product owner's request, every finger session now records held joint angles from calibration to the end of practice and the Progres report shows them. This adds summary values to saved history; it still saves no landmarks or measurement streams (section 1), only two ranges per metric.
+- **Metrics per exercise** (`FingerAngleMetric.metrics(for:)`): full fist, knuckle (MCP) and middle-joint (PIP) flexion; hook fist, PIP and end-joint (DIP) flexion; opposition, thumb flexion (mean of MP and IP); spreading, the index–little spread; extension sequence, MCP and PIP flexion (low values show extension). Four-finger metrics average the index to little fingers and need all four joints in the frame. Forearm rotation turns the wrist, so it reports no finger angle.
+- **Recording.** `FingerSessionEngine` owns a `FingerAngleRecorder` per exercise and feeds it every accepted observation: baseline, target and range phases count as "before practice", the active phase as "through practice"; other phases, pauses and lost evidence end the current hold. Only held angles count (`AngleHoldEstimator`: 0.8 s within 6°, median), so moving between poses or a fast overshoot never sets a range. A resumed session widens the ranges saved with its checkpoint. The angle source is the hand backend's: 3D with MediaPipe, 2D with Vision, and the report labels which.
+- **Storage.** `FingerExerciseResult.angles` is saved as `FingerSessionRecord.ResultRecord.angles` (`AngleRecord`: metric, before and after minimum/maximum, 3D flag), optional so older records decode unchanged; the record version stays 1. An unreadable angle entry is dropped instead of making the session unreadable.
+- **Report.** Each history card lists, under its exercise, every metric's before and through-practice ranges ("5° sampai 70° · rentang 65°") and the change in range of motion; the session detail repeats them in a "Sudut sendi" section with a note that these are held camera estimates, not goniometer measurements.
+
+Verification: Simulator build passed. A temporary harness over the production recorder with a synthetic noisy 2D hand (calibration open 5° and fist 70°/80°, practice 85°/95° with an unheld overshoot to 110°) recorded MCP 5–70° before and 2–85° through practice (+18° range) and PIP 5–80° and 2–95° (+18°), never the 110° overshoot; forearm rotation had no metrics, and a resumed recorder kept its earlier range. Not checked: the report's appearance, the record round trip on disk, and real sessions on the M1 iPad, including whether patients hold poses long enough for readings, how often a missing finger blanks four-finger metrics, and agreement with a goniometer. Arm raise and elbow bend angles: see the next paragraph.
+
+**Arm angles in the progress report (2026-11-11).** At the product owner's request, arm raise and elbow bend sessions record their held angle the same way, and the Progres tab shows them. Arm raise reports shoulder elevation (hip–shoulder–elbow) and elbow bend reports elbow flexion, on the activity's configured side; other therapy activities record none.
+- **Shared tracking.** `StagedAngleTrack` (Features/Measurement) now owns the before/after held ranges for both finger and body exercises; `FingerAngleRecorder` uses one track per metric and `BodyAngleRecorder` one track. The finger results were unchanged by this refactor (same harness numbers).
+- **Recording.** `SessionEngine` creates a `BodyAngleRecorder` per activity in `selectActivity` and feeds it each accepted observation before the activity handles it, using the raw frame: start and target capture count as before practice, practice as after; the return to start before practice, countdowns, timed practice and pauses end the current hold. The recorder lives across the activity's sets, which reuse calibration, so its ranges are cumulative.
+- **Storage.** `SessionActivityResult.angles` (`[BodyAngleResult]?`, Codable inside the existing summary record) is set on every recorded set result, including a stop. It is optional, so older summaries decode unchanged; the angle is stored as text so an unknown future value never fails decoding. Only two ranges per activity are saved.
+- **Report.** `BodyAngleHistoryViewModel` reads `SessionRepository.history()` and, per session, takes each activity's last result with an angle. The Progres tab shows the ten newest such sessions in a "Sudut sendi lengan" section above the finger history, each with the side, before and through-practice ranges and the range change, labelled 2D or 3D after the body backend.
+
+Verification: Simulator build passed. A temporary harness over the production body recorder with a noisy synthetic 2D elbow (calibration 10° and 100°, practice 120° and 5° with an unheld swing to 140°) recorded 10–100° before and 5–121° through practice (+25°), never the swing; arm raise mapped to shoulder elevation and reach to none; a result with angles round-tripped through JSON, a result without the field decoded, and an unknown angle name decoded as unknown. Not checked: the section's appearance, real arm sessions on the M1 iPad, whether patients hold calibration and practice positions long enough for readings, 2D underestimation when the arm moves toward the camera, and agreement with a goniometer.
+
+## ADR-008 — Doctor-assigned prescriptions with CloudKit sharing
+
+Accepted and implemented, 2026-11-11, at the product owner's request (see "ADR-008 implementation" below). Its "Data and permissions" and "Pairing in the clinic" sections, and the CloudKit and pairing bullets of the implementation notes, are superseded by "ADR-008 revision: encrypted public database" at the end of this document. This supersedes ADR-001 (local single-patient product, no accounts or cloud) and, in section 1, "Support one patient per installation, without accounts, patient selection, or cloud synchronization". It uses only Apple technologies.
+
+### Context
+
+A doctor assigns each patient's exercises and watches their progress; the patient only performs the exercises and views their own progress. Doctors and patients both use iPads. One doctor treats many patients; each patient has exactly one doctor.
+
+### Decision
+
+**One app, two roles.** On first launch the user chooses "Saya dokter" or "Saya pasien"; the role is stored on the device and changes only through an explicit reset. The app stays one iPad target (section 3).
+
+- **Doctor mode:** a patient list; per patient, a prescription editor and a progress view. The progress view reuses the Progres components (week summary, repetition chart, finger and arm angles).
+- **Patient mode:** the current app, with Beranda built from the active prescription instead of `DailyPlan.standard`.
+
+**The exercise catalog appears only in doctor mode.** The editor is a two-pane layout:
+- The left pane shows every exercise, grouped (fingers, arm and shoulder, balance, task).
+- The right pane shows the patient's prescription. The doctor adds exercises by tapping or dragging from the catalog (`.draggable` / `.dropDestination`), reorders them by dragging (`List` `.onMove`) and removes them by swiping.
+
+**Per prescription item the doctor sets:**
+- the exercise;
+- the side (left, right, or both with an explicit first side; no side for exercises without one, such as sit to stand);
+- sets (1–5);
+- the exercise's own work measure: repetitions (1–20), plus hold seconds for cross midline, rounds for reach and cup, and towels for fold towel;
+- rest between sets (5–120 s);
+- rest before the next exercise, in breaths (0–10).
+
+A single table in the domain defines which measures each exercise has, so the editor and the patient engines cannot disagree. "Both sides" expands into sequential side activities at session start, as bilateral configuration does today (section 2), and results stay per side.
+
+**Rest.**
+- Rest between sets replaces today's per-program rest and also applies between the sides of a "both sides" item.
+- Rest before the next exercise is the narrated breathing rest of `DailyPlanNextView`, with the doctor choosing its number of 12-second breaths.
+- Zero breaths skips the breathing rest; the next intro keeps its 10-second countdown.
+- The last item has no rest before the next exercise.
+- The editor shows the estimated duration of each rest and of the whole prescription.
+- Marizka narration needs new clips:
+  - `rest.long.remaining` for 7–10;
+  - a variable opening line ("Kita mulai dengan N kali tarikan napas") for 1–10, with numbers spelled out.
+  - Until those clips exist, the system voice speaks the missing lines.
+
+**Patients cannot change prescriptions.** Patient mode removes:
+- the side, sets, repetitions and rest settings in Settings (`settings.trainingSide`, the finger routine controls);
+- the steppers on program pages;
+- any list of all exercises.
+
+The patient can start, pause, end and resume exercises, calibrate, rest, and view progress. Without a prescription, Beranda says that no exercises have been assigned yet.
+
+**Prescription versions.**
+- "Simpan & kirim" publishes a new immutable version: one CloudKit record holding the ordered item list. Reordering therefore writes one record, and earlier versions stay intact.
+- Drafts never reach the patient.
+- Each session result records the prescription version it ran, so progress can be read against the targets in force.
+- The patient app keeps the last received version on the device and works offline.
+- The patient app validates every value against the ranges above and ignores a version that fails validation, keeping the previous one.
+
+### Data and permissions
+
+CloudKit permissions apply per record zone, not per record. Each kind of data therefore lives in the iCloud account of the only party allowed to write it, and is shared read-only with the other party.
+
+```text
+Doctor's iCloud (private database)            Patient's iCloud (private database)
+Zone "Prescription – <patient>"               Zone "Results"
+  Patient (name, notes)                         Session (date, prescription version)
+  Prescription versions (ordered items)         Exercise results (sets, repetitions,
+                                                  seconds, angle ranges, feeling)
+      read-only share ▶ patient's shared DB         read-only share ▶ doctor's shared DB
+```
+
+- **One zone per patient in the doctor's account**, each with its own `CKShare(recordZoneID:)` whose only participant is that patient. A zone can belong to one share only, and shared records count against the owner's quota. Prescription data is a few kilobytes.
+- **The patient's results zone** is shared with their one doctor. Results remain the patient's data.
+- **No public-database health data.** Sensitive fields (names, notes, angle values) use `CKRecord.encryptedValues`.
+- **Synchronization** uses `CKSyncEngine` (iOS 17, the deployment minimum): the private database on both sides, plus the shared database for the other party's zone. Local storage stays the source for running sessions; synchronization happens when online. SwiftData's CloudKit integration is not used because it does not support sharing; confirm this against current documentation at implementation time.
+- **Saved values stay summaries.** The no-stream rule of section 1 continues to apply: results carry the existing per-session summaries and held-angle ranges, never landmarks, video or audio.
+
+### Pairing in the clinic
+
+Pairing happens in person, with one QR scan and one consent.
+
+1. The doctor chooses Tambah pasien and enters the patient's name. The app shows a QR code (Core Image `CIQRCodeGenerator`) holding a random single-use pairing code, valid for 10 minutes, and the doctor's CloudKit user record ID.
+2. The patient chooses Hubungkan ke dokter and scans it in the app (VisionKit `DataScannerViewController`, or the existing AVFoundation camera).
+3. The patient app writes its own CloudKit user record ID to a temporary pairing record in the public database, named from the pairing code. The doctor app reads it, adds the patient to the prescription share through `fetchShareParticipant(withUserRecordID:)` with read-only permission, and writes the share URL back to the pairing record.
+4. The patient app shows a consent card: the doctor's name, what the doctor will see, and what the doctor can assign. It offers Tolak and Terima.
+5. On Terima, the patient app accepts the prescription share (`CKFetchShareMetadataOperation`, `CKAcceptSharesOperation`). It then creates its results share with the doctor as the only read-only participant and writes that URL to the pairing record. The doctor app accepts it.
+6. Either app deletes the pairing record when pairing finishes or the code expires.
+
+The pairing record holds only identifiers and share URLs, never health data. Private shares can be accepted only by participants the owner added, so the record is useless to anyone else.
+
+**One patient, one doctor.**
+- A paired patient who scans another doctor's code is asked whether to change doctors.
+- Changing doctors leaves the old prescription share and removes the old doctor from the results share.
+- A doctor can also disconnect a patient from the patient's page.
+
+### Consequences
+
+- **Both iPads must be signed in to iCloud.** Pairing shows guidance when an account is missing. Patients without their own Apple ID, such as those using a family iPad, need a decided fallback before release.
+- **CloudKit runs no server logic.** Reminders (for example, no practice for three days) run on the device, and there is no web dashboard unless CloudKit JS is added later.
+- **Project changes:**
+  - the iCloud capability with one CloudKit container;
+  - `CKSharingSupported` in project.yml;
+  - a scene-level handler for accepted shares;
+  - repository and synchronization layers beside the existing local repositories;
+  - a role-dependent root;
+  - replacing `DailyPlan.standard` and the per-program settings with prescription items, including per-item rest for finger, therapy and Balancing sessions.
+- **Regulation.** Rehabilitation data is specific (health) personal data under Indonesia's UU PDP No. 27/2022, and electronic medical records have their own Ministry of Health rules. iCloud stores data on Apple's servers. Explicit patient consent (step 4) is required, and legal or clinical review is pending before use with real patients.
+- **Alternatives rejected:**
+  - One shared zone with read-write access for the patient: patients could technically edit prescriptions, with only app code preventing it.
+  - Patient-owned zones for everything: the doctor's patient list would be scattered across shared zones.
+  - The public database for health data: readable by every user of the app.
+  - System share sheets sending iCloud links by message: require the patient's Apple ID contact and leave the app.
+
+### Verification plan
+
+Implementation follows the manual-verification policy (section 12). Pending checks on two physical iPads with separate iCloud accounts:
+- pairing, consent, rejection and expiry;
+- changing doctors and disconnecting;
+- a draft never reaching the patient;
+- reordering, side and rest values arriving intact;
+- a patient attempt to modify a prescription failing on the server;
+- offline practice with later upload;
+- rejection of out-of-range values;
+- progress appearing on the doctor's iPad;
+- both languages and large text in the editor;
+- narration for 0–10 breaths.
+
+### ADR-008 implementation (2026-11-11)
+
+Code lives in Features/Prescription (Domain, Data, Presentation), with changes to App, Home and the session setup paths.
+
+- **Role.** `AppRole` (`app.role` in UserDefaults) is chosen on `TMRoleSelectionView`; a doctor also enters the name patients see. `TMContentView` shows the role's root, and the router shows a single "Pasien" tab in doctor mode and Beranda plus Progres in patient mode.
+- **Domain.** `PrescriptionItem`, `Prescription`, `ExerciseMeasures` (the one table of units, ranges, hold and allowed sides per exercise) and `PrescriptionCatalog` (the fifteen `DailyPlan.standard` exercises, grouped). `Prescription.isValid` checks every item; `restSeconds` estimates the total rest. `DoctorPatient`, `PatientCareLink` and `SharedExerciseResult` are the stored and shared models; `SharedResultBuilder` turns finger and therapy history into one summary row per exercise and side.
+- **Storage.** `LocalDoctorPatientRepository` (`doctor-patients.json`) and `LocalPatientCareLinkRepository` (`patient-care-link.json`) follow the existing versioned, never-overwrite-unreadable rule.
+- **CloudKit.** `CareCloudService` uses the default container, `iCloud.<bundle identifier>` from the entitlements, created lazily so an unsigned build launches. It implements the zones, read-only zone shares (`fetchShareParticipant` then `addParticipant`, `publicPermission = .none`), versioned prescription records, result records and the two public pairing records exactly as the decision describes, with payloads in `encryptedValues`. **Departure:** it uses CloudKit's async database calls with a full zone fetch on each refresh instead of `CKSyncEngine`. Zones hold a few kilobytes, refreshes happen on Beranda and the doctor's list, and the simpler path was enough to ship the flow; move to `CKSyncEngine` if background push updates or large histories are needed.
+- **Pairing.** `DoctorCareViewModel` publishes the code (six characters without look-alikes), polls every 2 s for up to 10 minutes, shares the patient zone when the patient's id arrives, accepts the results share and marks the offer finished. `PatientCareViewModel` validates the code, shows the consent card, leaves a previous doctor when replacing, accepts the prescription share, shares results back and deletes its reply after the doctor finishes. `TMTherapyQRCode` (Core Image) and `TMTherapyQRScanner` (VisionKit, absent on Mac Catalyst and unavailable on the Simulator, where the typed code is used) are DesignSystem components.
+- **Doctor screens.** `TMDoctorHomeView` (patients, link state, latest version and session), `TMDoctorAddPatientView`, `TMDoctorPairingView`, `TMDoctorPatientView` with `TMPrescriptionEditorView` (catalog pane with tap and drag, prescription list with `onMove`, `onDelete`, `dropDestination` and an Edit button for handles, rest estimate, Save & send only when changed and valid), `TMPrescriptionItemEditor` (side, first side, sets, unit, hold, set rest, breaths) and `TMDoctorPatientProgressView` (results newest first with version and angles).
+- **Patient mode.** Beranda runs `DailyPlanViewModel` items built from the prescription (`apply`; a running plan keeps its items until it ends). Without a prescription it shows the connect prompt or "not assigned yet". `AppDependencies.refreshCare()` loads the stored link, fetches newer versions (invalid ones are ignored), and uploads new results. Debug builds launched with `-IteraStandardPlan` keep the fixed plan for trying sessions without pairing.
+- **Values in sessions.** Finger sessions take sets, repetitions, rest and side from the item (`prepareSession(prescribed:)`; a checkpoint resumes only when its sets and repetitions match). Therapy items build their `RoutineExercise` (sides, first side, goal or rounds, sets) and routine rest from the item. Balancing items build `BalancePracticeSettings` with the new memberwise initializer. The breathing rest after an item uses its breaths: `LongRestBreath` now takes a count, zero starts at the next-exercise announcement, the last breath always gets the closing cue, and counts other than six speak `rest.long.instructionsCount %lld`.
+- **Locked controls.** Patient Settings hide the side, sets, repetitions and rest section. The program overview pages are no longer reachable from Beranda.
+- **Narration.** `Tools/generate_narration.py` lists `rest.long.remaining` for 2–10 and `rest.long.instructionsCount` for 1–10, spelled out. Until the product owner renders them with their ElevenLabs key, those lines fall back to the system voice.
+- **Project.** project.yml adds the CloudKit service entitlement with container `iCloud.$(CFBundleIdentifier)` and `CKSharingSupported`. Device builds need a paid Apple Developer Program team that owns the bundle identifier; a free Personal Team cannot use iCloud.
+
+Not covered: Balancing sessions save no history, so their results are not sent to the doctor. Results sent include sessions saved before pairing.
+
+Verification: Simulator (iPadOS 17 minimum, arm64) and Mac Catalyst builds passed. A temporary harness over the production prescription models checked that every default item is valid, the range limits for sets, work, rest, breaths and hold, the side rules (no "both" for fingers, none for sit to stand), unknown exercises, the rest estimate, JSON round trips, version-at-date lookup and draft change detection. Simulator screenshots showed the role choice, the empty doctor list and the patient's connect prompt. Not checked, because the Simulator build is unsigned and the Simulator has no camera: every CloudKit call, pairing, sharing, publishing, receiving, uploading, the QR scanner, the prescription editor's drag and drop, the item editor and the doctor's progress view. The verification plan above remains pending on two iPads with separate iCloud accounts.
+
+### ADR-008 revision: encrypted public database (2026-11-11)
+
+Accepted at the product owner's request, after adding a patient failed because the doctor's personal iCloud storage was full. This supersedes ADR-008's "Data and permissions" and "Pairing in the clinic", including its decision against health data in the public database and its rejection of that alternative.
+
+**Context.** CloudKit counts private-database and shared records against the owner's personal iCloud quota. With no free space, every write fails, even a few kilobytes. The public database counts against the app developer's container quota instead.
+
+**Decision.**
+- **Storage.** All care data lives in the container's public database as one record type, `CareRecord`, with one field, `box` (AES-GCM ciphertext).
+- **One secret per link.** Each doctor–patient link has one 128-bit secret, the `CareChannel`.
+  - The doctor's iPad creates it when the patient is added and keeps it in the Keychain (`AfterFirstUnlockThisDeviceOnly`, not synced). The patient's iPad does the same after consent.
+  - It travels only in person, in the QR code (`itera-pair:` plus 26 base32 characters) or typed as the same 26 characters.
+- **Derived keys.** HKDF-SHA256 derives two keys from the secret.
+  - **Record names:** HMAC-SHA256 of a logical name: `offer`, `reply`, `prescriptions`, `results-<yyyy-MM>`.
+  - **Payloads:** AES-256-GCM, with the logical name as authenticated data, so one record cannot be passed off as another.
+  - Without the secret, records can neither be found, read nor forged.
+- **Write rights.** CloudKit's default public-database roles give only a record's creator the right to change or delete it.
+  - The doctor writes `offer` and `prescriptions` (every version in one record).
+  - The patient writes `reply` and monthly `results-*` records.
+  - So the server still stops either side from altering the other's data, as the read-only shares did.
+- **Reads** need no quota. **Writes** need a signed-in iCloud account, but no free personal space.
+- **Pairing.**
+  - The doctor adds a patient: this is local plus the Keychain, with no iCloud write.
+  - The doctor's iPad publishes an `offer` (doctor name, time shown) and displays the code.
+  - The patient scans or types it, the app opens the offer, and the consent card follows.
+  - On consent, the patient writes `reply` and keeps the secret. The doctor's iPad, polling every 2 s, sees a reply newer than the shown code and marks the patient connected.
+  - A code older than 10 minutes is refused by the patient app. Showing the code again re-publishes the offer with a new time.
+- **Leaving.**
+  - Leaving or changing doctors deletes the patient's reply and results (24 months back) and forgets the secret.
+  - Removing a patient deletes the doctor's offer and prescriptions and forgets the secret.
+- **Unchanged.** Results remain summaries only. Prescription validation, versions and every screen are as before.
+
+**Consequences.**
+- **The secret is the only protection.**
+  - Anyone who sees the code during its use can read that patient's data. The UI says to show it only in person.
+  - Losing it (a device reset without Keychain backup) makes earlier data unreadable, and the pair must connect again.
+  - Re-pairing reuses the patient's secret, so a code shown again later is still that patient's key.
+- **What is visible to others.** Record existence, sizes and modification times remain visible to anyone who can list the public database, but names and contents are not linkable to a person.
+- **A patient's replacement iPad** cannot overwrite records created by the old one. Remove and re-add the patient for a new device.
+- **Developer side.**
+  - The developer's container quota and CloudKit's public-database request limits now carry the load.
+  - Before TestFlight or release, deploy the `CareRecord` schema to Production in CloudKit Console. Development creates it on first save.
+  - Queries are not used (records are fetched by name), so no indexes are needed.
+- **Regulation.** Legal review remains pending (UU PDP), now for encrypted health data held in a database every app user can technically download.
+- **Project.** `CKSharingSupported` was removed from project.yml; the CloudKit entitlement stays.
+
+**Implementation.**
+- `CareChannel` (codes, derivation, seal and open) and `CareKeychain` live in Features/Prescription/Data/Cloud. `CareCloudService` is rewritten over the public database.
+- `DoctorPatient` no longer stores a zone or user id. `PatientCareLink` no longer stores the doctor's user id or zone. Older local files decode, ignoring those fields.
+- The pairing screen shows the QR and the grouped code. The connect screen accepts the 26-character code.
+
+**Verification.** Simulator build passed. A temporary harness over the production `CareChannel` and month helper confirmed:
+- 1000 random secrets round-trip through their codes;
+- grouped, QR, lowercase and dashed forms parse; short or invalid codes are refused;
+- record names are stable, differ per item and per channel, and hide the item name;
+- payloads contain no plaintext and open only with the same channel and logical name;
+- tampering is rejected, and repeated seals differ;
+- months roll back across a year.
+
+Not checked: any CloudKit call, which needs a signed build on two iPads (doctor and patient iCloud accounts, one of them with full storage), pairing, publishing, receiving and uploading.

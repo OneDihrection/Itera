@@ -23,6 +23,19 @@ struct TherapyPoint: Equatable {
     var length: Double { hypot(x, y) }
 }
 
+/// A position in meters. Body joints are relative to the hip root (Vision 3D); hand joints are
+/// relative to the hand's centre (MediaPipe world landmarks). Y points up in both.
+struct TherapyVector3: Equatable {
+    var x: Double
+    var y: Double
+    var z: Double
+
+    static func - (a: Self, b: Self) -> Self { Self(x: a.x - b.x, y: a.y - b.y, z: a.z - b.z) }
+    func dot(_ other: Self) -> Double { x * other.x + y * other.y + z * other.z }
+    var length: Double { sqrt(dot(self)) }
+    var isFinite: Bool { x.isFinite && y.isFinite && z.isFinite }
+}
+
 struct TherapyRectangle {
     let minX: Double
     let minY: Double
@@ -69,6 +82,9 @@ struct TrackingObservation {
     var workspaceMirrored = false
     /// Changes whenever a different person is locked as the patient, so smoothing can restart.
     var subjectEpoch = 0
+    /// Metric joint positions of the selected patient, present only with `BodyPoseBackend.vision3D`.
+    /// Exercises keep scoring `joints`; angle measurement prefers these when available.
+    var world: [BodyJoint: TherapyVector3] = [:]
 
     var aspect: Double { Double(width) / Double(max(1, height)) }
 

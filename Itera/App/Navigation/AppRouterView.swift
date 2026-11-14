@@ -64,6 +64,19 @@ enum AppRouterView {
             TMDailyPlanNextView()
         case .planIntro(let itemID):
             TMDailyPlanIntroView(itemID: itemID)
+        case .angleMeasurement:
+            TMAngleMeasurementDestination()
+                .environment(\.locale, AppLanguage.selected.locale)
+        case .doctorPatient(let id):
+            TMDoctorPatientView(patientID: id)
+        case .doctorAddPatient:
+            TMDoctorAddPatientView()
+        case .doctorPairing(let id):
+            TMDoctorPairingView(patientID: id)
+        case .prescriptionItem(let patient, let item):
+            TMPrescriptionItemEditor(patientID: patient, itemID: item)
+        case .connectDoctor:
+            TMConnectDoctorView()
         }
     }
 }
@@ -130,6 +143,14 @@ private struct TMBalanceSessionDestination: View {
             settings: settings,
             exercise: exercise
         ))
+    }
+}
+
+private struct TMAngleMeasurementDestination: View {
+    @Environment(AppDependencies.self) private var dependencies
+
+    var body: some View {
+        TMAngleMeasurementView(model: dependencies.makeAngleMeasurement())
     }
 }
 

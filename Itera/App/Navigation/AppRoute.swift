@@ -30,6 +30,15 @@ enum AppRoute: Hashable {
     case planNext
     /// The intro page of one daily-plan item, by item id.
     case planIntro(String)
+    /// Trial joint-angle measurement for comparing tracking backends.
+    case angleMeasurement
+    /// Doctor mode (ADR-008): one patient's prescription and progress.
+    case doctorPatient(UUID)
+    case doctorAddPatient
+    case doctorPairing(UUID)
+    case prescriptionItem(patient: UUID, item: UUID)
+    /// Patient mode: pairing with the doctor and consent.
+    case connectDoctor
 }
 
 enum AppTab: Hashable {

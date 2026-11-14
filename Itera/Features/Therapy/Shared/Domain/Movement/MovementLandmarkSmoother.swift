@@ -95,7 +95,9 @@ struct MovementLandmarkSmoother {
             joints: joints,
             cup: observation.cup,
             hand: observation.hand,
-            subjectEpoch: observation.subjectEpoch
+            subjectEpoch: observation.subjectEpoch,
+            // Metric positions are measured, not drawn, so they pass through unfiltered.
+            world: observation.world
         )
     }
 

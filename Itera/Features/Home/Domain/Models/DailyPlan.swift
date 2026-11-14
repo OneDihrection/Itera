@@ -7,8 +7,8 @@
 
 import Foundation
 
-/// One exercise in today's plan. The plan only names what to run; its settings (sets,
-/// repetitions, hold, side) stay owned by that program's own settings page.
+/// One exercise in today's plan. With a doctor's prescription it carries every value to run
+/// (ADR-008); without one, its settings stay owned by that program's own settings page.
 struct DailyPlanItem: Identifiable, Hashable {
     enum Exercise: Hashable {
         /// One finger or forearm exercise, run alone with its category's settings.
@@ -19,6 +19,8 @@ struct DailyPlanItem: Identifiable, Hashable {
     }
 
     let exercise: Exercise
+    /// The doctor's values for this item, when it comes from a prescription.
+    var prescribed: PrescriptionItem? = nil
 
     /// Stable identifier persisted in plan progress: the exercise's own raw value, never a
     /// display string.

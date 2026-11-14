@@ -14,6 +14,7 @@ struct TMFingerReportsView: View {
     @Environment(\.locale) private var locale
     @State private var confirmingHistoryDeletion = false
     @State private var deletingHistory = false
+    @State private var armAngles: BodyAngleHistoryViewModel?
 
     var body: some View {
         let report = PracticeReport(history: dependencies.home.history)
@@ -29,6 +30,11 @@ struct TMFingerReportsView: View {
                 VStack(alignment: .leading, spacing: 16) {
                     sectionTitle("progress.weeklyChart")
                     chart(report.weeklyRepetitions)
+                }
+
+                if let armAngles, !armAngles.sessions.isEmpty {
+                    Divider()
+                    armAngleSection(armAngles.sessions)
                 }
 
                 Divider()
@@ -208,6 +214,48 @@ struct TMFingerReportsView: View {
         }
 
         await dependencies.home.refresh()
+
+        let armAngles = armAngles ?? BodyAngleHistoryViewModel(repository: dependencies.sessions)
+        self.armAngles = armAngles
+        await armAngles.load()
+    }
+
+    // MARK: - Arm angles
+
+    /// Arm raise and elbow bend sessions with held angles, newest first.
+    private func armAngleSection(_ sessions: [BodyAngleHistoryViewModel.Session]) -> some View {
+        VStack(alignment: .leading, spacing: 16) {
+            sectionTitle("progress.armAngles")
+
+            ForEach(sessions.prefix(10)) { session in
+                VStack(alignment: .leading, spacing: 12) {
+                    Text(session.date, format: .dateTime.weekday(.wide).day().month(.abbreviated).year())
+                        .typography(size: 22, weight: .semiBold, relativeTo: .headline)
+
+                    ForEach(session.entries) { entry in
+                        TMTherapyAngleReportCard(
+                            title: LocalizedStringKey(entry.angle.bodyAngle?.titleKey ?? "report.angles"),
+                            badge: entry.angle.threeD ? "report.angle.source3D" : "report.angle.source2D",
+                            lines: [
+                                TherapyAngleLine(
+                                    id: -1,
+                                    label: "measurement.side",
+                                    value: Text(entry.side == .left ? "session.left" : "session.right")
+                                ),
+                            ] + TMFingerAngleList.lines(
+                                before: entry.angle.before,
+                                after: entry.angle.after,
+                                change: entry.angle.spanChange
+                            )
+                        )
+                    }
+                }
+            }
+
+            Text("report.armAngleNote")
+                .typography(.footnote)
+                .foregroundStyle(TherapyPalette.muted)
+        }
     }
 }
 
@@ -282,6 +330,10 @@ private struct TMFingerHistoryCard: View {
                     title: performed ? "progress.done" : "progress.actual",
                     value: result.flatMap { performed ? done($0) : nil } ?? Text("progress.notDone")
                 )
+            }
+
+            if let angles = result?.angles, !angles.isEmpty {
+                TMFingerAngleList(angles: angles)
             }
         }
     }
@@ -390,6 +442,16 @@ struct TMFingerReportDetailView: View {
                     }
                 }
             }
+            if summary.results.contains(where: { !$0.angles.isEmpty }) {
+                Text("report.angles").typography(.title2)
+                ForEach(summary.results.filter { !$0.angles.isEmpty }) { result in
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text(LocalizedStringKey(result.kind.title)).typography(.headline)
+                        TMFingerAngleList(angles: result.angles)
+                    }
+                }
+                Text("report.angleNote").typography(.footnote).foregroundStyle(TherapyPalette.muted)
+            }
             Text("report.cameraNoteShort").typography(.footnote).foregroundStyle(TherapyPalette.muted)
             DisclosureGroup("report.measurementDetails") {
                 Text("report.measurementNote").typography(.body)
@@ -420,5 +482,62 @@ struct TMFingerReportDetailView: View {
 
     private func duration(_ seconds: Double) -> String {
         String(format: "%02d:%02d", Int(seconds) / 60, Int(seconds) % 60)
+    }
+}
+
+// MARK: - Angles
+
+/// Held finger angles before practice (calibration) and through practice, with the change in
+/// range of motion between them.
+struct TMFingerAngleList: View {
+    let angles: [FingerAngleResult]
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            ForEach(angles) { angle in
+                TMTherapyAngleReportCard(
+                    title: LocalizedStringKey(angle.metric.titleKey),
+                    badge: angle.threeD ? "report.angle.source3D" : "report.angle.source2D",
+                    lines: Self.lines(before: angle.before, after: angle.after, change: angle.spanChange)
+                )
+            }
+        }
+    }
+
+    /// Before practice, through practice and the range change, shared with the arm angles.
+    static func lines(before: AngleRange?, after: AngleRange?, change: Double?) -> [TherapyAngleLine] {
+        var lines = [
+            TherapyAngleLine(id: 0, label: "report.angle.before", value: range(before)),
+            TherapyAngleLine(id: 1, label: "report.angle.after", value: range(after)),
+        ]
+
+        if let change {
+            lines.append(TherapyAngleLine(
+                id: 2,
+                label: "report.angle.change",
+                value: Text(verbatim: Self.signed(change)),
+                emphasized: true
+            ))
+        }
+
+        return lines
+    }
+
+    private static func range(_ range: AngleRange?) -> Text {
+        guard let range else {
+            return Text("report.angle.notHeld")
+        }
+
+        let low = TMTherapyAngleText.format(range.minimum)
+        let high = TMTherapyAngleText.format(range.maximum)
+        let span = TMTherapyAngleText.format(range.span)
+
+        return Text("report.angle.rangeValue \(low) \(high) \(span)")
+    }
+
+    private static func signed(_ degrees: Double) -> String {
+        let rounded = Int(degrees.rounded())
+
+        return rounded > 0 ? "+\(rounded)°" : "\(rounded)°"
     }
 }

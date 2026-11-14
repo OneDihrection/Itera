@@ -41,6 +41,34 @@ enum HandPoseExtractor {
         )
     }
 
+    /// Selection inputs from evidence of any detector: aspect-corrected wrist, hand size and side.
+    static func candidate(for hand: HandEvidence) -> HandSubjectSelector.Candidate {
+        let aspect = hand.width / max(hand.height, 1)
+
+        func position(_ index: Int) -> TherapyPoint? {
+            let point = hand.points[index]
+
+            guard point.confidence >= 0.3 else {
+                return nil
+            }
+
+            return TherapyPoint(x: point.x * aspect, y: point.y)
+        }
+
+        let wrist = position(0)
+        var size = 0.0
+
+        if let wrist, let knuckle = position(9) {
+            size = (wrist - knuckle).length
+        }
+
+        return HandSubjectSelector.Candidate(
+            wrist: wrist ?? TherapyPoint(x: .infinity, y: .infinity),
+            size: size,
+            side: hand.side
+        )
+    }
+
     /// Selection inputs for one detected hand: aspect-corrected wrist, hand size and chirality.
     static func candidate(
         for hand: VNHumanHandPoseObservation,

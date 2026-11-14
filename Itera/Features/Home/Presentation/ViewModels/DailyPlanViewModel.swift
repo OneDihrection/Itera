@@ -43,7 +43,10 @@ struct DailyPlanRow: Identifiable, Equatable {
 @Observable
 final class DailyPlanViewModel {
     static let completionPreviewDuration: Duration = .seconds(4)
-    let items: [DailyPlanItem]
+    /// The doctor's prescription in patient mode (ADR-008), otherwise the fixed plan.
+    private(set) var items: [DailyPlanItem]
+    /// Breaths of the rest after the item that just finished, from its prescription.
+    private(set) var restBreaths = LongRestBreath.defaultCount
     private(set) var progress = DailyPlanProgress.empty(on: .now)
     /// Index of the item whose session is open, or that just finished.
     private(set) var currentIndex: Int?
@@ -56,10 +59,36 @@ final class DailyPlanViewModel {
 
     @ObservationIgnored private let repository: any DailyPlanProgressRepository
     @ObservationIgnored private var loadFailed = false
+    /// A prescription that arrived while a plan ran; it applies when the run ends.
+    @ObservationIgnored private var pendingItems: [DailyPlanItem]?
 
     init(items: [DailyPlanItem] = DailyPlan.standard, repository: any DailyPlanProgressRepository) {
         self.items = items
         self.repository = repository
+    }
+
+    // MARK: - Prescription
+
+    /// Replaces the items with the prescription's, in the doctor's order. A running plan keeps
+    /// its items until it ends, so an update never changes the exercise in progress.
+    func apply(_ prescription: Prescription?) {
+        let prescribed = (prescription?.items ?? []).compactMap { item in
+            item.catalogItem.map { DailyPlanItem(exercise: $0.exercise, prescribed: item) }
+        }
+
+        guard prescribed != items else {
+            return
+        }
+
+        if isRunning {
+            pendingItems = prescribed
+        } else {
+            items = prescribed
+        }
+    }
+
+    var hasItems: Bool {
+        !items.isEmpty
     }
 
     // MARK: - Progress
@@ -82,7 +111,7 @@ final class DailyPlanViewModel {
     }
 
     var isFinishedToday: Bool {
-        completedCount == items.count
+        !items.isEmpty && completedCount == items.count
     }
 
     /// The first item not yet done today, or `nil` when everything is done.
@@ -142,7 +171,7 @@ final class DailyPlanViewModel {
         }
     }
 
-    private static func titleKey(for exercise: DailyPlanItem.Exercise) -> String {
+    static func titleKey(for exercise: DailyPlanItem.Exercise) -> String {
         switch exercise {
         case .finger(let exercise):
             return exercise.title
@@ -157,6 +186,10 @@ final class DailyPlanViewModel {
         for exercise: DailyPlanItem.Exercise,
         in dependencies: AppDependencies
     ) -> [DailyPlanRow.Detail] {
+        if let prescribed = items.first(where: { $0.exercise == exercise })?.prescribed {
+            return [.sets(prescribed.sets), .repetitions(prescribed.work)]
+        }
+
         switch exercise {
         case .finger(let exercise):
             let routine = dependencies.homeModel(for: exercise.category).routine
@@ -178,11 +211,54 @@ final class DailyPlanViewModel {
         HandSide(rawValue: sidePreference)
     }
 
+    private func prescribed(_ exercise: DailyPlanItem.Exercise) -> PrescriptionItem? {
+        items.first { $0.exercise == exercise }?.prescribed
+    }
+
+    /// The doctor's side for one-sided items. "Both" has no single side here.
+    private func prescribedSide(_ item: PrescriptionItem) -> HandSide? {
+        switch item.side {
+        case .left:
+            return .left
+        case .right:
+            return .right
+        case .both:
+            return item.firstSide
+        case nil:
+            return nil
+        }
+    }
+
     func fingerSide(for exercise: FingerExercise, in dependencies: AppDependencies) -> HandSide {
-        selectedSide ?? dependencies.homeModel(for: exercise.category).routine.side
+        if let prescribed = prescribed(.finger(exercise)), let side = prescribedSide(prescribed) {
+            return side
+        }
+
+        return selectedSide ?? dependencies.homeModel(for: exercise.category).routine.side
     }
 
     func balanceSettings(for exercise: BalanceExercise) -> BalancePracticeSettings {
+        if let item = prescribed(.balance(exercise)) {
+            let arm: BalanceArmSelection
+
+            switch item.side {
+            case .left:
+                arm = .left
+            case .right:
+                arm = .right
+            case .both, nil:
+                arm = .both
+            }
+
+            return BalancePracticeSettings(
+                repetitions: item.work,
+                holdSeconds: item.holdSeconds ?? BalancePracticeSettings.defaultHoldSeconds,
+                armSelection: arm,
+                sets: item.sets,
+                restSeconds: item.setRestSeconds
+            )
+        }
+
         var settings = BalancePracticeSettings(exercise: exercise)
         if !exercise.isSitToStand, let side = selectedSide {
             settings.armSelection = side == .left ? .left : .right
@@ -192,6 +268,26 @@ final class DailyPlanViewModel {
 
     /// Applies the daily-plan side to the saved exercise configuration for this session.
     func routineExercise(for kind: TherapyKind, in dependencies: AppDependencies) -> RoutineExercise {
+        if let item = prescribed(.therapy(kind)) {
+            var exercise = RoutineExercise(kind: kind)
+
+            switch item.side {
+            case .left:
+                exercise.sides = .left
+            case .right:
+                exercise.sides = .right
+            case .both, nil:
+                exercise.sides = .both
+            }
+
+            exercise.firstSide = item.firstSide == .left ? .left : .right
+            exercise.leftGoal = item.work
+            exercise.rightGoal = item.work
+            exercise.rounds = item.work
+            exercise.sets = item.sets
+            return exercise
+        }
+
         guard let category = kind.category else {
             return RoutineExercise(kind: kind)
         }
@@ -265,6 +361,7 @@ final class DailyPlanViewModel {
         }
         progress = progress.current(on: .now)
         progress.completed.insert(items[currentIndex].id)
+        restBreaths = items[currentIndex].prescribed?.breathsBeforeNext ?? LongRestBreath.defaultCount
         Task { await saveProgress() }
 
         let next = upcomingIndex
@@ -292,6 +389,12 @@ final class DailyPlanViewModel {
         isRunning = false
         restingBeforeNext = false
         currentIndex = nil
+
+        if let pendingItems {
+            items = pendingItems
+            self.pendingItems = nil
+        }
+
         router.dismiss()
         router.popToRoot()
     }
@@ -308,11 +411,20 @@ final class DailyPlanViewModel {
             let checkpoint = dependencies.homeModel(for: exercise.category).checkpoint
             let side = selectedSide
             let matchesSide = side.map { checkpoint?.routine.side == $0 } ?? true
+            let prescribed = items[index].prescribed
+            let prescribedSide = prescribed.flatMap(prescribedSide)
+            let sessionSide = prescribedSide ?? side
+            let matchesPrescription = prescribed.map {
+                checkpoint?.routine.sets == $0.sets && checkpoint?.routine.repetitions == $0.work
+            } ?? true
             dependencies.prepareSession(
                 category: exercise.category,
-                continuing: checkpoint?.routine.only == exercise && matchesSide,
+                continuing: checkpoint?.routine.only == exercise
+                    && (sessionSide.map { checkpoint?.routine.side == $0 } ?? matchesSide)
+                    && matchesPrescription,
                 only: exercise,
-                side: side
+                side: sessionSide,
+                prescribed: prescribed
             )
             route = .fingerSession
 
@@ -320,9 +432,10 @@ final class DailyPlanViewModel {
             let exercise = routineExercise(for: kind, in: dependencies)
             let configuration = kind.category.map { dependencies.routineModel(for: $0).configuration }
                 ?? RoutineConfiguration()
+            let rest = items[index].prescribed?.setRestSeconds ?? configuration.restSeconds
             dependencies.selectedRoutine = Routine(
                 activities: exercise.activities,
-                restSeconds: Double(configuration.restSeconds),
+                restSeconds: Double(rest),
                 practiceSeconds: Double(configuration.practiceSeconds)
             )
             route = .therapySession

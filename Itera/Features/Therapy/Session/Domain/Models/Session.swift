@@ -39,6 +39,9 @@ struct SessionActivityResult: Codable, Equatable {
     var practiceSeconds: Double = 0
     /// Absent in summaries saved before per-exercise sets were introduced.
     var setNumber: Int? = nil
+    /// Held joint angle of arm raise or elbow bend, cumulative over the activity's sets so far.
+    /// Absent for other activities and in summaries saved before angles were recorded.
+    var angles: [BodyAngleResult]? = nil
 
 }
 

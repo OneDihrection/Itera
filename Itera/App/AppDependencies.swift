@@ -15,17 +15,24 @@ final class AppDependencies: HistoryRecovering {
     let forearm: FingerHomeViewModel
     private(set) var session: FingerSessionViewModel?
     let permissions: PermissionManager
-    @ObservationIgnored private let camera = HandCameraService()
+    @ObservationIgnored private let camera = HandCameraService(poseBackend: .saved)
     @ObservationIgnored private let fingerAudio = GuidanceAudioService()
     @ObservationIgnored private let repository: any FingerSessionRepository
     @ObservationIgnored private let forearmRepository: any FingerSessionRepository
 
-    let tracking = BodyTrackingService()
+    let tracking = BodyTrackingService(poseBackend: .saved)
     let audio = SessionAudioService()
     let routine: RoutineViewModel
     let taskRoutine: RoutineViewModel
     /// Today's plan across programs; Beranda shows it and finishing sessions report to it.
     let dailyPlan = DailyPlanViewModel(repository: LocalDailyPlanProgressRepository())
+    /// Who uses this iPad (ADR-008); nil until chosen on first launch.
+    var role = AppRole.saved {
+        didSet { UserDefaults.standard.set(role?.rawValue, forKey: AppRole.storageKey) }
+    }
+    @ObservationIgnored let cloud = CareCloudService()
+    let doctor: DoctorCareViewModel
+    let patientCare: PatientCareViewModel
     var selectedRoutine = Routine.demo()
     let sessions: any SessionRepository
     private(set) var recoveryFailure: String?
@@ -54,6 +61,57 @@ final class AppDependencies: HistoryRecovering {
             category: .forearm, repository: forearmRepository,
             routineRepository: LocalFingerRoutineRepository(category: .forearm)
         )
+        doctor = DoctorCareViewModel(repository: LocalDoctorPatientRepository(), cloud: cloud)
+        patientCare = PatientCareViewModel(repository: LocalPatientCareLinkRepository(), cloud: cloud)
+    }
+
+    // MARK: - Care (ADR-008)
+
+    /// Returns to the role choice. Local and iCloud data stay, so choosing the same role again
+    /// restores the patients or the doctor link.
+    func signOut(router: NavigationRouter) {
+        doctor.cancelPairing()
+        dailyPlan.end(router: router)
+        router.dismiss()
+        router.popToRoot()
+        role = nil
+    }
+
+    /// Debug builds launched with `-IteraStandardPlan` run the fixed plan without a doctor, so
+    /// sessions can be tried on a device or Simulator that is not paired.
+    private var usesStandardPlan: Bool {
+        #if DEBUG
+        return ProcessInfo.processInfo.arguments.contains("-IteraStandardPlan")
+        #else
+        return false
+        #endif
+    }
+
+    /// Patient mode: shows the stored prescription at once, then receives a newer one and sends
+    /// new results when iCloud is reachable. Failures keep the stored prescription.
+    func refreshCare() async {
+        guard role == .patient else {
+            return
+        }
+
+        await patientCare.load()
+        applyPrescription()
+
+        await patientCare.refreshPrescription()
+        applyPrescription()
+
+        await patientCare.upload(
+            fingerHistory: home.history + forearm.history,
+            therapyHistory: (try? await sessions.history()) ?? []
+        )
+    }
+
+    func applyPrescription() {
+        guard !usesStandardPlan else {
+            return
+        }
+
+        dailyPlan.apply(patientCare.prescription)
     }
 
     func playButtonClick() {
@@ -89,7 +147,8 @@ final class AppDependencies: HistoryRecovering {
         category: ExerciseCategory = .fingers,
         continuing: Bool = false,
         only: FingerExercise? = nil,
-        side: HandSide? = nil
+        side: HandSide? = nil,
+        prescribed: PrescriptionItem? = nil
     ) {
         let model = homeModel(for: category)
         let checkpoint = continuing ? model.checkpoint : nil
@@ -98,6 +157,13 @@ final class AppDependencies: HistoryRecovering {
         if checkpoint == nil {
             routine.only = only
             routine.side = side ?? routine.side
+
+            // A doctor's values replace the saved finger settings for this session only.
+            if let prescribed {
+                routine.sets = prescribed.sets
+                routine.repetitions = prescribed.work
+                routine.restSeconds = prescribed.setRestSeconds
+            }
         }
 
         session = FingerSessionViewModel(
@@ -118,6 +184,16 @@ final class AppDependencies: HistoryRecovering {
             recoveryFailure = error.localizedDescription
         }
         recovering = false
+    }
+
+    /// Applies the saved tracking backends to both camera services, after Settings changes them.
+    func applyTrackingBackends() {
+        tracking.usePoseBackend(.saved)
+        camera.usePoseBackend(.saved)
+    }
+
+    func makeAngleMeasurement() -> AngleMeasurementViewModel {
+        AngleMeasurementViewModel(tracking: tracking, camera: camera)
     }
 
     func makeSession() -> TherapySessionViewModel {

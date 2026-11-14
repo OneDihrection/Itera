@@ -12,6 +12,8 @@ struct FingerSessionEngine {
     private(set) var activity: FingerActivity
     private(set) var paused = false
     private(set) var finished = false
+    /// Held angles of the current exercise, saved with its result.
+    private var angles: FingerAngleRecorder
 
     init(routine: FingerRoutine, checkpoint: FingerSessionSummary? = nil) {
         summary = checkpoint ?? FingerSessionSummary(
@@ -29,6 +31,7 @@ struct FingerSessionEngine {
         }
         let prior = summary.results.first { $0.kind == routine.exercises[index] && !$0.completed && !$0.skipped }
         activity = FingerActivity(kind: routine.exercises[index], routine: routine, restAfterFinalSet: index < routine.exercises.count - 1)
+        angles = FingerAngleRecorder(exercise: routine.exercises[index], prior: prior?.angles ?? [])
         if let prior {
             activity.restore(prior)
         }
@@ -42,6 +45,7 @@ struct FingerSessionEngine {
         paused = true
         activity.suspendClock()
         activity.breakEvidence()
+        angles.interrupt()
     }
 
     mutating func resume() {
@@ -75,11 +79,28 @@ struct FingerSessionEngine {
             return
         }
         activity.observe(evidence, now: now)
+        recordAngles(evidence)
+    }
+
+    /// Calibration counts as before practice; counted practice as after. Instructions,
+    /// countdowns, feedback and rest are not measured.
+    private mutating func recordAngles(_ evidence: HandEvidence) {
+        switch activity.phase {
+        case .baseline, .target, .range:
+            angles.observe(evidence, stage: .before)
+        case .active:
+            angles.observe(evidence, stage: .after)
+        case .rangeResult, .demonstration, .countdown, .feedback, .rest, .finished:
+            angles.interrupt()
+        }
     }
 
     mutating func suspendEvidence(at now: Double) { activity.suspendEvidence(at: now) }
 
-    mutating func loseEvidence() { activity.breakEvidence() }
+    mutating func loseEvidence() {
+        activity.breakEvidence()
+        angles.interrupt()
+    }
 
     mutating func tick(_ now: Double, ready: Bool) {
         guard !paused, !finished else {
@@ -94,6 +115,7 @@ struct FingerSessionEngine {
             summary.exerciseIndex += 1
             activity = FingerActivity(kind: summary.routine.exercises[summary.exerciseIndex], routine: summary.routine,
                                       restAfterFinalSet: summary.exerciseIndex < summary.routine.exercises.count - 1)
+            angles = FingerAngleRecorder(exercise: activity.kind)
         } else {
             finished = true
         }
@@ -112,6 +134,7 @@ struct FingerSessionEngine {
             summary.exerciseIndex += 1
             activity = FingerActivity(kind: summary.routine.exercises[summary.exerciseIndex], routine: summary.routine,
                                       restAfterFinalSet: summary.exerciseIndex < summary.routine.exercises.count - 1)
+            angles = FingerAngleRecorder(exercise: activity.kind)
         } else {
             finished = true
         }
@@ -132,7 +155,8 @@ struct FingerSessionEngine {
             kind: activity.kind, completedSets: activity.completedSets,
             repetitions: activity.totalRepetitions, activeSeconds: activity.activeSeconds,
             observedGain: activity.observedGain,
-            completed: activity.completedSets >= summary.routine.sets
+            completed: activity.completedSets >= summary.routine.sets,
+            angles: angles.results
         )
         summary.results.removeAll { $0.kind == activity.kind }
         summary.results.append(result)

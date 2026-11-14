@@ -21,8 +21,12 @@ struct TMHomeView: View {
     var body: some View {
         ScrollView {
             VStack(spacing: 56) {
-                header
-                timeline
+                if dependencies.dailyPlan.hasItems {
+                    header
+                    timeline
+                } else {
+                    noPrescription
+                }
             }
             .frame(maxWidth: 1000)
             .frame(maxWidth: .infinity)
@@ -40,6 +44,20 @@ struct TMHomeView: View {
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
                 Button {
+                    router.presentSheet(.connectDoctor)
+                } label: {
+                    Label("care.doctorButton", systemImage: "stethoscope")
+                }
+            }
+            ToolbarItem(placement: .primaryAction) {
+                Button {
+                    router.presentFullScreenCover(.angleMeasurement)
+                } label: {
+                    Label("measurement.open", systemImage: "angle")
+                }
+            }
+            ToolbarItem(placement: .primaryAction) {
+                Button {
                     router.presentSheet(.practicePreferences)
                 } label: {
                     Label("cognitive.settings", systemImage: "gearshape")
@@ -55,9 +73,39 @@ struct TMHomeView: View {
 
     private func refresh() async {
         await dependencies.home.refresh()
+        await dependencies.forearm.refresh()
         await dependencies.routine.load()
         await dependencies.taskRoutine.load()
         await dependencies.dailyPlan.load()
+        await dependencies.refreshCare()
+    }
+
+    // MARK: - No prescription
+
+    /// Patient mode before the doctor assigns exercises (ADR-008).
+    private var noPrescription: some View {
+        VStack(spacing: 24) {
+            greetingTitle
+                .typography(size: 44, weight: .bold, relativeTo: .largeTitle)
+                .accessibilityAddTraits(.isHeader)
+
+            Image(systemName: "list.bullet.clipboard")
+                .typography(size: 64, weight: .regular, relativeTo: .largeTitle)
+                .foregroundStyle(TherapyPalette.brand)
+                .accessibilityHidden(true)
+
+            Text(dependencies.patientCare.link == nil ? "care.noDoctor" : "care.noPrescription")
+                .typography(size: 26, weight: .regular, relativeTo: .title3)
+                .multilineTextAlignment(.center)
+
+            if dependencies.patientCare.link == nil {
+                TMTherapyButton(title: "care.connectTitle", symbol: "qrcode.viewfinder", prominent: true) {
+                    router.presentSheet(.connectDoctor)
+                }
+            }
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.top, 80)
     }
 
     // MARK: - Header

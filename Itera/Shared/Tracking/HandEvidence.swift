@@ -26,12 +26,15 @@ struct HandEvidence {
     let height: Double
     let side: HandSide?
     let points: [HandPoint]
+    /// The same 21 joints in meters, in `points` order, when the detector provides them
+    /// (MediaPipe world landmarks). Vision reports image points only.
+    var world: [TherapyVector3]? = nil
 
     /// The same landmarks attributed to a known hand.
     func assigning(side: HandSide) -> HandEvidence {
         HandEvidence(
             timestamp: timestamp, generation: generation, width: width,
-            height: height, side: side, points: points
+            height: height, side: side, points: points, world: world
         )
     }
 

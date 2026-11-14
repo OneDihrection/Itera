@@ -42,8 +42,17 @@ final class HandCameraService: NSObject, AVCaptureVideoDataOutputSampleBufferDel
     /// moved in visible steps and every filter lagged twice as long. Work stays bounded: inference
     /// runs on the capture queue and late frames are dropped by the output, never queued.
     private static let inferenceInterval = 1.0 / 30
+    /// Confined to `queue`.
+    private var poseBackend: HandPoseBackend
+    #if canImport(MediaPipeTasksVision)
+    /// Loaded on first use; queue-confined.
+    private var mediaPipe: MediaPipeHandDetector?
+    /// Set when MediaPipe cannot load or run; Vision is used until the backend is chosen again.
+    private var mediaPipeFailed = false
+    #endif
 
-    override init() {
+    init(poseBackend: HandPoseBackend = .vision) {
+        self.poseBackend = poseBackend
         super.init()
         // Room for both of the patient's hands plus a bystander's, so the exercised hand
         // is not crowded out of the results; the subject selector picks among them.
@@ -85,6 +94,20 @@ final class HandCameraService: NSObject, AVCaptureVideoDataOutputSampleBufferDel
             }
             generation = UUID()
             restoreCenterStage()
+        }
+    }
+
+    /// Chooses the hand detector for the next frames. Every finger rule reads the same joints,
+    /// so this can change between sessions without other changes.
+    func usePoseBackend(_ backend: HandPoseBackend) {
+        queue.async { [self] in
+            let backend = backend.isAvailable ? backend : .vision
+            poseBackend = backend
+            subjects.reset()
+            #if canImport(MediaPipeTasksVision)
+            mediaPipeFailed = false
+            #endif
+            NSLog("Hand pose backend=%@", backend.rawValue)
         }
     }
 
@@ -130,6 +153,8 @@ final class HandCameraService: NSObject, AVCaptureVideoDataOutputSampleBufferDel
         }
         session.addInput(input)
         output.alwaysDiscardsLateVideoFrames = true
+        // MediaPipe reads only 32BGRA frames; Vision accepts them too, so one format serves both.
+        output.videoSettings = [kCVPixelBufferPixelFormatTypeKey as String: kCVPixelFormatType_32BGRA]
         output.setSampleBufferDelegate(self, queue: queue)
         session.addOutput(output)
         if let connection = output.connection(with: .video) {
@@ -181,14 +206,21 @@ final class HandCameraService: NSObject, AVCaptureVideoDataOutputSampleBufferDel
         guard timestamp - lastInference >= Self.inferenceInterval - 0.001,
               let pixelBuffer = CMSampleBufferGetImageBuffer(buffer) else { return }
         lastInference = timestamp
+        let width = Double(CVPixelBufferGetWidth(pixelBuffer))
+        let height = Double(CVPixelBufferGetHeight(pixelBuffer))
+
         do {
-            try VNImageRequestHandler(cvPixelBuffer: pixelBuffer, orientation: .up).perform([request])
-            let hands = request.results ?? []
-            let aspect = Double(CVPixelBufferGetWidth(pixelBuffer)) / Double(CVPixelBufferGetHeight(pixelBuffer))
+            let hands = try detectHands(
+                in: buffer,
+                pixelBuffer: pixelBuffer,
+                timestamp: timestamp,
+                width: width,
+                height: height
+            )
 
             // Never choose by screen position alone; ambiguous scenes report no hand.
             guard let index = subjects.select(
-                hands.map { HandPoseExtractor.candidate(for: $0, aspect: aspect) },
+                hands.map(HandPoseExtractor.candidate(for:)),
                 at: timestamp,
                 generation: generation
             ) else {
@@ -199,34 +231,71 @@ final class HandCameraService: NSObject, AVCaptureVideoDataOutputSampleBufferDel
                 return
             }
 
-            let hand = hands[index]
-            let names: [VNHumanHandPoseObservation.JointName] = [
-                .wrist, .thumbCMC, .thumbMP, .thumbIP, .thumbTip,
-                .indexMCP, .indexPIP, .indexDIP, .indexTip,
-                .middleMCP, .middlePIP, .middleDIP, .middleTip,
-                .ringMCP, .ringPIP, .ringDIP, .ringTip,
-                .littleMCP, .littlePIP, .littleDIP, .littleTip
-            ]
-            let points = try names.map { name in
-                let p = try hand.recognizedPoint(name)
-                return HandPoint(x: p.location.x, y: p.location.y, confidence: p.confidence)
-            }
-            let side: HandSide?
-            switch hand.chirality {
-            case .left: side = .left
-            case .right: side = .right
-            default: side = nil
-            }
-            let evidence = HandEvidence(
-                timestamp: timestamp, generation: generation,
-                width: Double(CVPixelBufferGetWidth(pixelBuffer)),
-                height: Double(CVPixelBufferGetHeight(pixelBuffer)), side: side, points: points
-            )
-            events.send(.sample(CameraSample(evidence: evidence, timestamp: timestamp, generation: generation)))
+            events.send(.sample(CameraSample(evidence: hands[index], timestamp: timestamp, generation: generation)))
         } catch {
             events.send(.sample(CameraSample(evidence: nil, timestamp: timestamp, generation: generation, issue: .unreadable)))
         }
     }
+
+    // MARK: - Detectors
+
+    private func detectHands(
+        in buffer: CMSampleBuffer,
+        pixelBuffer: CVPixelBuffer,
+        timestamp: Double,
+        width: Double,
+        height: Double
+    ) throws -> [HandEvidence] {
+        #if canImport(MediaPipeTasksVision)
+        if poseBackend == .mediaPipe, let detector = loadMediaPipe() {
+            do {
+                return try detector.hands(
+                    in: buffer,
+                    timestamp: timestamp,
+                    generation: generation,
+                    width: width,
+                    height: height
+                )
+            } catch {
+                mediaPipeFailed = true
+                NSLog("MediaPipe hand detection failed, using Vision: %@", error.localizedDescription)
+            }
+        }
+        #endif
+
+        try VNImageRequestHandler(cvPixelBuffer: pixelBuffer, orientation: .up).perform([request])
+
+        return try (request.results ?? []).map { hand in
+            try HandPoseExtractor.evidence(
+                from: hand,
+                timestamp: timestamp,
+                generation: generation,
+                width: width,
+                height: height
+            )
+        }
+    }
+
+    #if canImport(MediaPipeTasksVision)
+    private func loadMediaPipe() -> MediaPipeHandDetector? {
+        guard !mediaPipeFailed else {
+            return nil
+        }
+
+        if let mediaPipe {
+            return mediaPipe
+        }
+
+        do {
+            mediaPipe = try MediaPipeHandDetector(maximumHands: request.maximumHandCount)
+        } catch {
+            mediaPipeFailed = true
+            NSLog("MediaPipe hand model unavailable, using Vision: %@", error.localizedDescription)
+        }
+
+        return mediaPipe
+    }
+    #endif
 
     private enum CameraError: Error { case unavailable }
 }

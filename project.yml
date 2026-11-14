@@ -6,11 +6,22 @@ options:
 configs:
   Debug: debug
   Release: release
+packages:
+  # MediaPipe Tasks 1.2.2 (google-ai-edge/mediapipe master on 2026-11-11), pinned so builds do not
+  # follow master. Its binaries ship for iOS devices and Simulators, not Mac Catalyst.
+  MediaPipe:
+    url: https://github.com/google-ai-edge/mediapipe
+    revision: 5d426da711f635fc454b631b28c9111571d25714
 targets:
   Itera:
     type: application
     platform: iOS
     deploymentTarget: "17.0"
+    dependencies:
+      # Linked on iOS only, so the Mac Catalyst build compiles without MediaPipe (canImport fails).
+      - package: MediaPipe
+        product: MediaPipeTasksVision
+        platformFilter: iOS
     sources:
       - path: Itera
         type: group
@@ -37,6 +48,13 @@ targets:
         # Required on Mac Catalyst, where hardened runtime silently denies capture without them.
         com.apple.security.device.camera: true
         com.apple.security.device.audio-input: true
+        # Doctor–patient prescriptions and results (SYSTEM_DESIGN ADR-008). The container follows
+        # the bundle identifier, so changing PRODUCT_BUNDLE_IDENTIFIER also changes the container.
+        # iCloud needs a paid Apple Developer Program team; a free Personal Team cannot use it.
+        com.apple.developer.icloud-container-identifiers:
+          - iCloud.$(CFBundleIdentifier)
+        com.apple.developer.icloud-services:
+          - CloudKit
     info:
       path: Generated/Info.plist
       properties:

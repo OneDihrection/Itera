@@ -367,14 +367,26 @@ private struct TMTherapyStepControl: View {
 
 struct TMTherapyError: View {
     let key: String
+    /// Optional technical detail (an error code) in small selectable text under the message.
+    var detail: String? = nil
+
     var body: some View {
-        Label(LocalizedStringKey(key), systemImage: "exclamationmark.circle.fill")
-            .typography(.body)
-            .foregroundStyle(TherapyPalette.warning)
-            .padding(18)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(TherapyPalette.peach, in: RoundedRectangle(cornerRadius: 20))
-            .accessibilityAddTraits(.updatesFrequently)
+        VStack(alignment: .leading, spacing: 8) {
+            Label(LocalizedStringKey(key), systemImage: "exclamationmark.circle.fill")
+                .typography(.body)
+
+            if let detail {
+                Text(verbatim: detail)
+                    .typography(.footnote)
+                    .textSelection(.enabled)
+            }
+        }
+        .foregroundStyle(TherapyPalette.warning)
+        .padding(18)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(TherapyPalette.peach, in: RoundedRectangle(cornerRadius: 20))
+        .accessibilityElement(children: .combine)
+        .accessibilityAddTraits(.updatesFrequently)
     }
 }
 

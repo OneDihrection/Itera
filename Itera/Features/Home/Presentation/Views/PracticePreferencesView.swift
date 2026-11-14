@@ -17,37 +17,18 @@ struct TMPracticePreferencesView: View {
     @AppStorage(PracticePreferences.celebrationSounds) private var celebrationSounds = true
     @AppStorage(PracticePreferences.patientName) private var patientName = ""
     @AppStorage(AppLanguage.storageKey) private var language = AppLanguage.selected.rawValue
+    @AppStorage(BodyPoseBackend.storageKey) private var bodyBackend = BodyPoseBackend.vision2D.rawValue
+    @AppStorage(HandPoseBackend.storageKey) private var handBackend = HandPoseBackend.vision.rawValue
     @Environment(\.scenePhase) private var scenePhase
     @State private var voice: NarrationVoice.Summary?
+    @State private var confirmingSignOut = false
 
     var body: some View {
         @Bindable var home = dependencies.home
         @Bindable var plan = dependencies.dailyPlan
 
         Form {
-            // The same saved finger routine the plan page edits; a session in progress keeps
-            // the snapshot it started with.
-            Section {
-                Picker("settings.trainingSide", selection: $plan.sidePreference) {
-                    Text("settings.trainingSideDefault").tag("")
-                    Text("session.left").tag(HandSide.left.rawValue)
-                    Text("session.right").tag(HandSide.right.rawValue)
-                }
-                .frame(minHeight: 64)
-                TMTherapyNumberControl(title: "plan.setsShort", value: $home.routine.sets, range: 1...5, showsBackground: false)
-                TMTherapyNumberControl(title: "plan.repsShort", value: $home.routine.repetitions, range: 1...20, showsBackground: false)
-                TMTherapyNumberControl(
-                    title: "plan.restSeconds",
-                    value: $home.routine.restSeconds,
-                    range: 5...120,
-                    step: 5,
-                    showsBackground: false
-                )
-            } header: {
-                Text("settings.exerciseTitle").typography(.headline)
-            } footer: {
-                Text("settings.exerciseHelp").typography(.body)
-            }
+            exerciseSection
             if let key = home.errorKey {
                 Section { TMTherapyError(key: key) }
             }
@@ -58,6 +39,15 @@ struct TMPracticePreferencesView: View {
                 Text("language.title").typography(.headline)
             }
             voiceSection
+            trackingSection
+            Section {
+                Button("role.signOut", role: .destructive) {
+                    confirmingSignOut = true
+                }
+                .frame(minHeight: 64)
+            } footer: {
+                Text("role.signOutMessage").typography(.body)
+            }
             Section {
                 TextField("settings.patientName", text: $patientName)
                     .textContentType(.name)
@@ -107,6 +97,7 @@ struct TMPracticePreferencesView: View {
             }
         }
         .presentationDetents([.large])
+        .modifier(TMSignOutConfirmation(isPresented: $confirmingSignOut))
         .onDisappear { Task { _ = await dependencies.home.saveRoutine() } }
         .onAppear(perform: refreshVoice)
         .onChange(of: language) { refreshVoice() }
@@ -116,6 +107,66 @@ struct TMPracticePreferencesView: View {
                 refreshVoice()
             }
         }
+    }
+
+    // MARK: - Exercise
+
+    /// The saved finger routine the plan page edits. Only the doctor sets sides, sets, repetitions
+    /// and rest in patient mode (ADR-008), so the section is hidden there.
+    @ViewBuilder
+    private var exerciseSection: some View {
+        @Bindable var home = dependencies.home
+        @Bindable var plan = dependencies.dailyPlan
+
+        if dependencies.role != .patient {
+            Section {
+                Picker("settings.trainingSide", selection: $plan.sidePreference) {
+                    Text("settings.trainingSideDefault").tag("")
+                    Text("session.left").tag(HandSide.left.rawValue)
+                    Text("session.right").tag(HandSide.right.rawValue)
+                }
+                .frame(minHeight: 64)
+                TMTherapyNumberControl(title: "plan.setsShort", value: $home.routine.sets, range: 1...5, showsBackground: false)
+                TMTherapyNumberControl(title: "plan.repsShort", value: $home.routine.repetitions, range: 1...20, showsBackground: false)
+                TMTherapyNumberControl(
+                    title: "plan.restSeconds",
+                    value: $home.routine.restSeconds,
+                    range: 5...120,
+                    step: 5,
+                    showsBackground: false
+                )
+            } header: {
+                Text("settings.exerciseTitle").typography(.headline)
+            } footer: {
+                Text("settings.exerciseHelp").typography(.body)
+            }
+        }
+    }
+
+    // MARK: - Tracking
+
+    /// Trial switches for the detectors; every exercise keeps its rules with either choice.
+    private var trackingSection: some View {
+        Section {
+            Picker("tracking.bodyBackend", selection: $bodyBackend) {
+                ForEach(BodyPoseBackend.allCases) { backend in
+                    Text(LocalizedStringKey(backend.titleKey)).tag(backend.rawValue)
+                }
+            }
+            .frame(minHeight: 64)
+            Picker("tracking.handBackend", selection: $handBackend) {
+                ForEach(HandPoseBackend.allCases.filter(\.isAvailable)) { backend in
+                    Text(LocalizedStringKey(backend.titleKey)).tag(backend.rawValue)
+                }
+            }
+            .frame(minHeight: 64)
+        } header: {
+            Text("tracking.title").typography(.headline)
+        } footer: {
+            Text("tracking.help").typography(.body)
+        }
+        .onChange(of: bodyBackend) { dependencies.applyTrackingBackends() }
+        .onChange(of: handBackend) { dependencies.applyTrackingBackends() }
     }
 
     // MARK: - Voice

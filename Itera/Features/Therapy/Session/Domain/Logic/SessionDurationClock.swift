@@ -75,20 +75,25 @@ struct LongRestBreath {
         case inhale, hold, exhale, settle
     }
 
-    static let count = 6
+    /// Breaths when no prescription sets the number (ADR-008: the doctor chooses 0–10).
+    static let defaultCount = 6
     static let inhaleSeconds = 3.0
     static let holdSeconds = 2.0
     static let exhaleSeconds = 5.0
     static let settleSeconds = 2.0
     static let cycleDuration = inhaleSeconds + holdSeconds + exhaleSeconds + settleSeconds
-    static let duration = Double(count) * cycleDuration
+    static func duration(count: Int) -> Double {
+        Double(count) * cycleDuration
+    }
 
+    let count: Int
     let number: Int
     let phase: Phase
     let intensity: Double
 
-    init(elapsed: Double) {
-        let elapsed = min(max(0, elapsed), Self.duration.nextDown)
+    init(elapsed: Double, count: Int = LongRestBreath.defaultCount) {
+        self.count = max(1, count)
+        let elapsed = min(max(0, elapsed), Self.duration(count: self.count).nextDown)
         number = Int(elapsed / Self.cycleDuration) + 1
         let position = elapsed.truncatingRemainder(dividingBy: Self.cycleDuration)
         let exhaleStart = Self.inhaleSeconds + Self.holdSeconds

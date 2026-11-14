@@ -26,6 +26,15 @@ struct BalancePracticeSettings: Hashable {
     /// Rest before each later set.
     var restSeconds: Int
 
+    /// Values chosen elsewhere, such as a doctor's prescription.
+    init(repetitions: Int, holdSeconds: Int, armSelection: BalanceArmSelection, sets: Int, restSeconds: Int) {
+        self.repetitions = repetitions
+        self.holdSeconds = holdSeconds
+        self.armSelection = armSelection
+        self.sets = sets
+        self.restSeconds = restSeconds
+    }
+
     /// Reads what the exercise's overview page last saved, falling back to its defaults.
     init(exercise: BalanceExercise, defaults: UserDefaults = .standard) {
         let repetitionsKey = exercise.storageKey("repetitions")

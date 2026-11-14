@@ -48,6 +48,21 @@ final class BodyTrackingService: NSObject, AVCaptureVideoDataOutputSampleBufferD
     private var watchdogRestarts = 0
     private var captureStartedAt = 0.0
 
+    /// Chooses the body request for the next frames. Best changed between sessions: the 3D
+    /// request tracks one person and approximates the nose and neck from the head and shoulders.
+    func usePoseBackend(_ backend: BodyPoseBackend) {
+        inferenceQueue.async { [weak self] in
+            guard let self, self.poseBackend != backend || self.threeDUnavailable else {
+                return
+            }
+
+            self.poseBackend = backend
+            self.threeDUnavailable = false
+            self.subjects = BodySubjectSelector()
+            NSLog("Body pose backend=%@", backend.rawValue)
+        }
+    }
+
     func requireCup(_ enabled: Bool) {
         inferenceQueue.async { [weak self] in
             guard let self, self.cupEnabled != enabled || (enabled && self.cupRequest == nil) else { return }
@@ -101,9 +116,16 @@ final class BodyTrackingService: NSObject, AVCaptureVideoDataOutputSampleBufferD
     }
 
     private let request = VNDetectHumanBodyPoseRequest()
+    private let request3D = VNDetectHumanBodyPose3DRequest()
+    /// Confined to `inferenceQueue`.
+    private var poseBackend: BodyPoseBackend
+    /// Set when the 3D request fails (it is unsupported on the Simulator and on some devices);
+    /// body inference then uses the 2D request until the backend is chosen again.
+    private var threeDUnavailable = false
     private var notifications: [NSObjectProtocol] = []
 
-    override init() {
+    init(poseBackend: BodyPoseBackend = .vision2D) {
+        self.poseBackend = poseBackend
         super.init()
         handRequest.maximumHandCount = 4
         let center = NotificationCenter.default
@@ -354,29 +376,15 @@ final class BodyTrackingService: NSObject, AVCaptureVideoDataOutputSampleBufferD
         guard !cupEnabled || time - lastPublished >= 1.0 / 20 else { return }
         lastPublished = time
         do {
-            if !cupEnabled && !handEnabled {
-                try VNImageRequestHandler(cvPixelBuffer: image, orientation: .up).perform([request])
-            }
-            let people = cupEnabled || handEnabled ? [] : (request.results ?? [])
-            let personPoints = people.map { (try? $0.recognizedPoints(.all)) ?? [:] }
+            let people = cupEnabled || handEnabled ? [] : try detectPeople(in: image)
             let imageAspect = Double(CVPixelBufferGetWidth(image)) / Double(CVPixelBufferGetHeight(image))
             let subject = subjects.select(
-                personPoints.map { Self.candidate(for: $0, aspect: imageAspect) },
+                people.map { Self.candidate(for: $0.joints, aspect: imageAspect) },
                 at: time,
                 generation: generation
             )
-
-            var joints: [BodyJoint: TrackingObservation.Landmark] = [:]
-            if let subject {
-                let points = personPoints[subject]
-                for (joint, visionJoint) in Self.jointMap {
-                    if let point = points[visionJoint] {
-                        joints[joint] = .init(
-                            position: TherapyPoint(x: point.location.x, y: point.location.y),
-                            confidence: point.confidence)
-                    }
-                }
-            }
+            let joints = subject.map { people[$0].joints } ?? [:]
+            let world = subject.map { people[$0].world } ?? [:]
             var hand: HandEvidence?
             if handEnabled {
                 try VNImageRequestHandler(cvPixelBuffer: image, orientation: .up).perform([handRequest])
@@ -414,7 +422,8 @@ final class BodyTrackingService: NSObject, AVCaptureVideoDataOutputSampleBufferD
                     personCount: subject == nil ? people.count : 1,
                     joints: joints,
                     cup: cup, hand: hand,
-                    subjectEpoch: subjects.epoch
+                    subjectEpoch: subjects.epoch,
+                    world: world
                 ))
         } catch {
             if time - lastInferenceFailure >= 5 {
@@ -471,25 +480,92 @@ final class BodyTrackingService: NSObject, AVCaptureVideoDataOutputSampleBufferD
         }
     }
 
+    // MARK: - Body requests
+
+    private struct DetectedPerson {
+        let joints: [BodyJoint: TrackingObservation.Landmark]
+        var world: [BodyJoint: TherapyVector3] = [:]
+    }
+
+    private func detectPeople(in image: CVPixelBuffer) throws -> [DetectedPerson] {
+        if poseBackend == .vision3D, !threeDUnavailable {
+            do {
+                return try detectPerson3D(in: image)
+            } catch {
+                threeDUnavailable = true
+                NSLog("Body 3D pose unavailable, using 2D: %@", error.localizedDescription)
+            }
+        }
+
+        try VNImageRequestHandler(cvPixelBuffer: image, orientation: .up).perform([request])
+
+        return (request.results ?? []).map { observation in
+            let points = (try? observation.recognizedPoints(.all)) ?? [:]
+            var joints: [BodyJoint: TrackingObservation.Landmark] = [:]
+
+            for (joint, visionJoint) in Self.jointMap {
+                guard let point = points[visionJoint] else {
+                    continue
+                }
+
+                joints[joint] = .init(
+                    position: TherapyPoint(x: point.location.x, y: point.location.y),
+                    confidence: point.confidence
+                )
+            }
+
+            return DetectedPerson(joints: joints)
+        }
+    }
+
+    /// The 3D request reports the most prominent person only, with all 17 joints or none and one
+    /// confidence for the whole body. Image points come from its own projection, so exercises
+    /// keep their 2D rules; `world` holds the metric positions relative to the hip root.
+    private func detectPerson3D(in image: CVPixelBuffer) throws -> [DetectedPerson] {
+        try VNImageRequestHandler(cvPixelBuffer: image, orientation: .up).perform([request3D])
+
+        return try (request3D.results ?? []).map { observation in
+            var joints: [BodyJoint: TrackingObservation.Landmark] = [:]
+            var world: [BodyJoint: TherapyVector3] = [:]
+
+            for (joint, visionJoint) in Self.jointMap3D {
+                let point = try observation.pointInImage(visionJoint)
+                joints[joint] = .init(
+                    position: TherapyPoint(x: point.x, y: point.y),
+                    confidence: observation.confidence
+                )
+
+                let translation = try observation.recognizedPoint(visionJoint).position.columns.3
+                world[joint] = TherapyVector3(
+                    x: Double(translation.x),
+                    y: Double(translation.y),
+                    z: Double(translation.z)
+                )
+            }
+
+            return DetectedPerson(joints: joints, world: world)
+        }
+    }
+
     /// Joints that identify a person across frames. Hips and root are left out on purpose: a
     /// seated patient close to the camera often has them out of frame or flickering, and each
     /// appearance or loss shifted the identity point enough to drop the lock onto the patient,
     /// so the skeleton vanished whenever someone else was in view.
-    private static let torsoJoints: [VNHumanBodyPoseObservation.JointName] = [
+    private static let torsoJoints: [BodyJoint] = [
         .neck, .nose, .leftShoulder, .rightShoulder,
     ]
 
     private static func candidate(
-        for points: [VNHumanBodyPoseObservation.JointName: VNRecognizedPoint],
+        for points: [BodyJoint: TrackingObservation.Landmark],
         aspect: Double
     ) -> BodySubjectSelector.Candidate {
         let confident = points.values
             .filter { $0.confidence >= 0.3 }
-            .map { TherapyPoint(x: $0.location.x * aspect, y: $0.location.y) }
+            .map { TherapyPoint(x: $0.position.x * aspect, y: $0.position.y) }
         let torso = torsoJoints
             .compactMap { points[$0] }
             .filter { $0.confidence >= 0.3 }
-            .map { TherapyPoint(x: $0.location.x * aspect, y: $0.location.y) }
+            .map { TherapyPoint(x: $0.position.x * aspect, y: $0.position.y) }
 
         guard !torso.isEmpty, confident.count >= 2 else {
             // Without a torso this person cannot be followed, so they can never win continuity.
@@ -509,15 +585,15 @@ final class BodyTrackingService: NSObject, AVCaptureVideoDataOutputSampleBufferD
     /// steadier than a box that grows when hips appear or disappear behind a table. Falls
     /// back to the torso box when a shoulder is not visible.
     private static func bodySize(
-        _ points: [VNHumanBodyPoseObservation.JointName: VNRecognizedPoint],
+        _ points: [BodyJoint: TrackingObservation.Landmark],
         torso: [TherapyPoint],
         aspect: Double
     ) -> Double {
         if let left = points[.leftShoulder], let right = points[.rightShoulder],
            left.confidence >= 0.3, right.confidence >= 0.3 {
             let width = TherapyPoint(
-                x: (left.location.x - right.location.x) * aspect,
-                y: left.location.y - right.location.y
+                x: (left.position.x - right.position.x) * aspect,
+                y: left.position.y - right.position.y
             )
             return width.length
         }
@@ -580,6 +656,16 @@ final class BodyTrackingService: NSObject, AVCaptureVideoDataOutputSampleBufferD
 
     private static let jointMap: [(BodyJoint, VNHumanBodyPoseObservation.JointName)] = [
         (.nose, .nose), (.neck, .neck), (.root, .root),
+        (.leftShoulder, .leftShoulder), (.rightShoulder, .rightShoulder),
+        (.leftElbow, .leftElbow), (.rightElbow, .rightElbow), (.leftWrist, .leftWrist),
+        (.rightWrist, .rightWrist), (.leftHip, .leftHip), (.rightHip, .rightHip),
+        (.leftKnee, .leftKnee), (.rightKnee, .rightKnee),
+        (.leftAnkle, .leftAnkle), (.rightAnkle, .rightAnkle),
+    ]
+    /// The 3D skeleton has no nose or neck: the head centre and the point between the shoulders
+    /// stand in for them, which shifts the "nose" slightly up compared with the 2D request.
+    private static let jointMap3D: [(BodyJoint, VNHumanBodyPose3DObservation.JointName)] = [
+        (.nose, .centerHead), (.neck, .centerShoulder), (.root, .root),
         (.leftShoulder, .leftShoulder), (.rightShoulder, .rightShoulder),
         (.leftElbow, .leftElbow), (.rightElbow, .rightElbow), (.leftWrist, .leftWrist),
         (.rightWrist, .rightWrist), (.leftHip, .leftHip), (.rightHip, .rightHip),

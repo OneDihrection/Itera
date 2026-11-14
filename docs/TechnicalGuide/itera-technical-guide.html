@@ -1,0 +1,851 @@
+<!-- itera-technical-guide.html -->
+<!-- Itera -->
+<!-- Created by Amelia Putri Aftiana on 13/11/2026. -->
+<!-- Source of docs/Itera-Technical-Guide.pdf. Regenerate with docs/TechnicalGuide/build-pdf.sh. -->
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Itera Technical Guide</title>
+<style>
+@font-face { font-family: "Jakarta"; src: url("../../Itera/Resources/Fonts/PlusJakartaSans/PlusJakartaSans-Regular.ttf"); font-weight: 400; }
+@font-face { font-family: "Jakarta"; src: url("../../Itera/Resources/Fonts/PlusJakartaSans/PlusJakartaSans-Bold.ttf"); font-weight: 700; }
+:root { --ink:#1d1b19; --muted:#6b6560; --rust:#b5381a; --rustSoft:#f6e7e1; --panel:#f4f1ec; --line:#ddd6cc; --blue:#2aa6fa; --yellow:#ffb800; --mono:"SF Mono", Menlo, monospace; }
+@page { size: A4; margin: 17mm 17mm 18mm 17mm;
+  @bottom-center { content: "Itera Technical Guide  ·  " counter(page); font-family: Jakarta, sans-serif; font-size: 8pt; color: #8a837c; } }
+@page :first { @bottom-center { content: none; } }
+* { box-sizing: border-box; }
+html { font-family: "Jakarta", -apple-system, sans-serif; color: var(--ink); font-size: 9.6pt; line-height: 1.45; }
+body { margin: 0; }
+h1 { font-size: 22pt; line-height: 1.15; margin: 0 0 6mm; color: var(--ink); break-after: avoid; }
+h1 .num { color: var(--rust); margin-right: 3mm; }
+h2 { font-size: 13.5pt; margin: 7mm 0 2.5mm; break-after: avoid; }
+h3 { font-size: 11pt; margin: 5mm 0 1.5mm; break-after: avoid; color: var(--rust); }
+p { margin: 0 0 2.6mm; }
+ul, ol { margin: 0 0 3mm; padding-left: 5mm; }
+li { margin-bottom: 1mm; }
+code { font-family: var(--mono); font-size: 8.6pt; background: var(--panel); padding: 0.2mm 1.2mm; border-radius: 1.2mm; }
+pre { font-family: var(--mono); font-size: 8.2pt; line-height: 1.45; background: var(--panel); border: 0.3mm solid var(--line); border-radius: 2mm; padding: 3mm 4mm; white-space: pre-wrap; break-inside: avoid; margin: 0 0 3.5mm; }
+pre code { background: none; padding: 0; }
+table { width: 100%; border-collapse: collapse; margin: 1mm 0 4mm; font-size: 9pt; break-inside: auto; }
+th { text-align: left; background: var(--panel); font-weight: 700; }
+th, td { border-bottom: 0.3mm solid var(--line); padding: 1.6mm 2mm; vertical-align: top; }
+tr { break-inside: avoid; }
+/* Chapters flow on from each other so no page is left nearly empty; only the cover and the
+   contents page force a new page. */
+.chapter { margin-top: 12mm; }
+.cover + .chapter, .chapter.contents + .chapter { break-before: page; margin-top: 0; }
+.lead { font-size: 11pt; color: var(--muted); margin-bottom: 5mm; break-after: avoid; break-inside: avoid; }
+.callout { border-left: 1.2mm solid var(--rust); background: var(--rustSoft); padding: 3mm 4mm; border-radius: 0 2mm 2mm 0; margin: 2mm 0 4mm; break-inside: avoid; }
+.callout.info { border-color: var(--blue); background: #e8f4fd; }
+.callout.warn { border-color: var(--yellow); background: #fff6dc; }
+.callout b:first-child { display: block; margin-bottom: 1mm; }
+figure { margin: 2mm 0 5mm; break-inside: avoid; }
+figcaption { font-size: 8.5pt; color: var(--muted); margin-top: 1.5mm; }
+svg text { font-family: Jakarta, sans-serif; }
+.two { display: grid; grid-template-columns: 1fr 1fr; gap: 5mm; }
+.tag { display: inline-block; font-size: 7.5pt; font-weight: 700; padding: 0.4mm 2mm; border-radius: 5mm; background: var(--panel); color: var(--muted); }
+.tag.ok { background: #e3f4e6; color: #2f7a3c; } .tag.pending { background: #fff1d6; color: #8a5a00; }
+/* Cover */
+.cover { height: 257mm; display: flex; flex-direction: column; justify-content: space-between; }
+.cover .brand { color: var(--rust); font-weight: 700; letter-spacing: 0.3mm; font-size: 10pt; }
+.cover h1 { font-size: 40pt; margin: 0; }
+.cover .sub { font-size: 14pt; color: var(--muted); margin-top: 4mm; max-width: 140mm; }
+.cover .meta { font-size: 9pt; color: var(--muted); border-top: 0.4mm solid var(--line); padding-top: 4mm; }
+.cover .band { height: 6mm; background: linear-gradient(90deg, var(--rust), #e08a3c, var(--yellow)); border-radius: 3mm; margin: 8mm 0; }
+/* Contents */
+.toc { columns: 2; column-gap: 8mm; font-size: 9.5pt; }
+.toc div { break-inside: avoid; margin-bottom: 1.6mm; }
+.toc b { color: var(--rust); display: inline-block; width: 7mm; }
+</style>
+</head>
+<body>
+
+<!-- ============================== COVER ============================== -->
+<section class="cover">
+  <div>
+    <div class="brand">ITERA · ENGINEERING</div>
+    <div class="band"></div>
+    <h1>Itera Technical Guide</h1>
+    <div class="sub">How the app is built, why it is built that way, and how to run, extend and debug it: architecture, tracking and measurement, audio, storage, the doctor–patient system and its iCloud infrastructure.</div>
+  </div>
+  <div class="meta">
+    Version 1.0 · 13 November 2026 · branch <code>testing-pengukuran</code><br>
+    Prepared by Amelia Putri Aftiana for the Itera team (Amelia Putri Aftiana, Meynabel Dimas Wisodewo, Gracia A, Fauzan Azima)<br>
+    Authoritative design source: <code>SYSTEM_DESIGN.md</code> in the repository. Where this guide and that file disagree, the file wins.
+  </div>
+</section>
+
+<!-- ============================== CONTENTS ============================== -->
+<section class="chapter contents">
+<h1>Contents</h1>
+<div class="toc">
+  <div><b>1</b>About Itera</div>
+  <div><b>2</b>Architecture at a glance</div>
+  <div><b>3</b>Project setup, build and signing</div>
+  <div><b>4</b>Navigation, design system and conventions</div>
+  <div><b>5</b>Sessions and exercises</div>
+  <div><b>6</b>Camera tracking pipeline</div>
+  <div><b>7</b>Detector backends: Vision 2D/3D and MediaPipe</div>
+  <div><b>8</b>Joint-angle measurement</div>
+  <div><b>9</b>Audio, narration and voice control</div>
+  <div><b>10</b>Local storage and history</div>
+  <div><b>11</b>Doctor and patient roles</div>
+  <div><b>12</b>Cloud infrastructure and encryption</div>
+  <div><b>13</b>Security, privacy and regulation</div>
+  <div><b>14</b>Architecture decisions</div>
+  <div><b>15</b>Verification status</div>
+  <div><b>16</b>Debugging and operations handbook</div>
+  <div><b>17</b>Known limitations and next steps</div>
+  <div><b>18</b>Glossary</div>
+</div>
+
+<h2>How to read this guide</h2>
+<p>Chapters 1–4 are for anyone joining the project. Chapters 5–10 explain the exercise app that runs on the patient's iPad. Chapters 11–13 explain the doctor–patient system added on 11 November 2026 and the infrastructure behind it. Chapters 14–17 collect the decisions, what has and has not been verified, and day-to-day operating knowledge.</p>
+<p>Every chapter follows the same pattern: <b>what</b> the part does, <b>how</b> it is built (with the files to open), <b>why</b> it was built that way, and the <b>considerations</b> or trade-offs a maintainer must keep in mind.</p>
+<p><b>Keeping it current:</b> when a decision changes, update <code>SYSTEM_DESIGN.md</code> first, then this guide's source (<code>docs/TechnicalGuide/itera-technical-guide.html</code>), and rebuild the PDF with <code>docs/TechnicalGuide/build-pdf.sh</code>.</p>
+<div class="callout info"><b>Status words used throughout</b>
+<span class="tag ok">Verified</span> means checked by a Simulator build plus, where stated, a temporary Swift harness over the production code. <span class="tag pending">Pending</span> means it still needs the physical M1 iPad (camera, voice, iCloud). A successful build never proves camera, voice or iCloud behaviour.</div>
+</section>
+
+<!-- ============================== 1 ============================== -->
+<section class="chapter">
+<h1><span class="num">1</span>About Itera</h1>
+<p class="lead">Itera is an iPad app for guided home rehabilitation. The iPad's front camera watches the patient, counts correct repetitions, guides them with calm visuals and Indonesian narration, and records progress the doctor can review.</p>
+
+<h2>Who uses it</h2>
+<table>
+<tr><th style="width:24%">Person</th><th>What they do in Itera</th></tr>
+<tr><td>Patient</td><td>Follows the exercises the doctor assigned, one after another, hands-free. Sees their own progress.</td></tr>
+<tr><td>Caregiver</td><td>Positions the iPad, helps with recovery actions (recalibrate, skip, pause) when needed.</td></tr>
+<tr><td>Doctor / therapist</td><td>Since ADR-008: assigns exercises, sides, sets, repetitions and rest per patient on their own iPad, and reads each patient's results and joint angles.</td></tr>
+</table>
+
+<h2>Exercises</h2>
+<table>
+<tr><th style="width:24%">Group</th><th>Exercises</th><th style="width:28%">Tracked with</th></tr>
+<tr><td>Hand and fingers</td><td>Full fist, hook fist, thumb opposition, finger spreading, extension sequence, forearm rotation</td><td>Hand pose (Vision or MediaPipe)</td></tr>
+<tr><td>Arm and shoulder</td><td>Arm raise, elbow bend, directional reach</td><td>Body pose (Vision 2D or 3D)</td></tr>
+<tr><td>Balance and trunk</td><td>Cross midline, external rotation, internal rotation, shoulder flexion, sit to stand</td><td>Body pose</td></tr>
+<tr><td>Daily task</td><td>Fold towel (a virtual towel moved with a pinch)</td><td>Hand pose through the body tracker</td></tr>
+</table>
+<p>Cup practice (a Core ML cup detector) still exists in code but is no longer part of the daily plan or the doctor's catalog.</p>
+
+<h2>Product constraints that shape the code</h2>
+<ul>
+<li><b>iPad only, landscape only, iPadOS 17 minimum.</b> The M1 iPad is the performance baseline. Mac Catalyst builds are kept as an explicit exception.</li>
+<li><b>On-device and offline-first.</b> All camera inference, speech and voice-command recognition run on the device. Sessions work without internet after setup. Video, audio, landmarks and per-frame measurement streams are never saved or sent.</li>
+<li><b>Indonesian and English</b> through String Catalogs. Voice commands stay English (en-US) in both languages.</li>
+<li><b>Older patients.</b> Large controls, calm guidance without error wording, readable at 1.5–2.5 m, narration recorded in a soft Indonesian voice.</li>
+<li><b>Camera evidence is an exercise aid, not a clinical measurement.</b> Angles in reports are labelled as camera estimates until validated against a goniometer.</li>
+</ul>
+
+<h2>Numbers</h2>
+<p>186 Swift files, about 33,700 lines, one app target, 22 design-system component files, about 80 commits by five contributors. Dependencies: Apple frameworks plus one Swift package, MediaPipe Tasks Vision.</p>
+</section>
+
+<!-- ============================== 2 ============================== -->
+<section class="chapter">
+<h1><span class="num">2</span>Architecture at a glance</h1>
+<p class="lead">One app target, organised vertically by feature and then by responsibility, using MVVM with Observation for UI state and Combine for service events.</p>
+
+<figure>
+<svg viewBox="0 0 700 330" width="100%">
+  <defs><marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#6b6560"/></marker></defs>
+  <rect x="10" y="10" width="680" height="54" rx="10" fill="#f6e7e1" stroke="#b5381a"/>
+  <text x="24" y="32" font-size="13" font-weight="700" fill="#b5381a">App · composition root</text>
+  <text x="24" y="52" font-size="11" fill="#1d1b19">MyApp · AppDependencies (builds every service once) · NavigationRouter · AppRoute · role-based root</text>
+  <rect x="10" y="84" width="330" height="96" rx="10" fill="#fff" stroke="#ddd6cc"/>
+  <text x="24" y="106" font-size="13" font-weight="700">Presentation</text>
+  <text x="24" y="126" font-size="11">Views: layout, bindings, accessibility</text>
+  <text x="24" y="144" font-size="11">ViewModels: @MainActor @Observable,</text>
+  <text x="24" y="162" font-size="11">coordinate services, no exercise rules</text>
+  <rect x="360" y="84" width="330" height="96" rx="10" fill="#fff" stroke="#ddd6cc"/>
+  <text x="374" y="106" font-size="13" font-weight="700">DesignSystem</text>
+  <text x="374" y="126" font-size="11">TM-prefixed reusable controls, Typography,</text>
+  <text x="374" y="144" font-size="11">TherapyPalette. Values, bindings and actions</text>
+  <text x="374" y="162" font-size="11">only; never depends on a feature</text>
+  <rect x="10" y="200" width="330" height="56" rx="10" fill="#fff" stroke="#ddd6cc"/>
+  <text x="24" y="222" font-size="13" font-weight="700">Domain</text>
+  <text x="24" y="242" font-size="11">Engines, activities, models, rules. No SwiftUI/Vision</text>
+  <rect x="360" y="200" width="330" height="56" rx="10" fill="#fff" stroke="#ddd6cc"/>
+  <text x="374" y="222" font-size="13" font-weight="700">Data</text>
+  <text x="374" y="242" font-size="11">Versioned Codable records, local repositories, CloudKit</text>
+  <rect x="10" y="272" width="680" height="50" rx="10" fill="#f4f1ec" stroke="#ddd6cc"/>
+  <text x="24" y="293" font-size="13" font-weight="700">Shared infrastructure</text>
+  <text x="24" y="312" font-size="11">Tracking (camera + inference) · Audio (sole audio-session owner) · Storage · Permissions · Localization · Animation</text>
+  <line x1="175" y1="64" x2="175" y2="82" stroke="#6b6560" marker-end="url(#a)"/>
+  <line x1="175" y1="180" x2="175" y2="198" stroke="#6b6560" marker-end="url(#a)"/>
+  <line x1="340" y1="132" x2="358" y2="132" stroke="#6b6560" marker-end="url(#a)"/>
+  <line x1="525" y1="198" x2="340" y2="230" stroke="#6b6560" marker-end="url(#a)"/>
+  <line x1="175" y1="180" x2="175" y2="182" stroke="#6b6560"/>
+</svg>
+<figcaption>Figure 2.1 — Layers and allowed dependency directions. Arrows point from the user of a layer to the layer it may depend on. Domain never depends on Presentation, Data implementations, Combine or platform services.</figcaption>
+</figure>
+
+<h2>Folder layout</h2>
+<table>
+<tr><th style="width:38%">Path</th><th>Contents</th></tr>
+<tr><td><code>project.yml</code></td><td>XcodeGen specification, the source of truth for the project</td></tr>
+<tr><td><code>SYSTEM_DESIGN.md</code></td><td>Authoritative design, ADR-001 to ADR-008</td></tr>
+<tr><td><code>Tools/</code></td><td>Narration generator and normaliser, plan artwork generator</td></tr>
+<tr><td><code>docs/TechnicalGuide/</code></td><td>This guide's source and build script</td></tr>
+<tr><td><code>Itera/App/</code></td><td>MyApp, AppDependencies, Navigation (router, routes), debug launcher</td></tr>
+<tr><td><code>Itera/DesignSystem/</code></td><td>README, Components, Controls, Typography</td></tr>
+<tr><td><code>Itera/Features/Home/</code></td><td>Beranda, daily plan, intro, long rest, settings</td></tr>
+<tr><td><code>Itera/Features/Therapy/Session/</code></td><td>Session and finger engines, view models, stage views, repositories</td></tr>
+<tr><td><code>Itera/Features/Therapy/Activities/</code></td><td>One folder per exercise: ArmRaise, Fingers, Balance, FoldTowel …</td></tr>
+<tr><td><code>Itera/Features/Therapy/Shared/</code></td><td>Activity lifecycle protocol, movement primitives, smoothers, holds</td></tr>
+<tr><td><code>Itera/Features/Routine/</code></td><td>Saved finger and therapy routine configuration</td></tr>
+<tr><td><code>Itera/Features/History/</code></td><td>Progres tab, reports, arm-angle history</td></tr>
+<tr><td><code>Itera/Features/Measurement/</code></td><td>Angle calculator, hold estimator, recorders, trial page</td></tr>
+<tr><td><code>Itera/Features/Prescription/</code></td><td>Doctor–patient domain, local and cloud data, doctor and patient screens</td></tr>
+<tr><td><code>Itera/Shared/</code></td><td>Tracking, Audio, Storage, Permissions, Localization, Accessibility, Animation</td></tr>
+<tr><td><code>Itera/Resources/</code></td><td>Assets, Animations (USDZ/MOV), Audio (narration), Fonts, String Catalogs, Models (YOLO cup, MediaPipe hand)</td></tr>
+</table>
+
+<h2>Core patterns</h2>
+<table>
+<tr><th style="width:26%">Pattern</th><th>How Itera uses it</th><th style="width:30%">Why</th></tr>
+<tr><td>MVVM with Observation</td><td><code>@MainActor @Observable</code> final view models held by views through <code>@State</code>; <code>@Bindable</code> only for bindings. No <code>ObservableObject</code>.</td><td>One source of truth for UI state; Observation tracks exactly what a view reads.</td></tr>
+<tr><td>Combine for events</td><td>Camera frames, availability, audio events arrive as publishers; view models subscribe and cancel on exit.</td><td>Services produce streams; Combine handles threading and cancellation cleanly (ADR-003).</td></tr>
+<tr><td>Composition root</td><td><code>AppDependencies</code> constructs every service and repository once and injects them.</td><td>No singletons or service locators; easy to swap a repository.</td></tr>
+<tr><td>Protocols at real seams</td><td>Repositories (<code>SessionRepository</code>, <code>DoctorPatientRepository</code> …), <code>TherapyActivity</code>, <code>PermissionManaging</code>.</td><td>Substitution where it matters, not one protocol per type.</td></tr>
+<tr><td>Typed commands and events</td><td><code>SessionCommand</code>, <code>SessionEvent</code>, <code>SessionSnapshot</code>, <code>SessionEffect</code>. Never strings like "Pause".</td><td>The compiler checks every command path.</td></tr>
+</table>
+
+<h2>Threading model</h2>
+<ul>
+<li>All engine mutations run on the main actor; engine work per frame stays short.</li>
+<li>Capture and inference run on dedicated serial queues (<code>Itera.bodyTracking</code>, <code>Itera.bodyInference</code>, <code>dev.itera.hand-camera</code>). Late frames are dropped by the capture output, never queued.</li>
+<li>Delivery to the main thread is a single replaceable pending frame, so a slow main thread sees the newest frame, not a backlog.</li>
+<li>File I/O happens inside repository actors; CloudKit calls are <code>async</code>.</li>
+</ul>
+</section>
+
+<!-- ============================== 3 ============================== -->
+<section class="chapter">
+<h1><span class="num">3</span>Project setup, build and signing</h1>
+<p class="lead">The Xcode project is generated from <code>project.yml</code> by XcodeGen and is not committed. Every persistent project change goes into <code>project.yml</code>.</p>
+
+<h2>First build</h2>
+<pre><code>brew install xcodegen          # once
+cd ~/Developer/Itera
+xcodegen generate              # after any change to project.yml, folders or resources
+open Itera.xcodeproj           # Xcode resolves the MediaPipe package on first open</code></pre>
+<p>Command-line Simulator build used for verification throughout the project:</p>
+<pre><code>DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer xcodebuild \
+  -project Itera.xcodeproj -scheme Itera \
+  -destination 'generic/platform=iOS Simulator' \
+  IPHONEOS_DEPLOYMENT_TARGET=17.0 CODE_SIGNING_ALLOWED=NO ARCHS=arm64 build</code></pre>
+<div class="callout warn"><b>arm64 only on the Simulator</b>MediaPipe 1.2.2 ships an arm64-only Simulator slice. Build the Simulator for arm64 (Apple silicon Macs); an x86_64 slice produces linker warnings.</div>
+
+<h2>What project.yml defines</h2>
+<table>
+<tr><th style="width:32%">Setting</th><th>Value and reason</th></tr>
+<tr><td>Target</td><td>One application target <code>Itera</code>, iOS 17.0, device family iPad (<code>"2"</code>), Mac Catalyst allowed.</td></tr>
+<tr><td>Bundle identifier / team</td><td><code>com.OneDihrection.Itera</code>, team <code>A2WQZ32XVK</code>. The identifier is owned by that team; other teams cannot register it.</td></tr>
+<tr><td>Sources</td><td>One recursive group <code>Itera</code> (Markdown excluded) so asset catalogs, String Catalogs and Core ML packages get their proper build phases.</td></tr>
+<tr><td>Package</td><td><code>MediaPipe</code> from github.com/google-ai-edge/mediapipe, pinned to revision <code>5d426da</code> (Tasks 1.2.2); product <code>MediaPipeTasksVision</code> linked with <code>platformFilter: iOS</code> so Catalyst builds without it.</td></tr>
+<tr><td>Entitlements</td><td>Camera and audio input (needed on Catalyst); <code>com.apple.developer.icloud-services: CloudKit</code>; container <code>iCloud.$(CFBundleIdentifier)</code>.</td></tr>
+<tr><td>Info.plist</td><td>Fonts, landscape-only orientations, full screen, camera/microphone/speech usage descriptions.</td></tr>
+</table>
+
+<h2>Signing and iCloud checklist</h2>
+<ol>
+<li>Use a <b>paid</b> Apple Developer Program team. A free Personal Team cannot use iCloud at all.</li>
+<li>Your Apple ID must be a member of team <code>A2WQZ32XVK</code> with a role that may edit identifiers (Admin, or App Manager with Certificates, Identifiers &amp; Profiles access). The plain Developer role usually cannot add capabilities.</li>
+<li>In the developer portal the App ID <code>com.OneDihrection.Itera</code> must have iCloud with CloudKit enabled and container <code>iCloud.com.OneDihrection.Itera</code> assigned. Xcode's automatic signing does this when the role allows it.</li>
+<li>Select the team in Signing &amp; Capabilities, then <b>Try Again</b>. The "wildcard profile doesn't include iCloud" errors disappear once the bundle identifier registers.</li>
+<li>Run <code>xcodegen generate</code> again whenever the project file is regenerated; signing values come from <code>project.yml</code>, not from edits in Xcode.</li>
+</ol>
+<div class="callout"><b>Why the container name follows the bundle identifier</b>The entitlement uses <code>iCloud.$(CFBundleIdentifier)</code> and the code uses <code>CKContainer.default()</code>. Changing the bundle identifier in one place therefore changes the container everywhere; there is no identifier in Swift to forget.</div>
+
+<h2>Tools folder</h2>
+<table>
+<tr><th style="width:32%">Tool</th><th>Purpose</th></tr>
+<tr><td><code>generate_narration.py</code></td><td>Renders Indonesian narration with ElevenLabs (voice "Marizka", model <code>eleven_multilingual_v2</code>) into <code>Tools/NarrationRaw</code>. The API key comes from the developer's environment and is never stored.</td></tr>
+<tr><td><code>normalize_narration.swift</code></td><td>Levels every raw clip to about −15 dBFS speech with a soft limiter and encodes 96 kbps AAC into <code>Resources/Audio/NarrationID</code>.</td></tr>
+<tr><td><code>generate_plan_art.py</code></td><td>Draws the <code>plan-&lt;id&gt;</code> exercise illustrations in a consistent style.</td></tr>
+</table>
+</section>
+
+<!-- ============================== 4 ============================== -->
+<section class="chapter">
+<h1><span class="num">4</span>Navigation, design system and conventions</h1>
+
+<h2>NavigationRouter</h2>
+<p>All navigation and modal presentation goes through the shared <code>NavigationRouter</code> (<code>App/Navigation</code>). Features never own a <code>NavigationStack</code>, destination registration or modal state.</p>
+<ul>
+<li><b>Routes</b> are cases of <code>AppRoute</code> (for example <code>.planIntro(id)</code>, <code>.fingerSession</code>, <code>.therapySession</code>, <code>.angleMeasurement</code>, <code>.doctorPatient(id)</code>, <code>.connectDoctor</code>). <code>AppRouterView.destination</code> maps each route to its view in one switch.</li>
+<li><b>Stacks</b>: <code>homePath</code> and <code>reportsPath</code> for the two tabs; <code>presentedSheets</code> and <code>presentedFullScreenCovers</code> as stacks of presentations.</li>
+<li><b>Tabs</b> depend on the role: patients see Beranda and Progres; doctors see one Pasien tab.</li>
+<li><b>Daily plan</b> keeps one full-screen cover while it moves between sessions, rest and the next intro; the router replaces the destination inside it so the presentation never flickers.</li>
+</ul>
+<p><b>Why:</b> one owner of navigation makes deep flows (plan → session → rest → next intro) predictable, and a session can never dismiss something it did not present.</p>
+
+<h2>Design system</h2>
+<p><code>Itera/DesignSystem</code> holds every reusable control and style; its README is required reading before UI work. Components take values, bindings, content and actions only.</p>
+<table>
+<tr><th style="width:36%">Area</th><th>Examples</th></tr>
+<tr><td>Typography</td><td><code>.typography(...)</code> with bundled Plus Jakarta Sans; font names live only here.</td></tr>
+<tr><td>Palette</td><td><code>TherapyPalette</code>: canvas, ink, brand rust, guidance blue and yellow, calm underlay for video.</td></tr>
+<tr><td>Exercise screens</td><td><code>TMTherapyExerciseIntro</code>, <code>TMTherapyExerciseLiveLayout</code>, <code>TMTherapyPauseDialog</code>, <code>TMTherapySetSummary</code>, <code>TMTherapyLongRest</code>.</td></tr>
+<tr><td>Camera guidance</td><td><code>TMSessionTargetOverlay</code>, <code>TMTherapyGuideBubble</code>, <code>TMTherapyGuideZone</code>, <code>TMTherapyHandCursor</code>, <code>CameraDisplayGeometry</code>.</td></tr>
+<tr><td>Measurement and reports</td><td><code>TMTherapyAngleReadout</code>, <code>TMTherapyAngleOverlay</code>, <code>TMTherapyAngleReportCard</code>.</td></tr>
+<tr><td>Pairing</td><td><code>TMTherapyQRCode</code> (Core Image), <code>TMTherapyQRScanner</code> (VisionKit; absent on Catalyst).</td></tr>
+</table>
+
+<h2>Code conventions (summary of AGENTS.md)</h2>
+<ul>
+<li>Every new file has a header with file name, actual author and date (Swift <code>// Created by</code>, YAML <code>#</code>, Markdown/HTML comments).</li>
+<li>Readable multiline declarations, guard clauses, shallow control flow, generous blank lines; <code>// MARK: -</code> in long files; comments explain purpose and constraints, not syntax.</li>
+<li>Readability and runtime performance are equally important; performance-driven complexity must rest on measurements or concrete constraints.</li>
+<li>Library and API questions are checked against current documentation through Context7 (<code>npx ctx7</code>) before coding.</li>
+<li>No automated test target: verification is a Simulator build plus temporary harnesses compiled with <code>swiftc</code> over production files, plus physical-device checks.</li>
+</ul>
+</section>
+
+<!-- ============================== 5 ============================== -->
+<section class="chapter">
+<h1><span class="num">5</span>Sessions and exercises</h1>
+<p class="lead">A session runs one or more activities through a fixed lifecycle. Each exercise owns its own state machine; the session owns ordering, sets, rest, pauses and results.</p>
+
+<figure>
+<svg viewBox="0 0 700 150" width="100%">
+  <defs><marker id="b" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#b5381a"/></marker></defs>
+  <g font-size="10.5" text-anchor="middle">
+    <rect x="5" y="20" width="78" height="36" rx="8" fill="#f4f1ec"/><text x="44" y="42">Intro</text>
+    <rect x="98" y="20" width="78" height="36" rx="8" fill="#f4f1ec"/><text x="137" y="42">Preparing</text>
+    <rect x="191" y="20" width="84" height="36" rx="8" fill="#f4f1ec"/><text x="233" y="42">Calibration</text>
+    <rect x="290" y="20" width="84" height="36" rx="8" fill="#f4f1ec"/><text x="332" y="42">Countdown</text>
+    <rect x="389" y="20" width="78" height="36" rx="8" fill="#f6e7e1" stroke="#b5381a"/><text x="428" y="42" font-weight="700">Practice</text>
+    <rect x="482" y="20" width="78" height="36" rx="8" fill="#f4f1ec"/><text x="521" y="42">Set done</text>
+    <rect x="575" y="20" width="118" height="36" rx="8" fill="#f4f1ec"/><text x="634" y="42">Rest → next set</text>
+    <rect x="389" y="96" width="140" height="36" rx="8" fill="#fff6dc"/><text x="459" y="118">Pause dialog (any stage)</text>
+    <rect x="555" y="96" width="138" height="36" rx="8" fill="#f4f1ec"/><text x="624" y="118">All done → long rest</text>
+  </g>
+  <g stroke="#b5381a" marker-end="url(#b)">
+    <line x1="83" y1="38" x2="96" y2="38"/><line x1="176" y1="38" x2="189" y2="38"/><line x1="275" y1="38" x2="288" y2="38"/>
+    <line x1="374" y1="38" x2="387" y2="38"/><line x1="467" y1="38" x2="480" y2="38"/><line x1="560" y1="38" x2="573" y2="38"/>
+    <line x1="634" y1="56" x2="634" y2="94"/><path d="M634,20 C634,0 332,0 332,18" fill="none"/>
+  </g>
+</svg>
+<figcaption>Figure 5.1 — Session stages. Later sets reuse calibration and go straight to the countdown. Pause, recovery and camera waits are suspension reasons around the current stage; the camera preview stays mounted through every stage.</figcaption>
+</figure>
+
+<h2>Three engines</h2>
+<table>
+<tr><th style="width:22%">Engine</th><th>Exercises</th><th style="width:38%">Key files</th></tr>
+<tr><td>Therapy session</td><td>Arm raise, elbow bend, directional reach, fold towel (and legacy cup)</td><td><code>SessionEngine</code>, <code>SessionProgress</code>, <code>MovementActivity</code>, <code>FoldTowelActivity</code>, <code>TherapySessionViewModel</code></td></tr>
+<tr><td>Finger session</td><td>Six finger and forearm exercises</td><td><code>FingerSessionEngine</code>, <code>FingerActivity</code>, <code>FingerSessionViewModel</code>, <code>HandCameraService</code></td></tr>
+<tr><td>Balancing</td><td>Cross midline, rotations, shoulder flexion, sit to stand</td><td><code>BalanceMovementEngine</code> implementations, <code>BalanceSessionViewModel</code></td></tr>
+</table>
+
+<h2>Rules that protect the patient</h2>
+<ul>
+<li><b>Missing evidence never earns credit.</b> Holds freeze during short losses (<code>InterruptibleHold</code>: 1.5 s tracking grace, 0.4 s zone-exit grace, at most 0.3 s credited per step) and clear after longer ones.</li>
+<li><b>Freshness.</b> Observations older than 300 ms, from a previous capture generation, non-finite or non-increasing in time are ignored for scoring.</li>
+<li><b>Calibration, not clinical maxima.</b> Start and target positions are captured from stable holds (2 s for arm movements and reach). Targets are "observed targets", never called range of motion.</li>
+<li><b>Preview continuity.</b> One camera preview stays mounted through guidance, countdowns, rest and pause; stage pages are overlays, so the camera never restarts between stages.</li>
+<li><b>Explicit resume.</b> Backgrounding pauses; nothing resumes automatically.</li>
+</ul>
+
+<h2>Daily plan</h2>
+<p><code>DailyPlanViewModel</code> runs the day's exercises in order. Each item opens its intro, then its session; finishing leads to the narrated breathing rest (<code>DailyPlanNextView</code>) and the next intro with a 10-second countdown. Progress per day is saved in <code>daily-plan-progress.json</code>.</p>
+<p>Since ADR-008 the items come from the doctor's prescription: each <code>DailyPlanItem</code> carries a <code>PrescriptionItem</code> with sets, repetitions (or rounds, towels), hold, side and two rests, and the three engines read those values when the session launches (chapter 11).</p>
+</section>
+
+<!-- ============================== 6 ============================== -->
+<section class="chapter">
+<h1><span class="num">6</span>Camera tracking pipeline</h1>
+<p class="lead">Two capture owners feed the engines: <code>BodyTrackingService</code> (body, towel hand mode, cup) and <code>HandCameraService</code> (finger exercises). Both use the front camera at 30 fps.</p>
+
+<figure>
+<svg viewBox="0 0 700 170" width="100%">
+  <defs><marker id="c" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#6b6560"/></marker></defs>
+  <g font-size="10.5">
+    <rect x="5" y="20" width="96" height="62" rx="8" fill="#f4f1ec"/><text x="14" y="42" font-weight="700">Front camera</text><text x="14" y="58">30 fps, landscape</text><text x="14" y="72">unmirrored</text>
+    <rect x="118" y="20" width="106" height="62" rx="8" fill="#f4f1ec"/><text x="127" y="42" font-weight="700">Inference</text><text x="127" y="58">Vision 2D / 3D</text><text x="127" y="72">or MediaPipe</text>
+    <rect x="241" y="20" width="110" height="62" rx="8" fill="#f4f1ec"/><text x="250" y="42" font-weight="700">Subject selection</text><text x="250" y="58">patient, not</text><text x="250" y="72">bystanders</text>
+    <rect x="368" y="20" width="104" height="62" rx="8" fill="#f4f1ec"/><text x="377" y="42" font-weight="700">Smoothing</text><text x="377" y="58">One Euro, jump</text><text x="377" y="72">hold, chirality vote</text>
+    <rect x="489" y="20" width="96" height="62" rx="8" fill="#f6e7e1" stroke="#b5381a"/><text x="498" y="42" font-weight="700">Engine</text><text x="498" y="58">holds, counting,</text><text x="498" y="72">calibration</text>
+    <rect x="602" y="20" width="92" height="62" rx="8" fill="#f4f1ec"/><text x="611" y="42" font-weight="700">UI overlay</text><text x="611" y="58">same geometry</text><text x="611" y="72">as scoring</text>
+    <rect x="241" y="108" width="231" height="46" rx="8" fill="#e8f4fd"/><text x="250" y="128" font-weight="700">Angle recorders (chapter 8)</text><text x="250" y="144">read the same frames, save summaries only</text>
+  </g>
+  <g stroke="#6b6560" marker-end="url(#c)">
+    <line x1="101" y1="51" x2="116" y2="51"/><line x1="224" y1="51" x2="239" y2="51"/><line x1="351" y1="51" x2="366" y2="51"/>
+    <line x1="472" y1="51" x2="487" y2="51"/><line x1="585" y1="51" x2="600" y2="51"/><line x1="420" y1="82" x2="400" y2="106"/>
+  </g>
+</svg>
+<figcaption>Figure 6.1 — From pixels to a counted repetition. Each stage discards rather than queues: late frames are dropped by the camera, and only the newest observation is delivered to the main thread.</figcaption>
+</figure>
+
+<h2>Coordinates</h2>
+<p>Domain coordinates are <b>unmirrored, normalized image coordinates with the origin at the bottom-left</b> (Vision's convention). Distances are aspect-corrected by multiplying x by width/height. Only the presentation layer mirrors for the front-camera preview, through <code>CameraDisplayGeometry</code>. Anatomical left and right come from the detected body or hand, never from screen position.</p>
+
+<h2>Subject selection</h2>
+<ul>
+<li><code>BodySubjectSelector</code> locks onto the first patient by torso position and shoulder width, ignores larger bystanders, and re-locks only after five seconds without the patient. Each new lock increments <code>subjectEpoch</code> so smoothing restarts.</li>
+<li><code>HandSubjectSelector</code> prefers continuity, then the exercised side, then a clearly dominant hand; ambiguous scenes report no hand.</li>
+<li><code>HandSideStabilizer</code> treats Vision's chirality as a vote with a 0.6 s time constant, because touching fingers make it flicker.</li>
+</ul>
+
+<h2>Smoothing</h2>
+<table>
+<tr><th style="width:30%">Filter</th><th>Where and why</th></tr>
+<tr><td><code>FingerMetricFilter</code></td><td>Scalar One Euro filter (1.2 Hz at rest, faster when moving) on every finger exercise's scored metric; restarts on gaps, finger changes and lost evidence.</td></tr>
+<tr><td><code>MovementLandmarkSmoother</code> / <code>JointPositionFilter</code></td><td>Per-joint filtering for body exercises; holds back a single jump larger than 0.15 until the next frame confirms it, so a joint briefly placed on the wrong limb is never drawn or scored.</td></tr>
+<tr><td><code>HandCursorFilter</code></td><td>Adaptive One Euro filter for the towel cursor; drawing and acceptance use the same filtered point.</td></tr>
+<tr><td><code>HandOverlaySmoother</code></td><td>Display-only smoothing of the finger skeleton.</td></tr>
+</table>
+<div class="callout info"><b>Why filters run before scoring for fingers and body</b>Unfiltered detector jitter pushed a held pose in and out of its zone, making holds feel unfair. The filters restart on any real gap, so they never blend across missing evidence or between people.</div>
+</section>
+
+<!-- ============================== 7 ============================== -->
+<section class="chapter">
+<h1><span class="num">7</span>Detector backends: Vision 2D/3D and MediaPipe</h1>
+<p class="lead">Two enums switch the detectors without changing any exercise rule. They exist for measurement trials on the <code>testing-pengukuran</code> branch.</p>
+
+<h2>The flags</h2>
+<table>
+<tr><th style="width:24%">Flag</th><th>Values</th><th style="width:38%">Set from</th></tr>
+<tr><td><code>BodyPoseBackend</code></td><td><code>.vision2D</code> (default), <code>.vision3D</code></td><td>Settings → Pelacakan; measurement page; debug <code>-IteraBodyPose vision3D</code></td></tr>
+<tr><td><code>HandPoseBackend</code></td><td><code>.vision</code> (default), <code>.mediaPipe</code></td><td>Settings → Pelacakan; measurement page; debug <code>-IteraHandPose mediaPipe</code></td></tr>
+</table>
+<p><code>AppDependencies</code> builds both services with the saved choice; <code>usePoseBackend(_:)</code> switches at run time and is best used between sessions.</p>
+
+<h2>Vision 2D versus 3D</h2>
+<table>
+<tr><th style="width:24%"></th><th>Vision 2D</th><th>Vision 3D (iOS 17)</th></tr>
+<tr><td>People</td><td>Several; the selector picks the patient</td><td>Most prominent person only; bystander rules cannot help</td></tr>
+<tr><td>Confidence</td><td>Per joint</td><td>One value for the whole body; all 17 joints or none</td></tr>
+<tr><td>Nose / neck</td><td>Detected</td><td>Approximated by head centre and centre of shoulders</td></tr>
+<tr><td>Angles</td><td>Shrink when a limb points at the camera</td><td>Correct in any direction (metric joints)</td></tr>
+<tr><td>Cost</td><td>Light</td><td>Heavier per frame; Simulator unsupported (falls back to 2D)</td></tr>
+<tr><td>Scale</td><td>–</td><td>Assumes 1.8 m height without LiDAR; angles are scale-free</td></tr>
+</table>
+<p><b>Design choice:</b> with 3D, exercises still read 2D points from the request's own projection (<code>pointInImage</code>), so counting rules are unchanged; metric positions go to <code>TrackingObservation.world</code> and are used only by angle measurement.</p>
+
+<h2>MediaPipe hand landmarker</h2>
+<ul>
+<li><code>MediaPipeHandDetector</code> runs the Hand Landmarker in video mode synchronously on the capture queue, at the existing 30 Hz cap.</li>
+<li>MediaPipe's 21 landmarks use Vision's joint order, so it produces the same <code>HandEvidence</code>. The adapter flips the y origin, swaps handedness (MediaPipe assumes selfie-mirrored frames; Itera's are unmirrored), assigns confidence 0.9 to every joint of a reported hand (MediaPipe has no per-joint confidence), and fills <code>HandEvidence.world</code> with metric world landmarks.</li>
+<li>The hand camera now captures 32BGRA, the only format MediaPipe reads; Vision accepts it too.</li>
+<li>The model <code>Resources/Models/MediaPipe/hand_landmarker.task</code> (float16, 7.8 MB, Apache 2.0) is bundled; source and checksum are in the Models README.</li>
+<li>If the model fails to load or a frame fails, the service logs and falls back to Vision.</li>
+</ul>
+<div class="callout"><b>Why MediaPipe at all</b>Vision's hand pose is 2D only. Finger joint angles bend largely toward the camera, so 2D angles understate flexion. MediaPipe's world landmarks give metric 3D finger joints from the same front camera, which is the strongest justification for the one non-Apple dependency.</div>
+</section>
+
+<!-- ============================== 8 ============================== -->
+<section class="chapter">
+<h1><span class="num">8</span>Joint-angle measurement</h1>
+<p class="lead">Angles are measured from the same frames as the exercises, held-averaged, and saved only as summary ranges: before practice (calibration) and through practice.</p>
+
+<h2>Calculation</h2>
+<ul>
+<li><code>JointAngleCalculator</code> prefers metric 3D joints (<code>.world3D</code>) and falls back to aspect-corrected image points (<code>.image2D</code>), requiring confidence 0.5 like the exercises.</li>
+<li>Body: elbow flexion (180° minus shoulder–elbow–wrist), shoulder elevation (hip–shoulder–elbow), knee flexion.</li>
+<li>Hand: flexion of each finger's MCP, PIP and DIP (thumb MP and IP), and finger spread (index–little proximal bones).</li>
+</ul>
+
+<h2>Held readings</h2>
+<p><code>AngleHoldEstimator</code> reports a value only after 0.8 s within 6° inside a one-second window, as the median of those samples. A gap over 0.3 s or a change of source ends the hold. Only held values update the range, so a fast swing or one misdetected frame never becomes the patient's maximum — the same way a therapist reads a goniometer while the patient holds.</p>
+
+<h2>Recording in sessions</h2>
+<table>
+<tr><th style="width:26%">Recorder</th><th>What it records</th></tr>
+<tr><td><code>StagedAngleTrack</code></td><td>Shared core: one angle's held range before practice and through practice.</td></tr>
+<tr><td><code>FingerAngleRecorder</code></td><td>Per finger exercise: full fist MCP + PIP; hook fist PIP + DIP; opposition thumb flexion; spreading spread; extension sequence MCP + PIP. Four-finger metrics average index to little. Forearm rotation has none.</td></tr>
+<tr><td><code>BodyAngleRecorder</code></td><td>Arm raise → shoulder elevation; elbow bend → elbow flexion, on the configured side, cumulative across sets.</td></tr>
+</table>
+<p>Calibration phases count as "before"; counted practice as "after"; countdowns, rest, feedback, pauses and timed practice end the current hold. Results are stored in <code>FingerExerciseResult.angles</code> and <code>SessionActivityResult.angles</code> as optional fields, so older history files still decode.</p>
+
+<h2>Where angles appear</h2>
+<ul>
+<li>Progres tab: finger history cards and session detail ("Sudut sendi"), and an arm section ("Sudut sendi lengan").</li>
+<li>Doctor's patient progress view (chapter 11).</li>
+<li>The trial measurement page (Beranda toolbar, angle icon): live, held, smallest, largest and range, with a backend picker, for comparison against a goniometer.</li>
+</ul>
+<div class="callout warn"><b>Not a clinical measurement yet</b>Every report labels angles 2D or 3D and notes they are camera estimates. Agreement with a goniometer, front-on and side-on, must be established on the device before any value is used clinically.</div>
+</section>
+
+<!-- ============================== 9 ============================== -->
+<section class="chapter">
+<h1><span class="num">9</span>Audio, narration and voice control</h1>
+
+<h2>One owner of the audio session</h2>
+<p><code>SessionAudioService</code> is the only owner of the audio session for therapy, Balancing and the daily plan (finger sessions use <code>GuidanceAudioService</code> through the same <code>NarrationAudioSession</code> rules). During a session the category stays <code>.playAndRecord</code> with <code>.default</code> mode and <code>.defaultToSpeaker</code>, so narration and music play at normal media volume while voice commands listen.</p>
+<ul>
+<li>Starting narration fades out effects; clip players stamp every play with a token so a late callback cannot finish a newer cue.</li>
+<li>Music ducks to 0.10 during cues. Counts are serialised ahead of prompts in a bounded queue.</li>
+<li>Voice processing (echo cancellation) is enabled with minimal ducking of other audio.</li>
+</ul>
+
+<h2>Recorded Indonesian narration</h2>
+<p>Indonesian cues play bundled recordings when every line of a cue has one; otherwise, on failure, or in English, the best installed system voice speaks. Clip names come from <code>NarrationClips.resourceName</code> (key without format specifiers, plus <code>-argument</code>). <code>speak.&lt;key&gt;</code> catalog entries may change the spoken wording without changing the screen text.</p>
+<pre><code>export ELEVENLABS_API_KEY="your-key-here"     # in your own terminal; never committed
+python3 Tools/generate_narration.py --dry-run  # list lines and characters
+python3 Tools/generate_narration.py --groups finger,body,numbers</code></pre>
+<p>Pending render: breath counts 7–10 and the opening line for 1–10 breaths (doctor-chosen rests). Until rendered, the system voice speaks them.</p>
+
+<h2>Voice commands</h2>
+<p><code>SFSpeechRecognizer</code> with <code>requiresOnDeviceRecognition</code>, English command phrases only (pause, resume, stop …), processed once per utterance and scoped by recognition generation. Camera, microphone, speech permission and on-device recognition are mandatory before therapy.</p>
+</section>
+
+<!-- ============================== 10 ============================== -->
+<section class="chapter">
+<h1><span class="num">10</span>Local storage and history</h1>
+<p class="lead">Everything the patient's iPad needs lives in local, versioned JSON files written atomically. The cloud (chapter 12) only carries copies of prescriptions and summary results.</p>
+
+<table>
+<tr><th style="width:36%">File (Application Support)</th><th>Owner and content</th></tr>
+<tr><td><code>routines.json</code>, <code>routines-task-oriented.json</code></td><td><code>LocalRoutineRepository</code>: saved therapy routines.</td></tr>
+<tr><td><code>Sessions/active.json</code> and <code>Sessions/&lt;id&gt;.json</code></td><td><code>LocalSessionRepository</code>: therapy checkpoint and immutable summaries, finalised idempotently.</td></tr>
+<tr><td>Finger session files</td><td><code>LocalFingerSessionRepository</code>: finger summaries and save-for-later checkpoint; unreadable checkpoints are renamed, never overwritten.</td></tr>
+<tr><td><code>daily-plan-progress.json</code></td><td>Completed plan items for the current day.</td></tr>
+<tr><td><code>doctor-patients.json</code></td><td>Doctor mode: patients, drafts, published versions, cached results.</td></tr>
+<tr><td><code>patient-care-link.json</code></td><td>Patient mode: doctor name, received prescription, version dates, ids already uploaded.</td></tr>
+<tr><td>Keychain <code>com.itera.care-channel</code></td><td>Channel secrets, one per patient (doctor) or one in total (patient); this device only.</td></tr>
+</table>
+<h2>Rules</h2>
+<ul>
+<li>Distinguish a missing file from an unreadable or unsupported one; never overwrite unreadable data with empty defaults.</li>
+<li>Persist stable identifiers and numbers, never localized strings.</li>
+<li>New fields are optional so older files decode (sets, angles, <code>only</code>, prescription fields).</li>
+<li>Calibration is never persisted for reuse after termination (ADR-004).</li>
+</ul>
+</section>
+
+<!-- ============================== 11 ============================== -->
+<section class="chapter">
+<h1><span class="num">11</span>Doctor and patient roles</h1>
+<p class="lead">ADR-008: one app, two roles. The doctor assigns; the patient performs and views progress. One doctor has many patients; each patient has exactly one doctor. Both use iPads.</p>
+
+<h2>Role</h2>
+<p><code>AppRole</code> (<code>app.role</code>) is chosen on first launch on <code>TMRoleSelectionView</code>; a doctor also enters the name patients will see. <code>TMContentView</code> shows the role's root. <b>Keluar</b> (sign out) returns to the role choice without deleting local or cloud data; it is in the doctor's toolbar overflow and at the bottom of the patient's Settings.</p>
+
+<h2>Prescription model</h2>
+<pre><code>Prescription          version · publishedAt · items (ordered)
+PrescriptionItem      exercise (catalog id) · side (left | right | both | none) · firstSide
+                      sets 1–5 · work (repetitions 1–20, rounds/towels 1–10)
+                      holdSeconds 3–20 (balance, except sit to stand)
+                      setRestSeconds 5–120 · breathsBeforeNext 0–10
+ExerciseMeasures      the one table of units, ranges, hold and allowed sides per exercise</code></pre>
+<ul>
+<li>Versions are immutable. "Simpan &amp; kirim" publishes the draft as version N+1; drafts never reach the patient. Results record the version in force when the session started.</li>
+<li>The patient app validates every value with <code>ExerciseMeasures</code> and ignores an invalid version, keeping the previous one — data from iCloud is treated as untrusted input.</li>
+<li>Finger exercises allow left or right only (finger sessions run one hand); sit to stand has no side; "both" expands into sequential side activities with the doctor's first side.</li>
+</ul>
+
+<h2>Doctor screens</h2>
+<ul>
+<li><code>TMDoctorHomeView</code>: patients, link state, latest version, last session.</li>
+<li><code>TMDoctorAddPatientView</code> → <code>TMDoctorPairingView</code>: QR code and grouped 26-character code.</li>
+<li><code>TMPrescriptionEditorView</code>: catalog pane (shown only in doctor mode) and the patient's prescription; add by tapping or dragging, reorder by dragging, delete by swiping; total rest estimate; "Simpan &amp; kirim".</li>
+<li><code>TMPrescriptionItemEditor</code>: side, first side, sets, unit, hold, set rest, breaths before next.</li>
+<li><code>TMDoctorPatientProgressView</code>: results newest first with sets, work, version and angle cards.</li>
+</ul>
+
+<h2>Patient mode</h2>
+<ul>
+<li>Beranda builds the plan from the prescription (<code>DailyPlanViewModel.apply</code>); a plan in progress keeps its items until it ends. Without a doctor it shows "Hubungkan ke dokter"; with a doctor but no prescription, "not assigned yet".</li>
+<li>Session launch maps item values into <code>FingerRoutine</code>, <code>RoutineExercise</code>/<code>Routine</code> and <code>BalancePracticeSettings</code>; the engines are unaware of doctors or iCloud.</li>
+<li>The breathing rest uses the finished item's breaths; zero skips straight to the next exercise announcement and 10-second countdown.</li>
+<li>Side, sets, repetitions and rest controls are hidden from patient Settings.</li>
+<li><code>AppDependencies.refreshCare()</code> loads the stored link, fetches newer prescriptions and uploads new results on Beranda.</li>
+<li>Debug builds launched with <code>-IteraStandardPlan</code> keep the fixed plan for testing sessions without pairing.</li>
+</ul>
+</section>
+
+<!-- ============================== 12 ============================== -->
+<section class="chapter">
+<h1><span class="num">12</span>Cloud infrastructure and encryption</h1>
+<p class="lead">Doctor and patient iPads exchange data through CloudKit's <b>public database</b>, end-to-end encrypted with a secret handed over in person. This is the ADR-008 revision of 11 November 2026.</p>
+
+<figure>
+<svg viewBox="0 0 700 260" width="100%">
+  <defs><marker id="d" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#6b6560"/></marker></defs>
+  <g font-size="10.5">
+    <rect x="5" y="30" width="170" height="200" rx="12" fill="#f4f1ec"/>
+    <text x="18" y="52" font-weight="700" font-size="12">Doctor iPad</text>
+    <text x="18" y="74">doctor-patients.json</text><text x="18" y="90">Keychain: 1 secret / patient</text>
+    <rect x="18" y="104" width="144" height="54" rx="8" fill="#fff"/><text x="28" y="124">writes: offer,</text><text x="28" y="140">prescriptions</text>
+    <rect x="18" y="166" width="144" height="54" rx="8" fill="#fff"/><text x="28" y="186">reads: reply,</text><text x="28" y="202">results-yyyy-MM</text>
+    <rect x="525" y="30" width="170" height="200" rx="12" fill="#f4f1ec"/>
+    <text x="538" y="52" font-weight="700" font-size="12">Patient iPad</text>
+    <text x="538" y="74">patient-care-link.json</text><text x="538" y="90">Keychain: 1 secret</text>
+    <rect x="538" y="104" width="144" height="54" rx="8" fill="#fff"/><text x="548" y="124">writes: reply,</text><text x="548" y="140">results-yyyy-MM</text>
+    <rect x="538" y="166" width="144" height="54" rx="8" fill="#fff"/><text x="548" y="186">reads: offer,</text><text x="548" y="202">prescriptions</text>
+    <rect x="215" y="20" width="270" height="220" rx="12" fill="#e8f4fd" stroke="#2aa6fa"/>
+    <text x="228" y="42" font-weight="700" font-size="12">CloudKit public database</text>
+    <text x="228" y="60">container iCloud.com.OneDihrection.Itera</text>
+    <text x="228" y="76" fill="#6b6560">developer quota · readable by app users</text>
+    <rect x="228" y="88" width="244" height="140" rx="8" fill="#fff"/>
+    <text x="240" y="108" font-weight="700">CareRecord</text>
+    <text x="240" y="126">recordName = "c" + HMAC(secret, name)</text>
+    <text x="240" y="142">box = AES-GCM(secret, JSON, aad=name)</text>
+    <text x="240" y="166" font-weight="700">Write rule (default roles)</text>
+    <text x="240" y="184">only the creator may change or delete</text>
+    <text x="240" y="200">→ doctor cannot alter results,</text>
+    <text x="240" y="216">   patient cannot alter prescriptions</text>
+  </g>
+  <g stroke="#6b6560" marker-end="url(#d)"><line x1="162" y1="131" x2="226" y2="131"/><line x1="226" y1="193" x2="164" y2="193"/><line x1="538" y1="131" x2="474" y2="131"/><line x1="474" y1="193" x2="536" y2="193"/></g>
+</svg>
+<figcaption>Figure 12.1 — Data flow. Without the secret, a record can be neither found (its name is an HMAC) nor read or forged (its body is authenticated encryption bound to its logical name).</figcaption>
+</figure>
+
+<h2>Why the public database</h2>
+<p>The first implementation used CloudKit sharing: one zone per patient in the doctor's private database and a results zone in the patient's private database, each shared read-only. CloudKit counts private and shared records against the <b>owner's personal iCloud quota</b>; with a full iCloud, every write failed, even a few kilobytes. The public database counts against the <b>developer's container quota</b>, so a full personal iCloud no longer blocks the app. The public database is readable by every user of the app, so the revision adds end-to-end encryption.</p>
+
+<h2>The care channel</h2>
+<table>
+<tr><th style="width:28%">Element</th><th>Implementation (<code>CareChannel</code>)</th></tr>
+<tr><td>Secret</td><td>128 random bits from <code>SecRandomCopyBytes</code>, created on the doctor's iPad when the patient is added.</td></tr>
+<tr><td>Hand-over</td><td>Only in person: QR <code>itera-pair:&lt;26 chars&gt;</code> or the same 26 base32 characters typed (grouped 5-5-5-5-6; 0/1/8 read as O/I/B).</td></tr>
+<tr><td>Key derivation</td><td>HKDF-SHA256 with salt <code>itera.care</code>; info <code>names</code> for record names, <code>box</code> for encryption.</td></tr>
+<tr><td>Record names</td><td><code>"c" + hex(HMAC-SHA256(namesKey, logical)[0..20])</code>; logical names: <code>offer</code>, <code>reply</code>, <code>prescriptions</code>, <code>results-yyyy-MM</code>.</td></tr>
+<tr><td>Payloads</td><td>AES-256-GCM with the logical name as authenticated data; fresh nonce per seal.</td></tr>
+<tr><td>Storage of the secret</td><td>Keychain, <code>kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly</code>, not synced; never in JSON files.</td></tr>
+</table>
+
+<h2>Records</h2>
+<table>
+<tr><th style="width:22%">Logical name</th><th style="width:16%">Written by</th><th>Encrypted content</th></tr>
+<tr><td><code>offer</code></td><td>Doctor</td><td>Doctor name, time the code was shown (codes expire after 10 minutes).</td></tr>
+<tr><td><code>reply</code></td><td>Patient</td><td>Consent time; tells the doctor the link is complete.</td></tr>
+<tr><td><code>prescriptions</code></td><td>Doctor</td><td>Every published version, in one record.</td></tr>
+<tr><td><code>results-yyyy-MM</code></td><td>Patient</td><td>That month's <code>SharedExerciseResult</code> rows (date, exercise, side, sets, work, completed, practice seconds, angle ranges, prescription version). The doctor reads back 12 months.</td></tr>
+</table>
+<p>One generic record type, <code>CareRecord</code>, with one field, <code>box</code>, so the schema itself reveals nothing. Records are fetched by name, never queried, so no indexes are required.</p>
+</section>
+
+<section>
+<h2>Pairing sequence</h2>
+<figure>
+<svg viewBox="0 0 700 330" width="100%">
+  <defs><marker id="e" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#b5381a"/></marker></defs>
+  <g font-size="10.5">
+    <rect x="30" y="8" width="120" height="28" rx="6" fill="#f4f1ec"/><text x="58" y="27" font-weight="700">Doctor iPad</text>
+    <rect x="290" y="8" width="120" height="28" rx="6" fill="#e8f4fd"/><text x="311" y="27" font-weight="700">Public DB</text>
+    <rect x="550" y="8" width="120" height="28" rx="6" fill="#f4f1ec"/><text x="575" y="27" font-weight="700">Patient iPad</text>
+    <line x1="90" y1="36" x2="90" y2="320" stroke="#ddd6cc" stroke-dasharray="4 4"/>
+    <line x1="350" y1="36" x2="350" y2="320" stroke="#ddd6cc" stroke-dasharray="4 4"/>
+    <line x1="610" y1="36" x2="610" y2="320" stroke="#ddd6cc" stroke-dasharray="4 4"/>
+    <text x="100" y="62">1. Add patient: new secret → Keychain</text>
+    <line x1="90" y1="82" x2="346" y2="82" stroke="#b5381a" marker-end="url(#e)"/><text x="110" y="76">2. save offer (doctor name, shown at)</text>
+    <text x="100" y="104">3. show QR / 26-char code</text>
+    <line x1="150" y1="122" x2="604" y2="122" stroke="#b5381a" stroke-dasharray="6 4" marker-end="url(#e)"/><text x="300" y="116">4. scan in person (secret never online)</text>
+    <line x1="606" y1="148" x2="354" y2="148" stroke="#b5381a" marker-end="url(#e)"/><text x="400" y="142">5. fetch offer, decrypt, check age</text>
+    <text x="440" y="176">6. consent card: Tolak / Setuju</text>
+    <line x1="606" y1="200" x2="354" y2="200" stroke="#b5381a" marker-end="url(#e)"/><text x="410" y="194">7. save reply; keep secret</text>
+    <line x1="94" y1="226" x2="346" y2="226" stroke="#b5381a" marker-end="url(#e)"/><text x="110" y="220">8. poll every 2 s for a newer reply</text>
+    <text x="100" y="252">9. "Terhubung" — patient marked paired</text>
+    <line x1="606" y1="280" x2="354" y2="280" stroke="#b5381a" marker-end="url(#e)"/><text x="396" y="274">10. fetch prescriptions; upload results</text>
+    <line x1="94" y1="306" x2="346" y2="306" stroke="#b5381a" marker-end="url(#e)"/><text x="110" y="300">11. publish versions; read results</text>
+  </g>
+</svg>
+<figcaption>Figure 12.2 — Pairing in the clinic. One scan and one consent. Changing doctors first deletes the patient's reply and results on the old channel; removing a patient deletes the doctor's offer and prescriptions.</figcaption>
+</figure>
+
+<h2>Code map</h2>
+<table>
+<tr><th style="width:42%">File</th><th>Responsibility</th></tr>
+<tr><td><code>Prescription/Domain/Models/Prescription.swift</code></td><td>Role, items, versions, <code>ExerciseMeasures</code>, catalog.</td></tr>
+<tr><td><code>Prescription/Domain/Models/CareLink.swift</code></td><td><code>DoctorPatient</code>, <code>PatientCareLink</code>, shared result types, repository protocols.</td></tr>
+<tr><td><code>Prescription/Domain/Logic/SharedResultBuilder.swift</code></td><td>History → one summary row per exercise and side.</td></tr>
+<tr><td><code>Prescription/Data/Cloud/CareChannel.swift</code></td><td>Secret, codes, HKDF, HMAC names, AES-GCM.</td></tr>
+<tr><td><code>Prescription/Data/Cloud/CareKeychain.swift</code></td><td>Keychain storage of secrets.</td></tr>
+<tr><td><code>Prescription/Data/Cloud/CareCloudService.swift</code></td><td>Public-database records, error mapping and logging.</td></tr>
+<tr><td><code>Prescription/Data/Repositories/…</code></td><td>Local JSON files for both roles.</td></tr>
+<tr><td><code>Prescription/Presentation/ViewModels/…</code></td><td>Doctor and patient workflows, pairing, sync.</td></tr>
+</table>
+
+<h2>Operating the container</h2>
+<ul>
+<li><b>Development</b> environment: the <code>CareRecord</code> type is created automatically on the first save from a Debug build.</li>
+<li><b>Before TestFlight or App Store</b>: in CloudKit Console, deploy the schema to <b>Production</b>; Release builds use Production and fail with a schema error otherwise.</li>
+<li>Default public-database security roles (World read, Authenticated create, Creator write) must stay; they enforce who can change which record.</li>
+<li>Watch the developer container's usage and request limits in CloudKit Console as patients grow.</li>
+<li>Writes need a signed-in iCloud account on the device; reads do not; neither needs free personal space.</li>
+</ul>
+
+<h2>Error handling</h2>
+<p><code>CareCloudService.errorKey(for:)</code> maps CloudKit codes to specific messages (no account, account needs attention, network, setup/entitlement, schema, quota, unknown), unwrapping partial failures. <code>errorDetail(for:)</code> adds "CKError N · system text" under the message and every failure is logged as <code>CloudKit &lt;step&gt; failed: …</code>. Only true network errors say "check the connection".</p>
+</section>
+
+<!-- ============================== 13 ============================== -->
+<section class="chapter">
+<h1><span class="num">13</span>Security, privacy and regulation</h1>
+
+<h2>What leaves the device</h2>
+<table>
+<tr><th style="width:30%">Data</th><th>Leaves the iPad?</th></tr>
+<tr><td>Video, audio, camera images</td><td>Never.</td></tr>
+<tr><td>Landmarks, per-frame measurements</td><td>Never (not even stored locally).</td></tr>
+<tr><td>Prescriptions</td><td>Encrypted, doctor → patient.</td></tr>
+<tr><td>Session summaries and angle ranges</td><td>Encrypted, patient → their doctor.</td></tr>
+<tr><td>Patient and doctor names</td><td>Doctor name inside the encrypted offer; patient name stays on the doctor's iPad.</td></tr>
+<tr><td>Narration text</td><td>Only during development rendering (ElevenLabs), never at run time and never with patient data.</td></tr>
+</table>
+
+<h2>Threats and mitigations</h2>
+<table>
+<tr><th style="width:30%">Threat</th><th>Mitigation / residual risk</th></tr>
+<tr><td>Another app user downloads the public database</td><td>Names are HMACs and bodies are AES-GCM; without a secret nothing is linkable or readable. Residual: record counts, sizes and times are visible.</td></tr>
+<tr><td>Someone photographs the pairing code</td><td>Shown only in person; the screen warns that it is the patient's key; offers expire after 10 minutes. Residual: the secret itself does not expire; a leaked code reads that patient's data.</td></tr>
+<tr><td>Swapping or forging records</td><td>Authenticated encryption bound to the logical name; creator-only writes on the server.</td></tr>
+<tr><td>Doctor edits results / patient edits prescriptions</td><td>Server-enforced creator rule; patient app also validates every value.</td></tr>
+<tr><td>Lost device or reset</td><td>Keychain items are this-device-only; a reset makes earlier cloud data unreadable and requires re-pairing.</td></tr>
+<tr><td>Malformed or hostile prescription</td><td><code>Prescription.isValid</code> rejects unknown exercises and out-of-range values; the previous valid version stays.</td></tr>
+</table>
+
+<h2>Regulation</h2>
+<p>Rehabilitation data is specific (health) personal data under Indonesia's UU PDP No. 27/2022, and electronic medical records have Ministry of Health rules. The patient gives explicit consent on the consent card. Data is held on Apple's servers, encrypted, in a database every app user can technically download. <b>Legal and clinical review is required before use with real patients.</b></p>
+</section>
+
+<!-- ============================== 14 ============================== -->
+<section class="chapter">
+<h1><span class="num">14</span>Architecture decisions</h1>
+<p class="lead">Full text in <code>SYSTEM_DESIGN.md</code>. This table records each decision, why it was taken and what it costs.</p>
+<table>
+<tr><th style="width:21%">Decision</th><th>Why</th><th style="width:33%">Cost / alternative rejected</th></tr>
+<tr><td>ADR-001 Local single-patient (superseded by ADR-008)</td><td>Simplest safe start: no accounts, no backend.</td><td>No sharing with doctors; replaced once doctors needed access.</td></tr>
+<tr><td>ADR-002 Domain engine inside one target</td><td>Rules independent of platform; one target is simple.</td><td>No compiler-enforced module walls; Swift packages rejected as premature.</td></tr>
+<tr><td>ADR-003 Observation for UI, Combine for events</td><td>Matches each tool's strength.</td><td>Two mechanisms to learn; publisher-only UI rejected.</td></tr>
+<tr><td>ADR-004 Fresh calibration after termination</td><td>Old targets could be wrong after repositioning.</td><td>Setup repeats after an interruption.</td></tr>
+<tr><td>ADR-005 Offline voice, interruptible guidance</td><td>Patient can always say "stop".</td><td>Strict device requirements; touch-only fallback rejected.</td></tr>
+<tr><td>ADR-006 Activity-owned state machines</td><td>Exercises differ (rehearsal, assessment, holds).</td><td>Some repetition across activities; universal state machine rejected.</td></tr>
+<tr><td>ADR-007 XcodeGen as project source of truth</td><td>Folders define groups; no merge conflicts in the project file.</td><td>A generation step after changes.</td></tr>
+<tr><td>Detector flags (2D/3D, Vision/MediaPipe)</td><td>Measure angles better without changing counting rules.</td><td>One third-party package; Catalyst without MediaPipe.</td></tr>
+<tr><td>Held-angle summaries only</td><td>Robust to jitter, privacy-preserving.</td><td>No raw curves for clinicians.</td></tr>
+<tr><td>ADR-008 Doctor-assigned prescriptions</td><td>Doctor controls exercises, sides, sets, reps and rest; patient just practices.</td><td>Requires iCloud on both iPads.</td></tr>
+<tr><td>ADR-008 revision: encrypted public database</td><td>Works when personal iCloud is full; server still enforces who writes what.</td><td>Security rests on the secret; CloudKit sharing (quota-bound) rejected; system share links rejected.</td></tr>
+<tr><td>Direct CloudKit calls instead of CKSyncEngine</td><td>Data is kilobytes; refresh on screen appearance is enough.</td><td>No background push; revisit if histories grow.</td></tr>
+</table>
+</section>
+
+<!-- ============================== 15 ============================== -->
+<section class="chapter">
+<h1><span class="num">15</span>Verification status</h1>
+<p class="lead">Itera has no automated test target by design. Each change is checked by a Simulator build at the iPadOS 17 minimum and, where logic changed, by a temporary Swift harness compiled over the production files.</p>
+<table>
+<tr><th style="width:30%">Area</th><th>Checked</th><th style="width:14%">Status</th></tr>
+<tr><td>Finger stability and strict holds</td><td>Harness: near-touch earns no hold, noisy touching tips complete, chirality flips absorbed.</td><td><span class="tag ok">Harness</span></td></tr>
+<tr><td>Body smoothing</td><td>Harness: wrong-frame step 0.093 → 0.003; fast reach lag 0.045 → 0.042.</td><td><span class="tag ok">Harness</span></td></tr>
+<tr><td>Angle calculator and estimator</td><td>90° elbow, 3D vs 2D toward camera (90° vs 0°), held median, swings ignored.</td><td><span class="tag ok">Harness</span></td></tr>
+<tr><td>Finger and arm angle recorders</td><td>Before/after ranges, overshoot ignored, resume, JSON round trip.</td><td><span class="tag ok">Harness</span></td></tr>
+<tr><td>Prescription rules</td><td>19 checks: defaults valid, ranges, sides, hold, unknown exercise, rest estimate, round trips.</td><td><span class="tag ok">Harness</span></td></tr>
+<tr><td>Care channel cryptography</td><td>17 checks: code round trips, names, sealing, wrong key, swapped name, tampering, nonces.</td><td><span class="tag ok">Harness</span></td></tr>
+<tr><td>Builds</td><td>iOS Simulator arm64 and Mac Catalyst.</td><td><span class="tag ok">Build</span></td></tr>
+<tr><td>Camera behaviour, overlays, tracking feel</td><td>All exercises, both hands, lighting, distance, bystanders.</td><td><span class="tag pending">Device</span></td></tr>
+<tr><td>Vision 3D and MediaPipe on real frames</td><td>Inference rate, thermals, handedness swap, alignment.</td><td><span class="tag pending">Device</span></td></tr>
+<tr><td>Goniometer agreement</td><td>Every angle, front-on and side-on.</td><td><span class="tag pending">Device</span></td></tr>
+<tr><td>CloudKit end to end</td><td>Pairing, consent, publish, receive, upload, change doctor, full personal iCloud.</td><td><span class="tag pending">2 iPads</span></td></tr>
+<tr><td>Narration</td><td>Listening to clips, overlap, voice commands during narration.</td><td><span class="tag pending">Device</span></td></tr>
+</table>
+<h2>How to write a harness</h2>
+<pre><code>H=$TMPDIR/harness; mkdir -p $H
+# main.swift: build inputs, call production code, print PASS/FAIL lines
+xcrun swiftc -O -o $H/run $H/main.swift \
+  Itera/Features/Measurement/Domain/Logic/AngleHoldEstimator.swift … other production files
+$H/run</code></pre>
+<p>Stub only the types a file needs that would pull in UI or platform services. Never commit harnesses; record what they showed in <code>SYSTEM_DESIGN.md</code>.</p>
+</section>
+
+<!-- ============================== 16 ============================== -->
+<section class="chapter">
+<h1><span class="num">16</span>Debugging and operations handbook</h1>
+
+<h2>Launch arguments (Debug builds)</h2>
+<table>
+<tr><th style="width:36%">Argument</th><th>Effect</th></tr>
+<tr><td><code>-IteraScreen intro:&lt;id&gt;</code></td><td>Opens a plan item's intro.</td></tr>
+<tr><td><code>-IteraScreen gallery:&lt;live|pause|setDone|allDone&gt;</code></td><td>Shows shared exercise screens with sample values.</td></tr>
+<tr><td><code>-IteraBodyPose vision3D</code></td><td>Uses the Vision 3D body request.</td></tr>
+<tr><td><code>-IteraHandPose mediaPipe</code></td><td>Uses MediaPipe for finger exercises.</td></tr>
+<tr><td><code>-IteraStandardPlan</code></td><td>Runs the fixed plan without a doctor.</td></tr>
+<tr><td><code>-IteraNoVoiceProcessing</code></td><td>Disables echo cancellation for comparison.</td></tr>
+<tr><td><code>-IteraVoiceChatAudioMode</code></td><td>Restores <code>.voiceChat</code> audio mode for comparison.</td></tr>
+<tr><td><code>-app.role doctor</code> / <code>patient</code></td><td>Sets the role through the UserDefaults argument domain.</td></tr>
+</table>
+
+<h2>Useful log lines</h2>
+<table>
+<tr><th style="width:42%">Prefix</th><th>Meaning</th></tr>
+<tr><td><code>Body capture …</code>, <code>Body frame dropped as stale</code></td><td>Camera start, first-frame delay, stale frames.</td></tr>
+<tr><td><code>Body pose backend=</code>, <code>Body 3D pose unavailable</code></td><td>Backend switches and 3D fallback.</td></tr>
+<tr><td><code>Hand pose backend=</code>, <code>MediaPipe … using Vision</code></td><td>Hand backend switches and fallback.</td></tr>
+<tr><td><code>CloudKit &lt;step&gt; failed:</code></td><td>Full CloudKit error for add patient, pairing, publish, results, accept, upload, leave.</td></tr>
+<tr><td><code>Care keychain save failed status=</code></td><td>Keychain write problem.</td></tr>
+</table>
+<p>Read them in Xcode's console, or in Console.app with the iPad selected, filtering by process <code>Itera</code>.</p>
+
+<h2>Common problems</h2>
+<table>
+<tr><th style="width:34%">Symptom</th><th>Cause and fix</th></tr>
+<tr><td>"Failed registering bundle identifier"</td><td>Wrong team selected; join team <code>A2WQZ32XVK</code> (chapter 3).</td></tr>
+<tr><td>Wildcard profile lacks iCloud</td><td>Follows from the above; or the role cannot add capabilities.</td></tr>
+<tr><td>"iCloud untuk app ini belum disiapkan" (setup)</td><td>Container or capability missing for the App ID; enable iCloud + CloudKit and assign the container.</td></tr>
+<tr><td>"Masuk ke iCloud…"</td><td>Sign in on the iPad (Settings → name → iCloud).</td></tr>
+<tr><td>"iCloud menolak format data" (schema)</td><td>Release build against Production without deployed schema; deploy in CloudKit Console.</td></tr>
+<tr><td>Code rejected on patient iPad</td><td>Code older than 10 minutes or mistyped; show the code again (re-publishes the offer).</td></tr>
+<tr><td>New patient iPad cannot connect</td><td>Records belong to the old device's account; remove and re-add the patient.</td></tr>
+<tr><td>Simulator crash on CloudKit action</td><td>Unsigned build has no iCloud entitlement; test CloudKit on signed devices.</td></tr>
+</table>
+
+<h2>Switching roles while debugging</h2>
+<p>Use <b>Keluar</b>. It keeps all data, so choosing the same role again restores the patients or the doctor link. To start clean, remove patients in doctor mode or disconnect in patient mode before signing out.</p>
+</section>
+
+<!-- ============================== 17 ============================== -->
+<section class="chapter">
+<h1><span class="num">17</span>Known limitations and next steps</h1>
+<h2>Limitations</h2>
+<ul>
+<li>Balancing sessions save no history, so their results are not sent to the doctor.</li>
+<li>Results already in history before pairing are uploaded at the first sync.</li>
+<li>The channel secret never expires; re-pairing reuses it.</li>
+<li>A patient's replacement iPad cannot overwrite records made by the old one.</li>
+<li>Refresh happens when Beranda or the doctor's list appears; there is no background push.</li>
+<li>Narration for 7–10 breaths and the counted opening line is not rendered yet.</li>
+<li>Angles are camera estimates without goniometer validation.</li>
+<li>The prescription editor, drag and drop, and every CloudKit path are unverified on devices.</li>
+</ul>
+<h2>Recommended next steps</h2>
+<ol>
+<li>Sign with team <code>A2WQZ32XVK</code>, run the full pairing and prescription flow on two iPads, including one with full personal iCloud.</li>
+<li>Run goniometer comparisons with the measurement page for each backend.</li>
+<li>Render the missing narration clips.</li>
+<li>Decide on secret rotation and device replacement before real patients.</li>
+<li>Add Balancing history if doctors need those results.</li>
+<li>Complete legal review (UU PDP) and deploy the CloudKit schema to Production before TestFlight.</li>
+<li>Consider <code>CKSyncEngine</code> or subscriptions if near-real-time updates become important.</li>
+</ol>
+</section>
+
+<!-- ============================== 18 ============================== -->
+<section class="chapter">
+<h1><span class="num">18</span>Glossary</h1>
+<table>
+<tr><th style="width:26%">Term</th><th>Meaning in Itera</th></tr>
+<tr><td>Activity</td><td>One configured exercise on one side, run by the session.</td></tr>
+<tr><td>Calibration</td><td>Capturing start and target positions for this patient and camera setup; not a clinical assessment.</td></tr>
+<tr><td>Observed target</td><td>A position from stable calibration evidence; never called maximum range of motion.</td></tr>
+<tr><td>Repetition</td><td>One accepted start → target → start cycle.</td></tr>
+<tr><td>Hold</td><td>Time credited only while fresh evidence stays in the zone.</td></tr>
+<tr><td>Capture generation</td><td>Identity of a camera configuration; frames from an old generation are ignored.</td></tr>
+<tr><td>Practice time</td><td>Time credited from usable active evidence, excluding pauses and camera waits.</td></tr>
+<tr><td>Held angle</td><td>Median angle after 0.8 s within 6°; the only value that updates ranges.</td></tr>
+<tr><td>Before / through practice</td><td>Angle ranges from calibration and from counted practice.</td></tr>
+<tr><td>Prescription</td><td>An immutable, versioned list of exercises with values chosen by the doctor.</td></tr>
+<tr><td>Care channel</td><td>The 128-bit secret shared in person by one doctor and one patient; it names and encrypts their records.</td></tr>
+<tr><td>Offer / reply</td><td>Encrypted pairing records written by the doctor and by the patient.</td></tr>
+<tr><td>Public database</td><td>CloudKit storage readable by the app's users and paid by the developer's quota.</td></tr>
+<tr><td>Composition root</td><td><code>AppDependencies</code>, where every service is created once.</td></tr>
+</table>
+
+</section>
+</body>
+</html>

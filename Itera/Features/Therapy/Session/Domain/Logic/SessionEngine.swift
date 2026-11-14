@@ -58,6 +58,8 @@ struct SessionTransition {
 struct SessionEngine {
     private var progress: SessionProgress
     private var activity: (any TherapyActivity)?
+    /// Held arm angle of the current activity, kept across its sets and saved with each result.
+    private var angleRecorder: BodyAngleRecorder?
     private(set) var snapshot = SessionSnapshot()
     private var effects: [SessionEffect] = []
     private var now = 0.0
@@ -187,9 +189,11 @@ struct SessionEngine {
         calibrationCompletionPending = false
         awaitingCountdownGuidance = false
         announcedCountdown = nil
+        angleRecorder = nil
         guard let configuration = progress.currentActivity else {
             return
         }
+        angleRecorder = BodyAngleRecorder(kind: configuration.kind, side: configuration.side)
         switch configuration.kind {
         case .foldTowel: activity = FoldTowelActivity(configuration: configuration)
         case .armRaise: activity = ArmRaiseActivity(configuration: configuration)
@@ -252,6 +256,7 @@ struct SessionEngine {
             return
         }
         guard !awaitingCountdownGuidance else { return }
+        recordAngle(frame)
         let old = activity?.presentation
         guard let result = activity?.handle(.observation(frame)) else {
             return
@@ -594,6 +599,28 @@ struct SessionEngine {
         }
     }
 
+    /// Start and target capture count as before practice; practice as after. The return to start
+    /// before practice, countdowns and timed practice are not measured.
+    private mutating func recordAngle(_ frame: TrackingObservation) {
+        guard case .movement(let movement) = activity?.presentation else {
+            angleRecorder?.interrupt()
+            return
+        }
+
+        switch movement.phase {
+        case .startCapture, .targetCapture:
+            angleRecorder?.observe(frame, stage: .before)
+        case .practice:
+            angleRecorder?.observe(frame, stage: .after)
+        case .returnToStart, .countdown:
+            angleRecorder?.interrupt()
+        }
+    }
+
+    private var recordedAngles: [BodyAngleResult]? {
+        angleRecorder?.result.map { [$0] }
+    }
+
     private mutating func record(_ outcome: ActivityOutcome) {
         guard progress.stage == .activity else {
             return
@@ -613,7 +640,8 @@ struct SessionEngine {
             completedWork: presentation?.count ?? 0, reachOutcomes: reach?.outcomes ?? [],
             skippedReachSteps: reach?.caregiverSkippedSteps,
             practiceSeconds: practicedSeconds,
-            cupOutcomes: cupOutcomes)
+            cupOutcomes: cupOutcomes,
+            angles: recordedAngles)
         effects.append(.checkpoint(checkpoint))
         snapshot.stage = .feedback
         feedbackEnteredAt = now
@@ -671,7 +699,8 @@ struct SessionEngine {
                     reachOutcomes: reach?.outcomes ?? [],
                     skippedReachSteps: reach?.caregiverSkippedSteps,
                     practiceSeconds: practicedSeconds,
-                    cupOutcomes: cupOutcomes
+                    cupOutcomes: cupOutcomes,
+                    angles: recordedAngles
                 )
             }
             progress.finalize(stopped: true, date: Date())
@@ -745,6 +774,7 @@ struct SessionEngine {
         }
         pausedSince = now
         beginSuspension()
+        angleRecorder?.interrupt()
         _ = activity?.handle(.suspend)
         effects.append(.cancelSpeech)
         guidance = nil
