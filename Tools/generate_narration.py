@@ -42,6 +42,7 @@ NORMALIZER = ROOT / "Tools/normalize_narration.swift"
 # Kept outside the app's sources so it is never bundled.
 MANIFEST = ROOT / "Tools/narration-manifest.json"
 API = "https://api.elevenlabs.io"
+SUPPORTED_GROUPS = {"finger", "body", "numbers", "opposition-left", "arm-raise-left"}
 
 # Finger exercises: FingerSessionViewModel.narrate() speaks these keys in order.
 FINGER_PREFIXES = ("baseline.", "move.", "demo.", "return.", "finger.", "recovery.")
@@ -234,6 +235,15 @@ def collect_lines(groups):
     strings = json.loads(CATALOG.read_text(encoding="utf-8"))["strings"]
     wanted = []
 
+    for group, prefix in (("opposition-left", "opposition.left."), ("arm-raise-left", "armRaise.left.")):
+        if group not in groups:
+            continue
+        for key in strings:
+            if not key.startswith(prefix) or key in {prefix + "title", prefix + "calibration.title"}:
+                continue
+            arguments = range(1, 7) if key.endswith(" %lld") else (None,)
+            wanted.extend((key, argument) for argument in arguments)
+
     for key, entry in strings.items():
         if "finger" in groups and (key.startswith(FINGER_PREFIXES) or key in FINGER_KEYS):
             wanted.append((key, None))
@@ -245,8 +255,9 @@ def collect_lines(groups):
             wanted.extend((key, value) for value in values)
 
     numbers = []
-    if "numbers" in groups:
-        for n in NUMBER_RANGE:
+    if groups & {"numbers", "opposition-left", "arm-raise-left"}:
+        number_range = NUMBER_RANGE if "numbers" in groups else range(1, 7)
+        for n in number_range:
             # A full stop gives each number a clean, final ending.
             text = indonesian_number(n).capitalize() + "."
             numbers.append({"key": "count", "argument": n, "text": text, "name": clip_name("count", n)})
@@ -259,7 +270,7 @@ def collect_lines(groups):
             continue
         if argument is not None:
             # Counts the patient hears are spelled out ("enam napas lagi"), as the number clips are.
-            spoken = indonesian_number(argument) if key in SPELLED_FORMAT_KEYS else str(argument)
+            spoken = indonesian_number(argument) if key in SPELLED_FORMAT_KEYS or key == "armRaise.left.longRest.remaining %lld" else str(argument)
             text = text.replace("%lld", spoken)
         lines.append({"key": key, "argument": argument, "text": text, "name": clip_name(key, argument)})
 
@@ -337,13 +348,17 @@ def main():
     parser.add_argument("--voice-name", default="Marizka")
     parser.add_argument("--voice-id", help="Use this voice ID instead of searching by name.")
     parser.add_argument("--model", default="eleven_multilingual_v2")
-    parser.add_argument("--groups", default="finger,body,numbers", help="Comma-separated: finger, body, numbers.")
+    parser.add_argument("--groups", default="finger,body,numbers,opposition-left,arm-raise-left", help="Comma-separated: finger, body, numbers, opposition-left, arm-raise-left.")
     parser.add_argument("--dry-run", action="store_true", help="List sentences and characters only.")
     parser.add_argument("--force", action="store_true", help="Re-render every sentence.")
     parser.add_argument("--normalize-only", action="store_true", help="Re-level existing raw clips; no API calls.")
     args = parser.parse_args()
 
-    lines = collect_lines(set(args.groups.split(",")))
+    groups = {group.strip() for group in args.groups.split(",")}
+    unknown = groups - SUPPORTED_GROUPS
+    if unknown:
+        parser.error("Unknown groups: " + ", ".join(sorted(unknown)))
+    lines = collect_lines(groups)
     characters = sum(len(line["text"]) for line in lines)
 
     if args.normalize_only:

@@ -83,6 +83,24 @@ struct LongRestBreath {
     static let cycleDuration = inhaleSeconds + holdSeconds + exhaleSeconds + settleSeconds
     static let duration = Double(count) * cycleDuration
 
+    /// The end of the current spoken phase, including “once more” before the last inhale.
+    /// A caller can freeze here until its identified narration completes without cutting it off.
+    static func narrationBoundary(at elapsed: Double) -> Double {
+        let breath = Self(elapsed: elapsed)
+        let start = Double(breath.number - 1) * cycleDuration
+        switch breath.phase {
+        case .inhale:
+            let isLastPreface = breath.number == count && elapsed - start < 1.4
+            return start + (isLastPreface ? 1.4 : inhaleSeconds)
+        case .hold:
+            return start + inhaleSeconds + holdSeconds
+        case .exhale:
+            return start + cycleDuration - settleSeconds
+        case .settle:
+            return start + cycleDuration
+        }
+    }
+
     let number: Int
     let phase: Phase
     let intensity: Double

@@ -68,7 +68,7 @@ final class TherapySessionViewModel {
         self.tracking = tracking
         self.audio = audio
         self.repository = repository
-        engine = SessionEngine(routine: routine)
+        engine = SessionEngine(routine: routine, scriptedArmRaise: AppLanguage.selected == .indonesian)
         snapshot = engine.snapshot
     }
 

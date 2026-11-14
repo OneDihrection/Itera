@@ -1,0 +1,479 @@
+{
+  "_comment": "opposition-left-narration.json — Created by Amelia Putri Aftiana on 14/11/2026. Exported from the approved opposition.left String Catalog entries in fixing-ux-n-voice.",
+  "lines": [
+    {
+      "key": "count",
+      "argument": 1,
+      "text": "Satu.",
+      "name": "narration-id-count-1"
+    },
+    {
+      "key": "count",
+      "argument": 2,
+      "text": "Dua.",
+      "name": "narration-id-count-2"
+    },
+    {
+      "key": "count",
+      "argument": 3,
+      "text": "Tiga.",
+      "name": "narration-id-count-3"
+    },
+    {
+      "key": "count",
+      "argument": 4,
+      "text": "Empat.",
+      "name": "narration-id-count-4"
+    },
+    {
+      "key": "count",
+      "argument": 5,
+      "text": "Lima.",
+      "name": "narration-id-count-5"
+    },
+    {
+      "key": "count",
+      "argument": 6,
+      "text": "Enam.",
+      "name": "narration-id-count-6"
+    },
+    {
+      "key": "opposition.left.calibration.complete",
+      "argument": null,
+      "text": "Oke kita sudah tahu titik awal gerakannya. Sekarang, kita siap mulai latihan.",
+      "name": "narration-id-opposition.left.calibration.complete"
+    },
+    {
+      "key": "opposition.left.calibration.open",
+      "argument": null,
+      "text": "Buka kembali tangannya. Tahan lagi sebentar.",
+      "name": "narration-id-opposition.left.calibration.open"
+    },
+    {
+      "key": "opposition.left.calibration.position",
+      "argument": null,
+      "text": "Kita mulai dari tangan kiri dulu ya. Arahkan tangan kiri ke kamera. Tangan kanannya bisa ditaruh saja di pangkuan.",
+      "name": "narration-id-opposition.left.calibration.position"
+    },
+    {
+      "key": "opposition.left.calibration.start",
+      "argument": null,
+      "text": "Sebelum mulai, kita cari tahu titik awal gerakan tangan kirimu dulu ya. Mulai dari buka tangan. Tahan sebentar.",
+      "name": "narration-id-opposition.left.calibration.start"
+    },
+    {
+      "key": "opposition.left.calibration.touch.0",
+      "argument": null,
+      "text": "Lalu sentuh jempol ke telunjuk, dan tahan sebentar.",
+      "name": "narration-id-opposition.left.calibration.touch.0"
+    },
+    {
+      "key": "opposition.left.calibration.touch.1",
+      "argument": null,
+      "text": "Lalu sentuh jempol ke jari tengah, dan tahan sebentar.",
+      "name": "narration-id-opposition.left.calibration.touch.1"
+    },
+    {
+      "key": "opposition.left.calibration.touch.2",
+      "argument": null,
+      "text": "Lalu sentuh jempol ke jari manis, dan tahan sebentar.",
+      "name": "narration-id-opposition.left.calibration.touch.2"
+    },
+    {
+      "key": "opposition.left.calibration.touch.3",
+      "argument": null,
+      "text": "Lalu sentuh jempol ke jari kelingking, dan tahan sebentar.",
+      "name": "narration-id-opposition.left.calibration.touch.3"
+    },
+    {
+      "key": "opposition.left.countdown.first",
+      "argument": null,
+      "text": "Latihan akan dimulai dalam",
+      "name": "narration-id-opposition.left.countdown.first"
+    },
+    {
+      "key": "opposition.left.countdown.next",
+      "argument": null,
+      "text": "Set selanjutnya akan dimulai dalam",
+      "name": "narration-id-opposition.left.countdown.next"
+    },
+    {
+      "key": "opposition.left.intro.focus",
+      "argument": null,
+      "text": "Latihan ini akan berfokus untuk melatih jari tangan menjepit benda kecil, seperti mengancingkan baju atau memegang sendok.",
+      "name": "narration-id-opposition.left.intro.focus"
+    },
+    {
+      "key": "opposition.left.intro.goals",
+      "argument": null,
+      "text": "Latihan ini terdiri dari dua set, dengan masing-masing set sebanyak lima repetisi.",
+      "name": "narration-id-opposition.left.intro.goals"
+    },
+    {
+      "key": "opposition.left.intro.title",
+      "argument": null,
+      "text": "Hari ini kita akan mulai dengan latihan Sentuh Jempol ke Jari.",
+      "name": "narration-id-opposition.left.intro.title"
+    },
+    {
+      "key": "opposition.left.intro.voice",
+      "argument": null,
+      "text": "Jika kamu merasa tidak nyaman selama latihan, kamu bisa menggunakan perintah suara. Katakan 'Stop' untuk berhenti sejenak, dan 'Go' untuk melanjutkan latihan.",
+      "name": "narration-id-opposition.left.intro.voice"
+    },
+    {
+      "key": "opposition.left.rep.1.complete",
+      "argument": null,
+      "text": "Bagus! Semua jari sudah tersentuh, jadi satu repetisi selesai.",
+      "name": "narration-id-opposition.left.rep.1.complete"
+    },
+    {
+      "key": "opposition.left.rep.1.open.0",
+      "argument": null,
+      "text": "Buka lagi tangannya. Tahan.",
+      "name": "narration-id-opposition.left.rep.1.open.0"
+    },
+    {
+      "key": "opposition.left.rep.1.open.1",
+      "argument": null,
+      "text": "Buka kembali tangannya.",
+      "name": "narration-id-opposition.left.rep.1.open.1"
+    },
+    {
+      "key": "opposition.left.rep.1.open.2",
+      "argument": null,
+      "text": "Buka lagi tangannya. Tunggu.",
+      "name": "narration-id-opposition.left.rep.1.open.2"
+    },
+    {
+      "key": "opposition.left.rep.1.open.3",
+      "argument": null,
+      "text": "Lalu buka kembali perlahan.",
+      "name": "narration-id-opposition.left.rep.1.open.3"
+    },
+    {
+      "key": "opposition.left.rep.1.opening",
+      "argument": null,
+      "text": "Yuk kita mulai. Satu repetisi dihitung kalau jempol sudah menyentuh semua jari, sampai kelingking, ya. Sekarang buka tangan perlahan, dan tahan sebentar.",
+      "name": "narration-id-opposition.left.rep.1.opening"
+    },
+    {
+      "key": "opposition.left.rep.1.touch.0",
+      "argument": null,
+      "text": "Sekarang, sentuh jempol ke telunjuk. Tahan sebentar.",
+      "name": "narration-id-opposition.left.rep.1.touch.0"
+    },
+    {
+      "key": "opposition.left.rep.1.touch.1",
+      "argument": null,
+      "text": "Lanjut sentuh jempol ke jari tengah. Tahan.",
+      "name": "narration-id-opposition.left.rep.1.touch.1"
+    },
+    {
+      "key": "opposition.left.rep.1.touch.2",
+      "argument": null,
+      "text": "Sekarang jempol ke jari manis. Tahan.",
+      "name": "narration-id-opposition.left.rep.1.touch.2"
+    },
+    {
+      "key": "opposition.left.rep.1.touch.3",
+      "argument": null,
+      "text": "Terakhir, jempol ke jari kelingking dan tahan.",
+      "name": "narration-id-opposition.left.rep.1.touch.3"
+    },
+    {
+      "key": "opposition.left.rep.2.complete",
+      "argument": null,
+      "text": "Hebat! Dua repetisi sudah selesai.",
+      "name": "narration-id-opposition.left.rep.2.complete"
+    },
+    {
+      "key": "opposition.left.rep.2.open.0",
+      "argument": null,
+      "text": "Buka kembali perlahan.",
+      "name": "narration-id-opposition.left.rep.2.open.0"
+    },
+    {
+      "key": "opposition.left.rep.2.open.1",
+      "argument": null,
+      "text": "Buka lagi tangannya.",
+      "name": "narration-id-opposition.left.rep.2.open.1"
+    },
+    {
+      "key": "opposition.left.rep.2.open.2",
+      "argument": null,
+      "text": "Buka kembali tangannya. Tunggu.",
+      "name": "narration-id-opposition.left.rep.2.open.2"
+    },
+    {
+      "key": "opposition.left.rep.2.open.3",
+      "argument": null,
+      "text": "Lalu buka kembali tanganmu perlahan.",
+      "name": "narration-id-opposition.left.rep.2.open.3"
+    },
+    {
+      "key": "opposition.left.rep.2.opening",
+      "argument": null,
+      "text": "Kita ulangi gerakannya ya.",
+      "name": "narration-id-opposition.left.rep.2.opening"
+    },
+    {
+      "key": "opposition.left.rep.2.touch.0",
+      "argument": null,
+      "text": "Jempol ke jari telunjuk dulu. Tahan.",
+      "name": "narration-id-opposition.left.rep.2.touch.0"
+    },
+    {
+      "key": "opposition.left.rep.2.touch.1",
+      "argument": null,
+      "text": "Selanjutnya ke jari tengah dan tahan.",
+      "name": "narration-id-opposition.left.rep.2.touch.1"
+    },
+    {
+      "key": "opposition.left.rep.2.touch.2",
+      "argument": null,
+      "text": "Sekarang ke jari manis. Tahan.",
+      "name": "narration-id-opposition.left.rep.2.touch.2"
+    },
+    {
+      "key": "opposition.left.rep.2.touch.3",
+      "argument": null,
+      "text": "Jari terakhir, ke jari kelingking. Tahan.",
+      "name": "narration-id-opposition.left.rep.2.touch.3"
+    },
+    {
+      "key": "opposition.left.rep.3.complete",
+      "argument": null,
+      "text": "Tiga repetisi sudah selesai, hebat!",
+      "name": "narration-id-opposition.left.rep.3.complete"
+    },
+    {
+      "key": "opposition.left.rep.3.open.0",
+      "argument": null,
+      "text": "Buka kembali perlahan.",
+      "name": "narration-id-opposition.left.rep.3.open.0"
+    },
+    {
+      "key": "opposition.left.rep.3.open.1",
+      "argument": null,
+      "text": "Buka lagi tangannya.",
+      "name": "narration-id-opposition.left.rep.3.open.1"
+    },
+    {
+      "key": "opposition.left.rep.3.open.2",
+      "argument": null,
+      "text": "Buka kembali tangannya. Tunggu.",
+      "name": "narration-id-opposition.left.rep.3.open.2"
+    },
+    {
+      "key": "opposition.left.rep.3.open.3",
+      "argument": null,
+      "text": "Perlahan buka kembali.",
+      "name": "narration-id-opposition.left.rep.3.open.3"
+    },
+    {
+      "key": "opposition.left.rep.3.opening",
+      "argument": null,
+      "text": "Kita lanjut ke repetisi ketiga, ya.",
+      "name": "narration-id-opposition.left.rep.3.opening"
+    },
+    {
+      "key": "opposition.left.rep.3.touch.0",
+      "argument": null,
+      "text": "Jempol ke jari telunjuk lagi, dan tahan.",
+      "name": "narration-id-opposition.left.rep.3.touch.0"
+    },
+    {
+      "key": "opposition.left.rep.3.touch.1",
+      "argument": null,
+      "text": "Lanjut ke jari tengah, tahan.",
+      "name": "narration-id-opposition.left.rep.3.touch.1"
+    },
+    {
+      "key": "opposition.left.rep.3.touch.2",
+      "argument": null,
+      "text": "Sekarang ke jari manis, dan tahan.",
+      "name": "narration-id-opposition.left.rep.3.touch.2"
+    },
+    {
+      "key": "opposition.left.rep.3.touch.3",
+      "argument": null,
+      "text": "Terakhir ke jari kelingking. Tahan.",
+      "name": "narration-id-opposition.left.rep.3.touch.3"
+    },
+    {
+      "key": "opposition.left.rep.4.complete",
+      "argument": null,
+      "text": "Bagus! Sudah empat repetisi selesai. Semangat! Satu repetisi lagi ya.",
+      "name": "narration-id-opposition.left.rep.4.complete"
+    },
+    {
+      "key": "opposition.left.rep.4.open.0",
+      "argument": null,
+      "text": "Buka kembali perlahan.",
+      "name": "narration-id-opposition.left.rep.4.open.0"
+    },
+    {
+      "key": "opposition.left.rep.4.open.1",
+      "argument": null,
+      "text": "Buka lagi tangannya.",
+      "name": "narration-id-opposition.left.rep.4.open.1"
+    },
+    {
+      "key": "opposition.left.rep.4.open.2",
+      "argument": null,
+      "text": "Buka kembali tangannya. Tunggu.",
+      "name": "narration-id-opposition.left.rep.4.open.2"
+    },
+    {
+      "key": "opposition.left.rep.4.open.3",
+      "argument": null,
+      "text": "Lalu buka kembali perlahan.",
+      "name": "narration-id-opposition.left.rep.4.open.3"
+    },
+    {
+      "key": "opposition.left.rep.4.opening",
+      "argument": null,
+      "text": "Kita lanjut ya.",
+      "name": "narration-id-opposition.left.rep.4.opening"
+    },
+    {
+      "key": "opposition.left.rep.4.touch.0",
+      "argument": null,
+      "text": "Jempol ke jari telunjuk dulu. Tahan.",
+      "name": "narration-id-opposition.left.rep.4.touch.0"
+    },
+    {
+      "key": "opposition.left.rep.4.touch.1",
+      "argument": null,
+      "text": "Selanjutnya ke jari tengah dan tahan.",
+      "name": "narration-id-opposition.left.rep.4.touch.1"
+    },
+    {
+      "key": "opposition.left.rep.4.touch.2",
+      "argument": null,
+      "text": "Sekarang ke jari manis. Tahan.",
+      "name": "narration-id-opposition.left.rep.4.touch.2"
+    },
+    {
+      "key": "opposition.left.rep.4.touch.3",
+      "argument": null,
+      "text": "Jari terakhir, ke jari kelingking. Tahan.",
+      "name": "narration-id-opposition.left.rep.4.touch.3"
+    },
+    {
+      "key": "opposition.left.rep.5.open.0",
+      "argument": null,
+      "text": "Buka kembali perlahan.",
+      "name": "narration-id-opposition.left.rep.5.open.0"
+    },
+    {
+      "key": "opposition.left.rep.5.open.1",
+      "argument": null,
+      "text": "Buka lagi tangannya.",
+      "name": "narration-id-opposition.left.rep.5.open.1"
+    },
+    {
+      "key": "opposition.left.rep.5.open.2",
+      "argument": null,
+      "text": "Buka kembali tangannya. Tunggu.",
+      "name": "narration-id-opposition.left.rep.5.open.2"
+    },
+    {
+      "key": "opposition.left.rep.5.open.3",
+      "argument": null,
+      "text": "Buka kembali tanganmu perlahan.",
+      "name": "narration-id-opposition.left.rep.5.open.3"
+    },
+    {
+      "key": "opposition.left.rep.5.touch.0",
+      "argument": null,
+      "text": "Jempol ke jari telunjuk lagi, dan tahan.",
+      "name": "narration-id-opposition.left.rep.5.touch.0"
+    },
+    {
+      "key": "opposition.left.rep.5.touch.1",
+      "argument": null,
+      "text": "Lanjut ke jari tengah, tahan.",
+      "name": "narration-id-opposition.left.rep.5.touch.1"
+    },
+    {
+      "key": "opposition.left.rep.5.touch.2",
+      "argument": null,
+      "text": "Sekarang ke jari manis. Tahan.",
+      "name": "narration-id-opposition.left.rep.5.touch.2"
+    },
+    {
+      "key": "opposition.left.rep.5.touch.3",
+      "argument": null,
+      "text": "Terakhir ke jari kelingking. Tahan.",
+      "name": "narration-id-opposition.left.rep.5.touch.3"
+    },
+    {
+      "key": "opposition.left.rest.closing",
+      "argument": null,
+      "text": "Sekarang, kita siap melanjutkan set berikutnya.",
+      "name": "narration-id-opposition.left.rest.closing"
+    },
+    {
+      "key": "opposition.left.rest.exhale",
+      "argument": null,
+      "text": "Hembuskan perlahan…",
+      "name": "narration-id-opposition.left.rest.exhale"
+    },
+    {
+      "key": "opposition.left.rest.exhale.last",
+      "argument": null,
+      "text": "Dan hembuskan panjang…",
+      "name": "narration-id-opposition.left.rest.exhale.last"
+    },
+    {
+      "key": "opposition.left.rest.hold",
+      "argument": null,
+      "text": "Tahan napas…",
+      "name": "narration-id-opposition.left.rest.hold"
+    },
+    {
+      "key": "opposition.left.rest.hold.first",
+      "argument": null,
+      "text": "Tahan napasnya di sini…",
+      "name": "narration-id-opposition.left.rest.hold.first"
+    },
+    {
+      "key": "opposition.left.rest.inhale.1",
+      "argument": null,
+      "text": "Tarik napas pelan lewat hidung…",
+      "name": "narration-id-opposition.left.rest.inhale.1"
+    },
+    {
+      "key": "opposition.left.rest.inhale.2",
+      "argument": null,
+      "text": "Dua napas lagi dengan menarik napas pelan lewat hidung…",
+      "name": "narration-id-opposition.left.rest.inhale.2"
+    },
+    {
+      "key": "opposition.left.rest.inhale.3",
+      "argument": null,
+      "text": "Sekali lagi, tarik napas pelan lewat hidung…",
+      "name": "narration-id-opposition.left.rest.inhale.3"
+    },
+    {
+      "key": "opposition.left.rest.opening",
+      "argument": null,
+      "text": "Hebat, set satu sudah selesai. Sebelum lanjut ke set dua, kita beri tubuh waktu untuk rileks sebentar ya. Kita akan mengambil tiga kali napas secara perlahan. Ikuti panduan ini senyamanmu.",
+      "name": "narration-id-opposition.left.rest.opening"
+    },
+    {
+      "key": "opposition.left.summary.final",
+      "argument": null,
+      "text": "Usaha yang bagus! Kamu sudah menyelesaikan seluruh set, dengan total sepuluh repetisi. Terima kasih sudah berusaha mengikuti setiap gerakannya, ya. Sekarang, yuk istirahat sebentar sebelum lanjut ke latihan berikutnya.",
+      "name": "narration-id-opposition.left.summary.final"
+    },
+    {
+      "key": "opposition.left.summary.first",
+      "argument": null,
+      "text": "Usaha yang bagus! Kamu sudah menyelesaikan set pertama, dengan total lima repetisi. Sekarang, yuk istirahat sebentar sebelum lanjut ke set kedua.",
+      "name": "narration-id-opposition.left.summary.first"
+    }
+  ]
+}

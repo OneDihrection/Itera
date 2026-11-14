@@ -144,6 +144,7 @@ struct TMTherapyLongRest: View {
 /// The final countdown overlays the mounted practice layout.
 struct TMPracticeCountdown: View {
     let seconds: Int
+    var title: LocalizedStringKey = "calibration.countdown"
     let pause: () -> Void
     let stop: () -> Void
 
@@ -153,7 +154,7 @@ struct TMPracticeCountdown: View {
         GeometryReader { geometry in
             Button(action: pause) {
                 VStack(spacing: 12) {
-                    Text("calibration.countdown")
+                    Text(title)
                         .typography(size: 32, weight: .bold, relativeTo: .title)
                         .multilineTextAlignment(.center)
 
@@ -171,7 +172,7 @@ struct TMPracticeCountdown: View {
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
-            .accessibilityLabel("calibration.countdown")
+            .accessibilityLabel(Text(title))
             .accessibilityValue(Text(seconds, format: .number))
             .accessibilityHint("countdown.pauseHint")
             .accessibilityAction(named: Text("action.end"), stop)

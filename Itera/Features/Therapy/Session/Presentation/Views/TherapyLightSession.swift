@@ -21,7 +21,8 @@ extension TMTherapySessionView {
             heading: isCalibrationLayout
                 ? TMTherapyExerciseHeading(
                     eyebrow: dependencies.dailyPlan.currentNumber.map { Text("plan.exerciseNumber \($0)") },
-                    title: Text("stage.calibration")
+                    title: Text(LocalizedStringKey(model.snapshot.usesArmRaiseScript
+                        ? model.snapshot.armRaiseNarrationPrefix + "calibration.title" : "stage.calibration"))
                 )
                 : lightHeading,
             cue: showsCalibrationCard ? nil : lightCue,
@@ -79,7 +80,8 @@ extension TMTherapySessionView {
         if showsCalibrationCard || (usesCalibrationOpening && model.snapshot.stage == .preparing) {
             return true
         }
-        if model.snapshot.stage == .preparationWait || model.snapshot.instruction == "calibration.complete" {
+        if model.snapshot.stage == .preparationWait || model.snapshot.instruction == "calibration.complete"
+            || model.snapshot.instruction == model.snapshot.armRaiseNarrationPrefix + "calibration.complete" {
             return true
         }
 
@@ -107,6 +109,10 @@ extension TMTherapySessionView {
     private var lightTitle: String {
         guard let activity = model.snapshot.activity else {
             return ""
+        }
+
+        if model.snapshot.usesArmRaiseScript {
+            return lightString(model.snapshot.armRaiseNarrationPrefix + "title")
         }
 
         var name = lightString(kindKeyName(activity.kind))
@@ -359,6 +365,9 @@ extension TMTherapySessionView {
     }
 
     private func lightSetMessage(lastSet: Bool, lastActivity: Bool) -> Text {
+        if model.snapshot.usesArmRaiseScript {
+            return Text(LocalizedStringKey(model.snapshot.armRaiseNarrationPrefix + (lastSet ? "summary.final" : "summary.first")))
+        }
         if lastSet, lastActivity {
             return Text("session.allDoneMessage")
         }

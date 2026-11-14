@@ -106,6 +106,7 @@ struct TMTherapySessionView: View {
         .onChange(of: model.snapshot.summary?.id) { _, id in
             if id != nil, let summary = model.snapshot.summary,
                 !summary.stopped, !summary.interrupted {
+                dependencies.dailyPlan.markArmRaiseRest(model.snapshot.usesArmRaiseScript ? model.snapshot.armRaiseScriptSide : nil)
                 celebrationStart = Date()
             }
         }
@@ -202,7 +203,15 @@ struct TMTherapySessionView: View {
 
     @ViewBuilder
     private var fullScreenPresentation: some View {
-        if model.snapshot.stage == .rest, let breath = model.snapshot.restBreath,
+        if model.snapshot.stage == .rest, let breath = model.snapshot.guidedSetBreathing,
+           !model.cameraDenied, model.voiceReady {
+            TMTherapyBreathingRest(
+                cue: LocalizedStringKey(model.snapshot.armRaiseNarrationPrefix + breath.key),
+                intensity: breath.intensity,
+                pause: { model.command(.pause) },
+                stop: { requestEnd() }
+            )
+        } else if model.snapshot.stage == .rest, let breath = model.snapshot.restBreath,
            !model.cameraDenied, model.voiceReady, !model.snapshot.paused || usesLightLayout {
             TMTherapyBreathingRest(
                 cue: LocalizedStringKey(breath.phase.key),
@@ -219,9 +228,12 @@ struct TMTherapySessionView: View {
         } else if model.snapshot.stage == .activity,
            let seconds = model.snapshot.presentation?.countdownSeconds,
            model.snapshot.instruction != "calibration.complete",
+           model.snapshot.instruction != model.snapshot.armRaiseNarrationPrefix + "calibration.complete",
            !model.cameraDenied, model.voiceReady, !model.snapshot.paused || usesLightLayout {
             TMPracticeCountdown(
                 seconds: seconds,
+                title: model.snapshot.usesArmRaiseScript && model.snapshot.setNumber > 1
+                    ? LocalizedStringKey(model.snapshot.armRaiseNarrationPrefix + "countdown.next") : "calibration.countdown",
                 pause: { model.command(.pause) },
                 stop: {
                     if usesLightLayout {

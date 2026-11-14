@@ -12,6 +12,7 @@ import SwiftUI
 struct TMDailyPlanIntroView: View {
     let itemID: String
     var countdownSeconds: Int? = nil
+    var automatic = false
 
     @Environment(AppDependencies.self) private var dependencies
     @Environment(NavigationRouter.self) private var router
@@ -19,6 +20,16 @@ struct TMDailyPlanIntroView: View {
 
     @State private var readiness: HomeViewModel?
     @State private var starting = false
+    @State private var narration = DailyPlanIntroNarration()
+    @Environment(\.scenePhase) private var scenePhase
+
+    private var usesArmRaiseScript: Bool {
+        dependencies.dailyPlan.usesArmRaiseScript(itemID: itemID, in: dependencies)
+    }
+
+    private var usesScript: Bool {
+        usesArmRaiseScript || dependencies.dailyPlan.usesOppositionScript(itemID: itemID, in: dependencies)
+    }
 
     var body: some View {
         if let row {
@@ -29,6 +40,15 @@ struct TMDailyPlanIntroView: View {
                 .task {
                     if countdownSeconds == nil {
                         prepareReadiness()
+                    }
+                    if usesScript {
+                        start()
+                    }
+                }
+                .onDisappear { narration.stop() }
+                .onChange(of: scenePhase) { _, phase in
+                    if phase != .active {
+                        narration.pause()
                     }
                 }
         }
@@ -48,11 +68,12 @@ struct TMDailyPlanIntroView: View {
             focus: Text(LocalizedStringKey("plan.purpose." + itemID)),
             targetTitle: "plan.targetTitle",
             safetyNote: "exercise.safetyNote",
-            startTitle: "exercise.start",
-            startDisabled: starting,
+            startTitle: narration.paused ? "session.resume" : "exercise.start",
+            startDisabled: (starting || narration.running) && !narration.paused,
             message: readinessMessage,
-            countdownSeconds: countdownSeconds,
+            countdownSeconds: usesScript ? nil : countdownSeconds,
             onBack: {
+                narration.stop()
                 if countdownSeconds != nil {
                     dependencies.audio.cancelSpeech()
                 }
@@ -112,7 +133,8 @@ struct TMDailyPlanIntroView: View {
             }
             return false
         }
-        let orderedDetails = details.filter { !sets.contains($0) } + sets
+        let otherDetails = details.filter { !sets.contains($0) }
+        let orderedDetails = usesScript ? sets + otherDetails : otherDetails + sets
 
         TMTherapyStatRow {
             ForEach(orderedDetails.indices, id: \.self) { index in
@@ -159,18 +181,41 @@ struct TMDailyPlanIntroView: View {
     }
 
     private func start() {
+        if narration.paused {
+            narration.resume()
+            return
+        }
         guard let readiness, !starting else {
             return
         }
 
         starting = true
         Task {
-            await dependencies.dailyPlan.startCurrent(
-                readiness: readiness,
-                dependencies: dependencies,
-                router: router
-            )
-            starting = false
+            if usesScript {
+                await narration.start(
+                    readiness: readiness,
+                    dependencies: dependencies,
+                    router: router,
+                    itemID: itemID,
+                    automatic: automatic,
+                    lines: usesArmRaiseScript
+                        ? ArmRaiseGuidance.introduction(
+                            for: dependencies.dailyPlan.routineExercise(for: .armRaise, in: dependencies)
+                                .activities.first?.side ?? .left
+                        )
+                        : OppositionGuidance.introductionKeys(
+                            for: dependencies.dailyPlan.fingerSide(for: .opposition, in: dependencies)
+                        )
+                )
+                starting = false
+            } else {
+                await dependencies.dailyPlan.startCurrent(
+                    readiness: readiness,
+                    dependencies: dependencies,
+                    router: router
+                )
+                starting = false
+            }
         }
     }
 }
