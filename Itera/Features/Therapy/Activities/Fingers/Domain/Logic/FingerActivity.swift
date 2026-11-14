@@ -106,7 +106,12 @@ struct FingerActivity {
     /// How far the automatic start of practice has advanced after the range is shown.
 
     var needsStart: Bool { awaitingStart }
-    var holdDuration: Double { phase == .range ? Self.readyCountdown : 2 }
+    var holdDuration: Double {
+        if phase == .range || OppositionGuidance.applies(to: kind, routine: routine) {
+            return Self.readyCountdown
+        }
+        return 2
+    }
     var isHolding: Bool { hold.isHolding || holdCompletionID != nil }
     /// A completed hold presents a full timer until its completion is acknowledged.
     var holdElapsed: Double {
@@ -254,7 +259,7 @@ struct FingerActivity {
 
     private mutating func beginCountdown() {
         phase = .countdown
-        remaining = 3
+        remaining = OppositionGuidance.applies(to: kind, routine: routine) && set > 1 ? 5 : 3
         narrationFinished = false
     }
 

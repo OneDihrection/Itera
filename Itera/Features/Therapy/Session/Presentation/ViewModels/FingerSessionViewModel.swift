@@ -60,6 +60,32 @@ final class FingerSessionViewModel {
     private var announcedCalibrationIndex: Int?
     private(set) var practiceCountdownReady = false
     @ObservationIgnored private var spokenFlowKey: String?
+    private(set) var scriptedRest: OppositionRest?
+    @ObservationIgnored private var lastHoldCount = ""
+
+    var usesOppositionScript: Bool {
+        sessionLanguage == .indonesian
+            && OppositionGuidance.applies(to: activity.kind, routine: routine)
+    }
+
+    var scriptedCueKey: String? {
+        guard usesOppositionScript else {
+            return nil
+        }
+        return scriptedNarrationKeys.last
+    }
+
+    private var scriptedNarrationKeys: [String] {
+        let keys: [String]
+        if calibrationMessage == "calibration.intro" {
+            keys = ["calibration.position"]
+        } else if activity.phase == .rest, let scriptedRest {
+            keys = [scriptedRest.key]
+        } else {
+            keys = OppositionGuidance.movementKeys(for: activity)
+        }
+        return keys.map { OppositionGuidance.prefix(for: routine.side) + $0 }
+    }
 
     var calibrationMessage: String? {
         switch activity.phase {
@@ -481,6 +507,7 @@ final class FingerSessionViewModel {
             }
             record(hand)
             updateRewards()
+            updateHoldCount()
             updateGuidance()
         }
     }
@@ -549,9 +576,23 @@ final class FingerSessionViewModel {
         if activity.phase != .countdown {
             practiceCountdownReady = false
         }
-        if activity.phase != .countdown || practiceCountdownReady {
+        if usesOppositionScript, activity.phase == .rest,
+           activity.completedSets < routine.sets, activity.remaining > 0 {
+            if scriptedRest == nil {
+                scriptedRest = OppositionRest()
+            }
+            scriptedRest?.tick(now, ready: frameReady && !paused)
+            if scriptedRest?.finished == true {
+                engine.skipRest()
+                engine.tick(now, ready: frameReady)
+            } else {
+                engine.tick(now, ready: false)
+            }
+        } else if activity.phase != .countdown || practiceCountdownReady {
+            scriptedRest = nil
             engine.tick(now, ready: frameReady)
         }
+        updateHoldCount()
         updateRewards()
         updateGuidance()
         syncRecorder()
@@ -562,6 +603,25 @@ final class FingerSessionViewModel {
         }
         if engine.finished {
             finish(completed: true)
+        }
+    }
+
+    private func updateHoldCount() {
+        guard usesOppositionScript, !paused, trackingReady,
+              speechID == nil, activity.isHolding, activity.holdCompletionID == nil,
+              activity.holdElapsed > 0,
+              [.baseline, .target, .active].contains(activity.phase) else {
+            lastHoldCount = ""
+            return
+        }
+
+        let second = max(1, Int(ceil(activity.holdRemaining)))
+        let identity = "\(activity.phase)-\(activity.set)-\(activity.repetitions)-\(activity.finger)-\(activity.returning)-\(activity.needsStart)-\(second)"
+        guard identity != lastHoldCount else {
+            return
+        }
+        if audio.playHoldSecond(second) {
+            lastHoldCount = identity
         }
     }
 
@@ -641,6 +701,11 @@ final class FingerSessionViewModel {
         guard !paused, previewAttached,
               ProcessInfo.processInfo.systemUptime - lastFrame <= 0.3 else { return }
 
+        if usesOppositionScript, activity.phase == .rest,
+           activity.completedSets < routine.sets, scriptedRest == nil {
+            scriptedRest = OppositionRest()
+        }
+
         let flow = calibrationMessage
         if flow == nil, activity.phase != .countdown,
            trackingRecovery.showsGuidance(at: ProcessInfo.processInfo.systemUptime) {
@@ -650,7 +715,16 @@ final class FingerSessionViewModel {
             return
         }
 
-        let key = (flow ?? instructionKey) + instructionKey
+        if usesOppositionScript,
+           flow == "calibration.try", activity.phase == .baseline, activity.finger == 0,
+           !trackingReady {
+            return
+        }
+
+        let scriptIdentity = usesOppositionScript
+            ? "\(activity.set)-\(activity.repetitions)-\(activity.needsStart)-\(scriptedRest?.step ?? -1)"
+            : ""
+        let key = scriptIdentity + (flow ?? instructionKey) + instructionKey
             + (activity.kind.isSequential ? fingerKey : "") + String(engine.summary.exerciseIndex)
         guard key != previousInstruction else {
             return
@@ -664,11 +738,19 @@ final class FingerSessionViewModel {
     private func completeNarration() {
         if spokenFlowKey == "calibration.intro" {
             announcedCalibrationIndex = engine.summary.exerciseIndex
+            if usesOppositionScript {
+                spokenFlowKey = nil
+                engine.guidanceStarted()
+                return
+            }
         } else if spokenFlowKey == "calibration.countdown" {
             practiceCountdownReady = true
             lastCountdownCue = ""
         }
         spokenFlowKey = nil
+        if usesOppositionScript, activity.phase == .rest {
+            scriptedRest?.guidanceCompleted()
+        }
         engine.guidanceCompleted()
     }
 
@@ -680,7 +762,9 @@ final class FingerSessionViewModel {
         let flow = calibrationMessage
         let key = flow ?? instructionKey
         var lines: [NarrationLine]
-        if flow == "calibration.try" {
+        if usesOppositionScript, !scriptedNarrationKeys.isEmpty {
+            lines = scriptedNarrationKeys.map { NarrationLine(key: $0) }
+        } else if flow == "calibration.try" {
             lines = [NarrationLine(key: key)] + narrationLines
         } else if flow != nil || activity.phase == .countdown {
             lines = [NarrationLine(key: key)]
@@ -768,6 +852,9 @@ final class FingerSessionViewModel {
             return
         }
         engine.pause()
+        scriptedRest?.suspend()
+        audio.stopCount()
+        lastHoldCount = ""
         let now = ProcessInfo.processInfo.systemUptime
         durationClock.pause(at: now)
         sessionElapsedSeconds = durationClock.elapsed(at: now)

@@ -131,6 +131,15 @@ struct SessionProgress {
         stage = .activity
     }
 
+    /// Completes a narrated rest whose clock is owned by the session's breathing sequence.
+    mutating func finishNarratedRest(at time: Double) {
+        guard pausedAt == nil, case .rest = stage else {
+            return
+        }
+        stage = .rest(deadline: time)
+        tick(at: time)
+    }
+
     var hasNextSet: Bool {
         guard let activity = currentActivity, let last = results.last else {
             return false

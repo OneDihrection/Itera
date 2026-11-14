@@ -32,6 +32,14 @@ struct TMDailyPlanNextView: View {
         stage == .countdownIntro || stage == .countdown
     }
 
+    private var usesNextScript: Bool {
+        guard let itemID = dependencies.dailyPlan.nextSessionItemID else {
+            return false
+        }
+        return dependencies.dailyPlan.usesOppositionScript(itemID: itemID, in: dependencies)
+            || dependencies.dailyPlan.usesArmRaiseScript(itemID: itemID, in: dependencies)
+    }
+
     private var countdownSeconds: Int {
         let countdownElapsed = stage == .countdown ? elapsed : 0
         return max(1, Int(ceil(Self.countdownDuration - countdownElapsed)))
@@ -55,7 +63,11 @@ struct TMDailyPlanNextView: View {
     private func transitionPage(itemID: String) -> some View {
         ZStack {
             if showingNextIntro {
-                TMDailyPlanIntroView(itemID: itemID, countdownSeconds: countdownSeconds)
+                TMDailyPlanIntroView(
+                    itemID: itemID,
+                    countdownSeconds: usesNextScript ? nil : countdownSeconds,
+                    automatic: usesNextScript
+                )
                     .environment(\.colorScheme, .light)
                     .transition(.opacity)
             } else {
@@ -109,8 +121,19 @@ struct TMDailyPlanNextView: View {
         var lastCueID: String?
         var lastSpokenSecond: Int?
         while !Task.isCancelled, !paused, scenePhase == .active {
+            if stage == .countdownIntro, usesNextScript {
+                return
+            }
             let now = ProcessInfo.processInfo.systemUptime
-            elapsed = now - startedAt
+            let proposedElapsed = now - startedAt
+            if stage == .breathing, dependencies.dailyPlan.usesScriptedLongRest,
+               !narrationFinished {
+                let boundary = LongRestBreath.narrationBoundary(at: elapsed)
+                elapsed = min(proposedElapsed, boundary.nextDown)
+                startedAt = now - elapsed
+            } else {
+                elapsed = proposedElapsed
+            }
 
             if stage == .countdown, elapsed >= Self.countdownDuration {
                 dependencies.audio.cancelSpeech()
@@ -165,7 +188,8 @@ struct TMDailyPlanNextView: View {
         case .opening: return .restInvitation
         case .restInvitation: return .instructions
         case .instructions: return .posture
-        case .posture: return .firstBreathCount
+        case .posture:
+            return dependencies.dailyPlan.usesScriptedLongRest ? .breathing : .firstBreathCount
         case .firstBreathCount: return .breathing
         case .closing: return .nextExercise
         case .nextExercise: return .exerciseName
@@ -178,6 +202,20 @@ struct TMDailyPlanNextView: View {
     /// The catalog line for the current stage. Each line is spoken by its key, so the recorded
     /// Marizka clip plays (the system voice is only the fallback), and shown as its text.
     private func restLine(breath: LongRestBreath?) -> NarrationLine? {
+        guard let line = baseRestLine(breath: breath) else {
+            return nil
+        }
+        guard let prefix = dependencies.dailyPlan.longRestNarrationPrefix,
+              line.key.hasPrefix("rest.long.") else {
+            return line
+        }
+        return NarrationLine(
+            key: prefix + line.key.dropFirst("rest.long.".count),
+            argument: line.argument
+        )
+    }
+
+    private func baseRestLine(breath: LongRestBreath?) -> NarrationLine? {
         switch stage {
         case .opening:
             return NarrationLine(key: "rest.long.opening")
@@ -202,7 +240,8 @@ struct TMDailyPlanNextView: View {
                 return nil
             }
 
-            return NarrationLine(key: breathingKey(for: breath))
+            let key = breathingKey(for: breath)
+            return key.isEmpty ? nil : NarrationLine(key: key)
         }
     }
 
@@ -211,7 +250,7 @@ struct TMDailyPlanNextView: View {
         case .inhale:
             switch breath.number {
             case 1:
-                return "rest.long.inhaleFirst"
+                return dependencies.dailyPlan.usesScriptedLongRest ? "rest.long.inhale" : "rest.long.inhaleFirst"
             case LongRestBreath.count:
                 let lastBreathStart = Double(LongRestBreath.count - 1) * LongRestBreath.cycleDuration
                 return elapsed - lastBreathStart < 1.4 ? "rest.long.inhaleLast" : "rest.long.inhale"
@@ -219,10 +258,13 @@ struct TMDailyPlanNextView: View {
                 return "rest.long.inhale"
             }
         case .hold:
-            return "rest.long.hold"
+            // The approved long-rest script has no spoken hold between inhale and exhale.
+            return dependencies.dailyPlan.usesScriptedLongRest ? "" : "rest.long.hold"
         case .exhale:
             switch breath.number {
-            case 1, 5:
+            case 1:
+                return dependencies.dailyPlan.usesScriptedLongRest ? "rest.long.exhale" : "rest.long.exhaleSlow"
+            case 5:
                 return "rest.long.exhaleSlow"
             case 3:
                 return "rest.long.exhaleShoulders"
@@ -232,7 +274,7 @@ struct TMDailyPlanNextView: View {
                 return "rest.long.exhale"
             }
         case .settle:
-            return "rest.long.settle"
+            return dependencies.dailyPlan.usesScriptedLongRest ? "" : "rest.long.settle"
         }
     }
 
@@ -266,10 +308,11 @@ struct TMDailyPlanNextView: View {
 
         // The breath count is spoken before the timed inhale so the longer cue has the full
         // phase. The two recordings play back to back; the stage waits for the second.
-        if let breath, breath.phase == .inhale, breath.number > 1, breath.number < LongRestBreath.count {
+        if let breath, breath.phase == .inhale, announcesRemainingBreaths(before: breath, line: line) {
             dependencies.audio.speak(
                 id: UUID(),
-                key: Self.remainingKey,
+                key: dependencies.dailyPlan.longRestNarrationPrefix.map { $0 + "remaining %lld" }
+                    ?? Self.remainingKey,
                 argument: remainingBreaths(afterStarting: breath)
             )
         }
@@ -278,6 +321,24 @@ struct TMDailyPlanNextView: View {
         narrationID = id
         narrationFinished = false
         dependencies.audio.speak(id: id, key: line.key, argument: line.argument)
+    }
+
+    /// Whether "N napas lagi" precedes this inhale cue.
+    ///
+    /// The first breath never announces six. The approved script also says "1 napas lagi"
+    /// before "Sekali lagi"; the last breath speaks two inhale cues, so only the first one
+    /// carries the count. The older generic rest keeps its original 5…2 counts.
+    private func announcesRemainingBreaths(before breath: LongRestBreath, line: NarrationLine) -> Bool {
+        guard breath.number > 1 else {
+            return false
+        }
+
+        guard breath.number == LongRestBreath.count else {
+            return true
+        }
+
+        return dependencies.dailyPlan.usesScriptedLongRest
+            && line.key.hasSuffix("inhaleLast")
     }
 
     private func localized(_ key: String.LocalizationValue) -> String {

@@ -31,6 +31,7 @@ struct TMFingerSessionView: View {
                     }
                     .onChange(of: model.hasFinished) { _, finished in
                         if finished {
+                            dependencies.dailyPlan.markOppositionRest(model.usesOppositionScript ? model.routine.side : nil)
                             router.replaceFullScreenCover(with: .sessionComplete)
                         }
                     }
@@ -76,7 +77,17 @@ struct TMFingerSessionView: View {
         }
         .overlay {
             if model.activity.phase == .countdown {
-                TMPracticeCountdown(seconds: model.countdown, pause: model.pause, stop: { endRequested = true; model.pause() })
+                TMPracticeCountdown(
+                    seconds: model.countdown,
+                    title: model.usesOppositionScript && model.activity.set > 1
+                        ? LocalizedStringKey(OppositionGuidance.prefix(for: model.routine.side) + "countdown.next")
+                        : "calibration.countdown",
+                    pause: model.pause,
+                    stop: {
+                        endRequested = true
+                        model.pause()
+                    }
+                )
                     .ignoresSafeArea()
             }
         }
@@ -112,12 +123,20 @@ struct TMFingerSessionView: View {
     private func heading(_ model: FingerSessionViewModel) -> TMTherapyExerciseHeading {
         TMTherapyExerciseHeading(
             eyebrow: dependencies.dailyPlan.currentNumber.map { Text("plan.exerciseNumber \($0)") },
-            title: model.isCalibrating ? Text("stage.calibration") : Text(verbatim: model.exerciseTitle)
+            title: model.isCalibrating
+                ? Text(LocalizedStringKey(model.usesOppositionScript
+                    ? OppositionGuidance.prefix(for: model.routine.side) + "calibration.title"
+                    : "stage.calibration"))
+                : Text(verbatim: model.exerciseTitle)
         )
     }
 
     /// Show one cue at a time, with the active finger inline when it is relevant.
     private func cue(_ model: FingerSessionViewModel) -> Text? {
+        if let key = model.scriptedCueKey {
+            return Text(LocalizedStringKey(key))
+        }
+
         if let message = model.calibrationMessage, message != "calibration.try" {
             return Text(LocalizedStringKey(message))
         }
@@ -149,7 +168,18 @@ struct TMFingerSessionView: View {
         case .feedback:
             TMFingerSetSummaryPage(model: model)
         case .rest:
-            if let breath = model.restBreath {
+            if let rest = model.scriptedRest {
+                TMTherapyBreathingRest(
+                    cue: LocalizedStringKey(OppositionGuidance.prefix(for: model.routine.side) + rest.key),
+                    intensity: rest.intensity,
+                    pause: model.pause,
+                    stop: {
+                        endRequested = true
+                        model.pause()
+                    },
+                    skip: model.skipRest
+                )
+            } else if let breath = model.restBreath {
                 TMTherapyBreathingRest(
                     cue: LocalizedStringKey(breath.phase.key),
                     intensity: breath.intensity,

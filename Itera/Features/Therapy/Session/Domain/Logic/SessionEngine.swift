@@ -42,6 +42,11 @@ struct SessionSnapshot {
     var setNumber = 1
     var seconds = 0
     var restBreath: RestBreath?
+    var guidedSetBreathing: GuidedSetBreathing?
+    var usesArmRaiseScript = false
+    /// Retained through summary, when `activity` becomes nil, to select the correct recordings.
+    var armRaiseScriptSide = TherapySide.left
+    var armRaiseNarrationPrefix: String { ArmRaiseGuidance.prefix(for: armRaiseScriptSide) }
     var paused = false
     /// Whether the shown countdown's clock is running. Preparation and the pre-practice countdown
     /// show their full value while the cue is still being spoken, before their deadline starts.
@@ -61,6 +66,9 @@ struct SessionTransition {
 /// One serialized owner of ordering, asynchronous identities, and terminal bookkeeping.
 struct SessionEngine {
     private var progress: SessionProgress
+    private let scriptedArmRaise: Bool
+    private var pendingScriptMovement: String?
+    private var lastScriptHoldCount = ""
     private var activity: (any TherapyActivity)?
     private(set) var snapshot = SessionSnapshot()
     private var effects: [SessionEffect] = []
@@ -103,7 +111,8 @@ struct SessionEngine {
     /// inference or main-thread hitch from cancelling narration and replaying it on every gap.
     static let cameraWaitGrace = 1.0
 
-    init(routine: Routine = .demo(), date: Date = Date()) {
+    init(routine: Routine = .demo(), date: Date = Date(), scriptedArmRaise: Bool = false) {
+        self.scriptedArmRaise = scriptedArmRaise
         progress = SessionProgress(routine: routine, startedAt: date)
         selectActivity()
     }
@@ -180,9 +189,45 @@ struct SessionEngine {
             snapshot.stage = .summary
             effects.append(.cancelSpeech)
             effects.append(.finalize(summary))
-            effects.append(.audio(UUID(), .closing(completed: !summary.stopped && summary.results.allSatisfy { $0.outcome == .completed })))
+            if !snapshot.usesArmRaiseScript || summary.stopped {
+                effects.append(.audio(UUID(), .closing(completed: !summary.stopped && summary.results.allSatisfy { $0.outcome == .completed })))
+            }
         }
         return transition
+    }
+
+    private var isCalibrationCompletionCue: Bool {
+        snapshot.instruction == "calibration.complete" || snapshot.instruction == snapshot.armRaiseNarrationPrefix + "calibration.complete"
+    }
+
+    private var practiceCountdownKey: String {
+        guard snapshot.usesArmRaiseScript else {
+            return "calibration.countdown"
+        }
+        return progress.setNumber == 1 ? snapshot.armRaiseNarrationPrefix + "countdown.first" : snapshot.armRaiseNarrationPrefix + "countdown.next"
+    }
+
+    private var currentScriptInstruction: String {
+        if snapshot.usesArmRaiseScript, snapshot.stage == .activity,
+           !isCalibrationCompletionCue, case .movement(let movement) = activity?.presentation {
+            return ArmRaiseGuidance.movementKey(movement, set: progress.setNumber, side: snapshot.armRaiseScriptSide)
+        }
+        return snapshot.instruction
+    }
+
+    /// Spoken seconds follow fresh, accepted hold progress. They never run from a wall timer.
+    private mutating func speakScriptHoldCount(_ movement: MovementSnapshot) {
+        guard narrationComplete, movement.progress > 0, movement.progress < 1 else {
+            lastScriptHoldCount = ""
+            return
+        }
+        let seconds = max(1, Int(ceil(3 * (1 - movement.progress))))
+        let identity = "\(progress.setNumber)-\(movement.phase)-\(movement.count)-\(movement.instruction)-\(seconds)"
+        guard identity != lastScriptHoldCount else {
+            return
+        }
+        lastScriptHoldCount = identity
+        effects.append(.audio(UUID(), .holdSecond(seconds)))
     }
 
     private var transition: SessionTransition {
@@ -203,10 +248,16 @@ struct SessionEngine {
         guard let configuration = progress.currentActivity else {
             return
         }
+        snapshot.usesArmRaiseScript = scriptedArmRaise && ArmRaiseGuidance.applies(to: configuration)
+        snapshot.armRaiseScriptSide = configuration.side
+        snapshot.guidedSetBreathing = nil
+        pendingScriptMovement = nil
+        lastScriptHoldCount = ""
         recorder = KeyRepRecorder(activity: configuration)
         switch configuration.kind {
         case .foldTowel: activity = FoldTowelActivity(configuration: configuration)
-        case .armRaise: activity = ArmRaiseActivity(configuration: configuration)
+        case .armRaise:
+            activity = ArmRaiseActivity(configuration: configuration, scriptedGuidance: snapshot.usesArmRaiseScript)
         case .elbowBend: activity = ElbowBendActivity(configuration: configuration)
         case .directionalReach: activity = DirectionalReachActivity(configuration: configuration)
         case .sitToStand, .crossMidline, .externalRotation, .internalRotation, .shoulderFlexion:
@@ -274,6 +325,7 @@ struct SessionEngine {
         }
         guard !awaitingCountdownGuidance else { return }
         let old = activity?.presentation
+        let previousInstruction = snapshot.instruction
         guard let result = activity?.handle(.observation(frame)) else {
             return
         }
@@ -298,6 +350,29 @@ struct SessionEngine {
             } else if after.grabID != before.grabID {
                 effects.append(.audio(UUID(), .towelGrab))
             }
+            return
+        }
+        if snapshot.usesArmRaiseScript,
+           case .movement(let after) = result.presentation {
+            if pendingScriptMovement != nil {
+                snapshot.instruction = previousInstruction
+                return
+            }
+            let key = ArmRaiseGuidance.movementKey(after, set: progress.setNumber, side: snapshot.armRaiseScriptSide)
+            if after.phase == .countdown {
+                if old?.countdownSeconds == nil {
+                    announcePracticeCountdown()
+                }
+            } else if old?.count != after.count {
+                pendingScriptMovement = key
+                announce(snapshot.armRaiseNarrationPrefix + "rep.\(after.count).complete", timed: false)
+            } else if case .movement(let before) = old,
+                      ArmRaiseGuidance.movementKey(before, set: progress.setNumber, side: snapshot.armRaiseScriptSide) != key {
+                announce(key, timed: false)
+            } else {
+                snapshot.instruction = key
+            }
+            speakScriptHoldCount(after)
             return
         }
         if case .movement(let before) = old, case .movement(let after) = result.presentation,
@@ -360,9 +435,10 @@ struct SessionEngine {
                 if snapshot.stage == .instruction || snapshot.stage == .demonstration
                     || snapshot.stage == .feedback || snapshot.stage == .activity
                     || snapshot.stage == .preparationWait
+                    || (snapshot.stage == .rest && snapshot.guidedSetBreathing != nil)
                 {
-                    let key = awaitingCountdownGuidance && snapshot.instruction != "calibration.complete"
-                        ? "calibration.countdown" : snapshot.instruction
+                    let key = awaitingCountdownGuidance && !isCalibrationCompletionCue
+                        ? practiceCountdownKey : currentScriptInstruction
                     announce(key, timed: snapshot.stage != .activity)
                 }
             }
@@ -373,7 +449,12 @@ struct SessionEngine {
             _ = activity?.handle(.resume)
             if let configuration = progress.currentActivity {
                 let plan = SessionGuidance.opening(configuration, includePositioning: positioningPending)
-                if plan.destination == .capture {
+                if snapshot.usesArmRaiseScript {
+                    calibrationCompletionPending = true
+                    snapshot.stage = .preparationWait
+                    snapshot.seconds = 0
+                    announce(snapshot.armRaiseNarrationPrefix + "calibration.position", timed: false)
+                } else if plan.destination == .capture {
                     calibrationCompletionPending = true
                     snapshot.stage = .preparationWait
                     snapshot.seconds = 0
@@ -393,6 +474,14 @@ struct SessionEngine {
             let previous = snapshot.presentation
             _ = activity?.handle(.tick(now))
             snapshot.presentation = activity?.presentation
+            if snapshot.usesArmRaiseScript, pendingScriptMovement == nil,
+               case .movement(let movement) = snapshot.presentation,
+               movement.phase != .countdown {
+                let key = ArmRaiseGuidance.movementKey(movement, set: progress.setNumber, side: snapshot.armRaiseScriptSide)
+                if snapshot.instruction != key {
+                    announce(key, timed: false)
+                }
+            }
             if case .towel(let after) = snapshot.presentation {
                 if case .towel(let before) = previous,
                    before.phase == .countdown, after.phase == .practice {
@@ -425,7 +514,10 @@ struct SessionEngine {
                     if case .rest = progress.stage {
                         snapshot.stage = .rest
                         snapshot.instruction = "session.rest"
-                        if !progress.hasNextSet {
+                        if snapshot.usesArmRaiseScript, progress.hasNextSet {
+                            snapshot.guidedSetBreathing = GuidedSetBreathing()
+                            announce(snapshot.armRaiseNarrationPrefix + "rest.opening", timed: false)
+                        } else if !progress.hasNextSet {
                             announce("session.rest", timed: false)
                         }
                     }
@@ -435,6 +527,19 @@ struct SessionEngine {
         }
         if snapshot.stage == .preparationWait, let deadline {
             snapshot.seconds = max(0, Int(ceil(deadline - now)))
+        }
+        if snapshot.stage == .rest, var breathing = snapshot.guidedSetBreathing {
+            let step = breathing.step
+            breathing.tick(now)
+            snapshot.guidedSetBreathing = breathing
+            if breathing.finished {
+                snapshot.guidedSetBreathing = nil
+                progress.finishNarratedRest(at: now)
+                beginNextSet()
+            } else if step != breathing.step {
+                announce(snapshot.armRaiseNarrationPrefix + breathing.key, timed: false)
+            }
+            return
         }
         if case .rest(let deadline) = progress.stage {
             let remaining = max(0, deadline - now)
@@ -485,13 +590,15 @@ struct SessionEngine {
         let liveTowel = snapshot.stage == .activity
             && progress.currentActivity?.kind == .foldTowel
             && snapshot.presentation?.countdownSeconds == nil
-        if timed || liveTowel { effects.append(.cancelSpeech) }
+        if timed || liveTowel || snapshot.usesArmRaiseScript {
+            effects.append(.cancelSpeech)
+        }
         let id = UUID()
         guidance = id
         narrationComplete = false
         guidanceStartedAt = now
         readingComplete = snapshot.stage != .instruction && snapshot.stage != .demonstration
-        speechTimeout = now + (snapshot.stage == .feedback ? 45 : (timed ? (guidancePlan?.watchdog ?? 20) : 20))
+        speechTimeout = now + (snapshot.usesArmRaiseScript || snapshot.stage == .feedback ? 45 : (timed ? (guidancePlan?.watchdog ?? 20) : 20))
         if timed || snapshot.stage == .preparationWait { deadline = nil }
         snapshot.instruction = key
         if let prefix = pendingPrefix {
@@ -507,9 +614,9 @@ struct SessionEngine {
         announcedCountdown = nil
         if calibrationCompletionPending {
             calibrationCompletionPending = false
-            announce("calibration.complete", timed: false)
+            announce(snapshot.usesArmRaiseScript ? snapshot.armRaiseNarrationPrefix + "calibration.complete" : "calibration.complete", timed: false)
         } else {
-            announce("calibration.countdown", timed: false)
+            announce(practiceCountdownKey, timed: false)
         }
     }
 
@@ -519,6 +626,27 @@ struct SessionEngine {
         }
         narrationComplete = true
         speechTimeout = nil
+        if snapshot.usesArmRaiseScript {
+            if snapshot.stage == .rest, snapshot.guidedSetBreathing != nil {
+                snapshot.guidedSetBreathing?.guidanceCompleted()
+                return
+            }
+            if snapshot.stage == .preparationWait {
+                if snapshot.instruction == snapshot.armRaiseNarrationPrefix + "calibration.position" {
+                    announce(snapshot.armRaiseNarrationPrefix + "calibration.start", timed: false)
+                } else {
+                    snapshot.stage = .activity
+                    evidenceBoundary = now
+                    _ = activity?.handle(.guidanceCompleted(now))
+                }
+                return
+            }
+            if let pendingScriptMovement {
+                self.pendingScriptMovement = nil
+                announce(pendingScriptMovement, timed: false)
+                return
+            }
+        }
         if snapshot.stage == .preparationWait {
             if snapshot.instruction == "calibration.intro", let configuration = progress.currentActivity {
                 beginCards(.opening(configuration, includePositioning: positioningPending))
@@ -532,8 +660,8 @@ struct SessionEngine {
                 return
             }
             if awaitingCountdownGuidance {
-                if snapshot.instruction == "calibration.complete" {
-                    announce("calibration.countdown", timed: false)
+                if snapshot.instruction == "calibration.complete" || snapshot.instruction == snapshot.armRaiseNarrationPrefix + "calibration.complete" {
+                    announce(practiceCountdownKey, timed: false)
                     return
                 }
                 awaitingCountdownGuidance = false
@@ -600,7 +728,9 @@ struct SessionEngine {
     private mutating func enterActivity() {
         snapshot.stage = .activity
         evidenceBoundary = now
-        snapshot.instruction = activity?.presentation.instruction ?? "session.holdStart"
+        snapshot.instruction = snapshot.usesArmRaiseScript
+            ? currentScriptInstruction
+            : (activity?.presentation.instruction ?? "session.holdStart")
         if case .towel = activity?.presentation {
             // The towel activity already has a countdown while its demonstration is on screen.
             announcePracticeCountdown()
@@ -628,6 +758,7 @@ struct SessionEngine {
         } else {
             progress.resume(at: now)
         }
+        pendingScriptMovement = nil
         let presentation = activity?.presentation
         let reach: ReachSnapshot?
         if case .reach(let value) = presentation { reach = value } else { reach = nil }
@@ -645,10 +776,14 @@ struct SessionEngine {
         case .movement, .towel: countsRepetitions = true
         default: break
         }
-        if outcome == .completed, countsRepetitions, let count = presentation?.count, count > 0 {
+        if !snapshot.usesArmRaiseScript, outcome == .completed, countsRepetitions, let count = presentation?.count, count > 0 {
             pendingPrefix = .count(count)
         }
-        snapshot.instruction = outcome == .skipped ? "session.skipped" : "session.feedback"
+        if snapshot.usesArmRaiseScript, outcome == .completed {
+            snapshot.instruction = progress.setNumber == 1 ? snapshot.armRaiseNarrationPrefix + "summary.first" : snapshot.armRaiseNarrationPrefix + "summary.final"
+        } else {
+            snapshot.instruction = outcome == .skipped ? "session.skipped" : "session.feedback"
+        }
         snapshot.assistanceKey = nil
         if canProgress { announce(snapshot.instruction, timed: true) }
     }
@@ -692,8 +827,8 @@ struct SessionEngine {
                 awaitingCountdownGuidance = snapshot.presentation?.countdownSeconds != nil
             }
             if canProgress {
-                let key = awaitingCountdownGuidance && snapshot.instruction != "calibration.complete"
-                    ? "calibration.countdown" : snapshot.instruction
+                let key = awaitingCountdownGuidance && !isCalibrationCompletionCue
+                    ? practiceCountdownKey : currentScriptInstruction
                 announce(
                     key,
                     timed: snapshot.stage == .instruction || snapshot.stage == .demonstration
@@ -836,6 +971,8 @@ struct SessionEngine {
     }
 
     private mutating func beginSuspension() {
+        snapshot.guidedSetBreathing?.suspend()
+        pendingScriptMovement = nil
         if suspensionSince == nil { suspensionSince = now }
         progress.pause(at: now)
     }

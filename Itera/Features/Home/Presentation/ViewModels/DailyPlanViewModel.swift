@@ -49,6 +49,15 @@ final class DailyPlanViewModel {
     private(set) var currentIndex: Int?
     private(set) var isRunning = false
     private(set) var restingBeforeNext = false
+    private(set) var oppositionRestSide: HandSide?
+    private(set) var armRaiseRestSide: TherapySide?
+    /// The second arm of a scripted arm raise, waiting behind its long rest. `nil` starts at
+    /// the first arm. The plan item is marked done only after its last arm.
+    private var pendingArmRaiseSide: TherapySide?
+
+    var usesScriptedLongRest: Bool {
+        oppositionRestSide != nil || armRaiseRestSide != nil
+    }
     private(set) var errorKey: String?
     var sidePreference = UserDefaults.standard.string(forKey: PracticePreferences.dailyPlanSide) ?? "" {
         didSet { UserDefaults.standard.set(sidePreference, forKey: PracticePreferences.dailyPlanSide) }
@@ -102,7 +111,18 @@ final class DailyPlanViewModel {
     }
 
     var hasAutomaticRest: Bool {
-        isRunning && !restingBeforeNext && upcomingIndex != nil
+        isRunning && !restingBeforeNext && (upcomingIndex != nil || awaitsSecondArmRaiseSide)
+    }
+
+    /// The open arm raise still has its other arm to run after the long rest.
+    private var awaitsSecondArmRaiseSide: Bool {
+        guard let currentIndex,
+              case .therapy(.armRaise) = items[currentIndex].exercise,
+              let side = armRaiseScriptSide else {
+            return false
+        }
+
+        return armRaiseSide(after: side) != nil
     }
 
     var nextSessionItemID: String? {
@@ -182,6 +202,83 @@ final class DailyPlanViewModel {
         selectedSide ?? dependencies.homeModel(for: exercise.category).routine.side
     }
 
+    func usesOppositionScript(itemID: String, in dependencies: AppDependencies) -> Bool {
+        guard AppLanguage.selected == .indonesian,
+              let item = items.first(where: { $0.id == itemID }),
+              case .finger(let exercise) = item.exercise else {
+            return false
+        }
+        var routine = dependencies.homeModel(for: exercise.category).routine
+        routine.side = fingerSide(for: exercise, in: dependencies)
+        return OppositionGuidance.applies(to: exercise, routine: routine)
+    }
+
+    /// Freeze the finished side before the plan selects a different item.
+    func markOppositionRest(_ side: HandSide?) {
+        oppositionRestSide = side
+    }
+
+    /// The recorded long-rest set for the finished scripted exercise.
+    ///
+    /// Both thumb-opposition briefs approve the same long-rest wording, but only the right-hand
+    /// generator rendered it. The left hand therefore shares those Marizka clips instead of
+    /// falling back to the older generic `rest.long.*` recordings.
+    var longRestNarrationPrefix: String? {
+        if oppositionRestSide != nil {
+            return "opposition.right.longRest."
+        }
+        return armRaiseRestSide.map { ArmRaiseGuidance.prefix(for: $0) + "longRest." }
+    }
+
+    func usesArmRaiseScript(itemID: String, in dependencies: AppDependencies) -> Bool {
+        guard AppLanguage.selected == .indonesian,
+              let item = items.first(where: { $0.id == itemID }),
+              case .therapy(.armRaise) = item.exercise else {
+            return false
+        }
+        return armRaiseScriptSide != nil
+    }
+
+    // MARK: - Scripted arm raise
+
+    /// The arms the approved Indonesian arm-raise briefs train, in order: left, then right.
+    /// A chosen plan side runs that arm only. `nil` keeps the program's own guidance.
+    private var armRaiseScriptSides: [TherapySide]? {
+        guard AppLanguage.selected == .indonesian else {
+            return nil
+        }
+
+        guard let selectedSide else {
+            return [.left, .right]
+        }
+
+        return [selectedSide == .left ? .left : .right]
+    }
+
+    /// The arm the next or open arm-raise session trains, while the briefs apply.
+    var armRaiseScriptSide: TherapySide? {
+        guard let sides = armRaiseScriptSides else {
+            return nil
+        }
+
+        return pendingArmRaiseSide.flatMap { sides.contains($0) ? $0 : nil } ?? sides.first
+    }
+
+    /// The arm after `side` that still needs its own full session, if any.
+    private func armRaiseSide(after side: TherapySide) -> TherapySide? {
+        guard let sides = armRaiseScriptSides,
+              let index = sides.firstIndex(of: side),
+              sides.indices.contains(index + 1) else {
+            return nil
+        }
+
+        return sides[index + 1]
+    }
+
+    func markArmRaiseRest(_ side: TherapySide?) {
+        armRaiseRestSide = side
+    }
+
     func balanceSettings(for exercise: BalanceExercise) -> BalancePracticeSettings {
         var settings = BalancePracticeSettings(exercise: exercise)
         if !exercise.isSitToStand, let side = selectedSide {
@@ -200,6 +297,15 @@ final class DailyPlanViewModel {
         var exercise = configuration.exercises.first { $0.kind == kind } ?? RoutineExercise(kind: kind)
         if let side = selectedSide {
             exercise.sides = side == .left ? .left : .right
+        }
+
+        // The briefs fix one arm per session at two sets of five repetitions, so the
+        // spoken targets, intro and recordings always match what is counted.
+        if kind == .armRaise, let side = armRaiseScriptSide {
+            exercise.sides = side == .left ? .left : .right
+            exercise.sets = ArmRaiseGuidance.sets
+            exercise.leftGoal = ArmRaiseGuidance.repetitions
+            exercise.rightGoal = ArmRaiseGuidance.repetitions
         }
         return exercise
     }
@@ -231,6 +337,7 @@ final class DailyPlanViewModel {
 
         isRunning = true
         currentIndex = index
+        pendingArmRaiseSide = nil
         router.push(.planIntro(items[index].id))
     }
 
@@ -245,7 +352,8 @@ final class DailyPlanViewModel {
             return
         }
 
-        guard await readiness.performAction() else {
+        guard await readiness.performAction(),
+              isRunning, self.currentIndex == currentIndex else {
             return
         }
 
@@ -263,6 +371,19 @@ final class DailyPlanViewModel {
             end(router: router)
             return
         }
+
+        // The left arm's session is followed by the long rest, then the right arm's own intro
+        // and session, as the two briefs describe. The same item stays current.
+        if case .therapy(.armRaise) = items[currentIndex].exercise,
+           let side = armRaiseScriptSide,
+           let nextSide = armRaiseSide(after: side) {
+            pendingArmRaiseSide = nextSide
+            restingBeforeNext = true
+            presentPlanNext(router: router)
+            return
+        }
+
+        pendingArmRaiseSide = nil
         progress = progress.current(on: .now)
         progress.completed.insert(items[currentIndex].id)
         Task { await saveProgress() }
@@ -270,7 +391,10 @@ final class DailyPlanViewModel {
         let next = upcomingIndex
         self.currentIndex = next
         restingBeforeNext = next != nil
+        presentPlanNext(router: router)
+    }
 
+    private func presentPlanNext(router: NavigationRouter) {
         if router.presentedFullScreenCovers.isEmpty {
             router.presentFullScreenCover(.planNext)
         } else {
@@ -292,6 +416,7 @@ final class DailyPlanViewModel {
         isRunning = false
         restingBeforeNext = false
         currentIndex = nil
+        pendingArmRaiseSide = nil
         router.dismiss()
         router.popToRoot()
     }
@@ -301,6 +426,8 @@ final class DailyPlanViewModel {
         replacingRest: Bool = false
     ) {
         currentIndex = index
+        oppositionRestSide = nil
+        armRaiseRestSide = nil
         let route: AppRoute
 
         switch items[index].exercise {

@@ -294,6 +294,11 @@ final class GuidanceAudioService: NSObject, AVSpeechSynthesizerDelegate {
         locale.hasPrefix("id") ? .indonesian : .english
     }
 
+    /// Discards an evidence-timed count when a hold is paused or its stage changes.
+    func stopCount() {
+        cuePlayer?.stop()
+    }
+
     func cancelSpeech() {
         stopNarrationClips()
         utterances.removeAll()
