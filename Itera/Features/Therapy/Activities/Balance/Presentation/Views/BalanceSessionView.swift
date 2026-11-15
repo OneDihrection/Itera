@@ -212,7 +212,7 @@ struct TMBalanceSessionView: View {
                     }
             }
         }
-        .accessibilityLabel(model.exercise.localized("cameraAccessibility"))
+        .accessibilityLabel(LocalizedStringKey(model.exercise.key("cameraAccessibility")))
     }
 
     /// A camera failure offers a retry; otherwise waiting shows the calm camera message.

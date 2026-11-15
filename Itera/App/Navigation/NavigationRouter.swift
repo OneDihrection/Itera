@@ -29,17 +29,12 @@ final class NavigationRouter {
 
     func push(_ route: AppRoute) {
         switch route {
-        case .home:
-            popToRoot()
         case .reports:
             selectedTab = .reports
             reportsPath.removeAll()
         case .report, .sessionReport:
             selectedTab = .reports
             reportsPath.append(route)
-        case .plan:
-            selectedTab = .home
-            homePath.append(route)
         default:
             path.append(route)
         }

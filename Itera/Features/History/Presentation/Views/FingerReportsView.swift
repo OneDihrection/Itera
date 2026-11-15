@@ -232,7 +232,7 @@ struct TMFingerReportsView: View {
         await dependencies.home.refresh()
 
         if armHistory == nil {
-            armHistory = TaskReportsViewModel.movementHistory(repository: dependencies.sessions)
+            armHistory = TaskReportsViewModel(repository: dependencies.sessions)
         }
         await armHistory?.load()
     }

@@ -34,8 +34,6 @@ TMTherapyIconButton in Components/TherapyControls.swift provides a large icon ac
 
 `TMMeasuredInstructionText` adapts VisionPoc’s measured, scrollable instruction reader. It accepts rendered text, a request identity, scaled font size, accessibility settings, and a reading-status callback. It owns measurement and presentation pacing only; the session engine decides when to advance. Typography resolves UIKit fonts alongside SwiftUI fonts in Typography.
 
-`TMExerciseIllustration` presents a noninteractive SF Symbol and scalable label. Home uses `homeHeading` (64 points) and `homeLabel` (32 points); `TMSessionButtonStyle` already provides scalable 32-point primary text and a 72-point minimum height.
-
 ## Full-screen session presentation
 
 `TMSessionStageSurface` provides the reference experience’s full-screen surface, 48-point inset, 24-point section spacing, and continuous 36-point border. It accepts content and controls without knowing about session state. `TMSessionCelebration` provides a cancellable three-second visual celebration and pauses its animation timeline afterward; the caller handles Reduce Motion. Its particle layout was adapted from VisionPoc’s `TherapyClosingSection.swift`.
@@ -55,9 +53,9 @@ The home, exercise start, session pages and progress page use a monochrome look:
 
 Existing controls gained compatible options instead of copies: `TMTherapyButton(pill:)` draws the dark pill (grey when `secondary`), `TMTherapyIconButton(circle:)` draws the black back/close circle with a 64-point touch target, `TMTherapyCard(outlined:padding:)` draws a bordered white card, and `TMTherapyProgressRing(tint:track:lineCap:)` recolours the ring. `TMTherapyTextButton` is a quiet text action for secondary choices beneath primary buttons.
 
-Components/TherapyPageLayout.swift owns `TMTherapyPageHeader` (centered title with a leading close circle, for full-screen session pages that have no navigation bar), `TMTherapyHeroCard`, `TMTherapyProgramCard` and `TMTherapyMediaPanel`.
+Components/TherapyPageLayout.swift owns `TMTherapyPageHeader` (centered title with a leading close circle, for full-screen session pages that have no navigation bar) and `TMTherapyMediaPanel`.
 
-Components/TherapySessionStatus.swift owns `TMTherapyCompletionMark`, `TMTherapyTargetTile`, `TMTherapyNumberedSteps`, `TMTherapySetRow` (done, next or upcoming) and `TMTherapyRestCountdown`. They display supplied values only; set progress, rest timing and skipping stay in the session.
+Components/TherapySessionStatus.swift owns `TMTherapyCompletionMark` and `TMTherapyFeedbackPill`. They display supplied values only; set progress and timing stay in the session.
 
 Components/TherapyProgressSummary.swift owns `TMTherapyWeekSummary`, `TMTherapyProgressSessionCard` and `TMTherapyWeeklyRepetitionChart`. Callers pass formatted values.
 
@@ -68,8 +66,6 @@ Top-level navigation uses the system `TabView` (a top tab bar on iPadOS 18, a bo
 
 
 `TMTherapyMusicMenu` uses a native Menu/Picker for mutually exclusive music choices. It accepts a string binding, value-only `TherapyMusicOption` labels and a button size (minimum 44 points), exposes the selected value to accessibility, and owns no preferences or playback. Session views map the shared track catalog into options. `TMTherapyPageHeader.trailingContentWidth` reserves centered-title space for trailing session actions so the music control does not overlap the title.
-
-`TMTherapyRangeGauge` (Components/TherapyRangeGauge.swift) draws a measured movement range as a start zone, a target zone, and end labels. It takes labels and zone fractions only; the caller decides what the range means.
 
 `TMTherapyFoldPanel` renders supplied fold progress as two shaded hinged panels with layer depth. It accepts progress, fold axis, layer count, and fill opacity, and uses flat movement under Reduce Motion. The caller owns gesture recognition, scoring, and demonstration timing. `CameraDisplayGeometry` shares aspect-fit image bounds and normalized-coordinate mapping between camera overlays, excluding letterbox margins.
 
@@ -87,7 +83,7 @@ The exercise layout stays visible while the camera gets ready. The light stage p
 
 Compatible additions: `TMMeasuredInstructionText(textColor:)` defaults to white for the dark screens, and light pages pass `.label`. `TMSessionPanel(light:)` draws the grey `panel` instead of a tinted black panel. The 3D examples render on `TherapyPalette.mediaBackground`, the studio grey of the finger demonstrations. The blue and yellow guidance colors use the existing `calmUnderlay` where drawn over camera video.
 
-`TMTherapyCountdownDial` (Components/TherapyFeedback.swift) is a very large digit inside a thick ring, used for the light pages' preparation, countdown and rest. Owners still publish whole seconds and say whether the clock is running (`running`). While running, the ring sweeps linearly over each second, so progress is continuous without fractional engine time; while waiting (a cue is still being spoken) it rests full and never moves ahead of the digit. `TMTherapyRepetitionPanel(compact:)` is a shorter card for pages where an illustration should be the larger panel. `TherapyPalette.exerciseBackdrop` is the bright backdrop shared by the 3D examples and their panel.
+`TherapyPalette.exerciseBackdrop` is the bright backdrop shared by the 3D examples and their panel.
 
 ## Guided gesture controls
 

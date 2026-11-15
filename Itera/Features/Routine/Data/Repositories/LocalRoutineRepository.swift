@@ -29,14 +29,4 @@ actor LocalRoutineRepository: RoutineRepository {
         }
         return record.routine
     }
-
-    func save(_ routine: RoutineConfiguration) throws {
-        try storage.write(Record(version: 1, routine: routine), to: url)
-    }
-
-    func delete() throws {
-        if FileManager.default.fileExists(atPath: url.path) {
-            try FileManager.default.removeItem(at: url)
-        }
-    }
 }

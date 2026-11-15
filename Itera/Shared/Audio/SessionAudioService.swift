@@ -693,5 +693,4 @@ final class SessionAudioService: NSObject, VoiceReadinessProviding, AVSpeechSynt
         inputWorker.stop(deactivate: true)
     }
 
-    private enum AudioFailure: Error { case inputUnavailable }
 }

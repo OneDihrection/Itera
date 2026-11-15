@@ -8,27 +8,15 @@
 import Foundation
 
 enum AppRoute: Hashable {
-    case home
-    case fingerHome(ExerciseCategory)
-    case routineConfiguration(TherapyCategory)
-    case exercisePicker(TherapyCategory)
     case therapySession
-    case therapyOverview(TherapyCategory)
-    case balanceOverview(BalanceExercise)
-    case armRotationHome
     case balanceSession(exercise: BalanceExercise, settings: BalancePracticeSettings)
-    case plan(ExerciseCategory)
     case reports
-    /// Session history for one routine category.
-    case taskReports(TherapyCategory)
     /// One arm-practice session with its key-repetition replays.
     case sessionReport(UUID)
     case report(UUID)
     case fingerSession
     case sessionComplete
     case practicePreferences
-    case routineSettings(ExerciseCategory)
-    case exercisePreview(FingerExercise)
     /// The page after the last daily-plan exercise.
     case planNext
     /// The intro page of one daily-plan item, by item id.

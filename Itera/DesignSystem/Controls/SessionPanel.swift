@@ -46,22 +46,3 @@ struct TMSessionPanel<Content: View>: View {
         }
     }
 }
-
-struct TMTargetBubble: View {
-    let diameter: Double
-    let active: Bool
-    let progress: Double
-
-    var body: some View {
-        Circle()
-            .fill((active ? Color.green : Color.white).opacity(0.18))
-            .overlay { Circle().stroke(active ? .green : .white.opacity(0.5), lineWidth: 3) }
-            .overlay {
-                Circle().trim(from: 0, to: progress)
-                    .stroke(.yellow, style: StrokeStyle(lineWidth: 7, lineCap: .round))
-                    .rotationEffect(.degrees(-90))
-            }
-            .frame(width: diameter, height: diameter)
-            .accessibilityHidden(true)
-    }
-}

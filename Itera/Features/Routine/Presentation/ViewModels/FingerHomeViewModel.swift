@@ -30,19 +30,6 @@ final class FingerHomeViewModel {
         self.routineRepository = routineRepository
     }
 
-    var repetitionSummary: String {
-        String.localizedStringWithFormat(
-            String(localized: "plan.repetitionFormat", bundle: AppLanguage.selected.resourceBundle),
-            Int64(routine.sets), Int64(routine.repetitions)
-        )
-    }
-
-    var movementSummary: String {
-        String.localizedStringWithFormat(
-            String(localized: "plan.movementFormat", bundle: AppLanguage.selected.resourceBundle), Int64(routine.exercises.count)
-        )
-    }
-
     func saveRoutine() async -> Bool {
         do {
             try await routineRepository.save(routine)

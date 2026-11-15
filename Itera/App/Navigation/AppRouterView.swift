@@ -12,39 +12,12 @@ enum AppRouterView {
     @ViewBuilder
     static func destination(_ route: AppRoute) -> some View {
         switch route {
-        case .home:
-            TMHomeView()
-        case .fingerHome(let category):
-            TMFingerHomeView(category: category)
-        case .therapyOverview(let category):
-            TMTherapyOverview(category: category)
-                .environment(\.buttonFeedback, {})
-                .environment(\.locale, AppLanguage.selected.locale)
-        case .armRotationHome:
-            TMArmRotationHomeView()
-                .environment(\.locale, AppLanguage.selected.locale)
-        case .balanceOverview(let exercise):
-            TMBalanceOverviewView(exercise: exercise)
-                .environment(\.locale, AppLanguage.selected.locale)
         case .balanceSession(let exercise, let settings):
             TMBalanceSessionDestination(exercise: exercise, settings: settings)
-                .environment(\.locale, AppLanguage.selected.locale)
-        case .routineConfiguration(let category):
-            TMRoutineConfigurationView(category: category)
-                .environment(\.buttonFeedback, {})
-                .environment(\.locale, AppLanguage.selected.locale)
-        case .exercisePicker(let category):
-            TMRoutineExercisePicker(category: category)
-                .environment(\.buttonFeedback, {})
                 .environment(\.locale, AppLanguage.selected.locale)
         case .therapySession:
             TMSessionDestination()
                 .environment(\.buttonFeedback, {})
-                .environment(\.locale, AppLanguage.selected.locale)
-        case .plan(let category):
-            TMFingerPlanView(category: category)
-        case .taskReports(let category):
-            TMTaskReportsDestination(category: category)
                 .environment(\.locale, AppLanguage.selected.locale)
         case .sessionReport(let id):
             TMSessionReportDestination(id: id)
@@ -59,10 +32,6 @@ enum AppRouterView {
             TMFingerSessionCompleteView()
         case .practicePreferences:
             TMPracticePreferencesView()
-        case .routineSettings(let category):
-            TMFingerRoutineSettingsView(category: category)
-        case .exercisePreview(let exercise):
-            TMFingerExercisePreviewView(exercise: exercise)
         case .planNext:
             TMDailyPlanNextView()
         case .planIntro(let itemID):
@@ -105,11 +74,11 @@ private struct TMRouterPreview: View {
 }
 
 #Preview("Pushed route") {
-    TMRouterPreview(route: .home)
+    TMRouterPreview(route: .practicePreferences)
 }
 
 #Preview("Sheet") {
-    TMRouterPreview(route: .home, sheet: true)
+    TMRouterPreview(route: .practicePreferences, sheet: true)
 }
 #endif
 
@@ -134,15 +103,6 @@ private struct TMBalanceSessionDestination: View {
             settings: settings,
             exercise: exercise
         ))
-    }
-}
-
-private struct TMTaskReportsDestination: View {
-    let category: TherapyCategory
-    @Environment(AppDependencies.self) private var dependencies
-
-    var body: some View {
-        TMTaskReportsView(model: TaskReportsViewModel(category: category, repository: dependencies.sessions))
     }
 }
 
