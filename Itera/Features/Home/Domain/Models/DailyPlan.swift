@@ -66,6 +66,7 @@ struct DailyPlanItem: Identifiable, Hashable {
 enum DailyPlan {
     /// The daily exercises in practice order: hand and forearm first, then arm,
     /// shoulder, trunk and the task. The plan is fixed for now; change this list to change it.
+    /// Debug builds can hide, reorder and resize items with `DebugPlanLayout`.
     static let standard: [DailyPlanItem] = {
         let fingers = FingerExercise.allCases.map { DailyPlanItem(exercise: .finger($0)) }
 

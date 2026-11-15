@@ -90,12 +90,17 @@ final class AppDependencies: HistoryRecovering {
         await forearm.refresh()
     }
 
-    /// - Parameter only: one exercise of the category to run alone, as a daily-plan item does.
+    /// - Parameters:
+    ///   - only: one exercise of the category to run alone, as a daily-plan item does.
+    ///   - sets: replaces the saved sets for this session only, as `side` does.
+    ///   - repetitions: replaces the saved repetitions for this session only.
     func prepareSession(
         category: ExerciseCategory = .fingers,
         continuing: Bool = false,
         only: FingerExercise? = nil,
-        side: HandSide? = nil
+        side: HandSide? = nil,
+        sets: Int? = nil,
+        repetitions: Int? = nil
     ) {
         let model = homeModel(for: category)
         let checkpoint = continuing ? model.checkpoint : nil
@@ -104,6 +109,8 @@ final class AppDependencies: HistoryRecovering {
         if checkpoint == nil {
             routine.only = only
             routine.side = side ?? routine.side
+            routine.sets = sets ?? routine.sets
+            routine.repetitions = repetitions ?? routine.repetitions
         }
 
         session = FingerSessionViewModel(

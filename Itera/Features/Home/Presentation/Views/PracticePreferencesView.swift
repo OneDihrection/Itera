@@ -89,6 +89,9 @@ struct TMPracticePreferencesView: View {
             } footer: {
                 Text("cognitive.soundHelp").typography(.body)
             }
+            #if DEBUG
+            debugSection
+            #endif
         }
         .typography(.body)
         .tint(TherapyPalette.green)
@@ -110,6 +113,18 @@ struct TMPracticePreferencesView: View {
         .presentationDetents([.large])
         .onDisappear { Task { _ = await dependencies.home.saveRoutine() } }
     }
+
+    #if DEBUG
+    // MARK: - Debug
+
+    private var debugSection: some View {
+        Section {
+            TMDebugActionButton(title: "debug.planEditor.open", symbol: "list.bullet") {
+                router.presentSheet(.debugPlanEditor)
+            }
+        }
+    }
+    #endif
 
     // MARK: - Recording
 

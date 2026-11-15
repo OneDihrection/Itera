@@ -36,6 +36,10 @@ enum AppRouterView {
             TMDailyPlanNextView()
         case .planIntro(let itemID):
             TMDailyPlanIntroView(itemID: itemID)
+        #if DEBUG
+        case .debugPlanEditor:
+            TMDebugPlanEditorView()
+        #endif
         }
     }
 }

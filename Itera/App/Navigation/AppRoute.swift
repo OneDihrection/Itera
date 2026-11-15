@@ -21,6 +21,10 @@ enum AppRoute: Hashable {
     case planNext
     /// The intro page of one daily-plan item, by item id.
     case planIntro(String)
+    #if DEBUG
+    /// Chooses, orders and sizes the daily-plan exercises Beranda shows.
+    case debugPlanEditor
+    #endif
 }
 
 enum AppTab: Hashable {

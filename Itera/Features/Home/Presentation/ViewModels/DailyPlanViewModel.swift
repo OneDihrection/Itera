@@ -43,7 +43,10 @@ struct DailyPlanRow: Identifiable, Equatable {
 @Observable
 final class DailyPlanViewModel {
     static let completionPreviewDuration: Duration = .seconds(4)
-    let items: [DailyPlanItem]
+    /// The exercises Beranda shows, in order. Always `standardItems` in Release builds.
+    private(set) var items: [DailyPlanItem]
+    /// Every exercise the plan knows, in standard order.
+    let standardItems: [DailyPlanItem]
     private(set) var progress = DailyPlanProgress.empty(on: .now)
     /// Index of the item whose session is open, or that just finished.
     private(set) var currentIndex: Int?
@@ -66,9 +69,71 @@ final class DailyPlanViewModel {
     @ObservationIgnored private let repository: any DailyPlanProgressRepository
     @ObservationIgnored private var loadFailed = false
 
+    #if DEBUG
+    /// The debug plan editor's arrangement and custom counts.
+    private(set) var debugLayout: DebugPlanLayout
+    #endif
+
     init(items: [DailyPlanItem] = DailyPlan.standard, repository: any DailyPlanProgressRepository) {
-        self.items = items
+        self.standardItems = items
         self.repository = repository
+
+        #if DEBUG
+        let layout = DebugPlanLayout.load(for: items)
+        self.debugLayout = layout
+        self.items = layout.items(from: items)
+        #else
+        self.items = items
+        #endif
+    }
+
+    #if DEBUG
+    // MARK: - Debug layout
+
+    /// Saves the debug editor's layout and rearranges Beranda. Ignored while a plan runs, so
+    /// the open item's index never shifts under it.
+    func applyDebugLayout(_ layout: DebugPlanLayout) {
+        guard !isRunning else {
+            return
+        }
+
+        let reconciled = layout.reconciled(with: standardItems)
+        reconciled.save()
+        debugLayout = reconciled
+        items = reconciled.items(from: standardItems)
+    }
+
+    /// The sets and repetitions `item` runs with now, custom counts included. The editor
+    /// starts a newly customized item from these.
+    func debugCounts(
+        for item: DailyPlanItem,
+        in dependencies: AppDependencies
+    ) -> (sets: Int, repetitions: Int) {
+        var sets = 1
+        var repetitions = 1
+
+        for detail in details(for: item.exercise, in: dependencies) {
+            switch detail {
+            case .sets(let value):
+                sets = value
+            case .repetitions(let value):
+                repetitions = value
+            case .holdSeconds:
+                break
+            }
+        }
+
+        return (sets, repetitions)
+    }
+    #endif
+
+    /// Custom counts from the debug plan editor; always `nil` in Release builds.
+    private func customCounts(for itemID: String) -> (sets: Int?, repetitions: Int?)? {
+        #if DEBUG
+        return debugLayout.override(for: itemID).map { ($0.sets, $0.repetitions) }
+        #else
+        return nil
+        #endif
     }
 
     // MARK: - Progress
@@ -162,7 +227,7 @@ final class DailyPlanViewModel {
         }
     }
 
-    private static func titleKey(for exercise: DailyPlanItem.Exercise) -> String {
+    static func titleKey(for exercise: DailyPlanItem.Exercise) -> String {
         switch exercise {
         case .finger(let exercise):
             return exercise.title
@@ -179,7 +244,7 @@ final class DailyPlanViewModel {
     ) -> [DailyPlanRow.Detail] {
         switch exercise {
         case .finger(let exercise):
-            let routine = dependencies.homeModel(for: exercise.category).routine
+            let routine = fingerRoutine(for: exercise, in: dependencies)
             return [.sets(routine.sets), .repetitions(routine.repetitions)]
 
         case .therapy(let kind):
@@ -188,7 +253,7 @@ final class DailyPlanViewModel {
             return [.sets(exercise.sets), .repetitions(goal)]
 
         case .balance(let exercise):
-            let settings = BalancePracticeSettings(exercise: exercise)
+            let settings = balanceSettings(for: exercise)
 
             return [.sets(settings.sets), .repetitions(settings.repetitions)]
         }
@@ -208,9 +273,21 @@ final class DailyPlanViewModel {
               case .finger(let exercise) = item.exercise else {
             return false
         }
-        var routine = dependencies.homeModel(for: exercise.category).routine
+        var routine = fingerRoutine(for: exercise, in: dependencies)
         routine.side = fingerSide(for: exercise, in: dependencies)
         return OppositionGuidance.applies(to: exercise, routine: routine)
+    }
+
+    /// The category's saved finger routine with this exercise's custom counts, if any.
+    private func fingerRoutine(for exercise: FingerExercise, in dependencies: AppDependencies) -> FingerRoutine {
+        var routine = dependencies.homeModel(for: exercise.category).routine
+
+        if let counts = customCounts(for: exercise.rawValue) {
+            routine.sets = counts.sets ?? routine.sets
+            routine.repetitions = counts.repetitions ?? routine.repetitions
+        }
+
+        return routine
     }
 
     /// Freeze the finished side before the plan selects a different item.
@@ -243,8 +320,10 @@ final class DailyPlanViewModel {
 
     /// The arms the approved Indonesian arm-raise briefs train, in order: left, then right.
     /// A chosen plan side runs that arm only. `nil` keeps the program's own guidance.
+    /// Custom debug counts replace the briefs' fixed two sets of five, so the script is dropped.
     private var armRaiseScriptSides: [TherapySide]? {
-        guard AppLanguage.selected == .indonesian else {
+        guard AppLanguage.selected == .indonesian,
+              customCounts(for: TherapyKind.armRaise.rawValue) == nil else {
             return nil
         }
 
@@ -284,6 +363,14 @@ final class DailyPlanViewModel {
         if !exercise.isSitToStand, let side = selectedSide {
             settings.armSelection = side == .left ? .left : .right
         }
+
+        if let counts = customCounts(for: exercise.rawValue) {
+            let range = BalancePracticeSettings.setsRange
+            let sets = counts.sets ?? settings.sets
+            settings.sets = min(range.upperBound, max(range.lowerBound, sets))
+            settings.repetitions = counts.repetitions ?? settings.repetitions
+        }
+
         return settings
     }
 
@@ -297,6 +384,17 @@ final class DailyPlanViewModel {
         var exercise = configuration.exercises.first { $0.kind == kind } ?? RoutineExercise(kind: kind)
         if let side = selectedSide {
             exercise.sides = side == .left ? .left : .right
+        }
+
+        if let counts = customCounts(for: kind.rawValue) {
+            exercise.sets = counts.sets ?? exercise.sets
+
+            // Arm movements and the towel count goals per side; directional reach counts rounds.
+            if let repetitions = counts.repetitions {
+                exercise.leftGoal = repetitions
+                exercise.rightGoal = repetitions
+                exercise.rounds = repetitions
+            }
         }
 
         // The briefs fix one arm per session at two sets of five repetitions, so the
@@ -435,11 +533,21 @@ final class DailyPlanViewModel {
             let checkpoint = dependencies.homeModel(for: exercise.category).checkpoint
             let side = selectedSide
             let matchesSide = side.map { checkpoint?.routine.side == $0 } ?? true
+            let routine = fingerRoutine(for: exercise, in: dependencies)
+
+            // A checkpoint saved under other counts would not run what the card shows.
+            let matchesCounts = checkpoint.map {
+                $0.routine.sets == routine.sets
+                    && $0.routine.repetitions == routine.repetitions
+            } ?? true
+
             dependencies.prepareSession(
                 category: exercise.category,
-                continuing: checkpoint?.routine.only == exercise && matchesSide,
+                continuing: checkpoint?.routine.only == exercise && matchesSide && matchesCounts,
                 only: exercise,
-                side: side
+                side: side,
+                sets: routine.sets,
+                repetitions: routine.repetitions
             )
             route = .fingerSession
 
