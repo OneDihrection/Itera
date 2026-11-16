@@ -1201,3 +1201,7 @@ Every page and injected type declares an explicit initializer and keeps its inje
 - **Daily plan.** `DailyPlanViewModel` receives the finger and forearm homes, both routine models and the launcher through `init`.
 
 Verification: Debug and Release Simulator builds with IPHONEOS_DEPLOYMENT_TARGET=17.0 passed. This change does not alter runtime behaviour; the earlier device checks still apply.
+
+## Session flow redesign (proposed, 2026-11-16)
+
+Proposed only; nothing is implemented. Today the guided `SessionEngine`, `FingerSessionViewModel`, `BalanceSessionViewModel` and `DailyPlanNextView` each run their own progression, pause, rest, countdown and narration-gate logic. The plan replaces this with shared domain flow types (`SessionStage`, `Suspension`, `GuidanceGate`, `Countdown`, `BreathingRest`, `ActivityFact`, `GuidancePolicy`) in ten behaviour-preserving phases. See [Documentation/SessionFlowRedesign/README.md](Documentation/SessionFlowRedesign/README.md). ADR-010 will be added when Phase 3 lands. Until a phase is merged, the sections above remain authoritative.
