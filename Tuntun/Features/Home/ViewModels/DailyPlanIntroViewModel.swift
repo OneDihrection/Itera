@@ -49,7 +49,7 @@ final class DailyPlanIntroViewModel: DailyPlanIntroViewModelProtocol {
     @ObservationIgnored private let presetCountdown: Int?
     @ObservationIgnored private let automatic: Bool
     private let plan: DailyPlanViewModel
-    @ObservationIgnored private let audio: SessionAudioService
+    @ObservationIgnored private let audioService: SessionAudioService
     private let readiness: TherapyReadinessViewModel
     private let narration: DailyPlanIntroNarration
 
@@ -61,7 +61,7 @@ final class DailyPlanIntroViewModel: DailyPlanIntroViewModelProtocol {
         countdownSeconds: Int?,
         automatic: Bool,
         plan: DailyPlanViewModel,
-        audio: SessionAudioService,
+        audioService: SessionAudioService,
         readiness: TherapyReadinessViewModel,
         narration: DailyPlanIntroNarration
     ) {
@@ -69,7 +69,7 @@ final class DailyPlanIntroViewModel: DailyPlanIntroViewModelProtocol {
         self.presetCountdown = countdownSeconds
         self.automatic = automatic
         self.plan = plan
-        self.audio = audio
+        self.audioService = audioService
         self.readiness = readiness
         self.narration = narration
     }
@@ -173,7 +173,7 @@ final class DailyPlanIntroViewModel: DailyPlanIntroViewModelProtocol {
                 await narration.start(
                     readiness: readiness,
                     plan: plan,
-                    audio: audio,
+                    audioService: audioService,
                     itemID: itemID,
                     automatic: automatic,
                     lines: scriptIntroduction
@@ -190,7 +190,7 @@ final class DailyPlanIntroViewModel: DailyPlanIntroViewModelProtocol {
         narration.stop()
 
         if presetCountdown != nil {
-            audio.cancelSpeech()
+            audioService.cancelSpeech()
         }
 
         plan.end()

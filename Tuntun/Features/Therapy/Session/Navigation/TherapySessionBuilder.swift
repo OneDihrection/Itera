@@ -10,12 +10,12 @@ import SwiftUI
 /// What the guided, Balancing and finger session pages need from their parent.
 @MainActor
 protocol TherapySessionDependency {
-    var tracking: BodyTrackingService { get }
-    var audio: SessionAudioService { get }
+    var trackingService: BodyTrackingService { get }
+    var audioService: SessionAudioService { get }
     var sessions: any SessionRepository { get }
-    var permissions: PermissionManager { get }
+    var permissionService: PermissionService { get }
     var fingers: FingerHomeViewModel { get }
-    var fingerSessions: FingerSessionLauncher { get }
+    var fingerSessionService: FingerSessionService { get }
     /// Sessions report their finishing action to today's plan.
     var planReporting: any DailyPlanSessionReporting { get }
     var sessionRouter: any SessionRouterProtocol { get }
@@ -32,8 +32,8 @@ final class TherapySessionBuilder {
 
     @ViewBuilder func buildTherapySession(routine: Routine) -> some View {
         let model: some TherapySessionViewModelProtocol = TherapySessionViewModel(
-            tracking: dependency.tracking,
-            audio: dependency.audio,
+            trackingService: dependency.trackingService,
+            audioService: dependency.audioService,
             repository: dependency.sessions,
             routine: routine
         )
@@ -41,7 +41,7 @@ final class TherapySessionBuilder {
         TMTherapySessionView(
             model: model,
             plan: dependency.planReporting,
-            permissions: dependency.permissions,
+            permissionService: dependency.permissionService,
             router: dependency.sessionRouter
         )
         .environment(\.buttonFeedback, {})
@@ -53,8 +53,8 @@ final class TherapySessionBuilder {
         settings: BalancePracticeSettings
     ) -> some View {
         let model: some BalanceSessionViewModelProtocol = BalanceSessionViewModel(
-            tracking: dependency.tracking,
-            audio: dependency.audio,
+            trackingService: dependency.trackingService,
+            audioService: dependency.audioService,
             repository: dependency.sessions,
             settings: settings,
             exercise: exercise
@@ -63,7 +63,7 @@ final class TherapySessionBuilder {
         TMBalanceSessionView(
             model: model,
             plan: dependency.planReporting,
-            permissions: dependency.permissions,
+            permissionService: dependency.permissionService,
             router: dependency.sessionRouter
         )
         .environment(\.locale, AppLanguage.selected.locale)
@@ -71,7 +71,7 @@ final class TherapySessionBuilder {
 
     @ViewBuilder func buildFingerSession() -> some View {
         TMFingerSessionView(
-            launcher: dependency.fingerSessions,
+            fingerSessionService: dependency.fingerSessionService,
             plan: dependency.planReporting,
             router: dependency.sessionRouter
         )
@@ -79,7 +79,7 @@ final class TherapySessionBuilder {
 
     @ViewBuilder func buildFingerSessionComplete() -> some View {
         let viewModel: some FingerSessionCompleteViewModelProtocol = FingerSessionCompleteViewModel(
-            launcher: dependency.fingerSessions,
+            fingerSessionService: dependency.fingerSessionService,
             plan: dependency.planReporting,
             home: dependency.fingers,
             tabs: dependency.tabRouter,

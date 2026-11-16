@@ -17,10 +17,10 @@ import Foundation
 final class AppComponent: HistoryDependency, HomeDependency, TherapySessionDependency {
     // MARK: - Services
 
-    let permissions: PermissionManager
-    let tracking = BodyTrackingService()
-    let audio: SessionAudioService
-    let buttonClick: ButtonClickPlayer
+    let permissionService: PermissionService
+    let trackingService = BodyTrackingService()
+    let audioService: SessionAudioService
+    let buttonClickService: ButtonClickService
 
     // MARK: - Repositories
 
@@ -34,8 +34,8 @@ final class AppComponent: HistoryDependency, HomeDependency, TherapySessionDepen
     let fingers: FingerHomeViewModel
     let armRoutine: RoutineViewModel
     let taskRoutine: RoutineViewModel
-    let fingerSessions: FingerSessionLauncher
-    let historyRecovery: any HistoryRecovering
+    let fingerSessionService: FingerSessionService
+    let historyRecoveryService: any HistoryRecoveryServiceProtocol
     /// Today's plan across programs; Beranda shows it and finishing sessions report to it.
     let dailyPlan: DailyPlanViewModel
 
@@ -46,20 +46,23 @@ final class AppComponent: HistoryDependency, HomeDependency, TherapySessionDepen
     /// Concrete because `RootViewModel` wires it; features receive `tabRouter`.
     private let tabs = TabRouter()
 
-    init(permissions: PermissionManager) {
-        self.permissions = permissions
+    init(permissionService: PermissionService) {
+        self.permissionService = permissionService
 
-        let audio = SessionAudioService()
-        let guidanceAudio = GuidanceAudioService()
-        self.audio = audio
-        buttonClick = ButtonClickPlayer(guidance: guidanceAudio, narration: audio)
+        let audioService = SessionAudioService()
+        let guidanceAudioService = GuidanceAudioService()
+        self.audioService = audioService
+        buttonClickService = ButtonClickService(
+            guidanceAudioService: guidanceAudioService,
+            audioService: audioService
+        )
 
         let directory = URL.applicationSupportDirectory.appendingPathComponent(
             "Sessions",
             isDirectory: true
         )
         sessions = LocalSessionRepository(directory: directory)
-        historyRecovery = SessionHistoryRecovery(sessions: sessions)
+        historyRecoveryService = HistoryRecoveryService(sessions: sessions)
 
         armRoutine = RoutineViewModel(repository: LocalRoutineRepository(
             url: URL.applicationSupportDirectory.appendingPathComponent("routines.json")
@@ -82,12 +85,12 @@ final class AppComponent: HistoryDependency, HomeDependency, TherapySessionDepen
             routineRepository: LocalFingerRoutineRepository(category: .forearm)
         )
 
-        fingerSessions = FingerSessionLauncher(
+        fingerSessionService = FingerSessionService(
             fingers: fingers,
             forearm: forearm,
-            camera: HandCameraService(),
-            audio: guidanceAudio,
-            permissions: permissions,
+            cameraService: HandCameraService(),
+            guidanceAudioService: guidanceAudioService,
+            permissionService: permissionService,
             fingerRepository: fingerRepository,
             forearmRepository: forearmRepository
         )
@@ -98,7 +101,7 @@ final class AppComponent: HistoryDependency, HomeDependency, TherapySessionDepen
             forearm: forearm,
             armRoutine: armRoutine,
             taskRoutine: taskRoutine,
-            fingerSessions: fingerSessions,
+            fingerSessionService: fingerSessionService,
             router: homeRouter
         )
 
@@ -131,7 +134,7 @@ final class AppComponent: HistoryDependency, HomeDependency, TherapySessionDepen
     lazy var rootViewModel = RootViewModel(
         router: tabs,
         playButtonClick: { [unowned self] in
-            buttonClick.play()
+            buttonClickService.play()
         }
     )
 
@@ -139,12 +142,12 @@ final class AppComponent: HistoryDependency, HomeDependency, TherapySessionDepen
 
     /// Finalizes a session interrupted by termination, once per launch.
     func recoverHistory() async {
-        await historyRecovery.recoverHistory()
+        await historyRecoveryService.recoverHistory()
     }
 
     /// Re-reads authorization when the app returns to the foreground.
     func refreshPermissions() {
-        permissions.refresh()
+        permissionService.refresh()
     }
 
     #if DEBUG

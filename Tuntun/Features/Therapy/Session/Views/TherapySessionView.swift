@@ -27,7 +27,7 @@ struct TMTherapySessionView<ViewModel: TherapySessionViewModelProtocol>: View {
     @State var videoBounds: CGRect?
     @State var model: ViewModel
     let plan: any DailyPlanSessionReporting
-    let permissions: any PermissionManaging
+    let permissionService: any PermissionServiceProtocol
     private let router: any SessionRouterProtocol
     /// A Debug fixture renders a fixed snapshot without starting capture or audio.
     private let presentationOnly: Bool
@@ -35,13 +35,13 @@ struct TMTherapySessionView<ViewModel: TherapySessionViewModelProtocol>: View {
     init(
         model: ViewModel,
         plan: any DailyPlanSessionReporting,
-        permissions: any PermissionManaging,
+        permissionService: any PermissionServiceProtocol,
         router: any SessionRouterProtocol,
         presentationOnly: Bool = false
     ) {
         _model = State(initialValue: model)
         self.plan = plan
-        self.permissions = permissions
+        self.permissionService = permissionService
         self.router = router
         self.presentationOnly = presentationOnly
     }
@@ -61,7 +61,7 @@ struct TMTherapySessionView<ViewModel: TherapySessionViewModelProtocol>: View {
                 VStack(spacing: 24) {
                     Text(LocalizedStringKey(model.entryMessage)).typography(.title)
                     Button("home.retry") {
-                        Task { await model.start(permissions: permissions) }
+                        Task { await model.start(permissionService: permissionService) }
                     }
                     .disabled(model.validating)
                     .buttonStyle(TMSessionButtonStyle())
@@ -135,7 +135,7 @@ struct TMTherapySessionView<ViewModel: TherapySessionViewModelProtocol>: View {
         .statusBarHidden(!usesLightLayout && model.snapshot.summary == nil)
         .navigationBarBackButtonHidden(model.snapshot.summary == nil || usesLightTheme)
         .task {
-            if !presentationOnly { await model.start(permissions: permissions) }
+            if !presentationOnly { await model.start(permissionService: permissionService) }
         }
         .task(id: model.snapshot.stage == .preparing) {
             await revealCameraRecoveryAfterDelay()
@@ -514,7 +514,7 @@ struct TMTherapySessionView<ViewModel: TherapySessionViewModelProtocol>: View {
         GeometryReader { geometry in
             ZStack {
                 TMBodyCameraPreview(
-                    session: model.tracking.session, front: true,
+                    session: model.trackingService.session, front: true,
                     onReady: model.previewReady,
                     onOrientation: model.orientationChanged,
                     onVideoBounds: usesLightLayout ? { videoBounds = $0 } : nil
@@ -727,7 +727,7 @@ struct TMTherapySessionView<ViewModel: TherapySessionViewModelProtocol>: View {
                         model.openSettings()
                     }.buttonStyle(TMSessionButtonStyle())
                     Button("home.retry") {
-                        Task { await model.enableVoice(permissions: permissions) }
+                        Task { await model.enableVoice(permissionService: permissionService) }
                     }.buttonStyle(TMSessionButtonStyle())
                 }
             }
@@ -780,7 +780,7 @@ struct TMTherapySessionView<ViewModel: TherapySessionViewModelProtocol>: View {
                             .buttonStyle(TMSessionButtonStyle())
                     }
                     Button("session.retryCamera") {
-                        Task { await model.retryCamera(permissions: permissions) }
+                        Task { await model.retryCamera(permissionService: permissionService) }
                     }.buttonStyle(TMSessionButtonStyle())
 
                     recoveryControls

@@ -1,5 +1,5 @@
 //
-//  PermissionManager.swift
+//  PermissionService.swift
 //  Tuntun
 //
 //  Created by dimaswisodewo on 28/10/2026.
@@ -24,7 +24,7 @@ enum PermissionStatus {
 }
 
 @MainActor
-protocol PermissionManaging: AnyObject {
+protocol PermissionServiceProtocol: AnyObject {
     func status(for permission: AppPermission) -> PermissionStatus
     func request(_ permission: AppPermission) async -> PermissionStatus
     func refresh()
@@ -33,7 +33,7 @@ protocol PermissionManaging: AnyObject {
 /// Owns authorization only; capture and audio services retain runtime readiness checks.
 @MainActor
 @Observable
-final class PermissionManager: PermissionManaging {
+final class PermissionService: PermissionServiceProtocol {
     private var statuses: [AppPermission: PermissionStatus] = [:]
 
     @ObservationIgnored

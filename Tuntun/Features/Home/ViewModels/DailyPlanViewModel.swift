@@ -70,7 +70,7 @@ final class DailyPlanViewModel: DailyPlanSessionReporting {
     @ObservationIgnored private let forearm: FingerHomeViewModel
     @ObservationIgnored private let armRoutine: RoutineViewModel
     @ObservationIgnored private let taskRoutine: RoutineViewModel
-    @ObservationIgnored private let fingerSessions: FingerSessionLauncher
+    @ObservationIgnored private let fingerSessionService: FingerSessionService
     @ObservationIgnored private let router: any DailyPlanRouterProtocol
     @ObservationIgnored private var loadFailed = false
 
@@ -93,7 +93,7 @@ final class DailyPlanViewModel: DailyPlanSessionReporting {
         forearm: FingerHomeViewModel,
         armRoutine: RoutineViewModel,
         taskRoutine: RoutineViewModel,
-        fingerSessions: FingerSessionLauncher,
+        fingerSessionService: FingerSessionService,
         router: any DailyPlanRouterProtocol
     ) {
         self.standardItems = items
@@ -102,7 +102,7 @@ final class DailyPlanViewModel: DailyPlanSessionReporting {
         self.forearm = forearm
         self.armRoutine = armRoutine
         self.taskRoutine = taskRoutine
-        self.fingerSessions = fingerSessions
+        self.fingerSessionService = fingerSessionService
         self.router = router
 
         #if DEBUG
@@ -584,7 +584,7 @@ final class DailyPlanViewModel: DailyPlanSessionReporting {
                     && $0.routine.repetitions == routine.repetitions
             } ?? true
 
-            fingerSessions.prepare(
+            fingerSessionService.prepare(
                 category: exercise.category,
                 continuing: checkpoint?.routine.only == exercise && matchesSide && matchesCounts,
                 only: exercise,

@@ -51,7 +51,7 @@ protocol FingerSessionViewModelProtocol: AnyObject, Observable {
     var demoTitleKey: String { get }
     var demoAnnouncement: String { get }
     /// The capture owner the camera preview attaches to.
-    var camera: HandCameraService { get }
+    var cameraService: HandCameraService { get }
 
     func start() async
     func pause()
@@ -108,9 +108,9 @@ final class FingerSessionViewModel: FingerSessionViewModelProtocol {
     /// Read once at session start, so a settings change never affects a running session.
     @ObservationIgnored private var replayRecording = ReplayRecording.off
     @ObservationIgnored private var lastCountdownCue = ""
-    let camera: HandCameraService
-    @ObservationIgnored private let audio: GuidanceAudioService
-    @ObservationIgnored private let permissions: any PermissionManaging
+    let cameraService: HandCameraService
+    @ObservationIgnored private let guidanceAudioService: GuidanceAudioService
+    @ObservationIgnored private let permissionService: any PermissionServiceProtocol
     @ObservationIgnored private let repository: any FingerSessionRepository
     @ObservationIgnored private var subscriptions = Set<AnyCancellable>()
     @ObservationIgnored private var timer: AnyCancellable?
@@ -177,17 +177,17 @@ final class FingerSessionViewModel: FingerSessionViewModelProtocol {
     @ObservationIgnored private var wasIdleTimerDisabled = false
     @ObservationIgnored private var language = "id-ID"
 
-    init(routine: FingerRoutine, checkpoint: FingerSessionSummary?, camera: HandCameraService,
-         audio: GuidanceAudioService, permissions: any PermissionManaging,
+    init(routine: FingerRoutine, checkpoint: FingerSessionSummary?, cameraService: HandCameraService,
+         guidanceAudioService: GuidanceAudioService, permissionService: any PermissionServiceProtocol,
          repository: any FingerSessionRepository) {
         engine = FingerSessionEngine(
             routine: routine,
             checkpoint: checkpoint,
             scriptedOpposition: AppLanguage.selected == .indonesian
         )
-        self.camera = camera
-        self.audio = audio
-        self.permissions = permissions
+        self.cameraService = cameraService
+        self.guidanceAudioService = guidanceAudioService
+        self.permissionService = permissionService
         self.repository = repository
         celebratedSets[engine.summary.exerciseIndex] = engine.activity.completedSets
     }
@@ -369,8 +369,8 @@ final class FingerSessionViewModel: FingerSessionViewModelProtocol {
             if cue != lastCountdownCue {
                 lastCountdownCue = cue
                 // Marizka says "tiga, dua, satu" when recorded; otherwise the beep as before.
-                if countdown > 0, !audio.playCountdown(countdown) {
-                    _ = audio.speak(String(countdown))
+                if countdown > 0, !guidanceAudioService.playCountdown(countdown) {
+                    _ = guidanceAudioService.speak(String(countdown))
                 }
             }
         }
@@ -389,7 +389,7 @@ final class FingerSessionViewModel: FingerSessionViewModelProtocol {
         }
         language = sessionLanguage.speechIdentifier
         subscribe()
-        let cameraStatus = await permissions.request(.camera)
+        let cameraStatus = await permissionService.request(.camera)
         guard !hasFinished else {
             return
         }
@@ -400,7 +400,7 @@ final class FingerSessionViewModel: FingerSessionViewModelProtocol {
             return
         }
         do {
-            try audio.configure(language: language)
+            try guidanceAudioService.configure(language: language)
         } catch {
             errorKey = "audio.unavailable"
         }
@@ -411,12 +411,12 @@ final class FingerSessionViewModel: FingerSessionViewModelProtocol {
             return
         }
         replayRecording = PracticePreferences.replayRecordingLevel
-        camera.clips.reset()
-        camera.clips.configure(privacy: PracticePreferences.repClipPrivacy)
-        camera.track(side: routine.side)
-        camera.start()
+        cameraService.clips.reset()
+        cameraService.clips.configure(privacy: PracticePreferences.repClipPrivacy)
+        cameraService.track(side: routine.side)
+        cameraService.start()
         if !paused {
-            audio.startMusic()
+            guidanceAudioService.startMusic()
             durationClock.resume(at: ProcessInfo.processInfo.systemUptime)
         }
         startTimer()
@@ -434,9 +434,9 @@ final class FingerSessionViewModel: FingerSessionViewModelProtocol {
 
     private func subscribe() {
         // Slightly under the 15 Hz inference interval, so throttling never drops a fresh sample.
-        camera.events.throttle(for: .milliseconds(60), scheduler: DispatchQueue.main, latest: true)
+        cameraService.events.throttle(for: .milliseconds(60), scheduler: DispatchQueue.main, latest: true)
             .sink { [weak self] event in self?.receive(event) }.store(in: &subscriptions)
-        audio.events.sink { [weak self] event in
+        guidanceAudioService.events.sink { [weak self] event in
             guard let self else {
                 return
             }
@@ -569,7 +569,7 @@ final class FingerSessionViewModel: FingerSessionViewModelProtocol {
                 let previousCompletion = activity.holdCompletionID
                 engine.observe(hand, now: now)
                 if previousCompletion == nil, activity.holdCompletionID != nil {
-                    audio.playCue(.holdCompleted)
+                    guidanceAudioService.playCue(.holdCompleted)
                 }
             }
             record(hand)
@@ -615,7 +615,7 @@ final class FingerSessionViewModel: FingerSessionViewModelProtocol {
         if let deadline = speechDeadline, now >= deadline, !paused {
             speechDeadline = nil
             speechID = nil
-            audio.cancelSpeech()
+            guidanceAudioService.cancelSpeech()
             completeNarration()
             errorKey = "audio.unavailable"
         }
@@ -635,7 +635,7 @@ final class FingerSessionViewModel: FingerSessionViewModelProtocol {
             speechID = nil
             speechDeadline = nil
             spokenFlowKey = nil
-            audio.cancelSpeech()
+            guidanceAudioService.cancelSpeech()
             previousInstruction = ""
         }
         updateRecovery(now: now, frameReady: frameReady)
@@ -687,7 +687,7 @@ final class FingerSessionViewModel: FingerSessionViewModelProtocol {
         guard identity != lastHoldCount else {
             return
         }
-        if audio.playHoldSecond(second) {
+        if guidanceAudioService.playHoldSecond(second) {
             lastHoldCount = identity
         }
     }
@@ -747,7 +747,7 @@ final class FingerSessionViewModel: FingerSessionViewModelProtocol {
         }
         lastRecoverySpoken = key
         // Recovery speech is not a progression effect; its completion cannot accept a hold.
-        audio.speak(
+        guidanceAudioService.speak(
             String(localized: String.LocalizationValue(key), bundle: sessionLanguage.resourceBundle),
             lines: [NarrationLine(key: key)]
         )
@@ -850,7 +850,7 @@ final class FingerSessionViewModel: FingerSessionViewModelProtocol {
         spokenFlowKey = key
         engine.guidanceStarted()
         speechDeadline = ProcessInfo.processInfo.systemUptime + max(15, Double(text.count) * 0.25)
-        speechID = audio.speak(text, lines: lines)
+        speechID = guidanceAudioService.speak(text, lines: lines)
     }
 
     /// The String Catalog keys behind `narrate()`'s text, in the same order, so a bundled
@@ -873,13 +873,13 @@ final class FingerSessionViewModel: FingerSessionViewModelProtocol {
     /// With recorded numbers, "dua, satu" says the same thing, and leaving the line out keeps
     /// the instruction from still playing when the hold, and its first number, begins.
     private var narratesHoldDuration: Bool {
-        (activity.phase == .target || activity.phase == .active) && !audio.hasRecordedCounts
+        (activity.phase == .target || activity.phase == .active) && !guidanceAudioService.hasRecordedCounts
     }
 
     var needsPermissionSettings: Bool {
         errorKey == "camera.permission" || (voiceNeedsAcknowledgment &&
-            (permissions.status(for: .microphone) != .authorized ||
-             permissions.status(for: .speechRecognition) != .authorized))
+            (permissionService.status(for: .microphone) != .authorized ||
+             permissionService.status(for: .speechRecognition) != .authorized))
     }
 
     var recoveryPanelKey: String? {
@@ -920,15 +920,15 @@ final class FingerSessionViewModel: FingerSessionViewModelProtocol {
         }
         engine.pause()
         scriptedRest?.suspend()
-        audio.stopCount()
+        guidanceAudioService.stopCount()
         lastHoldCount = ""
         let now = ProcessInfo.processInfo.systemUptime
         durationClock.pause(at: now)
         sessionElapsedSeconds = durationClock.elapsed(at: now)
         speechID = nil
         speechDeadline = nil
-        audio.cancelSpeech()
-        audio.pauseAmbient()
+        guidanceAudioService.cancelSpeech()
+        guidanceAudioService.pauseAmbient()
     }
 
     func resume() {
@@ -947,27 +947,27 @@ final class FingerSessionViewModel: FingerSessionViewModelProtocol {
         }
         engine.resume()
         durationClock.resume(at: ProcessInfo.processInfo.systemUptime)
-        camera.start()
-        audio.resumeAmbient()
+        cameraService.start()
+        guidanceAudioService.resumeAmbient()
         previousInstruction = ""
         updateGuidance()
     }
 
     func retryCamera() async {
-        guard await permissions.request(.camera) == .authorized else {
+        guard await permissionService.request(.camera) == .authorized else {
             errorKey = "camera.permission"
             return
         }
         errorKey = nil
         do {
-            try audio.configure(language: language)
+            try guidanceAudioService.configure(language: language)
         } catch {
             errorKey = "audio.unavailable"
         }
         if (routine.voiceControl || voiceNeedsAcknowledgment) && !voiceEnabled {
             await setVoice(true)
         }
-        camera.start()
+        cameraService.start()
         if !paused {
             durationClock.resume(at: ProcessInfo.processInfo.systemUptime)
         }
@@ -1050,15 +1050,15 @@ final class FingerSessionViewModel: FingerSessionViewModelProtocol {
 
     func setVoice(_ enabled: Bool) async {
         if !enabled {
-            audio.disableVoice()
+            guidanceAudioService.disableVoice()
             voiceEnabled = false
             return
         }
-        let microphone = await permissions.request(.microphone)
+        let microphone = await permissionService.request(.microphone)
         guard !hasFinished else {
             return
         }
-        let speech = await permissions.request(.speechRecognition)
+        let speech = await permissionService.request(.speechRecognition)
         guard !hasFinished else {
             return
         }
@@ -1069,8 +1069,8 @@ final class FingerSessionViewModel: FingerSessionViewModelProtocol {
             return
         }
         do {
-            try audio.configure(language: language)
-            voiceEnabled = try audio.enableVoice()
+            try guidanceAudioService.configure(language: language)
+            voiceEnabled = try guidanceAudioService.enableVoice()
         } catch {
             voiceEnabled = false
         }
@@ -1095,8 +1095,8 @@ final class FingerSessionViewModel: FingerSessionViewModelProtocol {
         trackingRecoveryPaused = true
         waitingForCamera = true
         pause()
-        camera.stop()
-        audio.suspend()
+        cameraService.stop()
+        guidanceAudioService.suspend()
         voiceEnabled = false
         trackingReady = false
         Task { await saveCheckpoint() }
@@ -1106,12 +1106,12 @@ final class FingerSessionViewModel: FingerSessionViewModelProtocol {
         guard hasStarted, !hasFinished else {
             return
         }
-        permissions.refresh()
-        guard permissions.status(for: .camera) == .authorized else {
+        permissionService.refresh()
+        guard permissionService.status(for: .camera) == .authorized else {
             errorKey = "camera.permission"
             return
         }
-        camera.start()
+        cameraService.start()
         startTimer()
     }
 
@@ -1189,8 +1189,8 @@ final class FingerSessionViewModel: FingerSessionViewModelProtocol {
 
     func cleanup() {
         flushRecording()
-        camera.clips.setEnabled(false)
-        camera.clips.releaseFrames()
+        cameraService.clips.setEnabled(false)
+        cameraService.clips.releaseFrames()
         hasStarted = false
         let now = ProcessInfo.processInfo.systemUptime
         durationClock.pause(at: now)
@@ -1202,8 +1202,8 @@ final class FingerSessionViewModel: FingerSessionViewModelProtocol {
         timer?.cancel()
         timer = nil
         subscriptions.removeAll()
-        camera.stop()
-        audio.stop()
+        cameraService.stop()
+        guidanceAudioService.stop()
         UIApplication.shared.isIdleTimerDisabled = wasIdleTimerDisabled
     }
 
@@ -1238,7 +1238,7 @@ final class FingerSessionViewModel: FingerSessionViewModelProtocol {
             && trackingReady
             && [.active, .feedback].contains(activity.phase)
 
-        camera.clips.setEnabled(replayRecording.savesClips && counted)
+        cameraService.clips.setEnabled(replayRecording.savesClips && counted)
 
         guard let clip = recorder?.observe(
             hand: hand,
@@ -1249,7 +1249,7 @@ final class FingerSessionViewModel: FingerSessionViewModelProtocol {
             return
         }
 
-        camera.clips.keep(
+        cameraService.clips.keep(
             group: clip.group,
             repNumber: clip.repNumber,
             from: clip.start,
@@ -1278,7 +1278,7 @@ final class FingerSessionViewModel: FingerSessionViewModelProtocol {
 
         let sessionID = engine.summary.id
         let repository = repository
-        let clips = camera.clips
+        let clips = cameraService.clips
 
         Task {
             do {
@@ -1378,7 +1378,7 @@ extension FingerSessionViewModel {
 
         demoAnnouncementKey = samePoseRun ? "demo.step.nextFinger" : demoTitleKey
         demoRevision += 1
-        audio.playCue(.demoChanged)
+        guidanceAudioService.playCue(.demoChanged)
     }
 }
 

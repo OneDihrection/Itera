@@ -36,7 +36,7 @@ enum VoiceStartupResult: Equatable {
 }
 
 @MainActor
-protocol VoiceReadinessProviding: AnyObject {
+protocol SessionAudioServiceProtocol: AnyObject {
     func prepare()
     func capability() -> VoiceCapability
     func startListening() async -> VoiceStartupResult
@@ -44,7 +44,7 @@ protocol VoiceReadinessProviding: AnyObject {
 }
 
 @MainActor
-final class SessionAudioService: NSObject, VoiceReadinessProviding, AVSpeechSynthesizerDelegate, SFSpeechRecognizerDelegate {
+final class SessionAudioService: NSObject, SessionAudioServiceProtocol, AVSpeechSynthesizerDelegate, SFSpeechRecognizerDelegate {
     let events = PassthroughSubject<AudioEvent, Never>()
     private let logger = Logger(subsystem: Bundle.main.bundleIdentifier ?? "Tuntun", category: "SessionAudio")
     private var routeObserver: NSObjectProtocol?

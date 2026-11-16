@@ -1,5 +1,5 @@
 //
-//  FingerSessionLauncher.swift
+//  FingerSessionService.swift
 //  Tuntun
 //
 //  Created by dimaswisodewo on 16/11/2026.
@@ -10,7 +10,7 @@ import Observation
 
 /// The open finger session the live page shows.
 @MainActor
-protocol FingerSessionLaunching: AnyObject, Observable {
+protocol FingerSessionServiceProtocol: AnyObject, Observable {
     associatedtype Session: FingerSessionViewModelProtocol
 
     var session: Session? { get }
@@ -22,31 +22,31 @@ protocol FingerSessionLaunching: AnyObject, Observable {
 /// outlives each of them here until the next session replaces it.
 @MainActor
 @Observable
-final class FingerSessionLauncher: FingerSessionLaunching {
+final class FingerSessionService: FingerSessionServiceProtocol {
     private(set) var session: FingerSessionViewModel?
 
     @ObservationIgnored private let fingers: FingerHomeViewModel
     @ObservationIgnored private let forearm: FingerHomeViewModel
-    @ObservationIgnored private let camera: HandCameraService
-    @ObservationIgnored private let audio: GuidanceAudioService
-    @ObservationIgnored private let permissions: PermissionManager
+    @ObservationIgnored private let cameraService: HandCameraService
+    @ObservationIgnored private let guidanceAudioService: GuidanceAudioService
+    @ObservationIgnored private let permissionService: PermissionService
     @ObservationIgnored private let fingerRepository: any FingerSessionRepository
     @ObservationIgnored private let forearmRepository: any FingerSessionRepository
 
     init(
         fingers: FingerHomeViewModel,
         forearm: FingerHomeViewModel,
-        camera: HandCameraService,
-        audio: GuidanceAudioService,
-        permissions: PermissionManager,
+        cameraService: HandCameraService,
+        guidanceAudioService: GuidanceAudioService,
+        permissionService: PermissionService,
         fingerRepository: any FingerSessionRepository,
         forearmRepository: any FingerSessionRepository
     ) {
         self.fingers = fingers
         self.forearm = forearm
-        self.camera = camera
-        self.audio = audio
-        self.permissions = permissions
+        self.cameraService = cameraService
+        self.guidanceAudioService = guidanceAudioService
+        self.permissionService = permissionService
         self.fingerRepository = fingerRepository
         self.forearmRepository = forearmRepository
     }
@@ -77,9 +77,9 @@ final class FingerSessionLauncher: FingerSessionLaunching {
         session = FingerSessionViewModel(
             routine: routine,
             checkpoint: checkpoint,
-            camera: camera,
-            audio: audio,
-            permissions: permissions,
+            cameraService: cameraService,
+            guidanceAudioService: guidanceAudioService,
+            permissionService: permissionService,
             repository: category == .fingers ? fingerRepository : forearmRepository
         )
     }

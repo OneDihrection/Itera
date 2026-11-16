@@ -1,5 +1,5 @@
 //
-//  SessionHistoryRecovery.swift
+//  HistoryRecoveryService.swift
 //  Tuntun
 //
 //  Created by dimaswisodewo on 16/11/2026.
@@ -8,10 +8,18 @@
 import Foundation
 import Observation
 
+/// What readiness needs from interrupted-session recovery.
+@MainActor
+protocol HistoryRecoveryServiceProtocol: AnyObject {
+    var recovering: Bool { get }
+    var recoveryFailure: String? { get }
+    func recoverHistory() async
+}
+
 /// Finalizes a session interrupted by termination, once per launch, before therapy starts.
 @MainActor
 @Observable
-final class SessionHistoryRecovery: HistoryRecovering {
+final class HistoryRecoveryService: HistoryRecoveryServiceProtocol {
     private(set) var recoveryFailure: String?
     private(set) var recovering = true
 

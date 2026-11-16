@@ -33,11 +33,11 @@ protocol TherapySessionViewModelProtocol: AnyObject, Observable {
     var validating: Bool { get }
     var isStarting: Bool { get }
     /// The capture owner the camera preview attaches to.
-    var tracking: BodyTrackingService { get }
+    var trackingService: BodyTrackingService { get }
 
-    func start(permissions: any PermissionManaging) async
-    func enableVoice(permissions: any PermissionManaging) async
-    func retryCamera(permissions: any PermissionManaging) async
+    func start(permissionService: any PermissionServiceProtocol) async
+    func enableVoice(permissionService: any PermissionServiceProtocol) async
+    func retryCamera(permissionService: any PermissionServiceProtocol) async
     func openSettings()
     func command(_ command: SessionCommand)
     func readingChanged(_ id: UUID, complete: Bool)
@@ -77,15 +77,15 @@ final class TherapySessionViewModel: TherapySessionViewModelProtocol {
     /// The last example step the live screen has shown, pulsed or accepted silently.
     @ObservationIgnored fileprivate var announcedDemoStep: DemoStep?
 
-    @ObservationIgnored let tracking: BodyTrackingService
-    @ObservationIgnored private let audio: SessionAudioService
+    @ObservationIgnored let trackingService: BodyTrackingService
+    @ObservationIgnored private let audioService: SessionAudioService
     @ObservationIgnored private let repository: any SessionRepository
     @ObservationIgnored private var engine = SessionEngine()
     @ObservationIgnored private var subscriptions = Set<AnyCancellable>()
     @ObservationIgnored private var timer: AnyCancellable?
     @ObservationIgnored private var started = false
     @ObservationIgnored private var live = false
-    @ObservationIgnored private var permissions: (any PermissionManaging)?
+    @ObservationIgnored private var permissionService: (any PermissionServiceProtocol)?
     private(set) var entryFailure = false
     private(set) var entryMessage = "home.entryBlocked"
     private(set) var validating = false
@@ -104,10 +104,10 @@ final class TherapySessionViewModel: TherapySessionViewModelProtocol {
     @ObservationIgnored private var replayRecording = ReplayRecording.off
 
     init(
-        tracking: BodyTrackingService, audio: SessionAudioService, repository: any SessionRepository, routine: Routine
+        trackingService: BodyTrackingService, audioService: SessionAudioService, repository: any SessionRepository, routine: Routine
     ) {
-        self.tracking = tracking
-        self.audio = audio
+        self.trackingService = trackingService
+        self.audioService = audioService
         self.repository = repository
         engine = SessionEngine(routine: routine, scriptedArmRaise: AppLanguage.selected == .indonesian)
         snapshot = engine.snapshot
@@ -117,8 +117,8 @@ final class TherapySessionViewModel: TherapySessionViewModelProtocol {
     /// Detached renderer input for Xcode previews; never enters or runs a session.
     static func presentationFixture(_ snapshot: SessionSnapshot) -> TherapySessionViewModel {
         let model = TherapySessionViewModel(
-            tracking: BodyTrackingService(),
-            audio: SessionAudioService(),
+            trackingService: BodyTrackingService(),
+            audioService: SessionAudioService(),
             repository: PresentationFixtureRepository(),
             routine: .demo()
         )
@@ -130,14 +130,14 @@ final class TherapySessionViewModel: TherapySessionViewModelProtocol {
     }
     #endif
 
-    func start(permissions: any PermissionManaging) async {
+    func start(permissionService: any PermissionServiceProtocol) async {
         guard !started else {
             return
         }
         guard !validating, !exited else { return }
         validating = true
         defer { validating = false }
-        self.permissions = permissions
+        self.permissionService = permissionService
         do {
             try await repository.recoverInterrupted()
             recovered = true
@@ -147,10 +147,10 @@ final class TherapySessionViewModel: TherapySessionViewModelProtocol {
             return
         }
         guard !exited else { return }
-        permissions.refresh()
-        audio.prepare()
-        guard allPermissionsGranted, await audio.startListening() == .started else {
-            audio.stop()
+        permissionService.refresh()
+        audioService.prepare()
+        guard allPermissionsGranted, await audioService.startListening() == .started else {
+            audioService.stop()
             entryMessage = "home.entryBlocked"
             entryFailure = true
             return
@@ -164,9 +164,9 @@ final class TherapySessionViewModel: TherapySessionViewModelProtocol {
         keepAwakeBeforeSession = UIApplication.shared.isIdleTimerDisabled
         UIApplication.shared.isIdleTimerDisabled = true
         replayRecording = PracticePreferences.replayRecordingLevel
-        tracking.clips.reset()
-        tracking.clips.configure(privacy: PracticePreferences.repClipPrivacy)
-        tracking.frames.sink { [weak self] frame in
+        trackingService.clips.reset()
+        trackingService.clips.configure(privacy: PracticePreferences.repClipPrivacy)
+        trackingService.frames.sink { [weak self] frame in
             guard let self, self.live else {
                 return
             }
@@ -191,13 +191,13 @@ final class TherapySessionViewModel: TherapySessionViewModelProtocol {
             observation.workspaceMirrored = true
             self.send(.observation(observation))
         }.store(in: &subscriptions)
-        tracking.failures.receive(on: DispatchQueue.main).sink { [weak self] error in
+        trackingService.failures.receive(on: DispatchQueue.main).sink { [weak self] error in
             guard let self else { return }
             let explanation = String(localized: "session.captureError", bundle: self.sessionLanguage.resourceBundle, locale: self.sessionLocale)
             self.failure = error.isEmpty ? explanation : explanation + "\n" + error
             self.send(.availability(.waiting))
         }.store(in: &subscriptions)
-        tracking.availability.receive(on: DispatchQueue.main).sink { [weak self] availability in
+        trackingService.availability.receive(on: DispatchQueue.main).sink { [weak self] availability in
             guard let self else { return }
 
             switch availability {
@@ -208,7 +208,7 @@ final class TherapySessionViewModel: TherapySessionViewModelProtocol {
             }
             self.send(.availability(availability))
         }.store(in: &subscriptions)
-        audio.events.sink { [weak self] event in self?.receive(event) }.store(in: &subscriptions)
+        audioService.events.sink { [weak self] event in self?.receive(event) }.store(in: &subscriptions)
         send(.command(.pause))
         timer = Timer.publish(every: 0.05, on: .main, in: .common).autoconnect().sink {
             [weak self] _ in self?.send(.tick(ProcessInfo.processInfo.systemUptime))
@@ -217,8 +217,8 @@ final class TherapySessionViewModel: TherapySessionViewModelProtocol {
             .compactMap { ($0 as? UIWindowScene)?.interfaceOrientation }
             .first { $0 == .landscapeLeft || $0 == .landscapeRight }
         updateHandRequirement()
-        tracking.configure(landscapeRight: orientation == .landscapeRight)
-        tracking.start()
+        trackingService.configure(landscapeRight: orientation == .landscapeRight)
+        trackingService.start()
         send(.command(.resume))
     }
 
@@ -226,17 +226,17 @@ final class TherapySessionViewModel: TherapySessionViewModelProtocol {
     /// hand when a bystander's is also visible.
     private func updateHandRequirement() {
         guard let activity = snapshot.activity, activity.kind == .foldTowel else {
-            tracking.requireHand(false)
+            trackingService.requireHand(false)
             return
         }
 
-        tracking.requireHand(true, side: HandSide(rawValue: activity.side.rawValue))
+        trackingService.requireHand(true, side: HandSide(rawValue: activity.side.rawValue))
     }
 
     private var allPermissionsGranted: Bool {
-        guard let permissions else { return false }
+        guard let permissionService else { return false }
         return AppPermission.allCases.allSatisfy {
-            permissions.status(for: $0) == .authorized
+            permissionService.status(for: $0) == .authorized
         }
     }
 
@@ -245,26 +245,26 @@ final class TherapySessionViewModel: TherapySessionViewModelProtocol {
         UIApplication.shared.open(url)
     }
 
-    func retryCamera(permissions: any PermissionManaging) async {
-        await enableVoice(permissions: permissions)
+    func retryCamera(permissionService: any PermissionServiceProtocol) async {
+        await enableVoice(permissionService: permissionService)
     }
 
-    func enableVoice(permissions: any PermissionManaging) async {
+    func enableVoice(permissionService: any PermissionServiceProtocol) async {
         guard live else {
-            await start(permissions: permissions)
+            await start(permissionService: permissionService)
             return
         }
-        permissions.refresh()
+        permissionService.refresh()
         guard allPermissionsGranted else {
             blockReadiness()
             return
         }
-        voiceReady = await audio.startListening() == .started
+        voiceReady = await audioService.startListening() == .started
         guard live, !exited, !isBackgrounded else { return }
         if voiceReady {
             cameraDenied = false
             failure = nil
-            tracking.start()
+            trackingService.start()
         }
         // Recovery restores controls only; Resume remains a separate user action.
     }
@@ -272,10 +272,10 @@ final class TherapySessionViewModel: TherapySessionViewModelProtocol {
     private func blockReadiness() {
         voiceReady = false
         listening = false
-        cameraDenied = permissions?.status(for: .camera) != .authorized
+        cameraDenied = permissionService?.status(for: .camera) != .authorized
         command(.pause)
-        tracking.stop()
-        audio.stop()
+        trackingService.stop()
+        audioService.stop()
     }
 
     func command(_ command: SessionCommand) {
@@ -286,9 +286,9 @@ final class TherapySessionViewModel: TherapySessionViewModelProtocol {
             guard voiceReady, allPermissionsGranted else { return }
         }
         if case .resume = command {
-            permissions?.refresh()
+            permissionService?.refresh()
             guard allPermissionsGranted, voiceReady, listening,
-                audio.capability() == .ready,
+                audioService.capability() == .ready,
                 saveFailure == nil || allowUnreliableHistory
             else {
                 return
@@ -308,23 +308,23 @@ final class TherapySessionViewModel: TherapySessionViewModelProtocol {
     }
 
     func orientationChanged(right: Bool) {
-        tracking.configure(landscapeRight: right)
+        trackingService.configure(landscapeRight: right)
     }
 
     private var isBackgrounded = false
 
     func background() {
         isBackgrounded = true
-        audio.stop()
+        audioService.stop()
         guard live else {
             return
         }
         command(.pause)
         send(.availability(.discontinuity))
         voiceReady = false
-        tracking.stop()
+        trackingService.stop()
         clearLivePose()
-        audio.stop()
+        audioService.stop()
     }
 
     func foreground() {
@@ -334,21 +334,21 @@ final class TherapySessionViewModel: TherapySessionViewModelProtocol {
 
     private func restoreForeground() async {
         guard live else { return }
-        permissions?.refresh()
+        permissionService?.refresh()
         guard allPermissionsGranted else {
             blockReadiness()
             return
         }
-        voiceReady = await audio.startListening() == .started
+        voiceReady = await audioService.startListening() == .started
         guard live, !exited, !isBackgrounded else { return }
-        if voiceReady { tracking.start() }
+        if voiceReady { trackingService.start() }
     }
 
     func exit() {
         exited = true
         if snapshot.summary == nil { command(.stop) }
         cleanup()
-        audio.stop()
+        audioService.stop()
     }
 
     func retrySave() {
@@ -391,7 +391,7 @@ final class TherapySessionViewModel: TherapySessionViewModelProtocol {
         }
         if case .tick(let now) = event, now - lastPermissionCheck >= 0.5 {
             lastPermissionCheck = now
-            permissions?.refresh()
+            permissionService?.refresh()
             if !allPermissionsGranted {
                 if voiceReady || listening { blockReadiness() }
                 return
@@ -404,12 +404,12 @@ final class TherapySessionViewModel: TherapySessionViewModelProtocol {
         snapshot = transition.snapshot
         updateClock()
         if snapshot.summary != nil {
-            audio.stopMusic()
+            audioService.stopMusic()
         } else if wasPaused != snapshot.paused {
             if snapshot.paused {
-                audio.pauseMusic()
+                audioService.pauseMusic()
             } else if live {
-                audio.resumeMusic()
+                audioService.resumeMusic()
             }
         }
         towelInterpolates = false
@@ -443,14 +443,14 @@ final class TherapySessionViewModel: TherapySessionViewModelProtocol {
                 // A single-key sentence can use its bundled recording; numbers and the
                 // combined exercise/side/guidance cue keep the system voice.
                 if Int(key) == nil && key != "session.guidance" {
-                    audio.speak(id: id, key: key)
+                    audioService.speak(id: id, key: key)
                 } else {
-                    audio.speak(id: id, text: text)
+                    audioService.speak(id: id, text: text)
                 }
-            case .audio(let id, let cue): audio.play(id: id, cue: cue)
-            case .cancelSpeech: audio.cancelSpeech()
+            case .audio(let id, let cue): audioService.play(id: id, cue: cue)
+            case .cancelSpeech: audioService.cancelSpeech()
             case .keepRepClip(let request):
-                tracking.clips.keep(
+                trackingService.clips.keep(
                     group: request.group,
                     repNumber: request.repNumber,
                     from: request.start,
@@ -526,7 +526,7 @@ final class TherapySessionViewModel: TherapySessionViewModelProtocol {
             && snapshot.summary == nil
             && snapshot.activity?.kind.recordsMovement == true
 
-        tracking.clips.setEnabled(recording)
+        trackingService.clips.setEnabled(recording)
     }
 
     /// Clips, like replays, help review but are not history: a failure is only logged.
@@ -535,7 +535,7 @@ final class TherapySessionViewModel: TherapySessionViewModelProtocol {
             return
         }
 
-        let clips = await tracking.clips.take(group: group)
+        let clips = await trackingService.clips.take(group: group)
 
         guard !clips.isEmpty else {
             return
@@ -558,12 +558,12 @@ final class TherapySessionViewModel: TherapySessionViewModelProtocol {
             return
         }
         live = false
-        tracking.clips.setEnabled(false)
-        tracking.clips.releaseFrames()
-        tracking.stop()
+        trackingService.clips.setEnabled(false)
+        trackingService.clips.releaseFrames()
+        trackingService.stop()
         clearLivePose()
-        tracking.requireHand(false)
-        if preserveClosing { audio.stopListening() } else { audio.stop() }
+        trackingService.requireHand(false)
+        if preserveClosing { audioService.stopListening() } else { audioService.stop() }
         timer?.cancel()
         timer = nil
         subscriptions.removeAll()
@@ -700,7 +700,7 @@ extension TherapySessionViewModel {
         }
 
         demoRevision += 1
-        audio.play(id: UUID(), cue: .demoChanged)
+        audioService.play(id: UUID(), cue: .demoChanged)
     }
 }
 

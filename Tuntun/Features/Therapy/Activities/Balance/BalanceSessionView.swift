@@ -11,18 +11,18 @@ struct TMBalanceSessionView<ViewModel: BalanceSessionViewModelProtocol>: View {
     @Environment(\.scenePhase) private var scenePhase
     @State private var model: ViewModel
     private let plan: any DailyPlanSessionReporting
-    private let permissions: any PermissionManaging
+    private let permissionService: any PermissionServiceProtocol
     private let router: any SessionRouterProtocol
 
     init(
         model: ViewModel,
         plan: any DailyPlanSessionReporting,
-        permissions: any PermissionManaging,
+        permissionService: any PermissionServiceProtocol,
         router: any SessionRouterProtocol
     ) {
         _model = State(initialValue: model)
         self.plan = plan
-        self.permissions = permissions
+        self.permissionService = permissionService
         self.router = router
     }
 
@@ -75,7 +75,7 @@ struct TMBalanceSessionView<ViewModel: BalanceSessionViewModelProtocol>: View {
         .navigationBarBackButtonHidden(true)
         .toolbar(.hidden, for: .navigationBar)
         .toolbar(.hidden, for: .tabBar)
-        .task { await model.start(permissions: permissions) }
+        .task { await model.start(permissionService: permissionService) }
         .task(id: automaticallyRests && scenePhase == .active) {
             guard automaticallyRests, scenePhase == .active else { return }
             try? await Task.sleep(for: DailyPlanTiming.completionPreview)
@@ -85,7 +85,7 @@ struct TMBalanceSessionView<ViewModel: BalanceSessionViewModelProtocol>: View {
         .onDisappear { model.stop() }
         .onChange(of: scenePhase) { _, phase in
             switch phase {
-            case .active: model.foreground(permissions: permissions)
+            case .active: model.foreground(permissionService: permissionService)
             case .background: model.background()
             case .inactive: break
             @unknown default: model.background()
@@ -195,7 +195,7 @@ struct TMBalanceSessionView<ViewModel: BalanceSessionViewModelProtocol>: View {
     private var camera: some View {
         ZStack(alignment: .top) {
             TMBodyCameraPreview(
-                session: model.tracking.session,
+                session: model.trackingService.session,
                 front: true,
                 onReady: model.previewReady,
                 onOrientation: model.orientationChanged,

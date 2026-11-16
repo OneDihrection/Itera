@@ -38,11 +38,11 @@ protocol DailyPlanNextViewModelProtocol: AnyObject, Observable {
 @Observable
 final class DailyPlanNextViewModel: DailyPlanNextViewModelProtocol {
     private let plan: DailyPlanViewModel
-    @ObservationIgnored private let audio: SessionAudioService
+    @ObservationIgnored private let audioService: SessionAudioService
 
-    init(plan: DailyPlanViewModel, audio: SessionAudioService) {
+    init(plan: DailyPlanViewModel, audioService: SessionAudioService) {
         self.plan = plan
-        self.audio = audio
+        self.audioService = audioService
     }
 
     // MARK: - State
@@ -73,37 +73,37 @@ final class DailyPlanNextViewModel: DailyPlanNextViewModelProtocol {
     }
 
     var audioEvents: AnyPublisher<AudioEvent, Never> {
-        audio.events.eraseToAnyPublisher()
+        audioService.events.eraseToAnyPublisher()
     }
 
     // MARK: - Audio
 
     func prepareRestNarration() {
-        audio.prepareRestNarration()
+        audioService.prepareRestNarration()
     }
 
     func startMusic() {
-        audio.startMusic()
+        audioService.startMusic()
     }
 
     func pauseMusic() {
-        audio.pauseMusic()
+        audioService.pauseMusic()
     }
 
     func stopMusic() {
-        audio.stopMusic()
+        audioService.stopMusic()
     }
 
     func cancelSpeech() {
-        audio.cancelSpeech()
+        audioService.cancelSpeech()
     }
 
     func playCountdown(_ seconds: Int) {
-        audio.play(id: UUID(), cue: .countdown(seconds))
+        audioService.play(id: UUID(), cue: .countdown(seconds))
     }
 
     func speak(id: UUID, key: String, argument: Int?) {
-        audio.speak(id: id, key: key, argument: argument)
+        audioService.speak(id: id, key: key, argument: argument)
     }
 
     // MARK: - Plan

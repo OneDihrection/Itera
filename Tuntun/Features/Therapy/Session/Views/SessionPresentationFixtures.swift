@@ -208,13 +208,13 @@ struct SessionPresentationFixturePreviews: PreviewProvider {
     static var previews: some View {
         let plan = PreviewPlan()
         let router = PreviewSessionRouter()
-        let permissions = PermissionManager()
+        let permissionService = PermissionService()
 
         ForEach(SessionPresentationFixtures.all) { fixture in
             TMTherapySessionView(
                 model: TherapySessionViewModel.presentationFixture(fixture.snapshot),
                 plan: plan,
-                permissions: permissions,
+                permissionService: permissionService,
                 router: router,
                 presentationOnly: true
             )

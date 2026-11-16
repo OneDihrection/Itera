@@ -17,7 +17,7 @@ final class DailyPlanIntroNarration {
     private(set) var running = false
     private(set) var paused = false
     @ObservationIgnored private var subscription: AnyCancellable?
-    @ObservationIgnored private var audio: SessionAudioService?
+    @ObservationIgnored private var audioService: SessionAudioService?
     @ObservationIgnored private var requestID: UUID?
     @ObservationIgnored private var operationID: UUID?
     @ObservationIgnored private var lineIndex = 0
@@ -27,7 +27,7 @@ final class DailyPlanIntroNarration {
     func start(
         readiness: TherapyReadinessViewModel,
         plan: DailyPlanViewModel,
-        audio: SessionAudioService,
+        audioService: SessionAudioService,
         itemID: String,
         automatic: Bool,
         lines: [String]
@@ -44,7 +44,7 @@ final class DailyPlanIntroNarration {
             return
         }
         lineKeys = lines
-        begin(audio: audio) {
+        begin(audioService: audioService) {
             Task { @MainActor in
                 guard self.operationID == operation,
                       plan.isRunning,
@@ -60,17 +60,17 @@ final class DailyPlanIntroNarration {
         }
     }
 
-    private func begin(audio: SessionAudioService, completion: @escaping () -> Void) {
+    private func begin(audioService: SessionAudioService, completion: @escaping () -> Void) {
         guard !running else {
             return
         }
-        self.audio = audio
+        self.audioService = audioService
         self.completion = completion
         running = true
         paused = false
         lineIndex = 0
-        audio.prepareRestNarration()
-        subscription = audio.events.sink { [weak self] event in
+        audioService.prepareRestNarration()
+        subscription = audioService.events.sink { [weak self] event in
             guard let self, self.running else {
                 return
             }
@@ -98,7 +98,7 @@ final class DailyPlanIntroNarration {
         }
         paused = true
         requestID = nil
-        audio?.cancelSpeech()
+        audioService?.cancelSpeech()
     }
 
     func resume() {
@@ -117,7 +117,7 @@ final class DailyPlanIntroNarration {
         subscription = nil
         completion = nil
         if wasRunning {
-            audio?.cancelSpeech()
+            audioService?.cancelSpeech()
         }
     }
 
@@ -137,6 +137,6 @@ final class DailyPlanIntroNarration {
         let key = lineKeys[lineIndex]
         let id = UUID()
         requestID = id
-        audio?.speak(id: id, key: key)
+        audioService?.speak(id: id, key: key)
     }
 }

@@ -10,13 +10,6 @@ import Observation
 import UIKit
 
 @MainActor
-protocol HistoryRecovering: AnyObject {
-    var recovering: Bool { get }
-    var recoveryFailure: String? { get }
-    func recoverHistory() async
-}
-
-@MainActor
 @Observable
 final class TherapyReadinessViewModel {
     private(set) var busy = false
@@ -24,34 +17,34 @@ final class TherapyReadinessViewModel {
     private(set) var action = "home.enablePermissions"
     private(set) var ready = false
 
-    @ObservationIgnored private let permissions: any PermissionManaging
-    @ObservationIgnored private let audio: any VoiceReadinessProviding
-    @ObservationIgnored private let history: any HistoryRecovering
+    @ObservationIgnored private let permissionService: any PermissionServiceProtocol
+    @ObservationIgnored private let audioService: any SessionAudioServiceProtocol
+    @ObservationIgnored private let historyRecoveryService: any HistoryRecoveryServiceProtocol
 
     init(
-        permissions: any PermissionManaging,
-        audio: any VoiceReadinessProviding,
-        history: any HistoryRecovering
+        permissionService: any PermissionServiceProtocol,
+        audioService: any SessionAudioServiceProtocol,
+        historyRecoveryService: any HistoryRecoveryServiceProtocol
     ) {
-        self.permissions = permissions
-        self.audio = audio
-        self.history = history
+        self.permissionService = permissionService
+        self.audioService = audioService
+        self.historyRecoveryService = historyRecoveryService
     }
 
     func refresh() {
         guard !busy else { return }
-        permissions.refresh()
-        audio.prepare()
+        permissionService.refresh()
+        audioService.prepare()
         ready = false
-        if history.recoveryFailure != nil {
+        if historyRecoveryService.recoveryFailure != nil {
             message = "session.recoveryError"
             action = "home.retry"
             return
         }
         if let missing = AppPermission.allCases.first(where: {
-            permissions.status(for: $0) != .authorized
+            permissionService.status(for: $0) != .authorized
         }) {
-            switch permissions.status(for: missing) {
+            switch permissionService.status(for: missing) {
             case .denied:
                 message = permissionMessage(missing)
                 action = "home.openSettings"
@@ -67,7 +60,7 @@ final class TherapyReadinessViewModel {
             }
             return
         }
-        switch audio.capability() {
+        switch audioService.capability() {
         case .ready:
             ready = true
             message = "home.ready"
@@ -93,11 +86,11 @@ final class TherapyReadinessViewModel {
         }
         let starting = ready
         busy = true
-        if history.recoveryFailure != nil || history.recovering {
-            await history.recoverHistory()
+        if historyRecoveryService.recoveryFailure != nil || historyRecoveryService.recovering {
+            await historyRecoveryService.recoverHistory()
         } else if starting {
-            let result = await audio.startListening()
-            audio.stop()
+            let result = await audioService.startListening()
+            audioService.stop()
             busy = false
             guard result == .started else {
                 ready = false
@@ -108,7 +101,7 @@ final class TherapyReadinessViewModel {
             return true
         } else {
             for permission in AppPermission.allCases {
-                guard await permissions.request(permission) == .authorized else { break }
+                guard await permissionService.request(permission) == .authorized else { break }
             }
         }
         busy = false

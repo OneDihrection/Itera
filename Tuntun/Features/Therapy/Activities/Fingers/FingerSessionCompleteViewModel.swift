@@ -33,7 +33,7 @@ protocol FingerSessionCompleteViewModelProtocol: AnyObject, Observable {
 final class FingerSessionCompleteViewModel: FingerSessionCompleteViewModelProtocol {
     private(set) var savingFinished = false
 
-    private let launcher: FingerSessionLauncher
+    private let fingerSessionService: FingerSessionService
     @ObservationIgnored private let plan: any DailyPlanSessionReporting
     /// Refreshed after saving so Beranda and Progress show the new session.
     @ObservationIgnored private let home: FingerHomeViewModel
@@ -41,13 +41,13 @@ final class FingerSessionCompleteViewModel: FingerSessionCompleteViewModelProtoc
     @ObservationIgnored private let router: any SessionRouterProtocol
 
     init(
-        launcher: FingerSessionLauncher,
+        fingerSessionService: FingerSessionService,
         plan: any DailyPlanSessionReporting,
         home: FingerHomeViewModel,
         tabs: any TabRouterProtocol,
         router: any SessionRouterProtocol
     ) {
-        self.launcher = launcher
+        self.fingerSessionService = fingerSessionService
         self.plan = plan
         self.home = home
         self.tabs = tabs
@@ -55,15 +55,15 @@ final class FingerSessionCompleteViewModel: FingerSessionCompleteViewModelProtoc
     }
 
     var summary: FingerSessionSummary? {
-        launcher.session?.finalSummary
+        fingerSessionService.session?.finalSummary
     }
 
     var exerciseTitle: String {
-        launcher.session?.exerciseTitle ?? ""
+        fingerSessionService.session?.exerciseTitle ?? ""
     }
 
     var sessionLocale: Locale {
-        launcher.session?.sessionLanguage.locale ?? AppLanguage.selected.locale
+        fingerSessionService.session?.sessionLanguage.locale ?? AppLanguage.selected.locale
     }
 
     var exerciseNumber: Int? {
@@ -83,9 +83,9 @@ final class FingerSessionCompleteViewModel: FingerSessionCompleteViewModelProtoc
     }
 
     func save() async {
-        await launcher.session?.saveFinalSummary()
+        await fingerSessionService.session?.saveFinalSummary()
 
-        if launcher.session?.finalSummarySaved == true {
+        if fingerSessionService.session?.finalSummarySaved == true {
             await home.refresh()
         }
 

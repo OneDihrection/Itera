@@ -459,7 +459,7 @@ extension TMTherapySessionView {
         ) {
             if !model.voiceReady {
                 Button("session.retryCamera") {
-                    Task { await model.retryCamera(permissions: permissions) }
+                    Task { await model.retryCamera(permissionService: permissionService) }
                 }
                 .buttonStyle(TMSessionButtonStyle())
             }

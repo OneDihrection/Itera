@@ -1246,3 +1246,9 @@ At the product owner's request, the architecture of "Components, builders and fe
 - **One Home router.** `PlanRouter` merged into `HomeRouter`, which one screen model already wired. Pages still receive narrow protocols.
 
 Verification: XcodeGen and Debug Simulator builds after each step with IPHONEOS_DEPLOYMENT_TARGET=17.0. Runtime behaviour is unchanged; the device checks of earlier entries still apply.
+
+## Service naming (2026-11-16)
+
+At the product owner's request, services follow the reference project's naming (`FavoritesService`, `FavoritesServiceProtocol`, injected as `favoritesService`). Types: `PermissionManager` → `PermissionService`, `SessionHistoryRecovery` → `HistoryRecoveryService` (moved to History/Services), `FingerSessionLauncher` → `FingerSessionService`, `ButtonClickPlayer` → `ButtonClickService`. Protocols: `PermissionManaging` → `PermissionServiceProtocol`, `HistoryRecovering` → `HistoryRecoveryServiceProtocol` (moved beside its service), `FingerSessionLaunching` → `FingerSessionServiceProtocol`, `VoiceReadinessProviding` → `SessionAudioServiceProtocol`. Injected properties and parameters are named after the service: `trackingService`, `cameraService`, `audioService`, `guidanceAudioService`, `permissionService`, `historyRecoveryService`, `fingerSessionService`, `buttonClickService`. Repositories, shared view models, routers and builders keep their names. Feature-owned services get a `Services/` folder.
+
+Verification: XcodeGen, Debug and Release Simulator builds and a Mac Catalyst build with IPHONEOS_DEPLOYMENT_TARGET=17.0. Renames only; runtime behaviour is unchanged.

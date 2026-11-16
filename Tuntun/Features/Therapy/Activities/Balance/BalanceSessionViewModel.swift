@@ -30,10 +30,10 @@ protocol BalanceSessionViewModelProtocol: AnyObject, Observable {
     var historySaveFailed: Bool { get }
     var elapsedSeconds: Int { get }
     /// The capture owner the camera preview attaches to.
-    var tracking: BodyTrackingService { get }
+    var trackingService: BodyTrackingService { get }
 
-    func start(permissions: any PermissionManaging) async
-    func foreground(permissions: any PermissionManaging)
+    func start(permissionService: any PermissionServiceProtocol) async
+    func foreground(permissionService: any PermissionServiceProtocol)
     func background()
     func viewport(_ size: CGSize)
     func previewReady(_ ready: Bool)
@@ -113,8 +113,8 @@ final class BalanceSessionViewModel: BalanceSessionViewModelProtocol {
         setResults.count >= totalSets
     }
 
-    @ObservationIgnored let tracking: BodyTrackingService
-    @ObservationIgnored private let audio: SessionAudioService
+    @ObservationIgnored let trackingService: BodyTrackingService
+    @ObservationIgnored private let audioService: SessionAudioService
     @ObservationIgnored private var engine: any BalanceMovementEngine
     @ObservationIgnored private var subscriptions = Set<AnyCancellable>()
     @ObservationIgnored private var viewport: TherapyViewport?
@@ -150,8 +150,8 @@ final class BalanceSessionViewModel: BalanceSessionViewModelProtocol {
     }
 
     init(
-        tracking: BodyTrackingService,
-        audio: SessionAudioService,
+        trackingService: BodyTrackingService,
+        audioService: SessionAudioService,
         repository: any SessionRepository,
         settings: BalancePracticeSettings,
         exercise: BalanceExercise = .crossMidline
@@ -160,8 +160,8 @@ final class BalanceSessionViewModel: BalanceSessionViewModelProtocol {
         let holdSeconds = settings.holdSeconds
         let armSelection = settings.armSelection
 
-        self.tracking = tracking
-        self.audio = audio
+        self.trackingService = trackingService
+        self.audioService = audioService
         self.repository = repository
         self.settings = settings
         let log = Self.makeLog(exercise: exercise, settings: settings)
@@ -191,9 +191,9 @@ final class BalanceSessionViewModel: BalanceSessionViewModelProtocol {
         snapshot = engine.snapshot
     }
 
-    func start(permissions: any PermissionManaging) async {
+    func start(permissionService: any PermissionServiceProtocol) async {
         guard !started else { return }
-        let status = await permissions.request(.camera)
+        let status = await permissionService.request(.camera)
         guard status == .authorized else {
             permissionDenied = true
             return
@@ -204,10 +204,10 @@ final class BalanceSessionViewModel: BalanceSessionViewModelProtocol {
         wasIdleTimerDisabled = UIApplication.shared.isIdleTimerDisabled
         UIApplication.shared.isIdleTimerDisabled = true
         replayRecording = PracticePreferences.replayRecordingLevel
-        tracking.clips.reset()
-        tracking.clips.configure(privacy: PracticePreferences.repClipPrivacy)
+        trackingService.clips.reset()
+        trackingService.clips.configure(privacy: PracticePreferences.repClipPrivacy)
 
-        tracking.frames
+        trackingService.frames
             .receive(on: DispatchQueue.main)
             .sink { [weak self] frame in
                 guard let self else { return }
@@ -244,7 +244,7 @@ final class BalanceSessionViewModel: BalanceSessionViewModelProtocol {
             }
             .store(in: &subscriptions)
 
-        tracking.availability
+        trackingService.availability
             .receive(on: DispatchQueue.main)
             .sink { [weak self] availability in
                 guard let self else { return }
@@ -267,7 +267,7 @@ final class BalanceSessionViewModel: BalanceSessionViewModelProtocol {
             }
             .store(in: &subscriptions)
 
-        tracking.failures
+        trackingService.failures
             .receive(on: DispatchQueue.main)
             .sink { [weak self] error in
                 self?.failure = error
@@ -275,21 +275,21 @@ final class BalanceSessionViewModel: BalanceSessionViewModelProtocol {
             }
             .store(in: &subscriptions)
 
-        audio.events
+        audioService.events
             .receive(on: DispatchQueue.main)
             .sink { [weak self] event in
                 self?.handle(event)
             }
             .store(in: &subscriptions)
 
-        tracking.start()
+        trackingService.start()
         clock.resume(at: Self.now)
-        audio.prepare()
+        audioService.prepare()
         if !paused, !allSetsDone {
-            audio.startMusic()
+            audioService.startMusic()
         }
-        let microphone = await permissions.request(.microphone)
-        let speech = await permissions.request(.speechRecognition)
+        let microphone = await permissionService.request(.microphone)
+        let speech = await permissionService.request(.speechRecognition)
         if microphone == .authorized, speech == .authorized {
             startVoiceListening()
         } else {
@@ -316,8 +316,8 @@ final class BalanceSessionViewModel: BalanceSessionViewModelProtocol {
         guard !allSetsDone else {
             finishLog(stopped: false)
             clock.pause(at: Self.now)
-            tracking.stop()
-            audio.stopMusic()
+            trackingService.stop()
+            audioService.stopMusic()
             return
         }
 
@@ -356,8 +356,8 @@ final class BalanceSessionViewModel: BalanceSessionViewModelProtocol {
         guard !paused, let phase = restBreath?.phase else {
             return
         }
-        audio.cancelSpeech()
-        audio.speak(id: UUID(), key: phase.key)
+        audioService.cancelSpeech()
+        audioService.speak(id: UUID(), key: phase.key)
     }
 
     /// Keeps the calibration: the patient starts the next set from the usual return to start.
@@ -367,7 +367,7 @@ final class BalanceSessionViewModel: BalanceSessionViewModelProtocol {
         }
 
         restRemaining = nil
-        audio.cancelSpeech()
+        audioService.cancelSpeech()
         setNumber += 1
         lastSpokenCountdown = nil
         engine.nextSet()
@@ -387,7 +387,7 @@ final class BalanceSessionViewModel: BalanceSessionViewModelProtocol {
         restTask = nil
         restRemaining = nil
         paused = false
-        audio.cancelSpeech()
+        audioService.cancelSpeech()
 
         while !allSetsDone {
             setNumber = setResults.count + 1
@@ -400,9 +400,9 @@ final class BalanceSessionViewModel: BalanceSessionViewModelProtocol {
 
         finishLog(stopped: false)
         clock.pause(at: Self.now)
-        tracking.stop()
+        trackingService.stop()
         clearLivePose()
-        audio.stopMusic()
+        audioService.stopMusic()
     }
     #endif
 
@@ -421,7 +421,7 @@ final class BalanceSessionViewModel: BalanceSessionViewModelProtocol {
     }
 
     func orientationChanged(right: Bool) {
-        tracking.configure(landscapeRight: right)
+        trackingService.configure(landscapeRight: right)
     }
 
     /// Restarts capture after a camera failure; the next first frame clears the failure.
@@ -431,7 +431,7 @@ final class BalanceSessionViewModel: BalanceSessionViewModelProtocol {
         }
 
         failure = nil
-        tracking.start()
+        trackingService.start()
     }
 
     func restart() {
@@ -449,13 +449,13 @@ final class BalanceSessionViewModel: BalanceSessionViewModelProtocol {
         paused = false
         cameraWaiting = true
         lastSpokenCountdown = nil
-        audio.cancelSpeech()
-        audio.startMusic()
+        audioService.cancelSpeech()
+        audioService.startMusic()
         engine.restart()
         engine.viewport = viewport
         resetOpening()
         snapshot = engine.snapshot
-        tracking.start()
+        trackingService.start()
     }
 
     func togglePause() {
@@ -467,9 +467,9 @@ final class BalanceSessionViewModel: BalanceSessionViewModelProtocol {
         paused = true
         recorder.discardCurrentRep()
         clock.pause(at: Self.now)
-        audio.pauseMusic()
+        audioService.pauseMusic()
         interruptOpening()
-        audio.cancelSpeech()
+        audioService.cancelSpeech()
         lastSpokenCountdown = nil
     }
 
@@ -477,22 +477,22 @@ final class BalanceSessionViewModel: BalanceSessionViewModelProtocol {
         guard paused, !allSetsDone else { return }
         paused = false
         clock.resume(at: Self.now)
-        audio.resumeMusic()
+        audioService.resumeMusic()
         speakRestBreath()
     }
 
-    func foreground(permissions: any PermissionManaging) {
-        permissions.refresh()
-        guard permissions.status(for: .camera) == .authorized else {
+    func foreground(permissionService: any PermissionServiceProtocol) {
+        permissionService.refresh()
+        guard permissionService.status(for: .camera) == .authorized else {
             permissionDenied = true
             return
         }
         permissionDenied = false
         if !allSetsDone {
-            tracking.start()
+            trackingService.start()
         }
-        if permissions.status(for: .microphone) == .authorized,
-            permissions.status(for: .speechRecognition) == .authorized
+        if permissionService.status(for: .microphone) == .authorized,
+            permissionService.status(for: .speechRecognition) == .authorized
         {
             startVoiceListening()
         }
@@ -508,9 +508,9 @@ final class BalanceSessionViewModel: BalanceSessionViewModelProtocol {
             resetOpening()
             snapshot = engine.snapshot
         }
-        tracking.stop()
+        trackingService.stop()
         clearLivePose()
-        audio.stop()
+        audioService.stop()
         voiceListening = false
     }
 
@@ -524,25 +524,25 @@ final class BalanceSessionViewModel: BalanceSessionViewModelProtocol {
         restTask?.cancel()
         restTask = nil
         clock.pause(at: Self.now)
-        tracking.clips.setEnabled(false)
-        tracking.clips.releaseFrames()
-        tracking.stop()
+        trackingService.clips.setEnabled(false)
+        trackingService.clips.releaseFrames()
+        trackingService.stop()
         clearLivePose()
-        audio.stop()
+        audioService.stop()
         subscriptions.removeAll()
         UIApplication.shared.isIdleTimerDisabled = wasIdleTimerDisabled
         started = false
     }
 
     private func startVoiceListening() {
-        voiceAvailable = audio.capability() != .unsupported
+        voiceAvailable = audioService.capability() != .unsupported
         Task { @MainActor [weak self] in
             guard let self else { return }
-            let result = await audio.startListening()
+            let result = await audioService.startListening()
             guard started else { return }
             voiceListening = result == .started
             if !paused, !allSetsDone {
-                audio.startMusic()
+                audioService.startMusic()
             }
             if result != .started {
                 voiceAvailable = false
@@ -581,13 +581,13 @@ final class BalanceSessionViewModel: BalanceSessionViewModelProtocol {
         if let openingCue {
             if let deadline = openingSpeechDeadline, timestamp >= deadline {
                 interruptOpening()
-                audio.cancelSpeech()
+                audioService.cancelSpeech()
                 completeOpeningCue()
             } else if openingSpeechID == nil {
                 let id = UUID()
                 openingSpeechID = id
                 openingSpeechDeadline = timestamp + 8
-                audio.speak(id: id, key: openingCue.rawValue)
+                audioService.speak(id: id, key: openingCue.rawValue)
             }
             return false
         }
@@ -603,7 +603,7 @@ final class BalanceSessionViewModel: BalanceSessionViewModelProtocol {
             practiceCountdown = nil
             countdownDeadline = nil
             lastSpokenCountdown = nil
-            audio.speak(id: UUID(), key: snapshot.instructionKey)
+            audioService.speak(id: UUID(), key: snapshot.instructionKey)
             return true
         }
 
@@ -645,7 +645,7 @@ final class BalanceSessionViewModel: BalanceSessionViewModelProtocol {
 
             calibrationFinished = true
             openingCue = .complete
-            audio.cancelSpeech()
+            audioService.cancelSpeech()
             if exercise.isSitToStand {
                 // Restart the seated countdown after both announcements finish.
                 engine.consume(frame, scoringEnabled: false)
@@ -700,7 +700,7 @@ final class BalanceSessionViewModel: BalanceSessionViewModelProtocol {
             return
         }
         lastSpokenCountdown = remaining
-        audio.play(id: UUID(), cue: .countdown(remaining))
+        audioService.play(id: UUID(), cue: .countdown(remaining))
     }
 
     private func updateAudio(from previous: BalanceSnapshot, to current: BalanceSnapshot) {
@@ -716,7 +716,7 @@ final class BalanceSessionViewModel: BalanceSessionViewModelProtocol {
         if current.metrics.completedTouches > previous.metrics.completedTouches {
             lastSpokenCountdown = nil
             let key = completionGuidanceKey(for: current)
-            audio.play(id: UUID(), cue: .guidance(prefix: .target, key: key))
+            audioService.play(id: UUID(), cue: .guidance(prefix: .target, key: key))
             return
         }
 
@@ -727,7 +727,7 @@ final class BalanceSessionViewModel: BalanceSessionViewModelProtocol {
             let key = current.activeArm == .right
                 ? exercise.key("voice.rightTarget")
                 : exercise.key("voice.leftTarget")
-            audio.speak(id: UUID(), key: key)
+            audioService.speak(id: UUID(), key: key)
             return
         }
 
@@ -737,7 +737,7 @@ final class BalanceSessionViewModel: BalanceSessionViewModelProtocol {
             let key = current.activeArm == .right
                 ? exercise.key("voice.rightTarget")
                 : exercise.key("voice.leftTarget")
-            audio.speak(id: UUID(), key: key)
+            audioService.speak(id: UUID(), key: key)
             return
         }
 
@@ -756,7 +756,7 @@ final class BalanceSessionViewModel: BalanceSessionViewModelProtocol {
         if current.metrics.completedTouches > previous.metrics.completedTouches {
             lastSpokenCountdown = nil
             let key = completionGuidanceKey(for: current)
-            audio.play(id: UUID(), cue: .guidance(prefix: .target, key: key))
+            audioService.play(id: UUID(), cue: .guidance(prefix: .target, key: key))
             return
         }
 
@@ -774,7 +774,7 @@ final class BalanceSessionViewModel: BalanceSessionViewModelProtocol {
         }
 
         // Any prefix other than the target chime speaks the line directly.
-        audio.play(id: UUID(), cue: .guidance(prefix: .towelGrab, key: current.instructionKey))
+        audioService.play(id: UUID(), cue: .guidance(prefix: .towelGrab, key: current.instructionKey))
     }
 
     /// Explains the starting pose, then the end pose, aloud as each calibration step begins,
@@ -803,7 +803,7 @@ final class BalanceSessionViewModel: BalanceSessionViewModelProtocol {
 
         spokenCalibrationKey = key
         // Any prefix other than the target chime speaks the line directly.
-        audio.play(id: UUID(), cue: .guidance(prefix: .towelGrab, key: key))
+        audioService.play(id: UUID(), cue: .guidance(prefix: .towelGrab, key: key))
 
         return true
     }
@@ -869,7 +869,7 @@ final class BalanceSessionViewModel: BalanceSessionViewModelProtocol {
 
         // Kept before recording stops, so the set's last repetition still finds its frames.
         if let clip {
-            tracking.clips.keep(
+            trackingService.clips.keep(
                 group: clip.group,
                 repNumber: clip.repNumber,
                 from: clip.start,
@@ -878,7 +878,7 @@ final class BalanceSessionViewModel: BalanceSessionViewModelProtocol {
             )
         }
 
-        tracking.clips.setEnabled(replayRecording.savesClips && counted)
+        trackingService.clips.setEnabled(replayRecording.savesClips && counted)
     }
 
     /// The engine's own estimate: forearm rotation or shoulder lift, or knee extension for
@@ -1006,7 +1006,7 @@ final class BalanceSessionViewModel: BalanceSessionViewModelProtocol {
             return
         }
 
-        let clips = await tracking.clips.take(group: group)
+        let clips = await trackingService.clips.take(group: group)
 
         guard !clips.isEmpty else {
             return
@@ -1033,6 +1033,6 @@ extension BalanceSessionViewModel {
         }
 
         demoRevision += 1
-        audio.play(id: UUID(), cue: .demoChanged)
+        audioService.play(id: UUID(), cue: .demoChanged)
     }
 }

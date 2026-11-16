@@ -15,10 +15,10 @@ protocol HomeDependency {
     var taskRoutine: RoutineViewModel { get }
     var dailyPlan: DailyPlanViewModel { get }
     /// The intro reads its narration and validates readiness before a session opens.
-    var audio: SessionAudioService { get }
-    var permissions: PermissionManager { get }
+    var audioService: SessionAudioService { get }
+    var permissionService: PermissionService { get }
     /// Readiness waits for interrupted-session recovery before therapy can start.
-    var historyRecovery: any HistoryRecovering { get }
+    var historyRecoveryService: any HistoryRecoveryServiceProtocol { get }
     /// Shared with `DailyPlanViewModel`, which drives the plan's navigation, and with the sessions.
     var homeRouter: HomeRouter { get }
     /// Builds the session pages the plan's cover shows; no session UI is written in Home.
@@ -100,11 +100,11 @@ final class HomeBuilder: HomeContentBuildable, PracticePreferencesContentBuildab
             countdownSeconds: countdownSeconds,
             automatic: automatic,
             plan: dependency.dailyPlan,
-            audio: dependency.audio,
+            audioService: dependency.audioService,
             readiness: TherapyReadinessViewModel(
-                permissions: dependency.permissions,
-                audio: dependency.audio,
-                history: dependency.historyRecovery
+                permissionService: dependency.permissionService,
+                audioService: dependency.audioService,
+                historyRecoveryService: dependency.historyRecoveryService
             ),
             narration: DailyPlanIntroNarration()
         )
@@ -147,7 +147,7 @@ final class HomeBuilder: HomeContentBuildable, PracticePreferencesContentBuildab
         case .planNext:
             let viewModel: some DailyPlanNextViewModelProtocol = DailyPlanNextViewModel(
                 plan: dependency.dailyPlan,
-                audio: dependency.audio
+                audioService: dependency.audioService
             )
 
             TMDailyPlanNextView(viewModel: viewModel, builder: self)
