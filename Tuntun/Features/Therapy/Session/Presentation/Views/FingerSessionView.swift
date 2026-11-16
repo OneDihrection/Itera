@@ -7,9 +7,9 @@
 
 import SwiftUI
 
-struct TMFingerSessionView: View {
-    private let launcher: FingerSessionLauncher
-    private let plan: DailyPlanViewModel
+struct TMFingerSessionView<Launcher: FingerSessionLaunching>: View {
+    private let launcher: Launcher
+    private let plan: any DailyPlanSessionReporting
     private let router: any SessionRouterProtocol
 
     @Environment(\.scenePhase) private var scenePhase
@@ -18,8 +18,8 @@ struct TMFingerSessionView: View {
     @State private var videoBounds: CGRect?
 
     init(
-        launcher: FingerSessionLauncher,
-        plan: DailyPlanViewModel,
+        launcher: Launcher,
+        plan: any DailyPlanSessionReporting,
         router: any SessionRouterProtocol
     ) {
         self.launcher = launcher
@@ -55,7 +55,7 @@ struct TMFingerSessionView: View {
     // MARK: - Exercise layout
 
     /// The shared live screen; stage pages, the countdown and the pause dialog lie over it.
-    private func session(_ model: FingerSessionViewModel) -> some View {
+    private func session(_ model: Launcher.Session) -> some View {
         TMTherapyExerciseLiveLayout(
             heading: heading(model),
             cue: cue(model),
@@ -120,7 +120,7 @@ struct TMFingerSessionView: View {
     /// Debug builds only. Over the header's trailing corner, above stage pages and the pause
     /// dialog, rather than in `accessories`, which would move the centred heading.
     @ViewBuilder
-    private func debugFinishButton(_ model: FingerSessionViewModel) -> some View {
+    private func debugFinishButton(_ model: Launcher.Session) -> some View {
         #if DEBUG
         if !model.hasFinished {
             TMDebugActionButton(title: "debug.finishExercise", symbol: "forward.end.fill") {
@@ -132,7 +132,7 @@ struct TMFingerSessionView: View {
         #endif
     }
 
-    private func heading(_ model: FingerSessionViewModel) -> TMTherapyExerciseHeading {
+    private func heading(_ model: Launcher.Session) -> TMTherapyExerciseHeading {
         TMTherapyExerciseHeading(
             eyebrow: plan.currentNumber.map { Text("plan.exerciseNumber \($0)") },
             title: model.isCalibrating
@@ -144,7 +144,7 @@ struct TMFingerSessionView: View {
     }
 
     /// Show one cue at a time, with the active finger inline when it is relevant.
-    private func cue(_ model: FingerSessionViewModel) -> Text? {
+    private func cue(_ model: Launcher.Session) -> Text? {
         if let key = model.scriptedCueKey {
             return Text(LocalizedStringKey(key))
         }
@@ -167,7 +167,7 @@ struct TMFingerSessionView: View {
         return instruction + Text(verbatim: " · ") + Text(LocalizedStringKey(model.fingerKey))
     }
 
-    private func isTracking(_ model: FingerSessionViewModel) -> Bool {
+    private func isTracking(_ model: Launcher.Session) -> Bool {
         [.baseline, .target, .range, .active].contains(model.activity.phase)
     }
 
@@ -175,7 +175,7 @@ struct TMFingerSessionView: View {
 
     /// Set completion and rest cover the live layout without removing the camera.
     @ViewBuilder
-    private func phasePage(_ model: FingerSessionViewModel) -> some View {
+    private func phasePage(_ model: Launcher.Session) -> some View {
         switch model.activity.phase {
         case .feedback:
             TMFingerSetSummaryPage(model: model, exerciseNumber: plan.currentNumber)
@@ -212,7 +212,7 @@ struct TMFingerSessionView: View {
         }
     }
 
-    private func coversSession(_ model: FingerSessionViewModel) -> Bool {
+    private func coversSession(_ model: Launcher.Session) -> Bool {
         [.feedback, .rest].contains(model.activity.phase)
     }
 
@@ -220,7 +220,7 @@ struct TMFingerSessionView: View {
 
     /// The live preview with the existing fingertip bubbles and their hold timer; recovery
     /// actions sit at the top, clear of the cue bubble at the bottom.
-    private func camera(_ model: FingerSessionViewModel) -> some View {
+    private func camera(_ model: Launcher.Session) -> some View {
         cameraPreview(model)
             .overlay(alignment: .top) {
                 VStack(spacing: 12) {
@@ -242,7 +242,7 @@ struct TMFingerSessionView: View {
     }
 
     /// Recovery guidance takes priority; otherwise the live hold/position feedback.
-    private func liveCue(_ model: FingerSessionViewModel) -> String? {
+    private func liveCue(_ model: Launcher.Session) -> String? {
         guard isTracking(model) else {
             return nil
         }
@@ -250,7 +250,7 @@ struct TMFingerSessionView: View {
         return model.recoveryGuidanceKey ?? model.liveFeedbackKey
     }
 
-    private func cameraPreview(_ model: FingerSessionViewModel) -> some View {
+    private func cameraPreview(_ model: Launcher.Session) -> some View {
         ZStack(alignment: .bottomLeading) {
             TherapyPalette.canvas
             TMHandCameraPreview(camera: model.camera, ready: model.previewReady) { bounds in
@@ -274,7 +274,7 @@ struct TMFingerSessionView: View {
     }
 
     @ViewBuilder
-    private func recovery(_ model: FingerSessionViewModel) -> some View {
+    private func recovery(_ model: Launcher.Session) -> some View {
         if model.calibrationNeedsHelp {
             TMTherapyButton(title: "action.recalibrate", pill: true) {
                 model.retryCalibration()
@@ -291,7 +291,7 @@ struct TMFingerSessionView: View {
         }
     }
 
-    private func example(_ model: FingerSessionViewModel) -> some View {
+    private func example(_ model: Launcher.Session) -> some View {
         TMFingerExampleView(
             exercise: model.activity.kind,
             phase: model.calibrationMessage == "calibration.intro" ? .demonstration : model.activity.phase,

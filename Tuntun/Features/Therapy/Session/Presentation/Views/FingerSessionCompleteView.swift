@@ -9,40 +9,35 @@ import SwiftUI
 
 /// The shared all-done page for the finger exercises: saves the finished session, then offers a
 /// way on to the next exercise or to progress.
-struct TMFingerSessionCompleteView: View {
-    private let launcher: FingerSessionLauncher
-    private let plan: DailyPlanViewModel
-    /// Refreshed after saving so Beranda and Progress show the new session.
-    private let home: FingerHomeViewModel
-    private let tabs: any TabRouterProtocol
-    private let router: any SessionRouterProtocol
-
+struct TMFingerSessionCompleteView<ViewModel: FingerSessionCompleteViewModelProtocol>: View {
+    @State private var viewModel: ViewModel
     @Environment(\.scenePhase) private var scenePhase
-    @State private var savingFinished = false
 
-    private var summary: FingerSessionSummary? {
-        launcher.session?.finalSummary
+    init(viewModel: ViewModel) {
+        _viewModel = State(initialValue: viewModel)
     }
 
-    init(
-        launcher: FingerSessionLauncher,
-        plan: DailyPlanViewModel,
-        home: FingerHomeViewModel,
-        tabs: any TabRouterProtocol,
-        router: any SessionRouterProtocol
-    ) {
-        self.launcher = launcher
-        self.plan = plan
-        self.home = home
-        self.tabs = tabs
-        self.router = router
+    private var summary: FingerSessionSummary? {
+        viewModel.summary
+    }
+
+    private var savingFinished: Bool {
+        viewModel.savingFinished
+    }
+
+    private var completed: Bool {
+        viewModel.completed
+    }
+
+    private var automaticallyRests: Bool {
+        viewModel.automaticallyRests
     }
 
     var body: some View {
         TMTherapySetSummary(
             heading: TMTherapyExerciseHeading(
-                eyebrow: plan.currentNumber.map { Text("plan.exerciseNumber \($0)") },
-                title: Text(verbatim: launcher.session?.exerciseTitle ?? "")
+                eyebrow: viewModel.exerciseNumber.map { Text("plan.exerciseNumber \($0)") },
+                title: Text(verbatim: viewModel.exerciseTitle)
             ),
             headline: Text(completed ? "session.allDoneTitle" : "done.titlePartial"),
             message: Text(completed ? "session.allDoneMessage" : "done.messagePartial"),
@@ -52,9 +47,9 @@ struct TMFingerSessionCompleteView: View {
             closingAction
         }
         .environment(\.colorScheme, .light)
-        .environment(\.locale, launcher.session?.sessionLanguage.locale ?? AppLanguage.selected.locale)
+        .environment(\.locale, viewModel.sessionLocale)
         .interactiveDismissDisabled()
-        .task { await saveSummary() }
+        .task { await viewModel.save() }
         .task(id: savingFinished && scenePhase == .active && automaticallyRests) {
             guard savingFinished, scenePhase == .active, automaticallyRests else {
                 return
@@ -66,7 +61,7 @@ struct TMFingerSessionCompleteView: View {
                 return
             }
 
-            close()
+            viewModel.close()
         }
     }
 
@@ -81,19 +76,15 @@ struct TMFingerSessionCompleteView: View {
         } else {
             TMTherapyFinishActions(
                 title: closingTitle,
-                symbol: plan.isRunning ? "play.fill" : nil,
+                symbol: viewModel.isPlanRunning ? "play.fill" : nil,
                 disabled: !savingFinished,
-                action: close
+                action: viewModel.close
             ) {
                 if !savingFinished {
                     ProgressView()
                 }
             }
         }
-    }
-
-    private var automaticallyRests: Bool {
-        completed && plan.hasAutomaticRest
     }
 
     /// Every set of every movement. Finger sets end only when the goal is reached, so a finished
@@ -122,30 +113,41 @@ struct TMFingerSessionCompleteView: View {
             }
     }
 
-    private func saveSummary() async {
-        await launcher.session?.saveFinalSummary()
-        if launcher.session?.finalSummarySaved == true {
-            await home.refresh()
-        }
-        savingFinished = true
-    }
-
-    private var completed: Bool {
-        summary?.outcome == .completed
-    }
-
     /// While today's plan runs, this page leads on to the next exercise instead of Progress.
     private var closingTitle: LocalizedStringKey {
-        plan.isRunning ? "plan.nextContinue" : "done.viewProgress"
-    }
-
-    private func close() {
-        guard !plan.isRunning else {
-            plan.finish(completed: completed)
-            return
-        }
-
-        router.closeSession()
-        tabs.showProgress()
+        viewModel.isPlanRunning ? "plan.nextContinue" : "done.viewProgress"
     }
 }
+
+// MARK: - Previews
+
+#if DEBUG
+@MainActor
+@Observable
+private final class MockFingerSessionCompleteViewModel: FingerSessionCompleteViewModelProtocol {
+    let summary: FingerSessionSummary? = FingerSessionSummary(
+        id: UUID(),
+        started: .now,
+        ended: .now,
+        routine: FingerRoutine(),
+        results: [],
+        outcome: .completed,
+        feeling: nil,
+        exerciseIndex: 0
+    )
+    let exerciseTitle = "Sentuh Jempol ke Jari"
+    let sessionLocale = AppLanguage.selected.locale
+    let exerciseNumber: Int? = 1
+    let isPlanRunning = true
+    let completed = true
+    let automaticallyRests = false
+    let savingFinished = true
+
+    func save() async {}
+    func close() {}
+}
+
+#Preview("Finger complete") {
+    TMFingerSessionCompleteView(viewModel: MockFingerSessionCompleteViewModel())
+}
+#endif

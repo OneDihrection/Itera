@@ -6,8 +6,6 @@
 //
 
 import Foundation
-import Observation
-import SwiftUI
 
 /// The root component: constructs every shared service, repository and model once and seeds each
 /// feature's component by conforming to that feature's dependency protocol.
@@ -16,48 +14,54 @@ import SwiftUI
 /// the environment or handed to feature code (SYSTEM_DESIGN §3, "Inject services through
 /// initializers").
 @MainActor
-final class AppComponent: Component<Void>, HistoryDependency, HomeDependency {
+final class AppComponent: Component<Void>, HistoryDependency, HomeDependency, TherapySessionDependency {
     // MARK: - Services
 
     let permissions: PermissionManager
     let tracking = BodyTrackingService()
-    let audio = SessionAudioService()
-    private let fingerAudio = GuidanceAudioService()
+    let audio: SessionAudioService
+    let buttonClick: ButtonClickPlayer
 
     // MARK: - Repositories
 
     let sessions: any SessionRepository
     /// Finger and forearm sessions share one folder, so this repository reads any session's
     /// key-repetition replays.
-    private let fingerRepository: any FingerSessionRepository
+    let fingerReplayRepository: any FingerSessionRepository
 
     // MARK: - Shared models
 
     let fingers: FingerHomeViewModel
-    private let forearm: FingerHomeViewModel
     let armRoutine: RoutineViewModel
     let taskRoutine: RoutineViewModel
     let fingerSessions: FingerSessionLauncher
-    private let recovery: SessionHistoryRecovery
+    let historyRecovery: any HistoryRecovering
     /// Today's plan across programs; Beranda shows it and finishing sessions report to it.
     let dailyPlan: DailyPlanViewModel
 
     // MARK: - Routers
 
-    /// Beranda's stack, sheet and plan cover; shared by the plan and its sessions.
+    /// Beranda's settings sheet.
     let homeRouter = HomeRouter()
-    /// One tab router for the app's single tab bar.
+    /// The plan's intro and full-screen cover; shared by the plan and its sessions.
+    let planRouter = PlanRouter()
+    /// Concrete because `RootViewModel` wires it; features receive `tabRouter`.
     private let tabs = TabRouter()
 
     init(permissions: PermissionManager) {
         self.permissions = permissions
+
+        let audio = SessionAudioService()
+        let guidanceAudio = GuidanceAudioService()
+        self.audio = audio
+        buttonClick = ButtonClickPlayer(guidance: guidanceAudio, narration: audio)
 
         let directory = URL.applicationSupportDirectory.appendingPathComponent(
             "Sessions",
             isDirectory: true
         )
         sessions = LocalSessionRepository(directory: directory)
-        recovery = SessionHistoryRecovery(sessions: sessions)
+        historyRecovery = SessionHistoryRecovery(sessions: sessions)
 
         armRoutine = RoutineViewModel(repository: LocalRoutineRepository(
             url: URL.applicationSupportDirectory.appendingPathComponent("routines.json")
@@ -67,14 +71,14 @@ final class AppComponent: Component<Void>, HistoryDependency, HomeDependency {
         ))
 
         let fingerRepository = LocalFingerSessionRepository()
-        self.fingerRepository = fingerRepository
+        fingerReplayRepository = fingerRepository
         fingers = FingerHomeViewModel(
             repository: fingerRepository,
             routineRepository: LocalFingerRoutineRepository()
         )
 
         let forearmRepository = LocalFingerSessionRepository(category: .forearm)
-        forearm = FingerHomeViewModel(
+        let forearm = FingerHomeViewModel(
             category: .forearm,
             repository: forearmRepository,
             routineRepository: LocalFingerRoutineRepository(category: .forearm)
@@ -84,7 +88,7 @@ final class AppComponent: Component<Void>, HistoryDependency, HomeDependency {
             fingers: fingers,
             forearm: forearm,
             camera: HandCameraService(),
-            audio: fingerAudio,
+            audio: guidanceAudio,
             permissions: permissions,
             fingerRepository: fingerRepository,
             forearmRepository: forearmRepository
@@ -97,75 +101,52 @@ final class AppComponent: Component<Void>, HistoryDependency, HomeDependency {
             armRoutine: armRoutine,
             taskRoutine: taskRoutine,
             fingerSessions: fingerSessions,
-            router: homeRouter
+            router: planRouter
         )
 
         super.init(with: ())
-    }
-
-    var fingerReplayRepository: any FingerSessionRepository {
-        fingerRepository
-    }
-
-    var historyRecovery: any HistoryRecovering {
-        recovery
     }
 
     var tabRouter: any TabRouterProtocol {
         tabs
     }
 
+    /// Session pages live in the plan's cover, so they use the plan's router.
+    var sessionRouter: any SessionRouterProtocol {
+        planRouter
+    }
+
     // MARK: - Feature builders
 
     lazy var historyBuilder = HistoryBuilder(component: HistoryComponent(dependency: self))
+    lazy var sessionBuilder = TherapySessionBuilder(component: TherapySessionComponent(dependency: self))
     lazy var homeBuilder = HomeBuilder(component: HomeComponent(dependency: self))
 
     // MARK: - Root
 
     /// Created once: it wires the tab router to its selection, so a rebuilt root must not
     /// replace it.
-    private lazy var rootViewModel = RootViewModel(
+    lazy var rootViewModel = RootViewModel(
         router: tabs,
         playButtonClick: { [unowned self] in
-            playButtonClick()
+            buttonClick.play()
         }
     )
 
-    /// The tab root. Each tab's root screen owns its own navigation stack.
-    @ViewBuilder func buildRoot() -> some View {
-        let viewModel: some RootViewModelProtocol = rootViewModel
-
-        RootView(
-            viewModel: viewModel,
-            home: homeBuilder.buildHome(),
-            reports: historyBuilder.buildReports()
-        )
-    }
-
     // MARK: - App lifecycle
 
+    /// Finalizes a session interrupted by termination, once per launch.
     func recoverHistory() async {
-        await recovery.recoverHistory()
+        await historyRecovery.recoverHistory()
     }
 
+    /// Re-reads authorization when the app returns to the foreground.
     func refreshPermissions() {
         permissions.refresh()
     }
 
-    func playButtonClick() {
-        guard UserDefaults.standard.object(forKey: PracticePreferences.buttonSounds) as? Bool ?? true else {
-            return
-        }
-
-        // A tap sound never lands on top of narration from a running session.
-        guard !audio.isNarrating else {
-            return
-        }
-
-        fingerAudio.playButtonClick()
-    }
-
     #if DEBUG
+    /// Opens a plan intro named by the `intro:` launch argument.
     func openDebugIntroIfRequested() {
         DebugScreenLauncher.openIntroIfRequested(plan: dailyPlan)
     }

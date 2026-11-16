@@ -8,13 +8,21 @@
 import Foundation
 import Observation
 
+/// The open finger session the live page shows.
+@MainActor
+protocol FingerSessionLaunching: AnyObject, Observable {
+    associatedtype Session: FingerSessionViewModelProtocol
+
+    var session: Session? { get }
+}
+
 /// Prepares finger and forearm sessions and keeps the open one.
 ///
 /// The live session page and its closing page are separate routes, so the session model
 /// outlives each of them here until the next session replaces it.
 @MainActor
 @Observable
-final class FingerSessionLauncher {
+final class FingerSessionLauncher: FingerSessionLaunching {
     private(set) var session: FingerSessionViewModel?
 
     @ObservationIgnored private let fingers: FingerHomeViewModel

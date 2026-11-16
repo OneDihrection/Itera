@@ -11,10 +11,13 @@ import SwiftUI
 struct MyApp: App {
     @Environment(\.scenePhase) private var scenePhase
     @State private var component: AppComponent
+    @State private var builder: RootBuilder
     @AppStorage(AppLanguage.storageKey) private var language = AppLanguage.selected.rawValue
 
     init() {
-        _component = State(initialValue: AppComponent(permissions: PermissionManager()))
+        let component = AppComponent(permissions: PermissionManager())
+        _component = State(initialValue: component)
+        _builder = State(initialValue: RootBuilder(component: component))
         AppFont.configureNavigationBars()
     }
 
@@ -24,7 +27,7 @@ struct MyApp: App {
                 .typography(.body)
                 // Applied at the root so tab stacks, sheets and covers share the language.
                 .environment(\.locale, (AppLanguage(rawValue: language) ?? .indonesian).locale)
-                .environment(\.buttonFeedback, component.playButtonClick)
+                .environment(\.buttonFeedback, component.buttonClick.play)
                 .buttonStyle(TMTherapySoundButtonStyle())
                 .task {
                     #if DEBUG
@@ -46,10 +49,10 @@ struct MyApp: App {
         if let screen = DebugScreenLauncher.galleryScreen {
             TMDebugScreenGallery(screen: screen)
         } else {
-            component.buildRoot()
+            builder.buildRoot()
         }
         #else
-        component.buildRoot()
+        builder.buildRoot()
         #endif
     }
 }

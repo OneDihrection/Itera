@@ -11,8 +11,49 @@ import Observation
 import UIKit
 
 @MainActor
+protocol TherapySessionViewModelProtocol: AnyObject, Observable {
+    var sessionLanguage: AppLanguage { get }
+    var sessionLocale: Locale { get }
+    var snapshot: SessionSnapshot { get }
+    var livePose: LivePose.Skeleton? { get }
+    var towelDisplay: TowelSnapshot? { get }
+    var towelInterpolates: Bool { get }
+    var cameraDenied: Bool { get }
+    var failure: String? { get }
+    var saveFailure: String? { get }
+    var saving: Bool { get }
+    var voiceReady: Bool { get }
+    var listening: Bool { get }
+    var demoRevision: Int { get }
+    var demoPlayback: TherapyAnimationPlayback { get }
+    var demoTitleKey: String { get }
+    var elapsedSeconds: Int { get }
+    var entryFailure: Bool { get }
+    var entryMessage: String { get }
+    var validating: Bool { get }
+    var isStarting: Bool { get }
+    /// The capture owner the camera preview attaches to.
+    var tracking: BodyTrackingService { get }
+
+    func start(permissions: any PermissionManaging) async
+    func enableVoice(permissions: any PermissionManaging) async
+    func retryCamera(permissions: any PermissionManaging) async
+    func openSettings()
+    func command(_ command: SessionCommand)
+    func readingChanged(_ id: UUID, complete: Bool)
+    func previewReady(_ ready: Bool)
+    func viewport(width: Double, height: Double)
+    func orientationChanged(right: Bool)
+    func background()
+    func foreground()
+    func exit()
+    func retrySave()
+    func acknowledgeSaveFailure()
+}
+
+@MainActor
 @Observable
-final class TherapySessionViewModel {
+final class TherapySessionViewModel: TherapySessionViewModelProtocol {
     let sessionLanguage = AppLanguage.selected
     var sessionLocale: Locale { sessionLanguage.locale }
     private(set) var snapshot: SessionSnapshot

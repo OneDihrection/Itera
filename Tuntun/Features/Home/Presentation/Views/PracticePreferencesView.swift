@@ -7,11 +7,12 @@
 
 import SwiftUI
 
-struct TMPracticePreferencesView<Builder: PracticePreferencesContentBuildable>: View {
+struct TMPracticePreferencesView<
+    ViewModel: PracticePreferencesViewModelProtocol,
+    Builder: PracticePreferencesContentBuildable
+>: View {
     @AppStorage(ExerciseMusicTrack.storageKey) private var musicTrack = ExerciseMusicTrack.defaultValue
-    @Bindable private var home: FingerHomeViewModel
-    @Bindable private var plan: DailyPlanViewModel
-    private let router: any HomeRouterProtocol
+    @State private var viewModel: ViewModel
     private let builder: Builder
     @Environment(\.buttonFeedback) private var buttonFeedback
     /// The nested Debug plan editor sheet.
@@ -26,15 +27,8 @@ struct TMPracticePreferencesView<Builder: PracticePreferencesContentBuildable>: 
     @AppStorage(PracticePreferences.videoCensoring) private var videoCensoring = PracticePreferences.videoCensoringChoice
     @AppStorage(AppLanguage.storageKey) private var language = AppLanguage.selected.rawValue
 
-    init(
-        home: FingerHomeViewModel,
-        plan: DailyPlanViewModel,
-        router: any HomeRouterProtocol,
-        builder: Builder
-    ) {
-        _home = Bindable(home)
-        _plan = Bindable(plan)
-        self.router = router
+    init(viewModel: ViewModel, builder: Builder) {
+        _viewModel = State(initialValue: viewModel)
         self.builder = builder
     }
 
@@ -43,17 +37,17 @@ struct TMPracticePreferencesView<Builder: PracticePreferencesContentBuildable>: 
             // The same saved finger routine the plan page edits; a session in progress keeps
             // the snapshot it started with.
             Section {
-                Picker("settings.trainingSide", selection: $plan.sidePreference) {
+                Picker("settings.trainingSide", selection: $viewModel.sidePreference) {
                     Text("settings.trainingSideDefault").tag("")
                     Text("session.left").tag(HandSide.left.rawValue)
                     Text("session.right").tag(HandSide.right.rawValue)
                 }
                 .frame(minHeight: 64)
-                TMTherapyNumberControl(title: "plan.setsShort", value: $home.routine.sets, range: 1...5, showsBackground: false)
-                TMTherapyNumberControl(title: "plan.repsShort", value: $home.routine.repetitions, range: 1...20, showsBackground: false)
+                TMTherapyNumberControl(title: "plan.setsShort", value: $viewModel.sets, range: 1...5, showsBackground: false)
+                TMTherapyNumberControl(title: "plan.repsShort", value: $viewModel.repetitions, range: 1...20, showsBackground: false)
                 TMTherapyNumberControl(
                     title: "plan.restSeconds",
-                    value: $home.routine.restSeconds,
+                    value: $viewModel.restSeconds,
                     range: 5...120,
                     step: 5,
                     showsBackground: false
@@ -63,7 +57,7 @@ struct TMPracticePreferencesView<Builder: PracticePreferencesContentBuildable>: 
             } footer: {
                 Text("settings.exerciseHelp").typography(.body)
             }
-            if let key = home.errorKey {
+            if let key = viewModel.errorKey {
                 Section { TMTherapyError(key: key) }
             }
             Section {
@@ -115,9 +109,7 @@ struct TMPracticePreferencesView<Builder: PracticePreferencesContentBuildable>: 
             ToolbarItem(placement: .confirmationAction) {
                 Button("action.done") {
                     Task {
-                        if await home.saveRoutine() {
-                            router.dismissSheet()
-                        }
+                        await viewModel.done()
                     }
                 }
                     .typography(.headline)
@@ -125,7 +117,7 @@ struct TMPracticePreferencesView<Builder: PracticePreferencesContentBuildable>: 
             }
         }
         .presentationDetents([.large])
-        .onDisappear { Task { _ = await home.saveRoutine() } }
+        .onDisappear { Task { await viewModel.save() } }
         #if DEBUG
         .sheet(isPresented: $editingPlan) {
             NavigationStack {
@@ -202,3 +194,36 @@ struct TMPracticePreferencesView<Builder: PracticePreferencesContentBuildable>: 
             .foregroundStyle(TherapyPalette.warning)
     }
 }
+
+// MARK: - Previews
+
+#if DEBUG
+@MainActor
+@Observable
+private final class MockPracticePreferencesViewModel: PracticePreferencesViewModelProtocol {
+    var sidePreference = ""
+    var sets = 2
+    var repetitions = 5
+    var restSeconds = 20
+    let errorKey: String? = nil
+
+    func done() async {}
+    func save() async {}
+}
+
+@MainActor
+private struct MockPreferencesBuilder: PracticePreferencesContentBuildable {
+    @ViewBuilder func buildDebugPlanEditor() -> some View {
+        Text(verbatim: "Plan editor")
+    }
+}
+
+#Preview("Settings") {
+    NavigationStack {
+        TMPracticePreferencesView(
+            viewModel: MockPracticePreferencesViewModel(),
+            builder: MockPreferencesBuilder()
+        )
+    }
+}
+#endif

@@ -20,11 +20,10 @@ protocol ReportsViewModelProtocol: AnyObject, Observable {
     func refresh() async
     /// Deletes every saved session; true when both stores succeeded.
     func deleteHistory() async -> Bool
-    func openFingerReport(id: UUID)
-    func openSessionReport(id: UUID)
 }
 
-/// The Progress tab: owns its navigation stack and joins finger and arm history.
+/// The Progress tab: owns its navigation stack and joins finger and arm history. Rows navigate
+/// through their own view models.
 @MainActor
 @Observable
 final class ReportsViewModel: ReportsViewModelProtocol {
@@ -37,12 +36,12 @@ final class ReportsViewModel: ReportsViewModelProtocol {
 
     init(
         home: FingerHomeViewModel,
-        sessions: any SessionRepository,
+        armReports: TaskReportsViewModel,
         router: HistoryRouter
     ) {
         self.home = home
         self.router = router
-        self.armReports = TaskReportsViewModel(repository: sessions)
+        self.armReports = armReports
 
         router.push = { [weak self] route in
             self?.path.append(route)
@@ -92,13 +91,5 @@ final class ReportsViewModel: ReportsViewModelProtocol {
         await armReports.deleteAll()
 
         return errorKey == nil
-    }
-
-    func openFingerReport(id: UUID) {
-        router.showFingerReport(id: id)
-    }
-
-    func openSessionReport(id: UUID) {
-        router.showSessionReport(id: id)
     }
 }

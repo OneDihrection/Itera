@@ -10,8 +10,49 @@ import Observation
 import UIKit
 
 @MainActor
+protocol BalanceSessionViewModelProtocol: AnyObject, Observable {
+    var exercise: BalanceExercise { get }
+    var snapshot: BalanceSnapshot { get }
+    var livePose: LivePose.Skeleton? { get }
+    var permissionDenied: Bool { get }
+    var cameraWaiting: Bool { get }
+    var failure: String? { get }
+    var paused: Bool { get }
+    var demoRevision: Int { get }
+    var calibrationMessage: String? { get }
+    var countdownOverlaySeconds: Int? { get }
+    var setNumber: Int { get }
+    var totalSets: Int { get }
+    var setResults: [Int] { get }
+    var restRemaining: Int? { get }
+    var restBreath: RestBreath? { get }
+    var allSetsDone: Bool { get }
+    var historySaveFailed: Bool { get }
+    var elapsedSeconds: Int { get }
+    /// The capture owner the camera preview attaches to.
+    var tracking: BodyTrackingService { get }
+
+    func start(permissions: any PermissionManaging) async
+    func foreground(permissions: any PermissionManaging)
+    func background()
+    func viewport(_ size: CGSize)
+    func previewReady(_ ready: Bool)
+    func orientationChanged(right: Bool)
+    func retryCamera()
+    func restart()
+    func pause()
+    func resume()
+    func stop()
+    func openSettings()
+    func retryHistorySave()
+    #if DEBUG
+    func finishExerciseForDebug()
+    #endif
+}
+
+@MainActor
 @Observable
-final class BalanceSessionViewModel {
+final class BalanceSessionViewModel: BalanceSessionViewModelProtocol {
     private(set) var snapshot = BalanceSnapshot()
     /// The tracked skeleton from the first camera frame, shown until the engine draws its own overlay.
     private(set) var livePose: LivePose.Skeleton?

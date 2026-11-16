@@ -10,13 +10,12 @@ import SwiftUI
 
 /// Debug builds only: chooses which daily-plan exercises Beranda shows, their order, and
 /// custom sets and repetitions per exercise. Edits a copy and applies it on Done.
-struct TMDebugPlanEditorView: View {
+struct TMDebugPlanEditorView<ViewModel: DebugPlanEditorViewModelProtocol>: View {
     @Environment(\.dismiss) private var dismiss
-    private let plan: DailyPlanViewModel
-    @State private var layout: DebugPlanLayout?
+    @State private var viewModel: ViewModel
 
-    init(plan: DailyPlanViewModel) {
-        self.plan = plan
+    init(viewModel: ViewModel) {
+        _viewModel = State(initialValue: viewModel)
     }
 
     var body: some View {
@@ -33,13 +32,6 @@ struct TMDebugPlanEditorView: View {
             toolbarContent
         }
         .presentationDetents([.large])
-        .onAppear {
-            guard layout == nil else {
-                return
-            }
-
-            layout = plan.debugLayout
-        }
     }
 
     // MARK: - Sections
@@ -53,43 +45,38 @@ struct TMDebugPlanEditorView: View {
         }
     }
 
-    @ViewBuilder
     private var entriesSection: some View {
-        if let layout {
-            Section {
-                ForEach(layout.entries) { entry in
-                    entryRow(entry)
-                }
-                .onMove { source, destination in
-                    self.layout?.entries.move(fromOffsets: source, toOffset: destination)
-                }
+        Section {
+            ForEach(viewModel.layout.entries) { entry in
+                entryRow(entry)
+            }
+            .onMove { source, destination in
+                viewModel.layout.entries.move(fromOffsets: source, toOffset: destination)
             }
         }
     }
 
     @ViewBuilder
     private func entryRow(_ entry: DebugPlanLayout.Entry) -> some View {
-        if let item = plan.standardItems.first(where: { $0.id == entry.itemID }),
+        if let info = viewModel.info(for: entry.itemID),
            let binding = binding(for: entry.itemID) {
-            let counts = plan.debugCounts(for: item)
-
             TMDebugPlanEntryRow(
                 entry: binding,
-                titleKey: DailyPlanViewModel.titleKey(for: item.exercise),
-                currentSets: counts.sets,
-                currentRepetitions: counts.repetitions
+                titleKey: info.titleKey,
+                currentSets: info.currentSets,
+                currentRepetitions: info.currentRepetitions
             )
         }
     }
 
     private func binding(for itemID: String) -> Binding<DebugPlanLayout.Entry>? {
-        guard let index = layout?.entries.firstIndex(where: { $0.itemID == itemID }) else {
+        guard let index = viewModel.layout.entries.firstIndex(where: { $0.itemID == itemID }) else {
             return nil
         }
 
         return Binding(
-            get: { layout?.entries[index] ?? DebugPlanLayout.Entry(itemID: itemID) },
-            set: { layout?.entries[index] = $0 }
+            get: { viewModel.layout.entries[index] },
+            set: { viewModel.layout.entries[index] = $0 }
         )
     }
 
@@ -99,7 +86,7 @@ struct TMDebugPlanEditorView: View {
     private var toolbarContent: some ToolbarContent {
         ToolbarItem(placement: .cancellationAction) {
             Button("debug.planEditor.reset") {
-                layout = .standard(plan.standardItems)
+                viewModel.reset()
             }
             .typography(.body)
             .frame(minHeight: 44)
@@ -107,10 +94,7 @@ struct TMDebugPlanEditorView: View {
 
         ToolbarItem(placement: .confirmationAction) {
             Button("action.done") {
-                if let layout {
-                    plan.applyDebugLayout(layout)
-                }
-
+                viewModel.apply()
                 dismiss()
             }
             .typography(.headline)
@@ -194,6 +178,27 @@ private struct TMDebugPlanEntryRow: View {
 
     private func clamped(_ value: Int, to range: ClosedRange<Int>) -> Int {
         min(range.upperBound, max(range.lowerBound, value))
+    }
+}
+
+// MARK: - Previews
+
+@MainActor
+@Observable
+private final class MockDebugPlanEditorViewModel: DebugPlanEditorViewModelProtocol {
+    var layout = DebugPlanLayout.standard(DailyPlan.standard)
+
+    func info(for itemID: String) -> DebugPlanEntryInfo? {
+        DebugPlanEntryInfo(titleKey: itemID, currentSets: 2, currentRepetitions: 5)
+    }
+
+    func reset() {}
+    func apply() {}
+}
+
+#Preview("Plan editor") {
+    NavigationStack {
+        TMDebugPlanEditorView(viewModel: MockDebugPlanEditorViewModel())
     }
 }
 #endif

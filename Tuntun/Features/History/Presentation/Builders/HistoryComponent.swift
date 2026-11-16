@@ -17,8 +17,9 @@ protocol HistoryDependency {
     var fingerReplayRepository: any FingerSessionRepository { get }
 }
 
+/// Conforms to `HistoryCellDependency` so it can seed the rows' component.
 @MainActor
-final class HistoryComponent: Component<HistoryDependency> {
+final class HistoryComponent: Component<HistoryDependency>, HistoryCellDependency {
     let fingers: FingerHomeViewModel
     let sessions: any SessionRepository
     let fingerReplayRepository: any FingerSessionRepository
@@ -28,8 +29,12 @@ final class HistoryComponent: Component<HistoryDependency> {
     /// replace it.
     lazy var reportsViewModel = ReportsViewModel(
         home: fingers,
-        sessions: sessions,
+        armReports: TaskReportsViewModel(repository: sessions),
         router: router
+    )
+
+    lazy var cellBuilder = HistoryCellBuilder(
+        component: HistoryCellComponent(dependency: self)
     )
 
     init(dependency: HistoryDependency) {

@@ -192,22 +192,7 @@ struct TMFingerReportsView<ViewModel: ReportsViewModelProtocol, Builder: History
             }
 
             ForEach(sessions) { entry in
-                switch entry {
-                case .finger(let summary):
-                    Button {
-                        viewModel.openFingerReport(id: summary.id)
-                    } label: {
-                        TMFingerHistoryCard(summary: summary)
-                    }
-                    .buttonStyle(TMTherapySoundButtonStyle())
-                case .arm(let summary):
-                    Button {
-                        viewModel.openSessionReport(id: summary.id)
-                    } label: {
-                        TMMovementHistoryCard(summary: summary)
-                    }
-                    .buttonStyle(TMTherapySoundButtonStyle())
-                }
+                builder.buildCell(entry: entry)
             }
         }
     }
@@ -239,32 +224,10 @@ struct TMFingerReportsView<ViewModel: ReportsViewModelProtocol, Builder: History
     }
 }
 
-// MARK: - History entry
-
-/// One row of "Riwayat latihan": finger and arm sessions are saved separately but listed together.
-private enum HistoryEntry: Identifiable {
-    case finger(FingerSessionSummary)
-    case arm(SessionSummary)
-
-    var id: UUID {
-        switch self {
-        case .finger(let summary): return summary.id
-        case .arm(let summary): return summary.id
-        }
-    }
-
-    var date: Date {
-        switch self {
-        case .finger(let summary): return summary.started
-        case .arm(let summary): return summary.startedAt
-        }
-    }
-}
-
 // MARK: - History card
 
 /// One saved session: its date and outcome, then the therapist's plan against what was done.
-private struct TMFingerHistoryCard: View {
+struct TMFingerHistoryCard: View {
     let summary: FingerSessionSummary
 
     var body: some View {
@@ -458,20 +421,20 @@ struct TMFingerReportDetailView<ViewModel: FingerReportDetailViewModelProtocol>:
     /// The first, hardest and last repetition of every recorded set, as a hand replay or clip.
     @ViewBuilder
     private func replaySection(_ summary: FingerSessionSummary) -> some View {
-        if let replays = viewModel.replays {
-            let recorded = summary.results.filter { !replays.sets(for: $0.kind).isEmpty }
+        if viewModel.replaysLoaded {
+            let recorded = summary.results.filter { !viewModel.replaySets(for: $0.kind).isEmpty }
 
             if !recorded.isEmpty {
                 Text("report.keyReps").typography(.title2)
 
                 ForEach(recorded) { result in
-                    ForEach(replays.sets(for: result.kind), id: \.setNumber) { set in
-                        replayCard(set, replays: replays)
+                    ForEach(viewModel.replaySets(for: result.kind), id: \.setNumber) { set in
+                        replayCard(set)
                     }
                 }
             }
 
-            if replays.replaysUnavailable {
+            if viewModel.replaysUnavailable {
                 Text("history.report.replaysUnavailable")
                     .typography(.body)
                     .foregroundStyle(TherapyPalette.muted)
@@ -479,7 +442,7 @@ struct TMFingerReportDetailView<ViewModel: FingerReportDetailViewModelProtocol>:
         }
     }
 
-    private func replayCard(_ set: FingerKeyReps, replays: FingerReplayViewModel) -> some View {
+    private func replayCard(_ set: FingerKeyReps) -> some View {
         TMTherapyCard {
             VStack(alignment: .leading, spacing: 14) {
                 HStack(spacing: 12) {
@@ -495,10 +458,10 @@ struct TMFingerReportDetailView<ViewModel: FingerReportDetailViewModelProtocol>:
                 }
 
                 TMKeyRepReplaySection(
-                    reps: replays.reps(in: set),
+                    reps: viewModel.reps(in: set),
                     emphasizedJoints: { _ in HandSkeleton.emphasis(for: set.exercise) },
-                    clipURL: { replays.clipURL(for: $0, in: set) },
-                    isTrackingLow: replays.isTrackingLow
+                    clipURL: { viewModel.clipURL(for: $0, in: set) },
+                    isTrackingLow: viewModel.isTrackingLow
                 )
             }
         }
@@ -518,3 +481,107 @@ struct TMFingerReportDetailView<ViewModel: FingerReportDetailViewModelProtocol>:
         String(format: "%02d:%02d", Int(seconds) / 60, Int(seconds) % 60)
     }
 }
+
+// MARK: - Previews
+
+#if DEBUG
+@MainActor
+@Observable
+private final class MockReportsViewModel: ReportsViewModelProtocol {
+    var path: [HistoryRoute] = []
+    let fingerHistory: [FingerSessionSummary] = [
+        FingerSessionSummary(
+            id: UUID(),
+            started: .now,
+            ended: .now,
+            routine: FingerRoutine(),
+            results: [],
+            outcome: .completed,
+            feeling: nil,
+            exerciseIndex: 0
+        )
+    ]
+    let armHistory: [SessionSummary] = []
+    let errorKey: String? = nil
+    let deletingHistory = false
+
+    func refresh() async {}
+
+    func deleteHistory() async -> Bool {
+        true
+    }
+}
+
+@MainActor
+@Observable
+private final class MockCellViewModel: HistoryCellViewModelProtocol {
+    let entry: HistoryEntry
+
+    init(entry: HistoryEntry) {
+        self.entry = entry
+    }
+
+    func onTap() {}
+}
+
+@MainActor
+private struct MockHistoryBuilder: HistoryContentBuildable {
+    @ViewBuilder func buildCell(entry: HistoryEntry) -> some View {
+        TMHistoryCellView(viewModel: MockCellViewModel(entry: entry))
+    }
+
+    @ViewBuilder func buildFingerReport(id: UUID) -> some View {
+        Text(verbatim: "Finger report")
+    }
+
+    @ViewBuilder func buildSessionReport(id: UUID) -> some View {
+        Text(verbatim: "Session report")
+    }
+}
+
+@MainActor
+@Observable
+private final class MockFingerReportDetailViewModel: FingerReportDetailViewModelProtocol {
+    let summary: FingerSessionSummary? = FingerSessionSummary(
+        id: UUID(),
+        started: .now,
+        ended: .now,
+        routine: FingerRoutine(),
+        results: [],
+        outcome: .completed,
+        feeling: nil,
+        exerciseIndex: 0
+    )
+    let replaysLoaded = true
+    let replaysUnavailable = false
+
+    func load() async {}
+    func delete(_ summary: FingerSessionSummary) async {}
+
+    func replaySets(for exercise: FingerExercise) -> [FingerKeyReps] {
+        []
+    }
+
+    func reps(in set: FingerKeyReps) -> [KeyRep] {
+        []
+    }
+
+    func clipURL(for rep: KeyRep, in set: FingerKeyReps) -> URL? {
+        nil
+    }
+
+    func isTrackingLow(_ rep: KeyRep) -> Bool {
+        false
+    }
+}
+
+#Preview("Reports") {
+    TMFingerReportsView(viewModel: MockReportsViewModel(), builder: MockHistoryBuilder())
+}
+
+#Preview("Finger report") {
+    NavigationStack {
+        TMFingerReportDetailView(viewModel: MockFingerReportDetailViewModel())
+    }
+}
+#endif
