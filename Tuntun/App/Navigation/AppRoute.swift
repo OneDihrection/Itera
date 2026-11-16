@@ -8,7 +8,8 @@
 import Foundation
 
 enum AppRoute: Hashable {
-    case therapySession
+    /// One guided session running this routine snapshot.
+    case therapySession(Routine)
     case balanceSession(exercise: BalanceExercise, settings: BalancePracticeSettings)
     case reports
     /// One arm-practice session with its key-repetition replays.

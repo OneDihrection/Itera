@@ -9,13 +9,19 @@ import SwiftUI
 
 struct TMBalanceSessionView: View {
     @Environment(NavigationRouter.self) private var router
-    @Environment(AppDependencies.self) private var dependencies
-    @Environment(PermissionManager.self) private var permissions
     @Environment(\.scenePhase) private var scenePhase
     @State private var model: BalanceSessionViewModel
+    private let plan: DailyPlanViewModel
+    private let permissions: PermissionManager
 
-    init(model: BalanceSessionViewModel) {
+    init(
+        model: BalanceSessionViewModel,
+        plan: DailyPlanViewModel,
+        permissions: PermissionManager
+    ) {
         _model = State(initialValue: model)
+        self.plan = plan
+        self.permissions = permissions
     }
 
     /// Set when End was tapped on the live screen, so the pause dialog opens on its confirmation.
@@ -93,7 +99,7 @@ struct TMBalanceSessionView: View {
 
     /// "Latihan N" while today's plan runs; a program started on its own has no number.
     private var eyebrow: Text? {
-        guard let number = dependencies.dailyPlan.currentNumber else {
+        guard let number = plan.currentNumber else {
             return nil
         }
 
@@ -355,7 +361,7 @@ struct TMBalanceSessionView: View {
     }
 
     private var automaticallyRests: Bool {
-        model.allSetsDone && dependencies.dailyPlan.hasAutomaticRest
+        model.allSetsDone && plan.hasAutomaticRest
     }
 
     private var allDonePage: some View {
@@ -368,8 +374,8 @@ struct TMBalanceSessionView: View {
         ) {
             if !automaticallyRests {
                 TMTherapyFinishActions(
-                    title: dependencies.dailyPlan.isRunning ? "plan.nextContinue" : "balance.completion.end",
-                    symbol: dependencies.dailyPlan.isRunning ? "play.fill" : nil,
+                    title: plan.isRunning ? "plan.nextContinue" : "balance.completion.end",
+                    symbol: plan.isRunning ? "play.fill" : nil,
                     repeatTitle: "balance.completion.repeat",
                     onRepeat: model.restart,
                     action: endPractice
@@ -409,22 +415,22 @@ struct TMBalanceSessionView: View {
         let completed = model.allSetsDone
         model.stop()
 
-        guard dependencies.dailyPlan.isRunning else {
+        guard plan.isRunning else {
             router.pop()
             return
         }
 
-        dependencies.dailyPlan.finish(completed: completed, router: router)
+        plan.finish(completed: completed, router: router)
     }
 
     /// Without camera access the session never started, so a running plan ends here.
     private func leaveWithoutResult() {
-        guard dependencies.dailyPlan.isRunning else {
+        guard plan.isRunning else {
             router.pop()
             return
         }
 
-        dependencies.dailyPlan.end(router: router)
+        plan.end(router: router)
     }
 }
 

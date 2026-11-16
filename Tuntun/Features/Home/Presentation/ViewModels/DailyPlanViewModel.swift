@@ -67,6 +67,11 @@ final class DailyPlanViewModel {
     }
 
     @ObservationIgnored private let repository: any DailyPlanProgressRepository
+    @ObservationIgnored private let fingers: FingerHomeViewModel
+    @ObservationIgnored private let forearm: FingerHomeViewModel
+    @ObservationIgnored private let armRoutine: RoutineViewModel
+    @ObservationIgnored private let taskRoutine: RoutineViewModel
+    @ObservationIgnored private let fingerSessions: FingerSessionLauncher
     @ObservationIgnored private var loadFailed = false
 
     #if DEBUG
@@ -74,9 +79,28 @@ final class DailyPlanViewModel {
     private(set) var debugLayout: DebugPlanLayout
     #endif
 
-    init(items: [DailyPlanItem] = DailyPlan.standard, repository: any DailyPlanProgressRepository) {
+    /// - Parameters:
+    ///   - fingers: the finger program, whose saved routine and checkpoint finger items use.
+    ///   - forearm: the forearm program, used the same way for forearm items.
+    ///   - armRoutine: the arm program's saved configuration for arm therapy items.
+    ///   - taskRoutine: the task-oriented program's saved configuration.
+    ///   - fingerSessions: prepares the finger session a finger item opens.
+    init(
+        items: [DailyPlanItem] = DailyPlan.standard,
+        repository: any DailyPlanProgressRepository,
+        fingers: FingerHomeViewModel,
+        forearm: FingerHomeViewModel,
+        armRoutine: RoutineViewModel,
+        taskRoutine: RoutineViewModel,
+        fingerSessions: FingerSessionLauncher
+    ) {
         self.standardItems = items
         self.repository = repository
+        self.fingers = fingers
+        self.forearm = forearm
+        self.armRoutine = armRoutine
+        self.taskRoutine = taskRoutine
+        self.fingerSessions = fingerSessions
 
         #if DEBUG
         let layout = DebugPlanLayout.load(for: items)
@@ -106,13 +130,12 @@ final class DailyPlanViewModel {
     /// The sets and repetitions `item` runs with now, custom counts included. The editor
     /// starts a newly customized item from these.
     func debugCounts(
-        for item: DailyPlanItem,
-        in dependencies: AppDependencies
+        for item: DailyPlanItem
     ) -> (sets: Int, repetitions: Int) {
         var sets = 1
         var repetitions = 1
 
-        for detail in details(for: item.exercise, in: dependencies) {
+        for detail in details(for: item.exercise) {
             switch detail {
             case .sets(let value):
                 sets = value
@@ -203,7 +226,7 @@ final class DailyPlanViewModel {
 
     // MARK: - Rows
 
-    func rows(in dependencies: AppDependencies) -> [DailyPlanRow] {
+    func rows() -> [DailyPlanRow] {
         let next = nextIndex
 
         return items.indices.map { index in
@@ -221,7 +244,7 @@ final class DailyPlanViewModel {
             return DailyPlanRow(
                 item: item,
                 titleKey: Self.titleKey(for: item.exercise),
-                details: details(for: item.exercise, in: dependencies),
+                details: details(for: item.exercise),
                 status: status
             )
         }
@@ -239,16 +262,15 @@ final class DailyPlanViewModel {
     }
 
     private func details(
-        for exercise: DailyPlanItem.Exercise,
-        in dependencies: AppDependencies
+        for exercise: DailyPlanItem.Exercise
     ) -> [DailyPlanRow.Detail] {
         switch exercise {
         case .finger(let exercise):
-            let routine = fingerRoutine(for: exercise, in: dependencies)
+            let routine = fingerRoutine(for: exercise)
             return [.sets(routine.sets), .repetitions(routine.repetitions)]
 
         case .therapy(let kind):
-            let exercise = routineExercise(for: kind, in: dependencies)
+            let exercise = routineExercise(for: kind)
             let goal = exercise.activities.first?.goal ?? 1
             return [.sets(exercise.sets), .repetitions(goal)]
 
@@ -263,11 +285,11 @@ final class DailyPlanViewModel {
         HandSide(rawValue: sidePreference)
     }
 
-    func fingerSide(for exercise: FingerExercise, in dependencies: AppDependencies) -> HandSide {
-        selectedSide ?? dependencies.homeModel(for: exercise.category).routine.side
+    func fingerSide(for exercise: FingerExercise) -> HandSide {
+        selectedSide ?? homeModel(for: exercise.category).routine.side
     }
 
-    func usesOppositionScript(itemID: String, in dependencies: AppDependencies) -> Bool {
+    func usesOppositionScript(itemID: String) -> Bool {
         guard AppLanguage.selected == .indonesian,
               let item = items.first(where: { $0.id == itemID }),
               case .finger(let exercise) = item.exercise else {
@@ -278,16 +300,16 @@ final class DailyPlanViewModel {
 
     /// The opposition intro for this plan's side and counts; it names goals only when they
     /// match the recording.
-    func oppositionIntroductionKeys(in dependencies: AppDependencies) -> [String] {
+    func oppositionIntroductionKeys() -> [String] {
         OppositionGuidance.introductionKeys(
-            for: fingerSide(for: .opposition, in: dependencies),
-            routine: fingerRoutine(for: .opposition, in: dependencies)
+            for: fingerSide(for: .opposition),
+            routine: fingerRoutine(for: .opposition)
         )
     }
 
     /// The category's saved finger routine with this exercise's custom counts, if any.
-    private func fingerRoutine(for exercise: FingerExercise, in dependencies: AppDependencies) -> FingerRoutine {
-        var routine = dependencies.homeModel(for: exercise.category).routine
+    private func fingerRoutine(for exercise: FingerExercise) -> FingerRoutine {
+        var routine = homeModel(for: exercise.category).routine
 
         if let counts = customCounts(for: exercise.rawValue) {
             routine.sets = counts.sets ?? routine.sets
@@ -314,7 +336,7 @@ final class DailyPlanViewModel {
         return armRaiseRestSide.map { ArmRaiseGuidance.prefix(for: $0) + "longRest." }
     }
 
-    func usesArmRaiseScript(itemID: String, in dependencies: AppDependencies) -> Bool {
+    func usesArmRaiseScript(itemID: String) -> Bool {
         guard AppLanguage.selected == .indonesian,
               let item = items.first(where: { $0.id == itemID }),
               case .therapy(.armRaise) = item.exercise else {
@@ -380,13 +402,26 @@ final class DailyPlanViewModel {
         return settings
     }
 
+    private func homeModel(for category: ExerciseCategory) -> FingerHomeViewModel {
+        category == .fingers ? fingers : forearm
+    }
+
+    private func routineModel(for category: TherapyCategory) -> RoutineViewModel {
+        switch category {
+        case .arm:
+            return armRoutine
+        case .taskOriented:
+            return taskRoutine
+        }
+    }
+
     /// Applies the daily-plan side to the saved exercise configuration for this session.
-    func routineExercise(for kind: TherapyKind, in dependencies: AppDependencies) -> RoutineExercise {
+    func routineExercise(for kind: TherapyKind) -> RoutineExercise {
         guard let category = kind.category else {
             return RoutineExercise(kind: kind)
         }
 
-        let configuration = dependencies.routineModel(for: category).configuration
+        let configuration = routineModel(for: category).configuration
         var exercise = configuration.exercises.first { $0.kind == kind } ?? RoutineExercise(kind: kind)
         if let side = selectedSide {
             exercise.sides = side == .left ? .left : .right
@@ -451,7 +486,6 @@ final class DailyPlanViewModel {
     /// start requires, then opens that item's session.
     func startCurrent(
         readiness: HomeViewModel,
-        dependencies: AppDependencies,
         router: NavigationRouter
     ) async {
         guard isRunning, let currentIndex else {
@@ -463,7 +497,7 @@ final class DailyPlanViewModel {
             return
         }
 
-        launch(currentIndex, dependencies: dependencies, router: router)
+        launch(currentIndex, router: router)
     }
 
     /// Called by a session's finishing action while the plan runs. Only a session that reached
@@ -508,12 +542,12 @@ final class DailyPlanViewModel {
         }
     }
 
-    func launchAfterRest(dependencies: AppDependencies, router: NavigationRouter) {
+    func launchAfterRest(router: NavigationRouter) {
         guard isRunning, restingBeforeNext, let currentIndex else {
             return
         }
         restingBeforeNext = false
-        launch(currentIndex, dependencies: dependencies, router: router, replacingRest: true)
+        launch(currentIndex, router: router, replacingRest: true)
     }
 
     /// "Kembali" on an intro, "Kembali ke Beranda" after the last item, or leaving a session
@@ -528,7 +562,8 @@ final class DailyPlanViewModel {
     }
 
     private func launch(
-        _ index: Int, dependencies: AppDependencies, router: NavigationRouter,
+        _ index: Int,
+        router: NavigationRouter,
         replacingRest: Bool = false
     ) {
         currentIndex = index
@@ -538,10 +573,10 @@ final class DailyPlanViewModel {
 
         switch items[index].exercise {
         case .finger(let exercise):
-            let checkpoint = dependencies.homeModel(for: exercise.category).checkpoint
+            let checkpoint = homeModel(for: exercise.category).checkpoint
             let side = selectedSide
             let matchesSide = side.map { checkpoint?.routine.side == $0 } ?? true
-            let routine = fingerRoutine(for: exercise, in: dependencies)
+            let routine = fingerRoutine(for: exercise)
 
             // A checkpoint saved under other counts would not run what the card shows.
             let matchesCounts = checkpoint.map {
@@ -549,7 +584,7 @@ final class DailyPlanViewModel {
                     && $0.routine.repetitions == routine.repetitions
             } ?? true
 
-            dependencies.prepareSession(
+            fingerSessions.prepare(
                 category: exercise.category,
                 continuing: checkpoint?.routine.only == exercise && matchesSide && matchesCounts,
                 only: exercise,
@@ -560,15 +595,15 @@ final class DailyPlanViewModel {
             route = .fingerSession
 
         case .therapy(let kind):
-            let exercise = routineExercise(for: kind, in: dependencies)
-            let configuration = kind.category.map { dependencies.routineModel(for: $0).configuration }
+            let exercise = routineExercise(for: kind)
+            let configuration = kind.category.map { routineModel(for: $0).configuration }
                 ?? RoutineConfiguration()
-            dependencies.selectedRoutine = Routine(
+            let routine = Routine(
                 activities: exercise.activities,
                 restSeconds: Double(configuration.restSeconds),
                 practiceSeconds: Double(configuration.practiceSeconds)
             )
-            route = .therapySession
+            route = .therapySession(routine)
 
         case .balance(let exercise):
             let settings = balanceSettings(for: exercise)

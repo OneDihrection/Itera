@@ -8,16 +8,23 @@
 import SwiftUI
 
 struct TMFingerSessionView: View {
-    @Environment(AppDependencies.self) private var dependencies
+    private let launcher: FingerSessionLauncher
+    private let plan: DailyPlanViewModel
+
     @Environment(NavigationRouter.self) private var router
     @Environment(\.scenePhase) private var scenePhase
     /// Set when End was tapped on the live screen, so the pause dialog opens on its confirmation.
     @State private var endRequested = false
     @State private var videoBounds: CGRect?
 
+    init(launcher: FingerSessionLauncher, plan: DailyPlanViewModel) {
+        self.launcher = launcher
+        self.plan = plan
+    }
+
     var body: some View {
         Group {
-            if let model = dependencies.session {
+            if let model = launcher.session {
                 session(model)
                     .environment(\.locale, model.sessionLanguage.locale)
                     .task { await model.start() }
@@ -31,7 +38,7 @@ struct TMFingerSessionView: View {
                     }
                     .onChange(of: model.hasFinished) { _, finished in
                         if finished {
-                            dependencies.dailyPlan.markOppositionRest(model.usesOppositionScript ? model.routine.side : nil)
+                            plan.markOppositionRest(model.usesOppositionScript ? model.routine.side : nil)
                             router.replaceFullScreenCover(with: .sessionComplete)
                         }
                     }
@@ -122,7 +129,7 @@ struct TMFingerSessionView: View {
 
     private func heading(_ model: FingerSessionViewModel) -> TMTherapyExerciseHeading {
         TMTherapyExerciseHeading(
-            eyebrow: dependencies.dailyPlan.currentNumber.map { Text("plan.exerciseNumber \($0)") },
+            eyebrow: plan.currentNumber.map { Text("plan.exerciseNumber \($0)") },
             title: model.isCalibrating
                 ? Text(LocalizedStringKey(model.usesOppositionScript
                     ? OppositionGuidance.prefix(for: model.routine.side) + "calibration.title"
@@ -166,7 +173,7 @@ struct TMFingerSessionView: View {
     private func phasePage(_ model: FingerSessionViewModel) -> some View {
         switch model.activity.phase {
         case .feedback:
-            TMFingerSetSummaryPage(model: model)
+            TMFingerSetSummaryPage(model: model, exerciseNumber: plan.currentNumber)
         case .rest:
             if let rest = model.scriptedRest {
                 TMTherapyBreathingRest(
@@ -193,7 +200,7 @@ struct TMFingerSessionView: View {
             } else if model.showsUpcomingPreview {
                 TMFingerUpcomingPage(model: model)
             } else {
-                TMFingerSetSummaryPage(model: model)
+                TMFingerSetSummaryPage(model: model, exerciseNumber: plan.currentNumber)
             }
         default:
             EmptyView()

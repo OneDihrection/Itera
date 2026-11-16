@@ -9,36 +9,37 @@ import SwiftUI
 
 @MainActor
 enum AppRouterView {
+    /// Builds a route's page through the factory, which injects only what that page uses.
     @ViewBuilder
-    static func destination(_ route: AppRoute) -> some View {
+    static func destination(_ route: AppRoute, dependencies: AppDependencies) -> some View {
         switch route {
         case .balanceSession(let exercise, let settings):
-            TMBalanceSessionDestination(exercise: exercise, settings: settings)
+            dependencies.makeBalanceSessionView(exercise: exercise, settings: settings)
                 .environment(\.locale, AppLanguage.selected.locale)
-        case .therapySession:
-            TMSessionDestination()
+        case .therapySession(let routine):
+            dependencies.makeTherapySessionView(routine: routine)
                 .environment(\.buttonFeedback, {})
                 .environment(\.locale, AppLanguage.selected.locale)
         case .sessionReport(let id):
-            TMSessionReportDestination(id: id)
+            dependencies.makeSessionReportView(id: id)
                 .environment(\.locale, AppLanguage.selected.locale)
         case .reports:
-            TMFingerReportsView()
+            dependencies.makeFingerReportsView()
         case .report(let id):
-            TMFingerReportDetailView(id: id)
+            dependencies.makeFingerReportDetailView(id: id)
         case .fingerSession:
-            TMFingerSessionView()
+            dependencies.makeFingerSessionView()
         case .sessionComplete:
-            TMFingerSessionCompleteView()
+            dependencies.makeFingerSessionCompleteView()
         case .practicePreferences:
-            TMPracticePreferencesView()
+            dependencies.makePracticePreferencesView()
         case .planNext:
-            TMDailyPlanNextView()
+            dependencies.makeDailyPlanNextView()
         case .planIntro(let itemID):
-            TMDailyPlanIntroView(itemID: itemID)
+            dependencies.makeDailyPlanIntroView(itemID: itemID)
         #if DEBUG
         case .debugPlanEditor:
-            TMDebugPlanEditorView()
+            dependencies.makeDebugPlanEditorView()
         #endif
         }
     }
@@ -64,12 +65,10 @@ private struct TMRouterPreview: View {
     }
 
     var body: some View {
-        TMContentView()
+        dependencies.makeHomeView()
             .typography(.body)
-            .withAppRouter()
+            .withAppRouter(dependencies: dependencies)
             .environment(router)
-            .environment(dependencies)
-            .environment(dependencies.permissions)
     }
 }
 
@@ -85,36 +84,3 @@ private struct TMRouterPreview: View {
     TMRouterPreview(route: .practicePreferences, sheet: true)
 }
 #endif
-
-private struct TMSessionDestination: View {
-    @Environment(AppDependencies.self) private var dependencies
-
-    var body: some View {
-        TMTherapySessionView(model: dependencies.makeSession())
-    }
-}
-
-private struct TMBalanceSessionDestination: View {
-    @Environment(AppDependencies.self) private var dependencies
-    let exercise: BalanceExercise
-    let settings: BalancePracticeSettings
-
-    var body: some View {
-        TMBalanceSessionView(model: BalanceSessionViewModel(
-            tracking: dependencies.tracking,
-            audio: dependencies.audio,
-            repository: dependencies.sessions,
-            settings: settings,
-            exercise: exercise
-        ))
-    }
-}
-
-private struct TMSessionReportDestination: View {
-    let id: UUID
-    @Environment(AppDependencies.self) private var dependencies
-
-    var body: some View {
-        TMSessionReportView(model: SessionReportViewModel(sessionID: id, repository: dependencies.sessions))
-    }
-}

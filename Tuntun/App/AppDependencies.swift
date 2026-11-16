@@ -7,65 +7,107 @@
 
 import Foundation
 import Observation
+import SwiftUI
 
+/// The composition root: constructs every shared service, repository and model once, and
+/// builds each page with only the dependencies it uses.
+///
+/// Pages receive their dependencies through initializers; this container is never placed in the
+/// environment or handed to feature code (SYSTEM_DESIGN §3, "Inject services through
+/// initializers").
 @MainActor
-@Observable
-final class AppDependencies: HistoryRecovering {
-    let home: FingerHomeViewModel
-    let forearm: FingerHomeViewModel
-    private(set) var session: FingerSessionViewModel?
-    let permissions: PermissionManager
-    @ObservationIgnored private let camera = HandCameraService()
-    @ObservationIgnored private let fingerAudio = GuidanceAudioService()
-    @ObservationIgnored private let repository: any FingerSessionRepository
-    @ObservationIgnored private let forearmRepository: any FingerSessionRepository
+final class AppDependencies {
+    // MARK: - Services
 
-    let tracking = BodyTrackingService()
-    let audio = SessionAudioService()
-    let routine: RoutineViewModel
-    let taskRoutine: RoutineViewModel
+    private let permissions: PermissionManager
+    private let tracking = BodyTrackingService()
+    private let audio = SessionAudioService()
+    private let fingerAudio = GuidanceAudioService()
+
+    // MARK: - Repositories
+
+    private let sessions: any SessionRepository
+    /// Finger and forearm sessions share one folder, so this repository reads any session's
+    /// key-repetition replays.
+    private let fingerRepository: any FingerSessionRepository
+
+    // MARK: - Shared models
+
+    private let fingers: FingerHomeViewModel
+    private let forearm: FingerHomeViewModel
+    private let armRoutine: RoutineViewModel
+    private let taskRoutine: RoutineViewModel
+    private let fingerSessions: FingerSessionLauncher
+    private let historyRecovery: SessionHistoryRecovery
     /// Today's plan across programs; Beranda shows it and finishing sessions report to it.
-    let dailyPlan = DailyPlanViewModel(repository: LocalDailyPlanProgressRepository())
-    var selectedRoutine = Routine.demo()
-    let sessions: any SessionRepository
-    private(set) var recoveryFailure: String?
-    private(set) var recovering = true
-    private var didRecover = false
+    private let dailyPlan: DailyPlanViewModel
 
     init(permissions: PermissionManager) {
         self.permissions = permissions
+
         let directory = URL.applicationSupportDirectory.appendingPathComponent(
-            "Sessions", isDirectory: true)
+            "Sessions",
+            isDirectory: true
+        )
         sessions = LocalSessionRepository(directory: directory)
-        routine = RoutineViewModel(repository: LocalRoutineRepository(
+        historyRecovery = SessionHistoryRecovery(sessions: sessions)
+
+        armRoutine = RoutineViewModel(repository: LocalRoutineRepository(
             url: URL.applicationSupportDirectory.appendingPathComponent("routines.json")
         ))
-
         taskRoutine = RoutineViewModel(repository: LocalRoutineRepository(
             url: URL.applicationSupportDirectory.appendingPathComponent("routines-task-oriented.json")
         ))
 
-        let repository = LocalFingerSessionRepository()
-        self.repository = repository
-        home = FingerHomeViewModel(repository: repository, routineRepository: LocalFingerRoutineRepository())
+        let fingerRepository = LocalFingerSessionRepository()
+        self.fingerRepository = fingerRepository
+        fingers = FingerHomeViewModel(
+            repository: fingerRepository,
+            routineRepository: LocalFingerRoutineRepository()
+        )
+
         let forearmRepository = LocalFingerSessionRepository(category: .forearm)
-        self.forearmRepository = forearmRepository
         forearm = FingerHomeViewModel(
-            category: .forearm, repository: forearmRepository,
+            category: .forearm,
+            repository: forearmRepository,
             routineRepository: LocalFingerRoutineRepository(category: .forearm)
+        )
+
+        fingerSessions = FingerSessionLauncher(
+            fingers: fingers,
+            forearm: forearm,
+            camera: HandCameraService(),
+            audio: fingerAudio,
+            permissions: permissions,
+            fingerRepository: fingerRepository,
+            forearmRepository: forearmRepository
+        )
+
+        dailyPlan = DailyPlanViewModel(
+            repository: LocalDailyPlanProgressRepository(),
+            fingers: fingers,
+            forearm: forearm,
+            armRoutine: armRoutine,
+            taskRoutine: taskRoutine,
+            fingerSessions: fingerSessions
         )
     }
 
-    /// Finger and forearm sessions share one folder, so either repository reads any session's
-    /// key-repetition replays.
-    var fingerReplays: any FingerSessionRepository {
-        repository
+    // MARK: - App lifecycle
+
+    func recoverHistory() async {
+        await historyRecovery.recoverHistory()
+    }
+
+    func refreshPermissions() {
+        permissions.refresh()
     }
 
     func playButtonClick() {
         guard UserDefaults.standard.object(forKey: PracticePreferences.buttonSounds) as? Bool ?? true else {
             return
         }
+
         // A tap sound never lands on top of narration from a running session.
         guard !audio.isNarrating else {
             return
@@ -74,66 +116,112 @@ final class AppDependencies: HistoryRecovering {
         fingerAudio.playButtonClick()
     }
 
-    func routineModel(for category: TherapyCategory) -> RoutineViewModel {
-        switch category {
-        case .arm: return routine
-        case .taskOriented: return taskRoutine
-        }
+    #if DEBUG
+    func openDebugIntroIfRequested(router: NavigationRouter) {
+        DebugScreenLauncher.openIntroIfRequested(plan: dailyPlan, router: router)
     }
+    #endif
 
-    func homeModel(for category: ExerciseCategory) -> FingerHomeViewModel {
-        category == .fingers ? home : forearm
-    }
+    // MARK: - Home
 
-    func refreshHomes() async {
-        await home.refresh()
-        await forearm.refresh()
-    }
-
-    /// - Parameters:
-    ///   - only: one exercise of the category to run alone, as a daily-plan item does.
-    ///   - sets: replaces the saved sets for this session only, as `side` does.
-    ///   - repetitions: replaces the saved repetitions for this session only.
-    func prepareSession(
-        category: ExerciseCategory = .fingers,
-        continuing: Bool = false,
-        only: FingerExercise? = nil,
-        side: HandSide? = nil,
-        sets: Int? = nil,
-        repetitions: Int? = nil
-    ) {
-        let model = homeModel(for: category)
-        let checkpoint = continuing ? model.checkpoint : nil
-        var routine = checkpoint?.routine ?? model.routine
-
-        if checkpoint == nil {
-            routine.only = only
-            routine.side = side ?? routine.side
-            routine.sets = sets ?? routine.sets
-            routine.repetitions = repetitions ?? routine.repetitions
-        }
-
-        session = FingerSessionViewModel(
-            routine: routine, checkpoint: checkpoint,
-            camera: camera, audio: fingerAudio, permissions: permissions,
-            repository: category == .fingers ? repository : forearmRepository
+    func makeHomeView() -> TMHomeView {
+        TMHomeView(
+            home: fingers,
+            routine: armRoutine,
+            taskRoutine: taskRoutine,
+            plan: dailyPlan
         )
     }
 
-    func recoverHistory() async {
-        guard !didRecover else { return }
-        recovering = true
-        do {
-            try await sessions.recoverInterrupted()
-            recoveryFailure = nil
-            didRecover = true
-        } catch {
-            recoveryFailure = error.localizedDescription
-        }
-        recovering = false
+    func makePracticePreferencesView() -> TMPracticePreferencesView {
+        TMPracticePreferencesView(home: fingers, plan: dailyPlan)
     }
 
-    func makeSession() -> TherapySessionViewModel {
-        TherapySessionViewModel(tracking: tracking, audio: audio, repository: sessions, routine: selectedRoutine)
+    func makeDailyPlanIntroView(
+        itemID: String,
+        countdownSeconds: Int? = nil,
+        automatic: Bool = false
+    ) -> TMDailyPlanIntroView {
+        TMDailyPlanIntroView(
+            itemID: itemID,
+            countdownSeconds: countdownSeconds,
+            automatic: automatic,
+            plan: dailyPlan,
+            audio: audio,
+            permissions: permissions,
+            history: historyRecovery
+        )
+    }
+
+    func makeDailyPlanNextView() -> TMDailyPlanNextView {
+        TMDailyPlanNextView(plan: dailyPlan, audio: audio) { [unowned self] itemID, countdownSeconds, automatic in
+            makeDailyPlanIntroView(
+                itemID: itemID,
+                countdownSeconds: countdownSeconds,
+                automatic: automatic
+            )
+        }
+    }
+
+    #if DEBUG
+    func makeDebugPlanEditorView() -> TMDebugPlanEditorView {
+        TMDebugPlanEditorView(plan: dailyPlan)
+    }
+    #endif
+
+    // MARK: - History
+
+    func makeFingerReportsView() -> TMFingerReportsView {
+        TMFingerReportsView(home: fingers, sessions: sessions)
+    }
+
+    func makeFingerReportDetailView(id: UUID) -> TMFingerReportDetailView {
+        TMFingerReportDetailView(id: id, home: fingers, replayRepository: fingerRepository)
+    }
+
+    func makeSessionReportView(id: UUID) -> TMSessionReportView {
+        TMSessionReportView(model: SessionReportViewModel(sessionID: id, repository: sessions))
+    }
+
+    // MARK: - Sessions
+
+    func makeTherapySessionView(routine: Routine) -> TMTherapySessionView {
+        let model = TherapySessionViewModel(
+            tracking: tracking,
+            audio: audio,
+            repository: sessions,
+            routine: routine
+        )
+
+        return TMTherapySessionView(model: model, plan: dailyPlan, permissions: permissions)
+    }
+
+    #if DEBUG
+    func makeTherapySessionView(fixture: SessionSnapshot) -> TMTherapySessionView {
+        TMTherapySessionView(fixture: fixture, plan: dailyPlan, permissions: permissions)
+    }
+    #endif
+
+    func makeBalanceSessionView(
+        exercise: BalanceExercise,
+        settings: BalancePracticeSettings
+    ) -> TMBalanceSessionView {
+        let model = BalanceSessionViewModel(
+            tracking: tracking,
+            audio: audio,
+            repository: sessions,
+            settings: settings,
+            exercise: exercise
+        )
+
+        return TMBalanceSessionView(model: model, plan: dailyPlan, permissions: permissions)
+    }
+
+    func makeFingerSessionView() -> TMFingerSessionView {
+        TMFingerSessionView(launcher: fingerSessions, plan: dailyPlan)
+    }
+
+    func makeFingerSessionCompleteView() -> TMFingerSessionCompleteView {
+        TMFingerSessionCompleteView(launcher: fingerSessions, plan: dailyPlan, home: fingers)
     }
 }

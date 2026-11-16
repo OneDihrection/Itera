@@ -20,7 +20,7 @@ extension TMTherapySessionView {
         TMTherapyExerciseLiveLayout(
             heading: isCalibrationLayout
                 ? TMTherapyExerciseHeading(
-                    eyebrow: dependencies.dailyPlan.currentNumber.map { Text("plan.exerciseNumber \($0)") },
+                    eyebrow: plan.currentNumber.map { Text("plan.exerciseNumber \($0)") },
                     title: Text(LocalizedStringKey(model.snapshot.usesArmRaiseScript
                         ? model.snapshot.armRaiseNarrationPrefix + "calibration.title" : "stage.calibration"))
                 )
@@ -102,7 +102,7 @@ extension TMTherapySessionView {
 
     /// "Latihan N" while today's plan runs, over the exercise and side.
     var lightHeading: TMTherapyExerciseHeading {
-        let eyebrow = dependencies.dailyPlan.currentNumber.map { Text("plan.exerciseNumber \($0)") }
+        let eyebrow = plan.currentNumber.map { Text("plan.exerciseNumber \($0)") }
         return TMTherapyExerciseHeading(eyebrow: eyebrow, title: Text(verbatim: lightTitle))
     }
 

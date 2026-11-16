@@ -10,13 +10,16 @@ import SwiftUI
 /// The page before each daily-plan exercise: what it trains, today's target, a safety note
 /// and the explicit Start that validates readiness and opens the session.
 struct TMDailyPlanIntroView: View {
-    let itemID: String
-    var countdownSeconds: Int? = nil
-    var automatic = false
+    private let itemID: String
+    private let countdownSeconds: Int?
+    private let automatic: Bool
+    private let plan: DailyPlanViewModel
+    private let audio: SessionAudioService
+    private let permissions: PermissionManager
+    /// Readiness waits for interrupted-session recovery before therapy can start.
+    private let history: any HistoryRecovering
 
-    @Environment(AppDependencies.self) private var dependencies
     @Environment(NavigationRouter.self) private var router
-    @Environment(PermissionManager.self) private var permissions
 
     @State private var readiness: HomeViewModel?
     @State private var starting = false
@@ -24,25 +27,46 @@ struct TMDailyPlanIntroView: View {
     @Environment(\.scenePhase) private var scenePhase
 
     private var usesArmRaiseScript: Bool {
-        dependencies.dailyPlan.usesArmRaiseScript(itemID: itemID, in: dependencies)
+        plan.usesArmRaiseScript(itemID: itemID)
     }
 
     private var usesScript: Bool {
-        usesArmRaiseScript || dependencies.dailyPlan.usesOppositionScript(itemID: itemID, in: dependencies)
+        usesArmRaiseScript || plan.usesOppositionScript(itemID: itemID)
     }
 
     /// The scripted intro for this item's side and counts.
     private var scriptIntroduction: [String] {
         guard usesArmRaiseScript else {
-            return dependencies.dailyPlan.oppositionIntroductionKeys(in: dependencies)
+            return plan.oppositionIntroductionKeys()
         }
 
-        let activity = dependencies.dailyPlan.routineExercise(for: .armRaise, in: dependencies).activities.first
+        let activity = plan.routineExercise(for: .armRaise).activities.first
         return ArmRaiseGuidance.introduction(
             for: activity?.side ?? .left,
             sets: activity?.sets ?? ScriptedRepetitions.recordedSets,
             repetitions: activity?.goal ?? ScriptedRepetitions.recordedRepetitions
         )
+    }
+
+    /// - Parameters:
+    ///   - countdownSeconds: shown in place of Start when the plan opens this intro after a rest.
+    ///   - automatic: the intro was opened by the plan, so its reading leads into the session.
+    init(
+        itemID: String,
+        countdownSeconds: Int? = nil,
+        automatic: Bool = false,
+        plan: DailyPlanViewModel,
+        audio: SessionAudioService,
+        permissions: PermissionManager,
+        history: any HistoryRecovering
+    ) {
+        self.itemID = itemID
+        self.countdownSeconds = countdownSeconds
+        self.automatic = automatic
+        self.plan = plan
+        self.audio = audio
+        self.permissions = permissions
+        self.history = history
     }
 
     var body: some View {
@@ -67,13 +91,13 @@ struct TMDailyPlanIntroView: View {
     }
 
     private var row: DailyPlanRow? {
-        dependencies.dailyPlan.rows(in: dependencies).first { $0.id == itemID }
+        plan.rows().first { $0.id == itemID }
     }
 
     private func intro(_ row: DailyPlanRow) -> some View {
         TMTherapyExerciseIntro(
             heading: TMTherapyExerciseHeading(
-                eyebrow: Text("plan.exerciseNumber \(dependencies.dailyPlan.number(of: itemID))"),
+                eyebrow: Text("plan.exerciseNumber \(plan.number(of: itemID))"),
                 title: Text(LocalizedStringKey(row.titleKey))
             ),
             focusTitle: "plan.focusTitle",
@@ -87,9 +111,9 @@ struct TMDailyPlanIntroView: View {
             onBack: {
                 narration.stop()
                 if countdownSeconds != nil {
-                    dependencies.audio.cancelSpeech()
+                    audio.cancelSpeech()
                 }
-                dependencies.dailyPlan.end(router: router)
+                plan.end(router: router)
             },
             onStart: start
         ) {
@@ -111,7 +135,7 @@ struct TMDailyPlanIntroView: View {
                 phase: .demonstration,
                 returning: false,
                 finger: 0,
-                side: dependencies.dailyPlan.fingerSide(for: exercise, in: dependencies),
+                side: plan.fingerSide(for: exercise),
                 paused: false
             )
 
@@ -119,7 +143,7 @@ struct TMDailyPlanIntroView: View {
             TMTowelDemonstrationView()
 
         case .therapy(let kind):
-            let exercise = dependencies.dailyPlan.routineExercise(for: kind, in: dependencies)
+            let exercise = plan.routineExercise(for: kind)
             TMExerciseExample(
                 asset: kind == .elbowBend ? .elbowBend : kind == .directionalReach ? .directionalReach : .armRaise,
                 mirrored: exercise.activities.first?.side == .left,
@@ -127,7 +151,7 @@ struct TMDailyPlanIntroView: View {
             )
 
         case .balance(let exercise):
-            let settings = dependencies.dailyPlan.balanceSettings(for: exercise)
+            let settings = plan.balanceSettings(for: exercise)
             TMBalanceExerciseDemonstrationView(
                 exercise: exercise,
                 paused: false,
@@ -184,8 +208,8 @@ struct TMDailyPlanIntroView: View {
         if readiness == nil {
             readiness = HomeViewModel(
                 permissions: permissions,
-                audio: dependencies.audio,
-                history: dependencies
+                audio: audio,
+                history: history
             )
         }
 
@@ -207,7 +231,8 @@ struct TMDailyPlanIntroView: View {
             if usesScript {
                 await narration.start(
                     readiness: readiness,
-                    dependencies: dependencies,
+                    plan: plan,
+                    audio: audio,
                     router: router,
                     itemID: itemID,
                     automatic: automatic,
@@ -215,9 +240,8 @@ struct TMDailyPlanIntroView: View {
                 )
                 starting = false
             } else {
-                await dependencies.dailyPlan.startCurrent(
+                await plan.startCurrent(
                     readiness: readiness,
-                    dependencies: dependencies,
                     router: router
                 )
                 starting = false

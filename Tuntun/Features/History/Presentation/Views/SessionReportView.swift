@@ -10,8 +10,12 @@ import SwiftUI
 /// One arm-practice session for a clinician, kept to a low reading load: per set one sentence,
 /// three numbers and one replay, with the rest behind disclosures.
 struct TMSessionReportView: View {
-    @State var model: SessionReportViewModel
+    @State private var model: SessionReportViewModel
     @Environment(NavigationRouter.self) private var router
+
+    init(model: SessionReportViewModel) {
+        _model = State(initialValue: model)
+    }
 
     var body: some View {
         ScrollView {

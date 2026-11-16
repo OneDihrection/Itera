@@ -10,13 +10,28 @@ import SwiftUI
 /// Beranda shows today's plan as a timeline. The start button floats at the bottom
 /// once the inline button scrolls away.
 struct TMHomeView: View {
-    @Environment(AppDependencies.self) private var dependencies
+    private let home: FingerHomeViewModel
+    private let routine: RoutineViewModel
+    private let taskRoutine: RoutineViewModel
+    private let plan: DailyPlanViewModel
     @Environment(NavigationRouter.self) private var router
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @AppStorage(PracticePreferences.patientName) private var patientName = ""
 
     /// True once the inline start button has scrolled under the top edge.
     @State private var startButtonHidden = false
+
+    init(
+        home: FingerHomeViewModel,
+        routine: RoutineViewModel,
+        taskRoutine: RoutineViewModel,
+        plan: DailyPlanViewModel
+    ) {
+        self.home = home
+        self.routine = routine
+        self.taskRoutine = taskRoutine
+        self.plan = plan
+    }
 
     var body: some View {
         ScrollView {
@@ -54,10 +69,10 @@ struct TMHomeView: View {
     private static let scrollSpace = "home.scroll"
 
     private func refresh() async {
-        await dependencies.home.refresh()
-        await dependencies.routine.load()
-        await dependencies.taskRoutine.load()
-        await dependencies.dailyPlan.load()
+        await home.refresh()
+        await routine.load()
+        await taskRoutine.load()
+        await plan.load()
     }
 
     // MARK: - Header
@@ -100,7 +115,7 @@ struct TMHomeView: View {
 
     @ViewBuilder
     private var statusMessages: some View {
-        if let error = dependencies.dailyPlan.errorKey {
+        if let error = plan.errorKey {
             TMTherapyError(key: error)
         }
 
@@ -111,7 +126,7 @@ struct TMHomeView: View {
     private var startButton: some View {
         TMTherapyButton(
             title: startTitle,
-            symbol: dependencies.dailyPlan.isFinishedToday ? "checkmark" : "play.fill",
+            symbol: plan.isFinishedToday ? "checkmark" : "play.fill",
             prominent: true
         ) {
             startPlan(from: nil)
@@ -119,13 +134,11 @@ struct TMHomeView: View {
     }
 
     private var startTitle: LocalizedStringKey {
-        let plan = dependencies.dailyPlan
-
         if plan.isFinishedToday {
             return "plan.doneToday"
         }
 
-        if plan.completedCount > 0 || dependencies.home.checkpoint != nil {
+        if plan.completedCount > 0 || home.checkpoint != nil {
             return "plan.continue"
         }
 
@@ -145,13 +158,13 @@ struct TMHomeView: View {
     /// Opens the intro of the next exercise (or the tapped one); the intro's own Start is the
     /// explicit start that validates permissions and listening.
     private func startPlan(from itemID: String?) {
-        dependencies.dailyPlan.begin(from: itemID, router: router)
+        plan.begin(from: itemID, router: router)
     }
 
     // MARK: - Timeline
 
     private var timeline: some View {
-        let rows = dependencies.dailyPlan.rows(in: dependencies)
+        let rows = plan.rows()
 
         return VStack(spacing: 0) {
             ForEach(rows.indices, id: \.self) { index in

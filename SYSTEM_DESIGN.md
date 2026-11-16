@@ -431,6 +431,8 @@ Use .typography(...) or inherit the root body style for app-authored text. Font 
 
 Keep body focused on composition. Prefer named private computed view properties, using @ViewBuilder for conditional or multiple-view sections, or dedicated subviews for meaningful sections with inputs, bindings, state, reuse, or substantial complexity. Reusable controls belong in DesignSystem; avoid splitting trivial expressions mechanically.
 
+Inject dependencies through an explicit initializer. A type that receives services, repositories, view models, factories or factory closures declares an `init` listing them, with any plain value inputs, and stores them as `private let` (`@Bindable private var` or `@State private var` where bindings or ownership require it). Do not rely on memberwise initializers for injection. App pages are built only by the composition root, `AppDependencies`, through its `make…` factories; never place it in the environment or pass it to feature code. Subviews that take only values or a model from their parent may keep memberwise initializers.
+
 Every newly authored file must have a format-appropriate header with its filename, actual author, and creation date. Use an explicitly supplied author first, otherwise effective git config user.name; ask if neither exists. Never hard-code a team member or use the AI's name. Preserve existing creation authorship. Swift uses Xcode-style // Created by headers; YAML uses comments and Markdown uses HTML comments. Preserve copied binaries and third-party licenses unchanged and document their source separately; never corrupt formats without comment support.
 
 Prefer readable multiline declarations, calls, expressions, and compound conditions when they improve scanning. Put complex arguments and conditions on separate lines. Use generous blank lines between logical steps and declarations while keeping closely related statements together. Expand control-flow bodies onto separate lines; avoid compressed guards, branches, and nested ternaries.
@@ -1185,3 +1187,17 @@ Verification: Debug Simulator build only.
 At the product owner's request, Mulai Latihan on a scripted daily-plan intro is disabled while the intro narration reads. It becomes available once the reading has finished (the session then opens automatically as before) or while the reading is paused, when the button resumes it. This supersedes "Mulai Latihan stays enabled while the intro reads; tapping it stops the remaining narration" from `0a9e93b`, in both the thumb-opposition and arm-raise sections; the skip path was removed. Back still stops the narration and leaves the plan.
 
 Verification: Debug Simulator build only.
+
+## Dependency factory (2026-11-16)
+
+`AppDependencies` (App) is the composition root and page factory. It constructs every service, repository and shared model once, keeps them private, and exposes one `make…` method per page. Each method injects only what that page uses through its initializer. The container is not placed in the environment and is not passed to feature views or view models. Feature code depends on the injected types alone. `NavigationRouter` remains in the environment, as the navigation conventions require.
+
+Every page and injected type declares an explicit initializer and keeps its injected dependencies private (see "Navigation, typography, and code conventions"); memberwise initializers are not used for injection.
+
+- **Navigation.** `withAppRouter(dependencies:)` passes the factory to the routing modifiers. `AppRouterView.destination(_:dependencies:)` is a switch over the factory methods.
+- **Guided sessions.** A guided session carries its routine snapshot in `AppRoute.therapySession(Routine)`, replacing the mutable `selectedRoutine`.
+- **Finger sessions.** `FingerSessionLauncher` prepares finger and forearm sessions. It holds the open one across the live and closing pages.
+- **History recovery.** `SessionHistoryRecovery` owns interrupted-session recovery (`HistoryRecovering`).
+- **Daily plan.** `DailyPlanViewModel` receives the finger and forearm homes, both routine models and the launcher through `init`.
+
+Verification: Debug and Release Simulator builds with IPHONEOS_DEPLOYMENT_TARGET=17.0 passed. This change does not alter runtime behaviour; the earlier device checks still apply.

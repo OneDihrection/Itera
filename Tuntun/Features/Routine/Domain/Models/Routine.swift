@@ -82,7 +82,7 @@ enum TherapyCategory: String, CaseIterable, Identifiable, Hashable {
     var kinds: [TherapyKind] { TherapyKind.allCases.filter { $0.category == self } }
 }
 
-struct SessionActivity: Identifiable, Codable, Equatable {
+struct SessionActivity: Identifiable, Codable, Hashable {
     let id: UUID
     let kind: TherapyKind
     let side: TherapySide
@@ -121,7 +121,7 @@ struct SessionActivity: Identifiable, Codable, Equatable {
     }
 }
 
-struct Routine: Codable, Equatable {
+struct Routine: Codable, Hashable {
     var id: UUID?
     let activities: [SessionActivity]
     let restSeconds: Double

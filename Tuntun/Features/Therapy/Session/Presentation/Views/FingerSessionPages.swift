@@ -18,13 +18,13 @@ import SwiftUI
 /// The last set of a movement shows the all-done wording.
 struct TMFingerSetSummaryPage: View {
     let model: FingerSessionViewModel
-
-    @Environment(AppDependencies.self) private var dependencies
+    /// "Latihan N" while today's plan runs.
+    let exerciseNumber: Int?
 
     var body: some View {
         TMTherapySetSummary(
             heading: TMTherapyExerciseHeading(
-                eyebrow: dependencies.dailyPlan.currentNumber.map { Text("plan.exerciseNumber \($0)") },
+                eyebrow: exerciseNumber.map { Text("plan.exerciseNumber \($0)") },
                 title: Text(verbatim: model.exerciseTitle)
             ),
             headline: allSetsDone

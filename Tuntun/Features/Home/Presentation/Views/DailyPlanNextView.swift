@@ -9,7 +9,11 @@ import SwiftUI
 
 /// The rest and countdown between exercises, or the page after the last exercise.
 struct TMDailyPlanNextView: View {
-    @Environment(AppDependencies.self) private var dependencies
+    private let plan: DailyPlanViewModel
+    private let audio: SessionAudioService
+    /// Builds the next exercise's intro shown after the rest, with its own dependencies.
+    private let makeIntro: (_ itemID: String, _ countdownSeconds: Int?, _ automatic: Bool) -> TMDailyPlanIntroView
+
     @Environment(NavigationRouter.self) private var router
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -33,11 +37,11 @@ struct TMDailyPlanNextView: View {
     }
 
     private var usesNextScript: Bool {
-        guard let itemID = dependencies.dailyPlan.nextSessionItemID else {
+        guard let itemID = plan.nextSessionItemID else {
             return false
         }
-        return dependencies.dailyPlan.usesOppositionScript(itemID: itemID, in: dependencies)
-            || dependencies.dailyPlan.usesArmRaiseScript(itemID: itemID, in: dependencies)
+        return plan.usesOppositionScript(itemID: itemID)
+            || plan.usesArmRaiseScript(itemID: itemID)
     }
 
     private var countdownSeconds: Int {
@@ -49,9 +53,19 @@ struct TMDailyPlanNextView: View {
         LongRestBreath.count - breath.number + 1
     }
 
+    init(
+        plan: DailyPlanViewModel,
+        audio: SessionAudioService,
+        makeIntro: @escaping (_ itemID: String, _ countdownSeconds: Int?, _ automatic: Bool) -> TMDailyPlanIntroView
+    ) {
+        self.plan = plan
+        self.audio = audio
+        self.makeIntro = makeIntro
+    }
+
     var body: some View {
         Group {
-            if let itemID = dependencies.dailyPlan.nextSessionItemID {
+            if let itemID = plan.nextSessionItemID {
                 transitionPage(itemID: itemID)
             } else {
                 completionPage
@@ -63,10 +77,10 @@ struct TMDailyPlanNextView: View {
     private func transitionPage(itemID: String) -> some View {
         ZStack {
             if showingNextIntro {
-                TMDailyPlanIntroView(
-                    itemID: itemID,
-                    countdownSeconds: usesNextScript ? nil : countdownSeconds,
-                    automatic: usesNextScript
+                makeIntro(
+                    itemID,
+                    usesNextScript ? nil : countdownSeconds,
+                    usesNextScript
                 )
                     .environment(\.colorScheme, .light)
                     .transition(.opacity)
@@ -86,15 +100,15 @@ struct TMDailyPlanNextView: View {
             }
         }
         .animation(reduceMotion ? nil : .easeInOut(duration: 0.25), value: showingNextIntro)
-        .onReceive(dependencies.audio.events) { event in
+        .onReceive(audio.events) { event in
             if case .completed(let id, _) = event, id == narrationID {
                 narrationFinished = true
             }
         }
         .task(id: paused || scenePhase != .active) {
             if paused || scenePhase != .active {
-                dependencies.audio.pauseMusic()
-                dependencies.audio.cancelSpeech()
+                audio.pauseMusic()
+                audio.cancelSpeech()
             } else {
                 await runTransition()
             }
@@ -109,12 +123,12 @@ struct TMDailyPlanNextView: View {
             } catch {
                 return
             }
-            dependencies.audio.prepareRestNarration()
+            audio.prepareRestNarration()
             audioPrepared = true
         }
 
         if !showingNextIntro {
-            dependencies.audio.startMusic()
+            audio.startMusic()
         }
 
         var startedAt = ProcessInfo.processInfo.systemUptime - elapsed
@@ -126,7 +140,7 @@ struct TMDailyPlanNextView: View {
             }
             let now = ProcessInfo.processInfo.systemUptime
             let proposedElapsed = now - startedAt
-            if stage == .breathing, dependencies.dailyPlan.usesScriptedLongRest,
+            if stage == .breathing, plan.usesScriptedLongRest,
                !narrationFinished {
                 let boundary = LongRestBreath.narrationBoundary(at: elapsed)
                 elapsed = min(proposedElapsed, boundary.nextDown)
@@ -136,15 +150,15 @@ struct TMDailyPlanNextView: View {
             }
 
             if stage == .countdown, elapsed >= Self.countdownDuration {
-                dependencies.audio.cancelSpeech()
-                dependencies.dailyPlan.launchAfterRest(dependencies: dependencies, router: router)
+                audio.cancelSpeech()
+                plan.launchAfterRest(router: router)
                 return
             }
 
             if stage == .countdown {
                 let seconds = countdownSeconds
                 if seconds != lastSpokenSecond {
-                    dependencies.audio.play(id: UUID(), cue: .countdown(seconds))
+                    audio.play(id: UUID(), cue: .countdown(seconds))
                     lastSpokenSecond = seconds
                 }
             } else {
@@ -160,7 +174,7 @@ struct TMDailyPlanNextView: View {
 
             if let next = nextStage {
                 if next == .countdownIntro {
-                    dependencies.audio.stopMusic()
+                    audio.stopMusic()
                 }
                 stage = next
                 elapsed = 0
@@ -189,7 +203,7 @@ struct TMDailyPlanNextView: View {
         case .restInvitation: return .instructions
         case .instructions: return .posture
         case .posture:
-            return dependencies.dailyPlan.usesScriptedLongRest ? .breathing : .firstBreathCount
+            return plan.usesScriptedLongRest ? .breathing : .firstBreathCount
         case .firstBreathCount: return .breathing
         case .closing: return .nextExercise
         case .nextExercise: return .exerciseName
@@ -205,7 +219,7 @@ struct TMDailyPlanNextView: View {
         guard let line = baseRestLine(breath: breath) else {
             return nil
         }
-        guard let prefix = dependencies.dailyPlan.longRestNarrationPrefix,
+        guard let prefix = plan.longRestNarrationPrefix,
               line.key.hasPrefix("rest.long.") else {
             return line
         }
@@ -232,7 +246,7 @@ struct TMDailyPlanNextView: View {
         case .nextExercise:
             return NarrationLine(key: "rest.long.nextExercise")
         case .exerciseName:
-            return dependencies.dailyPlan.nextSessionTitleKey.map { NarrationLine(key: $0) }
+            return plan.nextSessionTitleKey.map { NarrationLine(key: $0) }
         case .countdownIntro, .countdown:
             return NarrationLine(key: "calibration.countdown")
         case .breathing:
@@ -250,7 +264,7 @@ struct TMDailyPlanNextView: View {
         case .inhale:
             switch breath.number {
             case 1:
-                return dependencies.dailyPlan.usesScriptedLongRest ? "rest.long.inhale" : "rest.long.inhaleFirst"
+                return plan.usesScriptedLongRest ? "rest.long.inhale" : "rest.long.inhaleFirst"
             case LongRestBreath.count:
                 let lastBreathStart = Double(LongRestBreath.count - 1) * LongRestBreath.cycleDuration
                 return elapsed - lastBreathStart < 1.4 ? "rest.long.inhaleLast" : "rest.long.inhale"
@@ -259,11 +273,11 @@ struct TMDailyPlanNextView: View {
             }
         case .hold:
             // The approved long-rest script has no spoken hold between inhale and exhale.
-            return dependencies.dailyPlan.usesScriptedLongRest ? "" : "rest.long.hold"
+            return plan.usesScriptedLongRest ? "" : "rest.long.hold"
         case .exhale:
             switch breath.number {
             case 1:
-                return dependencies.dailyPlan.usesScriptedLongRest ? "rest.long.exhale" : "rest.long.exhaleSlow"
+                return plan.usesScriptedLongRest ? "rest.long.exhale" : "rest.long.exhaleSlow"
             case 5:
                 return "rest.long.exhaleSlow"
             case 3:
@@ -274,7 +288,7 @@ struct TMDailyPlanNextView: View {
                 return "rest.long.exhale"
             }
         case .settle:
-            return dependencies.dailyPlan.usesScriptedLongRest ? "" : "rest.long.settle"
+            return plan.usesScriptedLongRest ? "" : "rest.long.settle"
         }
     }
 
@@ -298,7 +312,7 @@ struct TMDailyPlanNextView: View {
     }
 
     private func speak(_ line: NarrationLine?, breath: LongRestBreath?) {
-        dependencies.audio.cancelSpeech()
+        audio.cancelSpeech()
 
         guard let line else {
             narrationID = nil
@@ -309,9 +323,9 @@ struct TMDailyPlanNextView: View {
         // The breath count is spoken before the timed inhale so the longer cue has the full
         // phase. The two recordings play back to back; the stage waits for the second.
         if let breath, breath.phase == .inhale, announcesRemainingBreaths(before: breath, line: line) {
-            dependencies.audio.speak(
+            audio.speak(
                 id: UUID(),
-                key: dependencies.dailyPlan.longRestNarrationPrefix.map { $0 + "remaining %lld" }
+                key: plan.longRestNarrationPrefix.map { $0 + "remaining %lld" }
                     ?? Self.remainingKey,
                 argument: remainingBreaths(afterStarting: breath)
             )
@@ -320,7 +334,7 @@ struct TMDailyPlanNextView: View {
         let id = UUID()
         narrationID = id
         narrationFinished = false
-        dependencies.audio.speak(id: id, key: line.key, argument: line.argument)
+        audio.speak(id: id, key: line.key, argument: line.argument)
     }
 
     /// Whether "N napas lagi" precedes this inhale cue.
@@ -337,7 +351,7 @@ struct TMDailyPlanNextView: View {
             return true
         }
 
-        return dependencies.dailyPlan.usesScriptedLongRest
+        return plan.usesScriptedLongRest
             && line.key.hasSuffix("inhaleLast")
     }
 
@@ -347,9 +361,9 @@ struct TMDailyPlanNextView: View {
     }
 
     private func stop() {
-        dependencies.audio.stopMusic()
-        dependencies.audio.cancelSpeech()
-        dependencies.dailyPlan.end(router: router)
+        audio.stopMusic()
+        audio.cancelSpeech()
+        plan.end(router: router)
     }
 
     private var completionPage: some View {
@@ -371,7 +385,7 @@ struct TMDailyPlanNextView: View {
             Spacer(minLength: 24)
 
             TMTherapyButton(title: "plan.backHome", symbol: "house.fill", prominent: true) {
-                dependencies.dailyPlan.end(router: router)
+                plan.end(router: router)
             }
 
             Spacer(minLength: 24)

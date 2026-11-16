@@ -26,7 +26,8 @@ final class DailyPlanIntroNarration {
 
     func start(
         readiness: HomeViewModel,
-        dependencies: AppDependencies,
+        plan: DailyPlanViewModel,
+        audio: SessionAudioService,
         router: NavigationRouter,
         itemID: String,
         automatic: Bool,
@@ -39,24 +40,23 @@ final class DailyPlanIntroNarration {
         operationID = operation
         // The intro is playback, not therapy. Do not silence it when microphone or command
         // recognition readiness is pending; startCurrent validates that before opening capture.
-        guard operationID == operation, dependencies.dailyPlan.isRunning,
-              dependencies.dailyPlan.nextSessionItemID == itemID else {
+        guard operationID == operation, plan.isRunning,
+              plan.nextSessionItemID == itemID else {
             return
         }
         lineKeys = lines
-        begin(audio: dependencies.audio) {
+        begin(audio: audio) {
             Task { @MainActor in
                 guard self.operationID == operation,
-                      dependencies.dailyPlan.isRunning,
-                      dependencies.dailyPlan.nextSessionItemID == itemID else {
+                      plan.isRunning,
+                      plan.nextSessionItemID == itemID else {
                     return
                 }
                 if automatic {
-                    dependencies.dailyPlan.launchAfterRest(dependencies: dependencies, router: router)
+                    plan.launchAfterRest(router: router)
                 } else {
-                    await dependencies.dailyPlan.startCurrent(
+                    await plan.startCurrent(
                         readiness: readiness,
-                        dependencies: dependencies,
                         router: router
                     )
                 }

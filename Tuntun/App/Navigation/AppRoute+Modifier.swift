@@ -8,6 +8,7 @@
 import SwiftUI
 
 private struct TMRouterViewModifier: ViewModifier {
+    let dependencies: AppDependencies
     @Environment(NavigationRouter.self) private var router
     @Environment(\.buttonFeedback) private var buttonFeedback
 
@@ -26,16 +27,16 @@ private struct TMRouterViewModifier: ViewModifier {
             NavigationStack(path: $router.homePath) {
                 content
                     .navigationDestination(for: AppRoute.self) {
-                        AppRouterView.destination($0)
+                        AppRouterView.destination($0, dependencies: dependencies)
                     }
             }
             .tabItem { Label("tab.home", systemImage: "house") }
             .tag(AppTab.home)
 
             NavigationStack(path: $router.reportsPath) {
-                TMFingerReportsView()
+                dependencies.makeFingerReportsView()
                     .navigationDestination(for: AppRoute.self) {
-                        AppRouterView.destination($0)
+                        AppRouterView.destination($0, dependencies: dependencies)
                     }
             }
             .tabItem { Label("tab.reports", systemImage: "chart.bar.xaxis") }
@@ -43,15 +44,14 @@ private struct TMRouterViewModifier: ViewModifier {
         }
         // The system tab bar sits at the top on iPadOS 18 and at the bottom on iPadOS 17.
         .tint(TherapyPalette.action)
-        .modifier(TMModalStackModifier(index: 0, isCover: false))
-        .modifier(TMModalStackModifier(index: 0, isCover: true))
+        .modifier(TMModalStackModifier(dependencies: dependencies, index: 0, isCover: false))
+        .modifier(TMModalStackModifier(dependencies: dependencies, index: 0, isCover: true))
     }
 }
 
 private struct TMModalStackModifier: ViewModifier {
+    let dependencies: AppDependencies
     @Environment(NavigationRouter.self) private var router
-    @Environment(AppDependencies.self) private var dependencies
-    @Environment(PermissionManager.self) private var permissions
     @Environment(\.buttonFeedback) private var buttonFeedback
     let index: Int
     let isCover: Bool
@@ -99,20 +99,28 @@ private struct TMModalStackModifier: ViewModifier {
     private func modalContent(_ item: RoutePresentation) -> some View {
         Group {
             if isCover {
-                TMFullScreenRouteContent(presentation: item)
-                    .modifier(TMModalStackModifier(index: 0, isCover: false, sheetHostCoverID: item.id))
+                TMFullScreenRouteContent(dependencies: dependencies, presentation: item)
+                    .modifier(TMModalStackModifier(
+                        dependencies: dependencies,
+                        index: 0,
+                        isCover: false,
+                        sheetHostCoverID: item.id
+                    ))
             } else {
                 NavigationStack {
-                    AppRouterView.destination(item.route)
+                    AppRouterView.destination(item.route, dependencies: dependencies)
                 }
             }
         }
-        .modifier(TMModalStackModifier(index: index + 1, isCover: isCover, sheetHostCoverID: sheetHostCoverID))
+        .modifier(TMModalStackModifier(
+            dependencies: dependencies,
+            index: index + 1,
+            isCover: isCover,
+            sheetHostCoverID: sheetHostCoverID
+        ))
         // Applied last so nested presentations see them too; Mac Catalyst does not
         // reliably forward the presenter's environment into sheet and cover content.
         .environment(router)
-        .environment(dependencies)
-        .environment(permissions)
         .environment(\.buttonFeedback, buttonFeedback)
         .typography(.body)
         .buttonStyle(TMTherapySoundButtonStyle())
@@ -121,6 +129,7 @@ private struct TMModalStackModifier: ViewModifier {
 
 /// A full-screen presentation stays mounted while its destination changes.
 private struct TMFullScreenRouteContent: View {
+    let dependencies: AppDependencies
     @Environment(NavigationRouter.self) private var router
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     let presentation: RoutePresentation
@@ -135,7 +144,7 @@ private struct TMFullScreenRouteContent: View {
 
         ZStack {
             TherapyPalette.canvas.ignoresSafeArea()
-            AppRouterView.destination(route)
+            AppRouterView.destination(route, dependencies: dependencies)
                 .id(route)
                 .transition(.opacity)
         }
@@ -151,7 +160,7 @@ private struct TMFullScreenRouteContent: View {
 }
 
 extension View {
-    func withAppRouter() -> some View {
-        modifier(TMRouterViewModifier())
+    func withAppRouter(dependencies: AppDependencies) -> some View {
+        modifier(TMRouterViewModifier(dependencies: dependencies))
     }
 }

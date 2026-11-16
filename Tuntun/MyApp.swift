@@ -23,22 +23,22 @@ struct MyApp: App {
         WindowGroup {
             root
                 .typography(.body)
-                .withAppRouter()
+                .withAppRouter(dependencies: dependencies)
                 // Applied outside the router so tab stacks, sheets and covers share the language.
                 .environment(\.locale, (AppLanguage(rawValue: language) ?? .indonesian).locale)
                 .environment(router)
-                .environment(dependencies)
-                .environment(dependencies.permissions)
                 .environment(\.buttonFeedback, dependencies.playButtonClick)
                 .buttonStyle(TMTherapySoundButtonStyle())
                 .task {
                     #if DEBUG
-                    DebugScreenLauncher.openIntroIfRequested(dependencies: dependencies, router: router)
+                    dependencies.openDebugIntroIfRequested(router: router)
                     #endif
                     await dependencies.recoverHistory()
                 }
                 .onChange(of: scenePhase) { _, phase in
-                    if phase == .active { dependencies.permissions.refresh() }
+                    if phase == .active {
+                        dependencies.refreshPermissions()
+                    }
                 }
         }
     }
@@ -49,10 +49,10 @@ struct MyApp: App {
         if let screen = DebugScreenLauncher.galleryScreen {
             TMDebugScreenGallery(screen: screen)
         } else {
-            TMContentView()
+            dependencies.makeHomeView()
         }
         #else
-        TMContentView()
+        dependencies.makeHomeView()
         #endif
     }
 }

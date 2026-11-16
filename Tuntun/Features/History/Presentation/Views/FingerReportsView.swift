@@ -9,7 +9,10 @@ import SwiftUI
 
 /// The Progress tab presents the current week, repetition totals and saved practice.
 struct TMFingerReportsView: View {
-    @Environment(AppDependencies.self) private var dependencies
+    private let home: FingerHomeViewModel
+    /// Arm, towel and Balancing summaries for the shared history list.
+    private let sessions: any SessionRepository
+
     @Environment(NavigationRouter.self) private var router
     @Environment(\.locale) private var locale
     @State private var confirmingHistoryDeletion = false
@@ -18,8 +21,13 @@ struct TMFingerReportsView: View {
     /// sessions join the same list.
     @State private var armHistory: TaskReportsViewModel?
 
+    init(home: FingerHomeViewModel, sessions: any SessionRepository) {
+        self.home = home
+        self.sessions = sessions
+    }
+
     var body: some View {
-        let report = PracticeReport(history: dependencies.home.history)
+        let report = PracticeReport(history: home.history)
 
         ScrollView {
             LazyVStack(alignment: .leading, spacing: 30) {
@@ -156,7 +164,7 @@ struct TMFingerReportsView: View {
                     .foregroundStyle(TherapyPalette.muted)
             }
 
-            if let error = dependencies.home.errorKey ?? armHistory?.errorKey {
+            if let error = home.errorKey ?? armHistory?.errorKey {
                 TMTherapyError(key: error)
                 TMTherapyButton(title: "action.retry", secondary: true, pill: true) {
                     Task { await refreshProgress() }
@@ -217,9 +225,9 @@ struct TMFingerReportsView: View {
 
         deletingHistory = true
         defer { deletingHistory = false }
-        await dependencies.home.deleteHistory()
+        await home.deleteHistory()
         await armHistory?.deleteAll()
-        if dependencies.home.errorKey == nil, armHistory?.errorKey == nil {
+        if home.errorKey == nil, armHistory?.errorKey == nil {
             confirmingHistoryDeletion = false
         }
     }
@@ -229,10 +237,10 @@ struct TMFingerReportsView: View {
             return
         }
 
-        await dependencies.home.refresh()
+        await home.refresh()
 
         if armHistory == nil {
-            armHistory = TaskReportsViewModel(repository: dependencies.sessions)
+            armHistory = TaskReportsViewModel(repository: sessions)
         }
         await armHistory?.load()
     }
@@ -364,13 +372,25 @@ private struct TMFingerHistoryCard: View {
 }
 
 struct TMFingerReportDetailView: View {
-    let id: UUID
-    @Environment(AppDependencies.self) private var dependencies
+    private let id: UUID
+    private let home: FingerHomeViewModel
+    private let replayRepository: any FingerSessionRepository
+
     @Environment(NavigationRouter.self) private var router
     @State private var replays: FingerReplayViewModel?
 
     private var summary: FingerSessionSummary? {
-        dependencies.home.history.first { $0.id == id }
+        home.history.first { $0.id == id }
+    }
+
+    init(
+        id: UUID,
+        home: FingerHomeViewModel,
+        replayRepository: any FingerSessionRepository
+    ) {
+        self.id = id
+        self.home = home
+        self.replayRepository = replayRepository
     }
 
     var body: some View {
@@ -385,9 +405,9 @@ struct TMFingerReportDetailView: View {
         .navigationTitle("report.titleShort")
         .navigationBarTitleDisplayMode(.inline)
         .task {
-            await dependencies.home.refresh()
+            await home.refresh()
 
-            let replays = FingerReplayViewModel(sessionID: id, repository: dependencies.fingerReplays)
+            let replays = FingerReplayViewModel(sessionID: id, repository: replayRepository)
             await replays.load()
             self.replays = replays
         }
@@ -453,8 +473,8 @@ struct TMFingerReportDetailView: View {
             .typography(.body).tint(TherapyPalette.green)
             TMTherapyButton(title: "report.delete", symbol: "trash", secondary: true) {
                 Task {
-                    await dependencies.home.delete(summary)
-                    if dependencies.home.errorKey == nil {
+                    await home.delete(summary)
+                    if home.errorKey == nil {
                         router.popToRoot()
                         router.push(.reports)
                     }

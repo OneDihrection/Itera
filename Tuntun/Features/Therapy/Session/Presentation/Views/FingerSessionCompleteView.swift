@@ -10,20 +10,34 @@ import SwiftUI
 /// The shared all-done page for the finger exercises: saves the finished session, then offers a
 /// way on to the next exercise or to progress.
 struct TMFingerSessionCompleteView: View {
-    @Environment(AppDependencies.self) private var dependencies
+    private let launcher: FingerSessionLauncher
+    private let plan: DailyPlanViewModel
+    /// Refreshed after saving so Beranda and Progress show the new session.
+    private let home: FingerHomeViewModel
+
     @Environment(NavigationRouter.self) private var router
     @Environment(\.scenePhase) private var scenePhase
     @State private var savingFinished = false
 
     private var summary: FingerSessionSummary? {
-        dependencies.session?.finalSummary
+        launcher.session?.finalSummary
+    }
+
+    init(
+        launcher: FingerSessionLauncher,
+        plan: DailyPlanViewModel,
+        home: FingerHomeViewModel
+    ) {
+        self.launcher = launcher
+        self.plan = plan
+        self.home = home
     }
 
     var body: some View {
         TMTherapySetSummary(
             heading: TMTherapyExerciseHeading(
-                eyebrow: dependencies.dailyPlan.currentNumber.map { Text("plan.exerciseNumber \($0)") },
-                title: Text(verbatim: dependencies.session?.exerciseTitle ?? "")
+                eyebrow: plan.currentNumber.map { Text("plan.exerciseNumber \($0)") },
+                title: Text(verbatim: launcher.session?.exerciseTitle ?? "")
             ),
             headline: Text(completed ? "session.allDoneTitle" : "done.titlePartial"),
             message: Text(completed ? "session.allDoneMessage" : "done.messagePartial"),
@@ -33,7 +47,7 @@ struct TMFingerSessionCompleteView: View {
             closingAction
         }
         .environment(\.colorScheme, .light)
-        .environment(\.locale, dependencies.session?.sessionLanguage.locale ?? AppLanguage.selected.locale)
+        .environment(\.locale, launcher.session?.sessionLanguage.locale ?? AppLanguage.selected.locale)
         .interactiveDismissDisabled()
         .task { await saveSummary() }
         .task(id: savingFinished && scenePhase == .active && automaticallyRests) {
@@ -62,7 +76,7 @@ struct TMFingerSessionCompleteView: View {
         } else {
             TMTherapyFinishActions(
                 title: closingTitle,
-                symbol: dependencies.dailyPlan.isRunning ? "play.fill" : nil,
+                symbol: plan.isRunning ? "play.fill" : nil,
                 disabled: !savingFinished,
                 action: close
             ) {
@@ -74,7 +88,7 @@ struct TMFingerSessionCompleteView: View {
     }
 
     private var automaticallyRests: Bool {
-        completed && dependencies.dailyPlan.hasAutomaticRest
+        completed && plan.hasAutomaticRest
     }
 
     /// Every set of every movement. Finger sets end only when the goal is reached, so a finished
@@ -104,9 +118,9 @@ struct TMFingerSessionCompleteView: View {
     }
 
     private func saveSummary() async {
-        await dependencies.session?.saveFinalSummary()
-        if dependencies.session?.finalSummarySaved == true {
-            await dependencies.home.refresh()
+        await launcher.session?.saveFinalSummary()
+        if launcher.session?.finalSummarySaved == true {
+            await home.refresh()
         }
         savingFinished = true
     }
@@ -117,12 +131,12 @@ struct TMFingerSessionCompleteView: View {
 
     /// While today's plan runs, this page leads on to the next exercise instead of Progress.
     private var closingTitle: LocalizedStringKey {
-        dependencies.dailyPlan.isRunning ? "plan.nextContinue" : "done.viewProgress"
+        plan.isRunning ? "plan.nextContinue" : "done.viewProgress"
     }
 
     private func close() {
-        guard !dependencies.dailyPlan.isRunning else {
-            dependencies.dailyPlan.finish(completed: completed, router: router)
+        guard !plan.isRunning else {
+            plan.finish(completed: completed, router: router)
             return
         }
 

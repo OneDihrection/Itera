@@ -16,9 +16,7 @@ struct TMTherapySessionView: View {
     @State var voiceOver = UIAccessibility.isVoiceOverRunning
     @ScaledMetric(relativeTo: .largeTitle) var instructionSize = 96.0
     @ScaledMetric(relativeTo: .title3) var calibrationCaptionSize = TMTherapyInstructionBubble.baseFontSize
-    @Environment(PermissionManager.self) var permissions
     @Environment(NavigationRouter.self) var router
-    @Environment(AppDependencies.self) var dependencies
     @Environment(\.scenePhase) private var scenePhase
     @AppStorage(PracticePreferences.calmMode) private var calmMode = false
     @State private var celebrationStart: Date?
@@ -29,14 +27,30 @@ struct TMTherapySessionView: View {
     @State var endRequested = false
     @State var videoBounds: CGRect?
     @State var model: TherapySessionViewModel
+    let plan: DailyPlanViewModel
+    let permissions: PermissionManager
 
     private var presentationOnly = false
 
-    init(model: TherapySessionViewModel) { _model = State(initialValue: model) }
+    init(
+        model: TherapySessionViewModel,
+        plan: DailyPlanViewModel,
+        permissions: PermissionManager
+    ) {
+        _model = State(initialValue: model)
+        self.plan = plan
+        self.permissions = permissions
+    }
 
     #if DEBUG
-    init(fixture: SessionSnapshot) {
+    init(
+        fixture: SessionSnapshot,
+        plan: DailyPlanViewModel,
+        permissions: PermissionManager
+    ) {
         _model = State(initialValue: .presentationFixture(fixture))
+        self.plan = plan
+        self.permissions = permissions
         presentationOnly = true
     }
     #endif
@@ -106,7 +120,7 @@ struct TMTherapySessionView: View {
         .onChange(of: model.snapshot.summary?.id) { _, id in
             if id != nil, let summary = model.snapshot.summary,
                 !summary.stopped, !summary.interrupted {
-                dependencies.dailyPlan.markArmRaiseRest(model.snapshot.usesArmRaiseScript ? model.snapshot.armRaiseScriptSide : nil)
+                plan.markArmRaiseRest(model.snapshot.usesArmRaiseScript ? model.snapshot.armRaiseScriptSide : nil)
                 celebrationStart = Date()
             }
         }
@@ -839,7 +853,7 @@ struct TMTherapySessionView: View {
 
     /// While today's plan runs, the summary leads on to the next exercise.
     var summaryExitTitle: LocalizedStringKey {
-        dependencies.dailyPlan.isRunning ? "plan.nextContinue" : "session.restart"
+        plan.isRunning ? "plan.nextContinue" : "session.restart"
     }
 
     private var canAutomaticallyContinuePlan: Bool {
@@ -850,26 +864,26 @@ struct TMTherapySessionView: View {
     }
 
     func automaticallyRests(after summary: SessionSummary) -> Bool {
-        dependencies.dailyPlan.hasAutomaticRest && !summary.stopped && !summary.interrupted
+        plan.hasAutomaticRest && !summary.stopped && !summary.interrupted
     }
 
     func leaveSummary(_ summary: SessionSummary) {
-        guard dependencies.dailyPlan.isRunning else {
+        guard plan.isRunning else {
             router.pop()
             return
         }
 
-        dependencies.dailyPlan.finish(completed: !summary.stopped && !summary.interrupted, router: router)
+        plan.finish(completed: !summary.stopped && !summary.interrupted, router: router)
     }
 
     /// Leaving before the session could start ends a running plan instead of skipping ahead.
     private func leaveWithoutResult() {
-        guard dependencies.dailyPlan.isRunning else {
+        guard plan.isRunning else {
             router.popToRoot()
             return
         }
 
-        dependencies.dailyPlan.end(router: router)
+        plan.end(router: router)
     }
 
     private func summaryRow(_ result: SessionActivityResult) -> some View {

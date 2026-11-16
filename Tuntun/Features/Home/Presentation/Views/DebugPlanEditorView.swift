@@ -12,8 +12,12 @@ import SwiftUI
 /// custom sets and repetitions per exercise. Edits a copy and applies it on Done.
 struct TMDebugPlanEditorView: View {
     @Environment(NavigationRouter.self) private var router
-    @Environment(AppDependencies.self) private var dependencies
+    private let plan: DailyPlanViewModel
     @State private var layout: DebugPlanLayout?
+
+    init(plan: DailyPlanViewModel) {
+        self.plan = plan
+    }
 
     var body: some View {
         List {
@@ -34,7 +38,7 @@ struct TMDebugPlanEditorView: View {
                 return
             }
 
-            layout = dependencies.dailyPlan.debugLayout
+            layout = plan.debugLayout
         }
     }
 
@@ -65,11 +69,9 @@ struct TMDebugPlanEditorView: View {
 
     @ViewBuilder
     private func entryRow(_ entry: DebugPlanLayout.Entry) -> some View {
-        let plan = dependencies.dailyPlan
-
         if let item = plan.standardItems.first(where: { $0.id == entry.itemID }),
            let binding = binding(for: entry.itemID) {
-            let counts = plan.debugCounts(for: item, in: dependencies)
+            let counts = plan.debugCounts(for: item)
 
             TMDebugPlanEntryRow(
                 entry: binding,
@@ -97,7 +99,7 @@ struct TMDebugPlanEditorView: View {
     private var toolbarContent: some ToolbarContent {
         ToolbarItem(placement: .cancellationAction) {
             Button("debug.planEditor.reset") {
-                layout = .standard(dependencies.dailyPlan.standardItems)
+                layout = .standard(plan.standardItems)
             }
             .typography(.body)
             .frame(minHeight: 44)
@@ -106,7 +108,7 @@ struct TMDebugPlanEditorView: View {
         ToolbarItem(placement: .confirmationAction) {
             Button("action.done") {
                 if let layout {
-                    dependencies.dailyPlan.applyDebugLayout(layout)
+                    plan.applyDebugLayout(layout)
                 }
 
                 router.dismissSheet()

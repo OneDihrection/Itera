@@ -10,7 +10,8 @@ import SwiftUI
 struct TMPracticePreferencesView: View {
     @AppStorage(ExerciseMusicTrack.storageKey) private var musicTrack = ExerciseMusicTrack.defaultValue
     @Environment(NavigationRouter.self) private var router
-    @Environment(AppDependencies.self) private var dependencies
+    @Bindable private var home: FingerHomeViewModel
+    @Bindable private var plan: DailyPlanViewModel
     @AppStorage(PracticePreferences.calmMode) private var calmMode = false
     @AppStorage(PracticePreferences.buttonSounds) private var buttonSounds = true
 
@@ -21,10 +22,12 @@ struct TMPracticePreferencesView: View {
     @AppStorage(PracticePreferences.videoCensoring) private var videoCensoring = PracticePreferences.videoCensoringChoice
     @AppStorage(AppLanguage.storageKey) private var language = AppLanguage.selected.rawValue
 
-    var body: some View {
-        @Bindable var home = dependencies.home
-        @Bindable var plan = dependencies.dailyPlan
+    init(home: FingerHomeViewModel, plan: DailyPlanViewModel) {
+        _home = Bindable(home)
+        _plan = Bindable(plan)
+    }
 
+    var body: some View {
         Form {
             // The same saved finger routine the plan page edits; a session in progress keeps
             // the snapshot it started with.
@@ -101,7 +104,7 @@ struct TMPracticePreferencesView: View {
             ToolbarItem(placement: .confirmationAction) {
                 Button("action.done") {
                     Task {
-                        if await dependencies.home.saveRoutine() {
+                        if await home.saveRoutine() {
                             router.dismissSheet()
                         }
                     }
@@ -111,7 +114,7 @@ struct TMPracticePreferencesView: View {
             }
         }
         .presentationDetents([.large])
-        .onDisappear { Task { _ = await dependencies.home.saveRoutine() } }
+        .onDisappear { Task { _ = await home.saveRoutine() } }
     }
 
     #if DEBUG
