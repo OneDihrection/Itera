@@ -69,7 +69,7 @@ You need an active paid Apple Developer membership and access to manage distribu
 3. In App Store Connect → My Apps, create the app record using that same bundle ID, or open its existing record.
 4. Confirm required agreements and app information are complete.
 5. Confirm project.yml uses the same PRODUCT_BUNDLE_IDENTIFIER and DEVELOPMENT_TEAM. Its current values are `com.OneDihrection.Itera` and `A2WQZ32XVK`; verify ownership before using them.
-6. The bundled AppIcon asset set uses the existing hand-hero artwork on an opaque sage background. project.yml selects it through ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon. Regenerate with `xcodegen generate` after changing project settings. Xcode compiles the assets and supplies the primary icon metadata; do not patch Generated/Info.plist manually.
+6. The primary app icon is the Icon Composer bundle `Itera/AppIcon.icon`. Xcode 26 or later compiles it into the asset catalog, including fallback renders for iOS 17 and 18. project.yml selects it through ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon, so the bundle must keep the name AppIcon. Regenerate with `xcodegen generate` after changing project settings. Xcode compiles the assets and supplies the primary icon metadata; do not patch Generated/Info.plist manually.
 
 Expected: one consistent bundle ID across Apple, project.yml, and the GitHub variable you will set later. Persistent project changes belong in project.yml, not only the generated Xcode project.
 
@@ -502,4 +502,4 @@ The App Store Connect API key and distribution signing private key have differen
 
 - [GitHub personal access token creation and limitations](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens)
 
-The initial AppIcon PNGs were derived on 4 November 2026 from the existing `Itera/Assets.xcassets/hand-hero.imageset/hand-hero.png`, using an opaque sage background. The supplied artwork retains its existing provenance; no new artwork authorship is asserted.
+The initial AppIcon PNGs were derived on 4 November 2026 from the existing `Itera/Assets.xcassets/hand-hero.imageset/hand-hero.png`, using an opaque sage background. On 16 November 2026 they were replaced by the user-supplied Icon Composer bundle `Itera/AppIcon.icon`. The supplied artwork retains its existing provenance; no new artwork authorship is asserted.
