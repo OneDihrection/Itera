@@ -282,6 +282,12 @@ final class DailyPlanViewModel {
     private func fingerRoutine(for exercise: FingerExercise, in dependencies: AppDependencies) -> FingerRoutine {
         var routine = dependencies.homeModel(for: exercise.category).routine
 
+        // The recorded Indonesian thumb-opposition script fixes two sets of five, so custom
+        // debug counts never replace the saved routine it is gated on.
+        guard !(exercise == .opposition && AppLanguage.selected == .indonesian) else {
+            return routine
+        }
+
         if let counts = customCounts(for: exercise.rawValue) {
             routine.sets = counts.sets ?? routine.sets
             routine.repetitions = counts.repetitions ?? routine.repetitions
@@ -320,10 +326,9 @@ final class DailyPlanViewModel {
 
     /// The arms the approved Indonesian arm-raise briefs train, in order: left, then right.
     /// A chosen plan side runs that arm only. `nil` keeps the program's own guidance.
-    /// Custom debug counts replace the briefs' fixed two sets of five, so the script is dropped.
+    /// The briefs apply even with custom debug counts; their two sets of five win.
     private var armRaiseScriptSides: [TherapySide]? {
-        guard AppLanguage.selected == .indonesian,
-              customCounts(for: TherapyKind.armRaise.rawValue) == nil else {
+        guard AppLanguage.selected == .indonesian else {
             return nil
         }
 
