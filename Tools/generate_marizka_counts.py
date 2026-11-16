@@ -20,7 +20,7 @@ Re-level existing raw takes, or listen at the app's timing, without API calls:
     python3 Tools/generate_marizka_counts.py --audition countdown --language id
 
 Every number must sound equally low, stable and calm, like the bundled Indonesian
-instructions in Itera/Resources/Audio/NarrationID. Takes therefore use the same unspoken
+instructions in Tuntun/Resources/Audio/NarrationID. Takes therefore use the same unspoken
 "explaining slowly" lead-in as Tools/generate_narration.py, each clip is recorded with
 several seeds, and Tools/measure_pitch.swift keeps the take closest to the instructions'
 pitch without a rising ending. --check fails any chosen take that still sounds higher or
@@ -52,7 +52,7 @@ ROOT = Path(__file__).resolve().parents[1]
 RAW = ROOT / "Tools/NarrationRaw/MarizkaCounts"
 # Every seeded take, kept out of the bundle and out of git; RAW holds only the chosen ones.
 CANDIDATES = RAW / "candidates"
-OUTPUT = ROOT / "Itera/Resources/Audio/MarizkaCounts"
+OUTPUT = ROOT / "Tuntun/Resources/Audio/MarizkaCounts"
 MANIFEST = ROOT / "Tools/marizka-counts-manifest.json"
 MODEL = "eleven_multilingual_v2"
 LANGUAGES = ("id", "en")

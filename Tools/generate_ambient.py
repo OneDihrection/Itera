@@ -6,7 +6,7 @@ import math
 import struct
 import wave
 
-folder = Path(__file__).resolve().parents[1] / 'Itera/Resources/Audio'
+folder = Path(__file__).resolve().parents[1] / 'Tuntun/Resources/Audio'
 folder.mkdir(parents=True, exist_ok=True)
 rate = 22050
 duration = 8

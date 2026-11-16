@@ -26,7 +26,7 @@ if [[ -n "$release_tag" && ! "$release_tag" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; the
 fi
 command -v git >/dev/null || fail 'Install Git before releasing.'
 cd -- "$(dirname -- "${BASH_SOURCE[0]}")"
-repo_root=$(git rev-parse --show-toplevel) || fail 'Run the script from an Itera checkout.'
+repo_root=$(git rev-parse --show-toplevel) || fail 'Run the script from a Tuntun checkout.'
 cd -- "$repo_root"
 git remote get-url origin >/dev/null || fail 'Configure origin before releasing.'
 git var GIT_AUTHOR_IDENT >/dev/null || fail 'Configure git user.name and user.email.'

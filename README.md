@@ -8,10 +8,10 @@ Native iPad app for the five requested finger exercises: full fist and release, 
 
 ```sh
 xcodegen generate
-open Itera.xcodeproj
+open Tuntun.xcodeproj
 ```
 
-Select the Itera scheme and an iPad Simulator or connected iPad, then Run. For device signing, set your bundle identifier and development team in project.yml, then regenerate. Persistent configuration belongs in project.yml.
+Select the Tuntun scheme and an iPad Simulator or connected iPad, then Run. For device signing, set your bundle identifier and development team in project.yml, then regenerate. Persistent configuration belongs in project.yml.
 
 Validated tooling: Xcode 27.1 (27A9275), XcodeGen 2.45.4. Minimum deployment is iPadOS 17.0, iPad only, landscape in either direction. If command-line tools point at CommandLineTools, choose Xcode under Xcode Settings → Locations, or set `DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer` for build commands.
 
@@ -26,9 +26,9 @@ PYTHONDONTWRITEBYTECODE=1 python3 Tools/generate_marizka_counts.py --check
 xcodegen generate
 ```
 
-Use `--voice-id` if the account has several voices named Marizka. The script creates 100 slow repetition takes and 10 short countdown takes per language, caches raw MP3s and request fingerprints under `Tools`, and bundles normalized AAC under `Itera/Resources/Audio/MarizkaCounts`. No ElevenLabs credential or network call goes into the app. Until new clips are bundled, Indonesian uses its existing recordings and English retains its existing count fallback.
+Use `--voice-id` if the account has several voices named Marizka. The script creates 100 slow repetition takes and 10 short countdown takes per language, caches raw MP3s and request fingerprints under `Tools`, and bundles normalized AAC under `Tuntun/Resources/Audio/MarizkaCounts`. No ElevenLabs credential or network call goes into the app. Until new clips are bundled, Indonesian uses its existing recordings and English retains its existing count fallback.
 
-Every number must sound as low, stable and calm as the Indonesian instructions in `Itera/Resources/Audio/NarrationID`. Each clip is recorded with three seeds (up to ten when none is calm), and `Tools/measure_pitch.swift` keeps the take closest to the instructions' pitch without a rising ending or an odd pause. Rejected takes stay in the ignored `Tools/NarrationRaw/MarizkaCounts/candidates` folder. `--check` fails missing or stray clips, countdowns over 0.90 seconds, and any chosen take that is not calm, and prints the `--only` command that tries more seeds for just those clips. To listen at session timing without API calls:
+Every number must sound as low, stable and calm as the Indonesian instructions in `Tuntun/Resources/Audio/NarrationID`. Each clip is recorded with three seeds (up to ten when none is calm), and `Tools/measure_pitch.swift` keeps the take closest to the instructions' pitch without a rising ending or an odd pause. Rejected takes stay in the ignored `Tools/NarrationRaw/MarizkaCounts/candidates` folder. `--check` fails missing or stray clips, countdowns over 0.90 seconds, and any chosen take that is not calm, and prints the `--only` command that tries more seeds for just those clips. To listen at session timing without API calls:
 
 ```sh
 PYTHONDONTWRITEBYTECODE=1 python3 Tools/generate_marizka_counts.py --audition countdown --language id
@@ -48,7 +48,7 @@ PYTHONDONTWRITEBYTECODE=1 python3 Tools/generate_narration.py --language en --ch
 xcodegen generate
 ```
 
-It records the finger and body instruction keys (spoken `speak.<key>` variants first) with three seeds each, up to six when none is calm, keeps the calmest take in `Tools/NarrationRaw/EN`, and bundles AAC in `Itera/Resources/Audio/NarrationEN` as `narration-en-<key>`. Rejected takes stay in the ignored `Tools/NarrationRaw/EN/candidates`. A cue without every recording falls back to the system voice, as in Indonesian.
+It records the finger and body instruction keys (spoken `speak.<key>` variants first) with three seeds each, up to six when none is calm, keeps the calmest take in `Tools/NarrationRaw/EN`, and bundles AAC in `Tuntun/Resources/Audio/NarrationEN` as `narration-en-<key>`. Rejected takes stay in the ignored `Tools/NarrationRaw/EN/candidates`. A cue without every recording falls back to the system voice, as in Indonesian.
 
 Home and Reports use native system tabs, with separate paths owned by the shared NavigationRouter. Native navigation bars, settings forms, and sheets provide familiar controls. Home and the plan list use image cards and shorter Indonesian copy; detailed caregiver and measurement explanations remain available through disclosure controls. Colors adapt to system light/dark appearance; accessibility text sizes stack the home/plan columns vertically. Plus Jakarta Sans, large touch targets, and the original session/calibration rules are retained.
 
@@ -97,7 +97,7 @@ Movement references, used for movement descriptions rather than prescribing trea
 
 ## Verification
 
-On 29 October 2026, Xcode 27.1 built the single Itera target successfully for an iPad Pro 13-inch (M5) Simulator running iPadOS 26.4.1, with signing disabled and deployment target 17.0. Regeneration and git whitespace checks passed. AVFoundation read the exported clip durations as 4/4/16/4/16 seconds. Bundled videos, fonts, catalogs, and audio were inspected in the app bundle.
+On 29 October 2026, Xcode 27.1 built the single Tuntun target successfully for an iPad Pro 13-inch (M5) Simulator running iPadOS 26.4.1, with signing disabled and deployment target 17.0. Regeneration and git whitespace checks passed. AVFoundation read the exported clip durations as 4/4/16/4/16 seconds. Bundled videos, fonts, catalogs, and audio were inspected in the app bundle.
 
 Simulator walkthrough covered Indonesian home/plan, permission flow, unavailable-camera recovery, pause/end, the mandatory feeling check, and a persisted report with zero repetitions rather than fabricated credit. The bundled hand frame was visible in the session mini window. A pending-permission setup race discovered during this walkthrough was fixed.
 
@@ -105,7 +105,7 @@ Physical M1-iPad acceptance is **pending**: both landscape orientations and anat
 
 ### Home/list redesign verification
 
-The redesign follows the supplied workout-screen structure while retaining Itera's data and session rules. Apple references: [Writing](https://developer.apple.com/design/human-interface-guidelines/writing), [Accessibility](https://developer.apple.com/design/human-interface-guidelines/accessibility), and [Navigation and search](https://developer.apple.com/design/human-interface-guidelines/navigation-and-search). The optional Mobbin search was unavailable because it required a paid plan; no Mobbin reference is claimed.
+The redesign follows the supplied workout-screen structure while retaining Tuntun's data and session rules. Apple references: [Writing](https://developer.apple.com/design/human-interface-guidelines/writing), [Accessibility](https://developer.apple.com/design/human-interface-guidelines/accessibility), and [Navigation and search](https://developer.apple.com/design/human-interface-guidelines/navigation-and-search). The optional Mobbin search was unavailable because it required a paid plan; no Mobbin reference is claimed.
 
 The revised Simulator build passed on 29 October 2026. Home/plan rendering, native back navigation, settings-sheet opening, changing/restoring the saved set amount, and opening/toggling the example preview were walked through. Export durations and 24 fps were read back with AVFoundation. A preview loop issue was identified by sampling the app: pausing at an endpoint retriggered the time observer and repeatedly queued seeks. The renderer now gates seeks, waits for completion, ignores obsolete completions, and holds non-looping endpoints once. That fix builds successfully.
 

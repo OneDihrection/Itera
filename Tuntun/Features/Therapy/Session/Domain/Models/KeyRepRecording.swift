@@ -1,0 +1,104 @@
+//
+//  KeyRepRecording.swift
+//  Tuntun
+//
+//  Created by dimaswisodewo on 12/11/2026.
+//
+
+import Foundation
+
+/// Measurements for one accepted repetition, kept for every repetition of a set.
+///
+/// Angles are 2D camera estimates in degrees, not clinical goniometry. They describe the
+/// activity's own movement: the shoulder angle for arm raise and elbow flexion for elbow bend.
+/// Directional reach has no single joint angle, so its angles are nil.
+struct RepMetrics: Codable, Equatable {
+    let repNumber: Int
+    /// Seconds from the end of the previous repetition (or practice start) to this one's credit.
+    let duration: Double
+    let startAngle: Double?
+    let peakAngle: Double?
+    /// Share of recorded frames in which every joint the angle needs was confidently tracked.
+    let trackingCoverage: Double
+    /// The arm that moved, when the exercise lets both arms take turns.
+    var side: TherapySide? = nil
+    /// Finger exercises: the share of the calibrated range reached at the target hold (1 is the
+    /// calibrated target). Sequential exercises report their weakest finger.
+    var peakFraction: Double? = nil
+
+    var observedRange: Double? {
+        guard let startAngle, let peakAngle else {
+            return nil
+        }
+
+        return peakAngle - startAngle
+    }
+}
+
+enum KeyRepRole: String, Codable, CaseIterable {
+    case first
+    case hardest
+    case last
+}
+
+/// One recorded pose: confidently tracked joints only, in Vision's normalized, unmirrored image
+/// space (origin bottom-left). A missing joint was not usable in that frame.
+struct SkeletonFrame: Equatable {
+    /// Number of hand joints, in `HandPoseExtractor` order: wrist, then four per finger.
+    static let handJointCount = 21
+
+    /// Seconds since the first recorded frame of the repetition.
+    let time: Double
+    let joints: [BodyJoint: TherapyPoint]
+    /// Hand exercises: `handJointCount` points, nil where a joint was not usable; nil when the
+    /// hand was not seen in this frame.
+    var hand: [TherapyPoint?]? = nil
+}
+
+/// The skeleton of one repetition kept for replay. One repetition can hold several roles, for
+/// example when the first repetition is also the hardest.
+struct KeyRep: Equatable {
+    var roles: [KeyRepRole]
+    let metrics: RepMetrics
+    /// Image width divided by height, needed to draw normalized joints without distortion.
+    let aspectRatio: Double
+    let frames: [SkeletonFrame]
+}
+
+/// The key repetitions recorded for one set of one activity.
+struct ActivityKeyReps: Equatable {
+    let executionID: UUID
+    let activity: SessionActivity
+    let setNumber: Int
+    let reps: [KeyRep]
+    /// The recorder's clip group while the set is being saved; nil once read back from storage.
+    var clipGroup: UUID? = nil
+}
+
+/// What a recorder records: a guided or Balancing activity, or one finger exercise.
+enum KeyRepSubject: Equatable {
+    case activity(SessionActivity)
+    case finger(FingerExercise, HandSide)
+}
+
+/// The key repetitions recorded for one set of one finger exercise.
+struct FingerKeyReps: Equatable {
+    let exercise: FingerExercise
+    let setNumber: Int
+    let reps: [KeyRep]
+    /// The recorder's clip group while the set is being saved; nil once read back from storage.
+    var clipGroup: UUID? = nil
+}
+
+/// Asks the clip source to keep the video of a repetition that was just completed.
+///
+/// Times are the monotonic capture timestamps of the repetition's first and last recorded
+/// frames. `retaining` names every repetition of the set that still holds a key role (first,
+/// hardest or last), so clips that lost their role can be released at once.
+struct KeyRepClipRequest: Equatable {
+    let group: UUID
+    let repNumber: Int
+    let start: Double
+    let end: Double
+    let retaining: Set<Int>
+}

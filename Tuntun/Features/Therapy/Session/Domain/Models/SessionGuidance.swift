@@ -1,0 +1,48 @@
+//
+//  SessionGuidance.swift
+//  Tuntun
+//
+//  Created by dimaswisodewo on 28/10/2026.
+//
+
+import Foundation
+
+/// One opening instruction card, followed by a movement demonstration when available.
+struct SessionGuidance {
+    struct Card {
+        let key: String
+        var demonstration = false
+    }
+
+    enum Destination {
+        case capture
+        case returnToStart
+        case activity
+    }
+
+    let cards: [Card]
+    let destination: Destination
+    var quietDelay: Double = 3
+    var watchdog: Double = 20
+
+    static func opening(_ activity: SessionActivity, includePositioning: Bool) -> Self {
+        if activity.kind == .foldTowel {
+            return Self(cards: [
+                Card(key: "towel.opening." + activity.side.rawValue),
+                Card(key: "towel.demo", demonstration: true)
+            ], destination: .activity)
+        }
+        if activity.kind == .directionalReach {
+            return Self(cards: [Card(key: "parity.reachOpening")], destination: .capture, quietDelay: 1, watchdog: 12)
+        }
+        let positioning = includePositioning ? "positioning" : "ready"
+        let key = "session.opening.\(activity.kind.rawValue).\(activity.side.rawValue).\(positioning)"
+        return Self(
+            cards: [
+                Card(key: key),
+                Card(key: "parity.example.\(activity.side.rawValue)", demonstration: true)
+            ],
+            destination: .capture
+        )
+    }
+}

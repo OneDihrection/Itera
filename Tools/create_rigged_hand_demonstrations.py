@@ -138,7 +138,7 @@ for name in names:
 # Author one contiguous action; runtime preserves the established 4-second subclip contract.
 rig.animation_data_clear()
 rig.animation_data_create()
-rig.animation_data.action = bpy.data.actions.new('Itera rigged hand guidance')
+rig.animation_data.action = bpy.data.actions.new('Tuntun rigged hand guidance')
 frame = 1
 starts = {}
 for kind, pairs in [

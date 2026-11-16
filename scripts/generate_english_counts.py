@@ -13,7 +13,7 @@ import sys
 import tempfile
 import wave
 
-OUTPUT = Path(__file__).resolve().parents[1] / 'Itera/Resources/Audio/CountsEN'
+OUTPUT = Path(__file__).resolve().parents[1] / 'Tuntun/Resources/Audio/CountsEN'
 
 
 def english_number(number):

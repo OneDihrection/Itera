@@ -10,7 +10,7 @@
 // without generating speech again.
 //
 // Usage, from the repository root:
-//     swift Tools/normalize_narration.swift Tools/NarrationRaw Itera/Resources/Audio/NarrationID
+//     swift Tools/normalize_narration.swift Tools/NarrationRaw Tuntun/Resources/Audio/NarrationID
 
 import AVFoundation
 import Foundation

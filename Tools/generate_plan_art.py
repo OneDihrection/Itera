@@ -4,7 +4,7 @@
 """Draws the Beranda plan illustrations in the style of the existing plan-*.svg figures.
 
 Usage, from the repository root:
-    python3 Tools/generate_plan_art.py Itera/Assets.xcassets
+    python3 Tools/generate_plan_art.py Tuntun/Assets.xcassets
     xcodegen generate
 Writes one imageset per pose. Shapes and colours copy the existing figures exactly.
 """
@@ -170,7 +170,7 @@ POSES = {
 }
 
 HEADER = """<!-- plan-{name}.svg -->
-<!-- Itera -->
+<!-- Tuntun -->
 <!-- Created by Amelia Putri Aftiana on 9/11/26. -->
 """
 
