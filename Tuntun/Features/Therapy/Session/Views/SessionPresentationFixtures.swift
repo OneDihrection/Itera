@@ -206,14 +206,41 @@ enum SessionPresentationFixtures {
 
 struct SessionPresentationFixturePreviews: PreviewProvider {
     static var previews: some View {
-        let sessions = AppComponent(permissions: PermissionManager()).sessionBuilder
+        let plan = PreviewPlan()
+        let router = PreviewSessionRouter()
+        let permissions = PermissionManager()
 
         ForEach(SessionPresentationFixtures.all) { fixture in
-            sessions.buildTherapySession(fixture: fixture.snapshot)
-                .preferredColorScheme(.dark)
-                .previewLayout(.fixed(width: 1366, height: 1024))
-                .previewDisplayName(fixture.id)
+            TMTherapySessionView(
+                model: TherapySessionViewModel.presentationFixture(fixture.snapshot),
+                plan: plan,
+                permissions: permissions,
+                router: router,
+                presentationOnly: true
+            )
+            .preferredColorScheme(.dark)
+            .previewLayout(.fixed(width: 1366, height: 1024))
+            .previewDisplayName(fixture.id)
         }
     }
+}
+
+/// Fixtures are never part of a running plan.
+@MainActor
+private final class PreviewPlan: DailyPlanSessionReporting {
+    let isRunning = false
+    let currentNumber: Int? = nil
+    let hasAutomaticRest = false
+
+    func finish(completed: Bool) {}
+    func end() {}
+    func markOppositionRest(_ side: HandSide?) {}
+    func markArmRaiseRest(_ side: TherapySide?) {}
+}
+
+@MainActor
+private final class PreviewSessionRouter: SessionRouterProtocol {
+    func showFingerSessionComplete() {}
+    func closeSession() {}
 }
 #endif

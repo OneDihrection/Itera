@@ -7,114 +7,86 @@
 
 import SwiftUI
 
-#if DEBUG
-/// Debug-only: the session screen filled from a fixed snapshot.
-protocol TherapySessionFixtureBuildable {
-    associatedtype FixtureScreen: View
-
-    @ViewBuilder @MainActor func buildTherapySession(fixture: SessionSnapshot) -> FixtureScreen
-}
-#endif
-
-/// Builds the session pages today's plan runs in its full-screen cover.
-protocol TherapySessionBuildable {
-    associatedtype TherapySessionScreen: View
-    associatedtype BalanceSessionScreen: View
-    associatedtype FingerSessionScreen: View
-    associatedtype FingerSessionCompleteScreen: View
-
-    @ViewBuilder @MainActor func buildTherapySession(routine: Routine) -> TherapySessionScreen
-    @ViewBuilder @MainActor func buildBalanceSession(
-        exercise: BalanceExercise,
-        settings: BalancePracticeSettings
-    ) -> BalanceSessionScreen
-    @ViewBuilder @MainActor func buildFingerSession() -> FingerSessionScreen
-    @ViewBuilder @MainActor func buildFingerSessionComplete() -> FingerSessionCompleteScreen
+/// What the guided, Balancing and finger session pages need from their parent.
+@MainActor
+protocol TherapySessionDependency {
+    var tracking: BodyTrackingService { get }
+    var audio: SessionAudioService { get }
+    var sessions: any SessionRepository { get }
+    var permissions: PermissionManager { get }
+    var fingers: FingerHomeViewModel { get }
+    var fingerSessions: FingerSessionLauncher { get }
+    /// Sessions report their finishing action to today's plan.
+    var planReporting: any DailyPlanSessionReporting { get }
+    var sessionRouter: any SessionRouterProtocol { get }
+    var tabRouter: any TabRouterProtocol { get }
 }
 
 @MainActor
-final class TherapySessionBuilder: TherapySessionBuildable {
-    private let component: TherapySessionComponent
+final class TherapySessionBuilder {
+    private let dependency: any TherapySessionDependency
 
-    init(component: TherapySessionComponent) {
-        self.component = component
+    init(dependency: any TherapySessionDependency) {
+        self.dependency = dependency
     }
 
     @ViewBuilder func buildTherapySession(routine: Routine) -> some View {
         let model: some TherapySessionViewModelProtocol = TherapySessionViewModel(
-            tracking: component.tracking,
-            audio: component.audio,
-            repository: component.sessions,
+            tracking: dependency.tracking,
+            audio: dependency.audio,
+            repository: dependency.sessions,
             routine: routine
         )
 
         TMTherapySessionView(
             model: model,
-            plan: component.planReporting,
-            permissions: component.permissions,
-            router: component.sessionRouter
+            plan: dependency.planReporting,
+            permissions: dependency.permissions,
+            router: dependency.sessionRouter
         )
         .environment(\.buttonFeedback, {})
         .environment(\.locale, AppLanguage.selected.locale)
     }
-
-    #if DEBUG
-    /// Debug fixtures render a fixed snapshot without capture or audio.
-    @ViewBuilder func buildTherapySession(fixture: SessionSnapshot) -> some View {
-        let model: some TherapySessionViewModelProtocol = TherapySessionViewModel.presentationFixture(fixture)
-
-        TMTherapySessionView(
-            model: model,
-            plan: component.planReporting,
-            permissions: component.permissions,
-            router: component.sessionRouter,
-            presentationOnly: true
-        )
-    }
-    #endif
 
     @ViewBuilder func buildBalanceSession(
         exercise: BalanceExercise,
         settings: BalancePracticeSettings
     ) -> some View {
         let model: some BalanceSessionViewModelProtocol = BalanceSessionViewModel(
-            tracking: component.tracking,
-            audio: component.audio,
-            repository: component.sessions,
+            tracking: dependency.tracking,
+            audio: dependency.audio,
+            repository: dependency.sessions,
             settings: settings,
             exercise: exercise
         )
 
         TMBalanceSessionView(
             model: model,
-            plan: component.planReporting,
-            permissions: component.permissions,
-            router: component.sessionRouter
+            plan: dependency.planReporting,
+            permissions: dependency.permissions,
+            router: dependency.sessionRouter
         )
         .environment(\.locale, AppLanguage.selected.locale)
     }
 
     @ViewBuilder func buildFingerSession() -> some View {
         TMFingerSessionView(
-            launcher: component.fingerSessions,
-            plan: component.planReporting,
-            router: component.sessionRouter
+            launcher: dependency.fingerSessions,
+            plan: dependency.planReporting,
+            router: dependency.sessionRouter
         )
     }
 
     @ViewBuilder func buildFingerSessionComplete() -> some View {
         let viewModel: some FingerSessionCompleteViewModelProtocol = FingerSessionCompleteViewModel(
-            launcher: component.fingerSessions,
-            plan: component.planReporting,
-            home: component.fingers,
-            tabs: component.tabRouter,
-            router: component.sessionRouter
+            launcher: dependency.fingerSessions,
+            plan: dependency.planReporting,
+            home: dependency.fingers,
+            tabs: dependency.tabRouter,
+            router: dependency.sessionRouter
         )
 
         TMFingerSessionCompleteView(viewModel: viewModel)
     }
 }
 
-#if DEBUG
-extension TherapySessionBuilder: TherapySessionFixtureBuildable {}
-#endif

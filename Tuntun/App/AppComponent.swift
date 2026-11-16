@@ -8,13 +8,13 @@
 import Foundation
 
 /// The root component: constructs every shared service, repository and model once and seeds each
-/// feature's component by conforming to that feature's dependency protocol.
+/// feature's builder by conforming to that feature's dependency protocol.
 ///
-/// Features receive only their own component, builder and router; this root is never placed in
+/// Features receive only their own dependency, builder and router; this root is never placed in
 /// the environment or handed to feature code (SYSTEM_DESIGN §3, "Inject services through
 /// initializers").
 @MainActor
-final class AppComponent: Component<Void>, HistoryDependency, HomeDependency, TherapySessionDependency {
+final class AppComponent: HistoryDependency, HomeDependency, TherapySessionDependency {
     // MARK: - Services
 
     let permissions: PermissionManager
@@ -104,7 +104,6 @@ final class AppComponent: Component<Void>, HistoryDependency, HomeDependency, Th
             router: planRouter
         )
 
-        super.init(with: ())
     }
 
     var tabRouter: any TabRouterProtocol {
@@ -123,9 +122,9 @@ final class AppComponent: Component<Void>, HistoryDependency, HomeDependency, Th
 
     // MARK: - Feature builders
 
-    lazy var historyBuilder = HistoryBuilder(component: HistoryComponent(dependency: self))
-    lazy var sessionBuilder = TherapySessionBuilder(component: TherapySessionComponent(dependency: self))
-    lazy var homeBuilder = HomeBuilder(component: HomeComponent(dependency: self))
+    lazy var historyBuilder = HistoryBuilder(dependency: self)
+    lazy var sessionBuilder = TherapySessionBuilder(dependency: self)
+    lazy var homeBuilder = HomeBuilder(dependency: self)
 
     // MARK: - Root
 

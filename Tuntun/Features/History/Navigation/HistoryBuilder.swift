@@ -7,32 +7,47 @@
 
 import SwiftUI
 
-/// Builds the Progress tab's root.
-protocol HistoryBuildable {
-    associatedtype ReportsScreen: View
-
-    @ViewBuilder @MainActor func buildReports() -> ReportsScreen
+/// What the Progress tab needs from its parent.
+@MainActor
+protocol HistoryDependency {
+    var fingers: FingerHomeViewModel { get }
+    /// Arm, towel and Balancing summaries.
+    var sessions: any SessionRepository { get }
+    /// Reads any finger or forearm session's key-repetition replays.
+    var fingerReplayRepository: any FingerSessionRepository { get }
 }
 
 /// What the reports list builds inside itself: its rows, and the pages it pushes.
-protocol HistoryContentBuildable: HistoryCellBuildable {
+protocol HistoryContentBuildable {
+    associatedtype CellContent: View
     associatedtype FingerReportScreen: View
     associatedtype SessionReportScreen: View
 
     @ViewBuilder @MainActor func buildFingerReport(id: UUID) -> FingerReportScreen
     @ViewBuilder @MainActor func buildSessionReport(id: UUID) -> SessionReportScreen
+    @ViewBuilder @MainActor func buildCell(entry: HistoryEntry) -> CellContent
 }
 
 @MainActor
-final class HistoryBuilder: HistoryBuildable, HistoryContentBuildable {
-    private let component: HistoryComponent
+final class HistoryBuilder: HistoryContentBuildable {
+    private let dependency: any HistoryDependency
+    /// One router for the tab's single stack.
+    private let router = HistoryRouter()
 
-    init(component: HistoryComponent) {
-        self.component = component
+    /// Created once: it wires the router's hooks to its path, so a rebuilt root must not
+    /// replace it.
+    private lazy var reportsViewModel = ReportsViewModel(
+        home: dependency.fingers,
+        armReports: TaskReportsViewModel(repository: dependency.sessions),
+        router: router
+    )
+
+    init(dependency: any HistoryDependency) {
+        self.dependency = dependency
     }
 
     @ViewBuilder func buildReports() -> some View {
-        let viewModel: some ReportsViewModelProtocol = component.reportsViewModel
+        let viewModel: some ReportsViewModelProtocol = reportsViewModel
 
         TMFingerReportsView(viewModel: viewModel, builder: self)
     }
@@ -40,12 +55,12 @@ final class HistoryBuilder: HistoryBuildable, HistoryContentBuildable {
     @ViewBuilder func buildFingerReport(id: UUID) -> some View {
         let viewModel: some FingerReportDetailViewModelProtocol = FingerReportDetailViewModel(
             id: id,
-            home: component.fingers,
+            home: dependency.fingers,
             replays: FingerReplayViewModel(
                 sessionID: id,
-                repository: component.fingerReplayRepository
+                repository: dependency.fingerReplayRepository
             ),
-            router: component.router
+            router: router
         )
 
         TMFingerReportDetailView(viewModel: viewModel)
@@ -54,16 +69,21 @@ final class HistoryBuilder: HistoryBuildable, HistoryContentBuildable {
     @ViewBuilder func buildSessionReport(id: UUID) -> some View {
         let viewModel: some SessionReportViewModelProtocol = SessionReportViewModel(
             sessionID: id,
-            repository: component.sessions,
-            router: component.router
+            repository: dependency.sessions,
+            router: router
         )
 
         TMSessionReportView(viewModel: viewModel)
             .environment(\.locale, AppLanguage.selected.locale)
     }
 
-    /// Reuses the row builder the component seeded; no row UI is written here.
+    /// No tap closure: the router is injected, so the row handles navigation itself.
     @ViewBuilder func buildCell(entry: HistoryEntry) -> some View {
-        component.cellBuilder.buildCell(entry: entry)
+        let viewModel: some HistoryCellViewModelProtocol = HistoryCellViewModel(
+            entry: entry,
+            router: router
+        )
+
+        TMHistoryCellView(viewModel: viewModel)
     }
 }

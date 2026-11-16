@@ -7,11 +7,23 @@
 
 import SwiftUI
 
-/// Builds the Home tab's root.
-protocol HomeBuildable {
-    associatedtype HomeScreen: View
-
-    @ViewBuilder @MainActor func buildHome() -> HomeScreen
+/// What Beranda, its settings, today's plan and its intro pages need from their parent.
+@MainActor
+protocol HomeDependency {
+    var fingers: FingerHomeViewModel { get }
+    var armRoutine: RoutineViewModel { get }
+    var taskRoutine: RoutineViewModel { get }
+    var dailyPlan: DailyPlanViewModel { get }
+    /// The intro reads its narration and validates readiness before a session opens.
+    var audio: SessionAudioService { get }
+    var permissions: PermissionManager { get }
+    /// Readiness waits for interrupted-session recovery before therapy can start.
+    var historyRecovery: any HistoryRecovering { get }
+    var homeRouter: HomeRouter { get }
+    /// Shared with `DailyPlanViewModel`, which drives the plan's navigation.
+    var planRouter: PlanRouter { get }
+    /// Builds the session pages the plan's cover shows; no session UI is written in Home.
+    var sessionBuilder: TherapySessionBuilder { get }
 }
 
 /// The pages the plan's full-screen cover shows.
@@ -52,17 +64,28 @@ protocol PracticePreferencesContentBuildable {
 }
 
 @MainActor
-final class HomeBuilder: HomeBuildable, HomeContentBuildable, PracticePreferencesContentBuildable {
-    private let component: HomeComponent
+final class HomeBuilder: HomeContentBuildable, PracticePreferencesContentBuildable {
+    private let dependency: any HomeDependency
 
-    init(component: HomeComponent) {
-        self.component = component
+    /// Created once: it wires the router's hooks to its stack, sheet and cover, so a rebuilt
+    /// root must not replace it.
+    private lazy var homeViewModel = HomeScreenViewModel(
+        fingers: dependency.fingers,
+        armRoutine: dependency.armRoutine,
+        taskRoutine: dependency.taskRoutine,
+        plan: dependency.dailyPlan,
+        homeRouter: dependency.homeRouter,
+        planRouter: dependency.planRouter
+    )
+
+    init(dependency: any HomeDependency) {
+        self.dependency = dependency
     }
 
     // MARK: - Root
 
     @ViewBuilder func buildHome() -> some View {
-        let viewModel: some HomeViewModelProtocol = component.homeViewModel
+        let viewModel: some HomeViewModelProtocol = homeViewModel
 
         TMHomeView(viewModel: viewModel, builder: self)
     }
@@ -78,12 +101,12 @@ final class HomeBuilder: HomeBuildable, HomeContentBuildable, PracticePreference
             itemID: itemID,
             countdownSeconds: countdownSeconds,
             automatic: automatic,
-            plan: component.dailyPlan,
-            audio: component.audio,
+            plan: dependency.dailyPlan,
+            audio: dependency.audio,
             readiness: TherapyReadinessViewModel(
-                permissions: component.permissions,
-                audio: component.audio,
-                history: component.historyRecovery
+                permissions: dependency.permissions,
+                audio: dependency.audio,
+                history: dependency.historyRecovery
             ),
             narration: DailyPlanIntroNarration()
         )
@@ -93,9 +116,9 @@ final class HomeBuilder: HomeBuildable, HomeContentBuildable, PracticePreference
 
     @ViewBuilder func buildPracticePreferences() -> some View {
         let viewModel: some PracticePreferencesViewModelProtocol = PracticePreferencesViewModel(
-            home: component.fingers,
-            plan: component.dailyPlan,
-            router: component.homeRouter
+            home: dependency.fingers,
+            plan: dependency.dailyPlan,
+            router: dependency.homeRouter
         )
 
         TMPracticePreferencesView(viewModel: viewModel, builder: self)
@@ -104,7 +127,7 @@ final class HomeBuilder: HomeBuildable, HomeContentBuildable, PracticePreference
     #if DEBUG
     @ViewBuilder func buildDebugPlanEditor() -> some View {
         let viewModel: some DebugPlanEditorViewModelProtocol = DebugPlanEditorViewModel(
-            plan: component.dailyPlan
+            plan: dependency.dailyPlan
         )
 
         TMDebugPlanEditorView(viewModel: viewModel)
@@ -116,17 +139,17 @@ final class HomeBuilder: HomeBuildable, HomeContentBuildable, PracticePreference
     @ViewBuilder func buildCoverPage(_ route: PlanCoverRoute) -> some View {
         switch route {
         case .therapySession(let routine):
-            component.sessionBuilder.buildTherapySession(routine: routine)
+            dependency.sessionBuilder.buildTherapySession(routine: routine)
         case .balanceSession(let exercise, let settings):
-            component.sessionBuilder.buildBalanceSession(exercise: exercise, settings: settings)
+            dependency.sessionBuilder.buildBalanceSession(exercise: exercise, settings: settings)
         case .fingerSession:
-            component.sessionBuilder.buildFingerSession()
+            dependency.sessionBuilder.buildFingerSession()
         case .fingerSessionComplete:
-            component.sessionBuilder.buildFingerSessionComplete()
+            dependency.sessionBuilder.buildFingerSessionComplete()
         case .planNext:
             let viewModel: some DailyPlanNextViewModelProtocol = DailyPlanNextViewModel(
-                plan: component.dailyPlan,
-                audio: component.audio
+                plan: dependency.dailyPlan,
+                audio: dependency.audio
             )
 
             TMDailyPlanNextView(viewModel: viewModel, builder: self)
