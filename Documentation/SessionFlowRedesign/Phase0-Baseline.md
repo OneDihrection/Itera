@@ -11,13 +11,13 @@ Before any production change, record how every session path behaves today. Each 
 ## Harness
 
 - Build a temporary harness outside the repository, in a scratch directory. Do not add it to `project.yml`, and do not add a test target.
-- Compile it with `swiftc` against the domain files, which import only Foundation:
-  - `Tuntun/Features/Therapy/Session/Domain/**`
-  - `Tuntun/Features/Therapy/Shared/Domain/**`
-  - `Tuntun/Features/Therapy/Activities/*/Domain/**`
-  - `Tuntun/Features/Routine/Domain/**`
+- Compile it with `swiftc` against the logic files, which import only Foundation:
+  - `Tuntun/Features/Therapy/Session/Models/**`
+  - `Tuntun/Features/Therapy/Shared/**` (excluding `LivePose.swift`)
+  - the Foundation-only files in `Tuntun/Features/Therapy/Activities/*/` (`grep -L 'import SwiftUI\|import UIKit\|import Combine'`)
+  - `Tuntun/Features/Routine/Models/**`
   - the tracking models under `Tuntun/Shared/Tracking/Models`
-- Add the domain types each phase introduces as they appear. The compile fails if a domain file imports anything other than Foundation.
+- Add the domain types each phase introduces as they appear. The compile fails if a logic file imports anything other than Foundation.
 - Feed scripted event sequences through the harness: synthetic `TrackingObservation` frames, ticks, commands, readiness changes, and narration completion and reading events. Use a fake clock.
 - After each `handle` call, print one transcript line with the time, stage, suspension, instruction key, countdown seconds, rest phase and intensity, and the effects (speak/audio keys with their identity index, cancel, checkpoint, finalize, saveKeyReps, keepRepClip).
 - Print identities as stable indices (`g1`, `g2`, …), not as UUIDs, so transcripts can be diffed.

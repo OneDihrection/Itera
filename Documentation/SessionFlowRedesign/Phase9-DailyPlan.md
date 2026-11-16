@@ -43,7 +43,7 @@ Make the daily-plan flow an explicit enum, and move the long-rest machine out of
   - Sessions report `sessionEnded(_:)`, built from `policy.longRestScript`.
   - Views report `sessionReadyToLeave()` once saving finishes, and `scenePhase(_:)`.
   - The plan view model owns the single 4 s preview.
-- Add `Features/Home/Domain/Models/LongRest.swift`, an enum that runs `.breathing(BreathingRest.long(...))`, then `.countdown(Countdown(total: 10))` or `.handOff` for scripted next items. It reproduces:
+- Add `Features/Home/Models/LongRest.swift`, an enum that runs `.breathing(BreathingRest.long(...))`, then `.countdown(Countdown(total: 10))` or `.handOff` for scripted next items. It reproduces:
   - the "N napas lagi" lead line;
   - `inhaleLast`;
   - the silent scripted hold;

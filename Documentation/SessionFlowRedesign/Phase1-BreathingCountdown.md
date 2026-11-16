@@ -10,13 +10,13 @@ Replace the duplicated breathing machines with one `BreathingRest`, and add the 
 
 ## Current state
 
-- `GuidedSetBreathing` (`Activities/ArmRaise/Domain/Logic/ArmRaiseGuidance.swift:83`) and `OppositionRest` (`Activities/Fingers/Domain/Logic/OppositionGuidance.swift:130`) contain the same logic. Each is an integer `step` machine: 0 is the opening, steps 1–9 are three breaths of inhale, hold and exhale with minimums of 6, 2 and 3 seconds, and 10 is the closing. Each also has a `narrationFinished` flag and caps elapsed time at 0.2 s per tick.
-- `RestBreath` (`Session/Domain/Logic/SessionDurationClock.swift`) is a 6 s inhale and 3 s exhale cycle derived from the rest deadline.
+- `GuidedSetBreathing` (`Activities/ArmRaise/ArmRaiseGuidance.swift:83`) and `OppositionRest` (`Activities/Fingers/OppositionGuidance.swift:130`) contain the same logic. Each is an integer `step` machine: 0 is the opening, steps 1–9 are three breaths of inhale, hold and exhale with minimums of 6, 2 and 3 seconds, and 10 is the closing. Each also has a `narrationFinished` flag and caps elapsed time at 0.2 s per tick.
+- `RestBreath` (`Session/Models/SessionDurationClock.swift`) is a 6 s inhale and 3 s exhale cycle derived from the rest deadline.
 - `LongRestBreath` (same file) runs 3/2/5/2 s cycles. `DailyPlanNextView` uses it, and this phase leaves it in place until Phase 9.
 
 ## Changes
 
-- Add `Tuntun/Features/Therapy/Shared/Domain/SessionFlow/BreathingRest.swift`:
+- Add `Tuntun/Features/Therapy/Shared/SessionFlow/BreathingRest.swift`:
 
   ```swift
   struct BreathPhase: Equatable {
