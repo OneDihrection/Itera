@@ -21,7 +21,7 @@ final class DailyPlanIntroNarration {
     @ObservationIgnored private var requestID: UUID?
     @ObservationIgnored private var operationID: UUID?
     @ObservationIgnored private var lineIndex = 0
-    @ObservationIgnored private var lineKeys = OppositionGuidance.introductionKeys(for: .left)
+    @ObservationIgnored private var lineKeys: [String] = []
     @ObservationIgnored private var completion: (() -> Void)?
 
     func start(
@@ -30,7 +30,7 @@ final class DailyPlanIntroNarration {
         router: NavigationRouter,
         itemID: String,
         automatic: Bool,
-        lines: [String] = OppositionGuidance.introductionKeys(for: .left)
+        lines: [String]
     ) async {
         guard !running else {
             return

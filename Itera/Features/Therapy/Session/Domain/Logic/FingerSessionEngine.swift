@@ -12,12 +12,15 @@ struct FingerSessionEngine {
     private(set) var activity: FingerActivity
     private(set) var paused = false
     private(set) var finished = false
+    /// Indonesian thumb opposition follows the approved script's hold and countdown timing.
+    private let scriptedOpposition: Bool
     #if DEBUG
     /// Exercises finished with the debug shortcut, whose results must not be recaptured.
     private var debugCompletedKinds: Set<FingerExercise> = []
     #endif
 
-    init(routine: FingerRoutine, checkpoint: FingerSessionSummary? = nil) {
+    init(routine: FingerRoutine, checkpoint: FingerSessionSummary? = nil, scriptedOpposition: Bool = false) {
+        self.scriptedOpposition = scriptedOpposition
         summary = checkpoint ?? FingerSessionSummary(
             id: UUID(), started: Date(), ended: Date(), routine: routine,
             results: [], outcome: .interrupted, exerciseIndex: 0
@@ -32,7 +35,12 @@ struct FingerSessionEngine {
             }
         }
         let prior = summary.results.first { $0.kind == routine.exercises[index] && !$0.completed && !$0.skipped }
-        activity = FingerActivity(kind: routine.exercises[index], routine: routine, restAfterFinalSet: index < routine.exercises.count - 1)
+        activity = FingerActivity(
+            kind: routine.exercises[index],
+            routine: routine,
+            restAfterFinalSet: index < routine.exercises.count - 1,
+            scriptedGuidance: scriptedOpposition && OppositionGuidance.applies(to: routine.exercises[index])
+        )
         if let prior {
             activity.restore(prior)
         }
@@ -142,8 +150,13 @@ struct FingerSessionEngine {
         }
 
         summary.exerciseIndex += 1
-        activity = FingerActivity(kind: summary.routine.exercises[summary.exerciseIndex], routine: summary.routine,
-                                  restAfterFinalSet: summary.exerciseIndex < summary.routine.exercises.count - 1)
+        let kind = summary.routine.exercises[summary.exerciseIndex]
+        activity = FingerActivity(
+            kind: kind,
+            routine: summary.routine,
+            restAfterFinalSet: summary.exerciseIndex < summary.routine.exercises.count - 1,
+            scriptedGuidance: scriptedOpposition && OppositionGuidance.applies(to: kind)
+        )
     }
 
     mutating func snapshot(outcome: SessionOutcome) -> FingerSessionSummary {

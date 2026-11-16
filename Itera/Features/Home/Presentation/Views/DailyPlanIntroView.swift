@@ -31,6 +31,20 @@ struct TMDailyPlanIntroView: View {
         usesArmRaiseScript || dependencies.dailyPlan.usesOppositionScript(itemID: itemID, in: dependencies)
     }
 
+    /// The scripted intro for this item's side and counts.
+    private var scriptIntroduction: [String] {
+        guard usesArmRaiseScript else {
+            return dependencies.dailyPlan.oppositionIntroductionKeys(in: dependencies)
+        }
+
+        let activity = dependencies.dailyPlan.routineExercise(for: .armRaise, in: dependencies).activities.first
+        return ArmRaiseGuidance.introduction(
+            for: activity?.side ?? .left,
+            sets: activity?.sets ?? ScriptedRepetitions.recordedSets,
+            repetitions: activity?.goal ?? ScriptedRepetitions.recordedRepetitions
+        )
+    }
+
     var body: some View {
         if let row {
             intro(row)
@@ -198,14 +212,7 @@ struct TMDailyPlanIntroView: View {
                     router: router,
                     itemID: itemID,
                     automatic: automatic,
-                    lines: usesArmRaiseScript
-                        ? ArmRaiseGuidance.introduction(
-                            for: dependencies.dailyPlan.routineExercise(for: .armRaise, in: dependencies)
-                                .activities.first?.side ?? .left
-                        )
-                        : OppositionGuidance.introductionKeys(
-                            for: dependencies.dailyPlan.fingerSide(for: .opposition, in: dependencies)
-                        )
+                    lines: scriptIntroduction
                 )
                 starting = false
             } else {

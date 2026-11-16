@@ -273,20 +273,21 @@ final class DailyPlanViewModel {
               case .finger(let exercise) = item.exercise else {
             return false
         }
-        var routine = fingerRoutine(for: exercise, in: dependencies)
-        routine.side = fingerSide(for: exercise, in: dependencies)
-        return OppositionGuidance.applies(to: exercise, routine: routine)
+        return OppositionGuidance.applies(to: exercise)
+    }
+
+    /// The opposition intro for this plan's side and counts; it names goals only when they
+    /// match the recording.
+    func oppositionIntroductionKeys(in dependencies: AppDependencies) -> [String] {
+        OppositionGuidance.introductionKeys(
+            for: fingerSide(for: .opposition, in: dependencies),
+            routine: fingerRoutine(for: .opposition, in: dependencies)
+        )
     }
 
     /// The category's saved finger routine with this exercise's custom counts, if any.
     private func fingerRoutine(for exercise: FingerExercise, in dependencies: AppDependencies) -> FingerRoutine {
         var routine = dependencies.homeModel(for: exercise.category).routine
-
-        // The recorded Indonesian thumb-opposition script fixes two sets of five, so custom
-        // debug counts never replace the saved routine it is gated on.
-        guard !(exercise == .opposition && AppLanguage.selected == .indonesian) else {
-            return routine
-        }
 
         if let counts = customCounts(for: exercise.rawValue) {
             routine.sets = counts.sets ?? routine.sets
@@ -402,13 +403,15 @@ final class DailyPlanViewModel {
             }
         }
 
-        // The briefs fix one arm per session at two sets of five repetitions, so the
-        // spoken targets, intro and recordings always match what is counted.
+        // The briefs run one arm per session, two sets of five unless the plan's counts are
+        // customized; the script then speaks only the recordings that match the counts.
         if kind == .armRaise, let side = armRaiseScriptSide {
+            let counts = customCounts(for: kind.rawValue)
+            let repetitions = counts?.repetitions ?? ScriptedRepetitions.recordedRepetitions
             exercise.sides = side == .left ? .left : .right
-            exercise.sets = ArmRaiseGuidance.sets
-            exercise.leftGoal = ArmRaiseGuidance.repetitions
-            exercise.rightGoal = ArmRaiseGuidance.repetitions
+            exercise.sets = counts?.sets ?? ScriptedRepetitions.recordedSets
+            exercise.leftGoal = repetitions
+            exercise.rightGoal = repetitions
         }
         return exercise
     }

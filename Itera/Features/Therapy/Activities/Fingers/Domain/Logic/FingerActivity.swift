@@ -13,6 +13,9 @@ enum FingerPhase: Equatable {
 struct FingerActivity {
     let kind: FingerExercise
     let routine: FingerRoutine
+    /// The approved Indonesian opposition script: three-second holds and a five-second
+    /// countdown before later sets.
+    let scriptedGuidance: Bool
     let restAfterFinalSet: Bool
     private(set) var phase: FingerPhase = .baseline
     private(set) var set = 1
@@ -70,10 +73,11 @@ struct FingerActivity {
     /// Change from the start pose that shows which way the patient turns.
     private static let forearmTurnThreshold = 0.08
 
-    init(kind: FingerExercise, routine: FingerRoutine, restAfterFinalSet: Bool = true) {
+    init(kind: FingerExercise, routine: FingerRoutine, restAfterFinalSet: Bool = true, scriptedGuidance: Bool = false) {
         self.kind = kind
         self.routine = routine
         self.restAfterFinalSet = restAfterFinalSet
+        self.scriptedGuidance = scriptedGuidance
         phase = kind.calibratesRange ? .range : .baseline
     }
 
@@ -107,7 +111,7 @@ struct FingerActivity {
 
     var needsStart: Bool { awaitingStart }
     var holdDuration: Double {
-        if phase == .range || OppositionGuidance.applies(to: kind, routine: routine) {
+        if phase == .range || scriptedGuidance {
             return Self.readyCountdown
         }
         return 2
@@ -259,7 +263,7 @@ struct FingerActivity {
 
     private mutating func beginCountdown() {
         phase = .countdown
-        remaining = OppositionGuidance.applies(to: kind, routine: routine) && set > 1 ? 5 : 3
+        remaining = scriptedGuidance && set > 1 ? 5 : 3
         narrationFinished = false
     }
 

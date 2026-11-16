@@ -65,26 +65,26 @@ final class FingerSessionViewModel {
 
     var usesOppositionScript: Bool {
         sessionLanguage == .indonesian
-            && OppositionGuidance.applies(to: activity.kind, routine: routine)
+            && OppositionGuidance.applies(to: activity.kind)
     }
 
+    /// The catalog key of the last scripted sentence, shown as the on-screen cue.
     var scriptedCueKey: String? {
         guard usesOppositionScript else {
             return nil
         }
-        return scriptedNarrationKeys.last
+        return scriptedNarrationLines.last { !$0.isNumber }?.key
     }
 
-    private var scriptedNarrationKeys: [String] {
-        let keys: [String]
+    private var scriptedNarrationLines: [NarrationLine] {
+        let prefix = OppositionGuidance.prefix(for: routine.side)
         if calibrationMessage == "calibration.intro" {
-            keys = ["calibration.position"]
-        } else if activity.phase == .rest, let scriptedRest {
-            keys = [scriptedRest.key]
-        } else {
-            keys = OppositionGuidance.movementKeys(for: activity)
+            return [NarrationLine(key: prefix + "calibration.position")]
         }
-        return keys.map { OppositionGuidance.prefix(for: routine.side) + $0 }
+        if activity.phase == .rest, let scriptedRest {
+            return [NarrationLine(key: prefix + scriptedRest.key)]
+        }
+        return OppositionGuidance.movementLines(for: activity, side: routine.side)
     }
 
     var calibrationMessage: String? {
@@ -118,7 +118,11 @@ final class FingerSessionViewModel {
     init(routine: FingerRoutine, checkpoint: FingerSessionSummary?, camera: HandCameraService,
          audio: GuidanceAudioService, permissions: any PermissionManaging,
          repository: any FingerSessionRepository) {
-        engine = FingerSessionEngine(routine: routine, checkpoint: checkpoint)
+        engine = FingerSessionEngine(
+            routine: routine,
+            checkpoint: checkpoint,
+            scriptedOpposition: AppLanguage.selected == .indonesian
+        )
         self.camera = camera
         self.audio = audio
         self.permissions = permissions
@@ -579,7 +583,7 @@ final class FingerSessionViewModel {
         if usesOppositionScript, activity.phase == .rest,
            activity.completedSets < routine.sets, activity.remaining > 0 {
             if scriptedRest == nil {
-                scriptedRest = OppositionRest()
+                scriptedRest = OppositionRest(opensAfterFirstSet: activity.completedSets == 1)
             }
             scriptedRest?.tick(now, ready: frameReady && !paused)
             if scriptedRest?.finished == true {
@@ -703,7 +707,7 @@ final class FingerSessionViewModel {
 
         if usesOppositionScript, activity.phase == .rest,
            activity.completedSets < routine.sets, scriptedRest == nil {
-            scriptedRest = OppositionRest()
+            scriptedRest = OppositionRest(opensAfterFirstSet: activity.completedSets == 1)
         }
 
         let flow = calibrationMessage
@@ -762,8 +766,8 @@ final class FingerSessionViewModel {
         let flow = calibrationMessage
         let key = flow ?? instructionKey
         var lines: [NarrationLine]
-        if usesOppositionScript, !scriptedNarrationKeys.isEmpty {
-            lines = scriptedNarrationKeys.map { NarrationLine(key: $0) }
+        if usesOppositionScript, !scriptedNarrationLines.isEmpty {
+            lines = scriptedNarrationLines
         } else if flow == "calibration.try" {
             lines = [NarrationLine(key: key)] + narrationLines
         } else if flow != nil || activity.phase == .countdown {
@@ -774,6 +778,9 @@ final class FingerSessionViewModel {
 
         let bundle = sessionLanguage.resourceBundle
         let text = lines.map { line in
+            if line.isNumber, let number = line.argument {
+                return String(number)
+            }
             let value = String(localized: String.LocalizationValue(line.key), bundle: bundle)
             if let argument = line.argument {
                 return String.localizedStringWithFormat(value, Int64(argument))

@@ -7,11 +7,23 @@
 
 import Foundation
 
-/// One spoken sentence, identified by its String Catalog key.
+/// One spoken sentence, identified by its String Catalog key, or a Marizka number spliced
+/// into a recorded cue.
 struct NarrationLine: Equatable {
+    /// Reserved key of a number line; it is not a String Catalog entry.
+    static let numberKey = "marizka.number"
+
     let key: String
-    /// The number substituted into a format key such as "guide.holdDuration %lld".
+    /// The number substituted into a format key such as "guide.holdDuration %lld", or the
+    /// number a number line speaks.
     var argument: Int? = nil
+
+    /// A Marizka repetition number ("Tiga."), for counts no recorded sentence states.
+    static func number(_ value: Int) -> NarrationLine {
+        NarrationLine(key: numberKey, argument: value)
+    }
+
+    var isNumber: Bool { key == Self.numberKey }
 }
 
 /// Human-sounding narration recorded ahead of time and bundled with the app.
@@ -48,8 +60,12 @@ enum NarrationClips {
     }
 
     /// The bundled file name for a line in one language, such as "narration-en-session.ready".
-    /// Must match `clip_name` in Tools/generate_narration.py.
+    /// Must match `clip_name` in Tools/generate_narration.py. Number lines name Marizka's clip.
     static func resourceName(for line: NarrationLine, language: AppLanguage) -> String {
+        if line.isNumber, let number = line.argument {
+            return countResourceName(number, language: language, countdown: false)
+        }
+
         var name = line.key.replacingOccurrences(of: " %lld", with: "")
 
         if let argument = line.argument {

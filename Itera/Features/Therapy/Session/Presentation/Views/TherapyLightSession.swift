@@ -365,8 +365,8 @@ extension TMTherapySessionView {
     }
 
     private func lightSetMessage(lastSet: Bool, lastActivity: Bool) -> Text {
-        if model.snapshot.usesArmRaiseScript {
-            return Text(LocalizedStringKey(model.snapshot.armRaiseNarrationPrefix + (lastSet ? "summary.final" : "summary.first")))
+        if model.snapshot.usesArmRaiseScript, let key = model.snapshot.armRaiseSummaryKey {
+            return Text(LocalizedStringKey(key))
         }
         if lastSet, lastActivity {
             return Text("session.allDoneMessage")

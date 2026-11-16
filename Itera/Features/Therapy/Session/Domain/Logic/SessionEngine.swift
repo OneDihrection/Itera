@@ -44,6 +44,9 @@ struct SessionSnapshot {
     var restBreath: RestBreath?
     var guidedSetBreathing: GuidedSetBreathing?
     var usesArmRaiseScript = false
+    /// The recorded arm-raise set summary just spoken, or nil when the counts did not match
+    /// its numbers and the general ending was used.
+    var armRaiseSummaryKey: String?
     /// Retained through summary, when `activity` becomes nil, to select the correct recordings.
     var armRaiseScriptSide = TherapySide.left
     var armRaiseNarrationPrefix: String { ArmRaiseGuidance.prefix(for: armRaiseScriptSide) }
@@ -210,9 +213,34 @@ struct SessionEngine {
     private var currentScriptInstruction: String {
         if snapshot.usesArmRaiseScript, snapshot.stage == .activity,
            !isCalibrationCompletionCue, case .movement(let movement) = activity?.presentation {
-            return ArmRaiseGuidance.movementKey(movement, set: progress.setNumber, side: snapshot.armRaiseScriptSide)
+            return ArmRaiseGuidance.movementKey(movement, set: progress.setNumber, goal: scriptGoal, side: snapshot.armRaiseScriptSide)
         }
         return snapshot.instruction
+    }
+
+    /// Repetitions per set of the current arm-raise script, which chooses its recorded lines.
+    private var scriptGoal: Int {
+        progress.currentActivity?.goal ?? ScriptedRepetitions.recordedRepetitions
+    }
+
+    /// The recorded set summary when its numbers are true; otherwise Marizka says the set's
+    /// repetitions before the general set or exercise ending.
+    private mutating func scriptedSummary(count: Int) -> String {
+        let sets = progress.currentActivity?.sets ?? 1
+        snapshot.armRaiseSummaryKey = ArmRaiseGuidance.summaryKey(
+            setNumber: progress.setNumber,
+            sets: sets,
+            goal: scriptGoal,
+            side: snapshot.armRaiseScriptSide
+        )
+        if let key = snapshot.armRaiseSummaryKey {
+            return key
+        }
+
+        if count > 0 {
+            pendingPrefix = .count(count)
+        }
+        return progress.setNumber < sets ? "session.good" : "session.feedback"
     }
 
     /// Spoken seconds follow fresh, accepted hold progress. They never run from a wall timer.
@@ -358,16 +386,23 @@ struct SessionEngine {
                 snapshot.instruction = previousInstruction
                 return
             }
-            let key = ArmRaiseGuidance.movementKey(after, set: progress.setNumber, side: snapshot.armRaiseScriptSide)
+            let key = ArmRaiseGuidance.movementKey(after, set: progress.setNumber, goal: scriptGoal, side: snapshot.armRaiseScriptSide)
             if after.phase == .countdown {
                 if old?.countdownSeconds == nil {
                     announcePracticeCountdown()
                 }
             } else if old?.count != after.count {
-                pendingScriptMovement = key
-                announce(snapshot.armRaiseNarrationPrefix + "rep.\(after.count).complete", timed: false)
+                if let praise = ArmRaiseGuidance.praiseKey(after: after.count, side: snapshot.armRaiseScriptSide) {
+                    pendingScriptMovement = key
+                    announce(praise, timed: false)
+                } else {
+                    // No recording praises this repetition: Marizka says its number, then the
+                    // next movement cue follows in the same guidance.
+                    pendingPrefix = .count(after.count)
+                    announce(key, timed: false)
+                }
             } else if case .movement(let before) = old,
-                      ArmRaiseGuidance.movementKey(before, set: progress.setNumber, side: snapshot.armRaiseScriptSide) != key {
+                      ArmRaiseGuidance.movementKey(before, set: progress.setNumber, goal: scriptGoal, side: snapshot.armRaiseScriptSide) != key {
                 announce(key, timed: false)
             } else {
                 snapshot.instruction = key
@@ -477,7 +512,7 @@ struct SessionEngine {
             if snapshot.usesArmRaiseScript, pendingScriptMovement == nil,
                case .movement(let movement) = snapshot.presentation,
                movement.phase != .countdown {
-                let key = ArmRaiseGuidance.movementKey(movement, set: progress.setNumber, side: snapshot.armRaiseScriptSide)
+                let key = ArmRaiseGuidance.movementKey(movement, set: progress.setNumber, goal: scriptGoal, side: snapshot.armRaiseScriptSide)
                 if snapshot.instruction != key {
                     announce(key, timed: false)
                 }
@@ -515,8 +550,9 @@ struct SessionEngine {
                         snapshot.stage = .rest
                         snapshot.instruction = "session.rest"
                         if snapshot.usesArmRaiseScript, progress.hasNextSet {
-                            snapshot.guidedSetBreathing = GuidedSetBreathing()
-                            announce(snapshot.armRaiseNarrationPrefix + "rest.opening", timed: false)
+                            let breathing = GuidedSetBreathing(opensAfterFirstSet: progress.setNumber == 1)
+                            snapshot.guidedSetBreathing = breathing
+                            announce(snapshot.armRaiseNarrationPrefix + breathing.key, timed: false)
                         } else if !progress.hasNextSet {
                             announce("session.rest", timed: false)
                         }
@@ -780,7 +816,7 @@ struct SessionEngine {
             pendingPrefix = .count(count)
         }
         if snapshot.usesArmRaiseScript, outcome == .completed {
-            snapshot.instruction = progress.setNumber == 1 ? snapshot.armRaiseNarrationPrefix + "summary.first" : snapshot.armRaiseNarrationPrefix + "summary.final"
+            snapshot.instruction = scriptedSummary(count: presentation?.count ?? 0)
         } else {
             snapshot.instruction = outcome == .skipped ? "session.skipped" : "session.feedback"
         }
