@@ -1,0 +1,240 @@
+//
+//  HandCameraService.swift
+//  Tuntun
+//
+//  Created by Amelia Putri Aftiana on 29/10/2026.
+//
+
+import AVFoundation
+import Combine
+import Vision
+
+enum HandDetectionIssue: Equatable { case missingHand, multipleHands, unreadable }
+
+struct CameraSample {
+    let evidence: HandEvidence?
+    let timestamp: Double
+    let generation: UUID
+    var issue: HandDetectionIssue? = nil
+}
+
+enum HandCameraEvent {
+    case sample(CameraSample)
+    case failure(String)
+}
+
+/// One serial capture/inference owner. Late frames are dropped by the capture output.
+final class HandCameraService: NSObject, AVCaptureVideoDataOutputSampleBufferDelegate {
+    let session = AVCaptureSession()
+    let events = PassthroughSubject<HandCameraEvent, Never>()
+    /// Filtered key-repetition video, fed from every inferred frame while a session enables it.
+    let clips = RepClipFrameSource()
+    private let queue = DispatchQueue(label: "dev.itera.hand-camera", qos: .userInitiated)
+    private let output = AVCaptureVideoDataOutput()
+    private let request = VNDetectHumanHandPoseRequest()
+    private var generation = UUID()
+    private var configured = false
+    private var device: AVCaptureDevice?
+    private var previousCenterStage: (mode: AVCaptureDevice.CenterStageControlMode, enabled: Bool)?
+    private var lastInference = 0.0
+    private var notifications: [NSObjectProtocol] = []
+    /// Keeps scoring on the patient's hand when bystanders' or the other hand appear. Queue-confined.
+    private var subjects = HandSubjectSelector()
+    /// One hand-pose inference per camera frame at 30 fps. At 15 Hz the drawn hand and its ring
+    /// moved in visible steps and every filter lagged twice as long. Work stays bounded: inference
+    /// runs on the capture queue and late frames are dropped by the output, never queued.
+    private static let inferenceInterval = 1.0 / 30
+
+    override init() {
+        super.init()
+        // Room for both of the patient's hands plus a bystander's, so the exercised hand
+        // is not crowded out of the results; the subject selector picks among them.
+        request.maximumHandCount = 4
+        for name in [AVCaptureSession.wasInterruptedNotification, AVCaptureSession.runtimeErrorNotification] {
+            notifications.append(NotificationCenter.default.addObserver(forName: name, object: session, queue: nil) { [weak self] _ in
+                self?.events.send(.failure("camera.interrupted"))
+            })
+        }
+    }
+
+    deinit {
+        notifications.forEach(NotificationCenter.default.removeObserver)
+    }
+
+    func start() {
+        queue.async { [self] in
+            do {
+                if !configured {
+                    try configure()
+                }
+                if !session.isRunning {
+                    try beginFixedFraming()
+                    generation = UUID()
+                    lastInference = 0
+                    session.startRunning()
+                }
+            } catch {
+                restoreCenterStage()
+                events.send(.failure("camera.unavailable"))
+            }
+        }
+    }
+
+    func stop() {
+        queue.async { [self] in
+            if session.isRunning {
+                session.stopRunning()
+            }
+            generation = UUID()
+            restoreCenterStage()
+        }
+    }
+
+    /// Sets the exercised side, used only to choose between several newly visible hands.
+    func track(side: HandSide) {
+        queue.async { [self] in
+            subjects.preferredSide = side
+            subjects.reset()
+        }
+    }
+
+    func orient(_ orientation: AVCaptureVideoOrientation) {
+        #if targetEnvironment(macCatalyst)
+        // Mac cameras already deliver upright landscape frames; forcing an orientation rotates them.
+        return
+        #else
+        queue.async { [self] in
+            if let connection = output.connection(with: .video), connection.videoOrientation != orientation {
+                connection.videoOrientation = orientation
+                generation = UUID()
+            }
+        }
+        #endif
+    }
+
+    private func configure() throws {
+        var selectedCamera = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: .front)
+        #if targetEnvironment(macCatalyst)
+        // A Mac’s user-facing webcam can report an unspecified position.
+        selectedCamera = selectedCamera ?? AVCaptureDevice.default(for: .video)
+        #endif
+        guard AVCaptureDevice.authorizationStatus(for: .video) == .authorized,
+              let camera = selectedCamera, camera.position != .back else {
+            throw CameraError.unavailable
+        }
+        let input = try AVCaptureDeviceInput(device: camera)
+        device = camera
+        session.beginConfiguration()
+        defer { session.commitConfiguration() }
+        session.sessionPreset = .hd1280x720
+        guard session.canAddInput(input), session.canAddOutput(output) else {
+            throw CameraError.unavailable
+        }
+        session.addInput(input)
+        output.alwaysDiscardsLateVideoFrames = true
+        output.setSampleBufferDelegate(self, queue: queue)
+        session.addOutput(output)
+        if let connection = output.connection(with: .video) {
+            #if !targetEnvironment(macCatalyst)
+            connection.videoOrientation = .landscapeLeft
+            #endif
+            connection.automaticallyAdjustsVideoMirroring = false
+            connection.isVideoMirrored = false
+            if connection.isVideoStabilizationSupported {
+                connection.preferredVideoStabilizationMode = .off
+            }
+        }
+        configured = true
+    }
+
+    private func beginFixedFraming() throws {
+        if previousCenterStage == nil {
+            previousCenterStage = (AVCaptureDevice.centerStageControlMode, AVCaptureDevice.isCenterStageEnabled)
+        }
+        AVCaptureDevice.centerStageControlMode = .app
+        AVCaptureDevice.isCenterStageEnabled = false
+        guard let device else {
+            return
+        }
+        try device.lockForConfiguration()
+        defer { device.unlockForConfiguration() }
+        device.cancelVideoZoomRamp()
+        device.videoZoomFactor = max(1, device.minAvailableVideoZoomFactor)
+    }
+
+    private func restoreCenterStage() {
+        guard let previousCenterStage else {
+            return
+        }
+        AVCaptureDevice.centerStageControlMode = .app
+        AVCaptureDevice.isCenterStageEnabled = previousCenterStage.enabled
+        AVCaptureDevice.centerStageControlMode = previousCenterStage.mode
+        self.previousCenterStage = nil
+    }
+
+    func captureOutput(_ output: AVCaptureOutput, didOutput buffer: CMSampleBuffer, from connection: AVCaptureConnection) {
+        // The session clock is not always the host clock on Mac, which the view model's freshness check assumes.
+        let presentationTime = CMSampleBufferGetPresentationTimeStamp(buffer)
+        let timestamp = CMSyncConvertTime(
+            presentationTime,
+            from: session.synchronizationClock ?? CMClockGetHostTimeClock(),
+            to: CMClockGetHostTimeClock()
+        ).seconds
+        guard timestamp - lastInference >= Self.inferenceInterval - 0.001,
+              let pixelBuffer = CMSampleBufferGetImageBuffer(buffer) else { return }
+        lastInference = timestamp
+
+        // The hand camera runs no body pose, so face detection alone censors faces in clips.
+        if clips.claimFrame(at: timestamp) {
+            clips.offer(pixelBuffer, time: timestamp, heads: nil)
+        }
+
+        do {
+            try VNImageRequestHandler(cvPixelBuffer: pixelBuffer, orientation: .up).perform([request])
+            let hands = request.results ?? []
+            let aspect = Double(CVPixelBufferGetWidth(pixelBuffer)) / Double(CVPixelBufferGetHeight(pixelBuffer))
+
+            // Never choose by screen position alone; ambiguous scenes report no hand.
+            guard let index = subjects.select(
+                hands.map { HandPoseExtractor.candidate(for: $0, aspect: aspect) },
+                at: timestamp,
+                generation: generation
+            ) else {
+                events.send(.sample(CameraSample(
+                    evidence: nil, timestamp: timestamp, generation: generation,
+                    issue: hands.count > 1 ? .multipleHands : .missingHand
+                )))
+                return
+            }
+
+            let hand = hands[index]
+            let names: [VNHumanHandPoseObservation.JointName] = [
+                .wrist, .thumbCMC, .thumbMP, .thumbIP, .thumbTip,
+                .indexMCP, .indexPIP, .indexDIP, .indexTip,
+                .middleMCP, .middlePIP, .middleDIP, .middleTip,
+                .ringMCP, .ringPIP, .ringDIP, .ringTip,
+                .littleMCP, .littlePIP, .littleDIP, .littleTip
+            ]
+            let points = try names.map { name in
+                let p = try hand.recognizedPoint(name)
+                return HandPoint(x: p.location.x, y: p.location.y, confidence: p.confidence)
+            }
+            let side: HandSide?
+            switch hand.chirality {
+            case .left: side = .left
+            case .right: side = .right
+            default: side = nil
+            }
+            let evidence = HandEvidence(
+                timestamp: timestamp, generation: generation,
+                width: Double(CVPixelBufferGetWidth(pixelBuffer)),
+                height: Double(CVPixelBufferGetHeight(pixelBuffer)), side: side, points: points
+            )
+            events.send(.sample(CameraSample(evidence: evidence, timestamp: timestamp, generation: generation)))
+        } catch {
+            events.send(.sample(CameraSample(evidence: nil, timestamp: timestamp, generation: generation, issue: .unreadable)))
+        }
+    }
+
+    private enum CameraError: Error { case unavailable }
+}

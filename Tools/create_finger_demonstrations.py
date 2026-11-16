@@ -9,7 +9,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 scene = bpy.data.scenes.get('IteraFingerDemonstrations') or bpy.data.scenes.new('IteraFingerDemonstrations')
 bpy.context.window.scene = scene
-collection = bpy.data.collections.new('Itera Hand')
+collection = bpy.data.collections.new('Tuntun Hand')
 scene.collection.children.link(collection)
 
 def move_to_collection(obj):

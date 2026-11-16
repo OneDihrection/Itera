@@ -6,7 +6,7 @@ import struct
 import wave
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parents[1] / 'Itera/Resources/Audio'
+ROOT = Path(__file__).resolve().parents[1] / 'Tuntun/Resources/Audio'
 ROOT.mkdir(parents=True, exist_ok=True)
 RATE = 22050
 

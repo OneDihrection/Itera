@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 # generate_narration.py
 # Created by Amelia Putri Aftiana on 05/11/2026.
-"""Renders Itera's narration once with ElevenLabs, for bundling in the app.
+"""Renders Tuntun's narration once with ElevenLabs, for bundling in the app.
 
 Each spoken sentence is a String Catalog key. This script reads the text of those keys in
 one language and saves one MP3 per key under Tools/NarrationRaw (Indonesian) or
 Tools/NarrationRaw/EN (English), then runs Tools/normalize_narration.swift to level their
-loudness into Itera/Resources/Audio/NarrationID or NarrationEN as AAC. The app plays a
+loudness into Tuntun/Resources/Audio/NarrationID or NarrationEN as AAC. The app plays a
 recording when one exists and otherwise uses the iPad voice, so sessions stay offline and
 nothing is sent anywhere while a patient exercises.
 
@@ -43,16 +43,16 @@ import urllib.request
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-CATALOG = ROOT / "Itera/Resources/Localization/Localizable.xcstrings"
+CATALOG = ROOT / "Tuntun/Resources/Localization/Localizable.xcstrings"
 # Untouched ElevenLabs output, kept outside the app so it can be re-levelled without credits.
 RAW = ROOT / "Tools/NarrationRaw"
-OUTPUT = ROOT / "Itera/Resources/Audio/NarrationID"
+OUTPUT = ROOT / "Tuntun/Resources/Audio/NarrationID"
 NORMALIZER = ROOT / "Tools/normalize_narration.swift"
 # Kept outside the app's sources so it is never bundled.
 MANIFEST = ROOT / "Tools/narration-manifest.json"
 # English recordings: same pipeline, separate folders, so the Indonesian caches stay untouched.
 RAW_EN = ROOT / "Tools/NarrationRaw/EN"
-OUTPUT_EN = ROOT / "Itera/Resources/Audio/NarrationEN"
+OUTPUT_EN = ROOT / "Tuntun/Resources/Audio/NarrationEN"
 MANIFEST_EN = ROOT / "Tools/narration-en-manifest.json"
 # The language being rendered; main() switches RAW, OUTPUT and MANIFEST for English.
 LANGUAGE = "id"

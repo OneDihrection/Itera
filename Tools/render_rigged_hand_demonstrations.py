@@ -10,7 +10,7 @@ scene = bpy.data.scenes['IteraRiggedHand']
 bpy.context.window.scene = scene
 if hasattr(scene,'eevee') and hasattr(scene.eevee,'taa_render_samples'):
     scene.eevee.taa_render_samples = 32
-folder = ROOT / 'Itera/Resources/Animations/Fingers'
+folder = ROOT / 'Tuntun/Resources/Animations/Fingers'
 folder.mkdir(parents=True,exist_ok=True)
 scene.render.image_settings.media_type = 'VIDEO'
 scene.render.image_settings.file_format = 'FFMPEG'
@@ -33,7 +33,7 @@ scene.render.image_settings.file_format = 'PNG'
 scene.render.image_settings.color_mode = 'RGBA'
 scene.render.film_transparent = True
 for name,frame in [('hand-hero',1),('hand-fullFist',48),('hand-hookFist',144),('hand-opposition',240),('hand-spreading',624),('hand-extensionSequence',720)]:
-    asset = ROOT / 'Itera/Assets.xcassets' / (name+'.imageset')
+    asset = ROOT / 'Tuntun/Assets.xcassets' / (name+'.imageset')
     asset.mkdir(parents=True,exist_ok=True)
     scene.frame_set(frame)
     scene.render.filepath = str(asset / (name+'.png'))

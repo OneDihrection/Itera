@@ -6,7 +6,7 @@ Treat SYSTEM_DESIGN.md as the authoritative project design. Surface conflicts ra
 
 ## Design system
 
-Every agent doing UI work must inspect `Itera/DesignSystem` and read its README first. Use existing reusable controls and styling from that folder. If no suitable component exists, create a reusable one there before using it. Extend compatible components instead of duplicating controls or styling in feature folders.
+Every agent doing UI work must inspect `Tuntun/DesignSystem` and read its README first. Use existing reusable controls and styling from that folder. If no suitable component exists, create a reusable one there before using it. Extend compatible components instead of duplicating controls or styling in feature folders.
 
 Screens may use native SwiftUI layout directly; navigation must use the shared router. Feature views own screen composition; therapy-specific compositions may remain in their feature, using design system controls and styling. Add components only as needed; do not build a speculative library or wrap every SwiftUI primitive.
 
@@ -14,11 +14,11 @@ Design system components accept values, bindings, content, and actions as needed
 
 ## 3D animation rendering
 
-Before creating or replacing a rendered 3D exercise animation, follow [Documentation/AnimationRenderingStandard.md](Documentation/AnimationRenderingStandard.md). Keep the existing animation and playback contracts in SYSTEM_DESIGN.md and `Itera/Resources/Animations/README.md`; the rendering standard defines the export and naming requirements for new renders.
+Before creating or replacing a rendered 3D exercise animation, follow [Documentation/AnimationRenderingStandard.md](Documentation/AnimationRenderingStandard.md). Keep the existing animation and playback contracts in SYSTEM_DESIGN.md and `Tuntun/Resources/Animations/README.md`; the rendering standard defines the export and naming requirements for new renders.
 
 ## Project generation
 
-Use the existing Itera project and source directory names. The specification is named project.yml, matching XcodeGen’s default and SYSTEM_DESIGN.md.
+Use the existing Tuntun project and source directory names. The specification is named project.yml, matching XcodeGen’s default and SYSTEM_DESIGN.md.
 
 Run from the repository root:
 

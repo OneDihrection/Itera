@@ -1,5 +1,5 @@
 # Author: dimaswisodewo
-name: Itera
+name: Tuntun
 options:
   createIntermediateGroups: true
   developmentLanguage: en
@@ -7,12 +7,12 @@ configs:
   Debug: debug
   Release: release
 targets:
-  Itera:
+  Tuntun:
     type: application
     platform: iOS
     deploymentTarget: "17.0"
     sources:
-      - path: Itera
+      - path: Tuntun
         type: group
         excludes:
           - "**/*.md"
@@ -32,7 +32,7 @@ targets:
         SWIFT_GENERATE_LOCALIZATION_SYMBOLS: NO
         LOCALIZATION_PREFERS_STRING_CATALOGS: YES
     entitlements:
-      path: Generated/Itera.entitlements
+      path: Generated/Tuntun.entitlements
       properties:
         # Required on Mac Catalyst, where hardened runtime silently denies capture without them.
         com.apple.security.device.camera: true
@@ -59,10 +59,10 @@ targets:
           - UIInterfaceOrientationLandscapeLeft
           - UIInterfaceOrientationLandscapeRight
 schemes:
-  Itera:
+  Tuntun:
     build:
       targets:
-        Itera: all
+        Tuntun: all
     run:
       config: Debug
     archive:

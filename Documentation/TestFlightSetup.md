@@ -1,7 +1,7 @@
 <!-- TestFlightSetup.md — Created by dimaswisodewo on 03/11/2026. -->
 # Set up automatic TestFlight uploads
 
-Push a version tag for a reviewed production commit, and GitHub Actions builds, signs, and uploads Itera to TestFlight. Apple processes the upload before testers can install it.
+Push a version tag for a reviewed production commit, and GitHub Actions builds, signs, and uploads Tuntun to TestFlight. Apple processes the upload before testers can install it.
 
 The initial setup supplies a fresh GitHub-hosted Mac with the tools, signing assets, and credentials it needs. Later releases normally require only a tag. Coworkers do not need release credentials to contribute code or install TestFlight builds.
 
@@ -21,7 +21,7 @@ The initial setup supplies a fresh GitHub-hosted Mac with the tools, signing ass
 | Signing branch | `master` |
 | App release branch | `production` |
 
-Run commands in Terminal from the Itera repository root unless stated otherwise. The input commands use macOS's default zsh shell. Replace uppercase placeholders and example file paths before running commands. Keep passwords and original signing files outside both repositories.
+Run commands in Terminal from the Tuntun repository root unless stated otherwise. The input commands use macOS's default zsh shell. Replace uppercase placeholders and example file paths before running commands. Keep passwords and original signing files outside both repositories.
 
 ## First-time setup
 
@@ -29,13 +29,13 @@ Complete these tasks once. If a resource already exists, verify it and continue.
 
 ### 1. Know where files belong
 
-You need your existing **Itera app repository** and a separate **private signing repository**, for example `OneDihrection/ios-signing`.
+You need your existing **Tuntun app repository** and a separate **private signing repository**, for example `OneDihrection/ios-signing`.
 
 | Location | What belongs there |
 | --- | --- |
-| Itera repository | App source, project.yml, Gemfile/lockfile, fastlane/Fastfile, and .github/workflows/testflight.yml |
+| Tuntun repository | App source, project.yml, Gemfile/lockfile, fastlane/Fastfile, and .github/workflows/testflight.yml |
 | Private ios-signing repository | Certificates, private signing keys, and provisioning profiles encrypted and committed by match |
-| Itera GitHub Actions secrets | Apple API credentials, encoded .p8 key, match password, encoded GitHub read credentials |
+| Tuntun GitHub Actions secrets | Apple API credentials, encoded .p8 key, match password, encoded GitHub read credentials |
 | Password manager / secure local storage | Original API key, match password, tokens, and recovery copies |
 
 Do not commit API `.p8` files, tokens, the match password, or unencrypted signing files to either repository. Match encrypts its signing assets before committing them. Base64 encoding alone does not encrypt a secret.
@@ -65,11 +65,11 @@ The repository was previously validated with Xcode 27.1 and XcodeGen 2.45.4. CI 
 You need an active paid Apple Developer membership and access to manage distribution signing.
 
 1. In Apple Developer → Account → Membership details, find your Team ID.
-2. In Certificates, Identifiers & Profiles → Identifiers, register or confirm Itera's explicit bundle ID.
+2. In Certificates, Identifiers & Profiles → Identifiers, register or confirm Tuntun's explicit bundle ID.
 3. In App Store Connect → My Apps, create the app record using that same bundle ID, or open its existing record.
 4. Confirm required agreements and app information are complete.
 5. Confirm project.yml uses the same PRODUCT_BUNDLE_IDENTIFIER and DEVELOPMENT_TEAM. Its current values are `com.OneDihrection.Itera` and `A2WQZ32XVK`; verify ownership before using them.
-6. The primary app icon is the Icon Composer bundle `Itera/AppIcon.icon`. Xcode 26 or later compiles it into the asset catalog, including fallback renders for iOS 17 and 18. project.yml selects it through ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon, so the bundle must keep the name AppIcon. Regenerate with `xcodegen generate` after changing project settings. Xcode compiles the assets and supplies the primary icon metadata; do not patch Generated/Info.plist manually.
+6. The primary app icon is the Icon Composer bundle `Tuntun/AppIcon.icon`. Xcode 26 or later compiles it into the asset catalog, including fallback renders for iOS 17 and 18. project.yml selects it through ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon, so the bundle must keep the name AppIcon. Regenerate with `xcodegen generate` after changing project settings. Xcode compiles the assets and supplies the primary icon metadata; do not patch Generated/Info.plist manually.
 
 Expected: one consistent bundle ID across Apple, project.yml, and the GitHub variable you will set later. Persistent project changes belong in project.yml, not only the generated Xcode project.
 
@@ -103,7 +103,7 @@ Use a **local bootstrap token with write access**. Match must push encrypted fil
 
 1. Sign in to your personal GitHub account, which must already have write access to `OneDihrection/ios-signing`.
 2. Click your avatar → Settings → Developer settings → Personal access tokens → Fine-grained tokens → Generate new token.
-3. Name it `Itera signing bootstrap` and choose an expiration date.
+3. Name it `Tuntun signing bootstrap` and choose an expiration date.
 4. Select **OneDihrection** as Resource owner, then **Only select repositories** → **ios-signing**.
 5. Under Repository permissions, set **Contents: Read and write**. No workflow permission is needed for this signing-only repository.
 6. Generate the token and save it securely. If approval is pending, ask a OneDihrection administrator to approve it before continuing. If the organization is unavailable, check membership and organization token policy with its administrator.
@@ -163,7 +163,7 @@ Compare the two SHA256 fingerprints:
 
 #### Import the verified files
 
-**Where:** Terminal, in the Itera root. Keep the write-access PAT exported.
+**Where:** Terminal, in the Tuntun root. Keep the write-access PAT exported.
 
 **Action:** once the fingerprints match, run:
 
@@ -184,7 +184,7 @@ Expected: encrypted `.cer` and `.p12` files appear under `certs/distribution` on
 
 #### Create or synchronize the app profile
 
-From the Itera root, in the same authenticated Terminal:
+From the Tuntun root, in the same authenticated Terminal:
 
 ```sh
 bundle exec fastlane match appstore \
@@ -195,7 +195,7 @@ bundle exec fastlane match appstore \
 
 Match reuses a valid imported identity, installs it locally, and creates or synchronizes the App Store provisioning profile. If no usable identity exists in its repository, it attempts certificate creation instead. This local operation is writable; CI stays read-only.
 
-If a profile was generated for another bundle ID, it cannot sign Itera under its new identifier. The distribution certificate may still be reused, but obtain the profile for `com.OneDihrection.Itera` through the command above.
+If a profile was generated for another bundle ID, it cannot sign Tuntun under its new identifier. The distribution certificate may still be reused, but obtain the profile for `com.OneDihrection.Itera` through the command above.
 
 Only after import and synchronization finish, clear the Git credential:
 
@@ -226,13 +226,13 @@ Expected: match finishes successfully and the encrypted assets appear remotely. 
 Create a **second token** for GitHub Actions; do not reuse the bootstrap write token:
 
 1. Open your personal GitHub Settings → Developer settings → Personal access tokens → Fine-grained tokens → Generate new token.
-2. Name it `Itera signing CI` and choose an expiration date you can track.
+2. Name it `Tuntun signing CI` and choose an expiration date you can track.
 3. Select **OneDihrection** as Resource owner.
 4. Select **Only select repositories** → **ios-signing**.
 5. Under Repository permissions, select **Contents: Read-only**.
 6. Generate it, complete organization approval if required, and save it securely.
 
-You do not add either token to the signing repository's files or settings. GitHub grants access through the token's repository selection; the encoded CI credential goes into the **Itera app repository's** Actions secret in step 9.
+You do not add either token to the signing repository's files or settings. GitHub grants access through the token's repository selection; the encoded CI credential goes into the **Tuntun app repository's** Actions secret in step 9.
 
 In your Mac's default zsh Terminal, encode the GitHub credentials using hidden input:
 
@@ -254,9 +254,9 @@ base64 < "$HOME/secure-keys/AuthKey_YOUR_KEY_ID.p8" | tr -d '\n' | pbcopy
 
 Paste this clipboard value into ASC_KEY_BASE64 in step 9. Clear the clipboard afterward with `printf '' | pbcopy`.
 
-### 9. Add settings to the Itera repository
+### 9. Add settings to the Tuntun repository
 
-Open the **Itera app repository**, not ios-signing. Go to Settings → Secrets and variables → Actions.
+Open the **Tuntun app repository**, not ios-signing. Go to Settings → Secrets and variables → Actions.
 
 Under Variables → New repository variable, add:
 
@@ -307,7 +307,7 @@ Use this path after first-time setup is complete. You do not need to recreate ce
 
 ### 1. Push a release tag
 
-From a clean Itera checkout, run the script to choose a major, minor, or patch bump from the highest version tag in production history:
+From a clean Tuntun checkout, run the script to choose a major, minor, or patch bump from the highest version tag in production history:
 
 ```sh
 ./release-testflight.sh
@@ -323,12 +323,12 @@ If production is checked out in another worktree, use `git worktree list` to loc
 
 Success means the release tag was pushed, not that the build or upload finished. Use the printed Actions link to monitor progress.
 
-Open GitHub → Itera → Actions → TestFlight. The workflow:
+Open GitHub → OneDihrection/Itera → Actions → TestFlight. The workflow:
 
 1. Validates `vMAJOR.MINOR.PATCH` and confirms the tagged commit belongs to production history. Tags themselves do not belong to branches. Older production commits are eligible too.
 2. Installs Ruby dependencies and generates the Xcode project.
 3. Reads encrypted signing assets into a temporary CI keychain.
-4. Archives scheme Itera in Release for iOS, using the tag as marketing version and the latest TestFlight build number for that version plus one.
+4. Archives scheme Tuntun in Release for iOS, using the tag as marketing version and the latest TestFlight build number for that version plus one.
 5. Uploads the IPA to TestFlight.
 
 Ordinary branch pushes do not upload. Release one tag at a time: GitHub serializes uploads but can replace pending runs if tags arrive rapidly. Other upload systems must not upload concurrently.
@@ -340,7 +340,7 @@ The generated app declares `ITSAppUsesNonExemptEncryption` as Boolean `false` th
 Merge a change to this declaration into production and push a new release tag to include it in future uploads. An already uploaded build is unchanged: complete its pending encryption questionnaire in App Store Connect using accurate answers for that build.
 
 
-After the upload succeeds, open App Store Connect → Itera → TestFlight. Apple processing continues after the GitHub job ends. Wait for the build to finish processing and answer any export-compliance questions accurately.
+After the upload succeeds, open App Store Connect → Tuntun → TestFlight. Apple processing continues after the GitHub job ends. Wait for the build to finish processing and answer any export-compliance questions accurately.
 
 Create or select an internal testing group and add the processed build as needed. This workflow uploads only; it does not submit to the App Store or distribute to external testers. External testing requires its own review and distribution setup.
 
@@ -352,7 +352,7 @@ Find the exact error first. A successful GitHub login, Apple login, archive, and
 
 | Problem | What to check or do |
 | --- | --- |
-| Could not locate Gemfile | Change to the Itera root before running bundle exec |
+| Could not locate Gemfile | Change to the Tuntun root before running bundle exec |
 | Unable to locate Xcode | Select full Xcode with `export DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer`, then retry in that Terminal |
 | Waiting for a hosted runner | Workflow steps have not started; inspect GitHub runner availability |
 | Release guard fails | Confirm exact numeric tag format, remote production existence, and that the commit is in its history |
@@ -422,7 +422,7 @@ The long part is establishing this reusable setup. Once the assets and secrets a
 
 | Item | Used by / destination | Purpose |
 | --- | --- | --- |
-| GITHUB_TOKEN | Runner → Itera repository | Automatic job credential for checking out app source; its access does not extend to ios-signing |
+| GITHUB_TOKEN | Runner → Tuntun repository | Automatic job credential for checking out app source; its access does not extend to ios-signing |
 | GitHub PAT / MATCH_GIT_BASIC_AUTHORIZATION | match → ios-signing over HTTPS | Reads encrypted signing files; local bootstrap uses separate write access to commit them |
 | MATCH_PASSWORD | match on your Mac or runner | Decrypts/encrypts signing files locally; not a GitHub or Apple login password |
 | Distribution .cer and matching private key in .p12 | Runner Keychain → Xcode signing | Certificate identifies the signing identity; its private key creates the app signature |
@@ -454,7 +454,7 @@ sequenceDiagram
 1. The maintainer confirms a valid certificate and matching private key. Existing assets are imported when available; creating a new certificate requires Apple's permission and capacity.
 2. Apple supplies the app-specific profile. The certificate can be reused across apps in the team, but the profile must authorize this app and certificate.
 3. Match encrypts and pushes the assets. Import and profile synchronization may make separate commits; the diagram summarizes the overall setup.
-4. The maintainer configures Actions secrets and variables in Itera. CI subsequently reads the signing repository without creating certificates or profiles.
+4. The maintainer configures Actions secrets and variables in Tuntun. CI subsequently reads the signing repository without creating certificates or profiles.
 
 ### Communication during each release
 
@@ -502,4 +502,4 @@ The App Store Connect API key and distribution signing private key have differen
 
 - [GitHub personal access token creation and limitations](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens)
 
-The initial AppIcon PNGs were derived on 4 November 2026 from the existing `Itera/Assets.xcassets/hand-hero.imageset/hand-hero.png`, using an opaque sage background. On 16 November 2026 they were replaced by the user-supplied Icon Composer bundle `Itera/AppIcon.icon`. The supplied artwork retains its existing provenance; no new artwork authorship is asserted.
+The initial AppIcon PNGs were derived on 4 November 2026 from the existing `Tuntun/Assets.xcassets/hand-hero.imageset/hand-hero.png`, using an opaque sage background. On 16 November 2026 they were replaced by the user-supplied Icon Composer bundle `Tuntun/AppIcon.icon`. The supplied artwork retains its existing provenance; no new artwork authorship is asserted.

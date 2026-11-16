@@ -22,7 +22,7 @@ from mathutils import Quaternion, Vector
 
 
 ROOT = Path(__file__).resolve().parents[1]
-OUTPUT = ROOT / "Itera/Resources/Animations"
+OUTPUT = ROOT / "Tuntun/Resources/Animations"
 RIG = "Male_Basemesh_Rig_01"
 
 

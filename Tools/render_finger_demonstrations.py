@@ -11,7 +11,7 @@ scene.render.image_settings.file_format = 'FFMPEG'
 scene.render.ffmpeg.format = 'QUICKTIME'
 scene.render.ffmpeg.codec = 'H264'
 scene.render.ffmpeg.constant_rate_factor = 'MEDIUM'
-folder = ROOT / 'Itera/Resources/Animations/Fingers'
+folder = ROOT / 'Tuntun/Resources/Animations/Fingers'
 folder.mkdir(parents=True, exist_ok=True)
 if hasattr(scene, 'eevee') and hasattr(scene.eevee, 'taa_render_samples'):
     scene.eevee.taa_render_samples = 24

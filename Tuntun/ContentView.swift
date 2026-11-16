@@ -1,0 +1,12 @@
+//
+//  ContentView.swift
+//  Tuntun
+//
+//  Created by Amelia Putri Aftiana on 29/10/2026.
+//
+
+import SwiftUI
+
+struct TMContentView: View {
+    var body: some View { TMHomeView() }
+}
