@@ -19,12 +19,12 @@ Run balance sessions on `SessionEngine` through an activity adapter. Afterwards,
   - `advanceOpeningIfReady` (≈ 535-572), `updateCalibrationTransition` (≈ 591-619) and `completeOpeningCue` (≈ 621-642);
   - 11 `isSitToStand` branches;
   - `background()`, which sets `paused` directly (≈ 461).
-- `BalanceMovementEngine` (`Balance/Domain/Models/BalanceMetrics.swift:116`) has `consume(_:scoringEnabled:)`, `invalidateCalibration()`, `restart()` and `nextSet()`. Its implementations are `CrossMidlineBalanceEngine`, `ArmMovementEngine` and `SitToStandBalanceEngine`.
+- `BalanceMovementEngine` (`Balance/BalanceMetrics.swift:116`) has `consume(_:scoringEnabled:)`, `invalidateCalibration()`, `restart()` and `nextSet()`. Its implementations are `CrossMidlineBalanceEngine`, `ArmMovementEngine` and `SitToStandBalanceEngine`.
 - Balance already uses `TrackingObservation`, `SessionRepository`, `SessionCheckpoint` and `SessionSummary`. `TherapyKind` already has the balance cases, which `SessionEngine.selectActivity` currently maps to `nil`.
 
 ## Changes
 
-- Add `Activities/Balance/Domain/Logic/BalanceActivity.swift`, a `TherapyActivity` that wraps `any BalanceMovementEngine`:
+- Add `Activities/Balance/BalanceActivity.swift`, a `TherapyActivity` that wraps `any BalanceMovementEngine`:
   - An observation calls `consume(frame, scoringEnabled: !evidenceHeld)`. The skeleton stays visible while scoring is held.
   - `.recalibrate` calls `invalidateCalibration()`, and `.nextSet` calls `nextSet()`.
   - Entering reaching, holding or returning emits `.calibrationCompleted`. A change in `completedTouches` emits `.repetitionCredited`. `.complete` produces `.finished`.

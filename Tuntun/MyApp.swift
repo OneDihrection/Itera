@@ -15,7 +15,7 @@ struct MyApp: App {
     @AppStorage(AppLanguage.storageKey) private var language = AppLanguage.selected.rawValue
 
     init() {
-        let component = AppComponent(permissions: PermissionManager())
+        let component = AppComponent(permissionService: PermissionService())
         _component = State(initialValue: component)
         _builder = State(initialValue: RootBuilder(component: component))
         AppFont.configureNavigationBars()
@@ -27,7 +27,7 @@ struct MyApp: App {
                 .typography(.body)
                 // Applied at the root so tab stacks, sheets and covers share the language.
                 .environment(\.locale, (AppLanguage(rawValue: language) ?? .indonesian).locale)
-                .environment(\.buttonFeedback, component.buttonClick.play)
+                .environment(\.buttonFeedback, component.buttonClickService.play)
                 .buttonStyle(TMTherapySoundButtonStyle())
                 .task {
                     #if DEBUG

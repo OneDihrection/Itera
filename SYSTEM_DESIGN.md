@@ -1,437 +1,130 @@
-# Guided Therapy — Clean Project System Design
+# Tuntun — System Design
 
-Status: implementation specification. Date: 2026-10-28.
+Status: current-state specification, rewritten 2026-11-16. Every agent reads this whole document before planning, reviewing or changing the project.
 
-This document describes a new app, not a claim that the proof of concept already implements this architecture. It is self-contained except for the binary assets listed below. Copy this document into the clean project as its architecture baseline.
+This document states what is true now. [Documentation/DesignLog.md](Documentation/DesignLog.md) keeps the reasoning, the superseded rules and each change's verification evidence, oldest first; "(log: *Title*)" points at an entry there. When this document and the log differ, this document wins. A change that alters a rule here updates the rule here **and** appends a dated log entry. Explicit user instructions take precedence over both; surface conflicts rather than departing silently.
 
 ## 1. Product and constraints
 
-Build an iPad-only guided exercise app targeting iPadOS 17 or later. Support landscape left and landscape right only; portrait orientations are unsupported. Use an M1 iPad as the minimum physical performance-validation device. A caregiver configures the routine and positions the device. The patient then follows automatic guidance, with assistance nearby for exceptional recovery.
+- Guided exercise app for one patient per installation, set up by a caregiver who positions the device and helps with recovery. No accounts, patient selection, backend or cloud sync (ADR-001).
+- iPad, iPadOS 17 or later, landscape left and right only. Mac Catalyst is retained as an exception; the M1 iPad is the minimum physical performance-validation device.
+- Exercises: the finger program (five finger movements and forearm rotation), arm raise, elbow bend, directional reach, cross midline, external and internal rotation, shoulder flexion, sit to stand and fold towel.
+- Camera evidence is an exercise aid, not a validated clinical measurement. Angles are 2D estimates shown with "≈" and called "observed range", never ROM.
+- Sessions work offline. Every exercise, detection, narration and animation resource is bundled. Nothing is synthesized or sent over the network at runtime.
+- Camera, microphone, speech-recognition authorization and en-US on-device command recognition are mandatory before therapy. There is no touch-only bypass.
+- Indonesian (default) and English, through String Catalogs. The selected language is frozen during a session.
 
-Include arm raises, elbow bends, and directional reaching. Tracking diagnostics and the separate head-interaction and extended rehabilitation demonstrations are outside this version. Camera-derived evidence is an exercise aid, not a validated clinical measurement.
+## 2. Glossary
 
-Support one patient per installation, without accounts, patient selection, or cloud synchronization. Save routines and completion history locally. Do not save video, microphone recordings, landmarks, or detailed measurement streams. The exceptions are bounded key-repetition skeletons (body or hand) and per-repetition aggregates for every exercise (see "Key-repetition replays for clinicians" and "Recording for every exercise"), and short filtered clips of the same key repetitions (see "Key-repetition clips"). Sessions work without internet after initial device voice setup; bundle all exercise and detection resources.
+- **Caregiver:** configures, positions the iPad and assists. Not interchangeable with patient.
+- **Routine:** a saved, reusable configuration of activities and goals. Not live progress.
+- **Daily plan:** today's ordered list of exercises on Beranda (`DailyPlan.standard`), run one after another.
+- **Session:** one attempt at a routine snapshot. Later edits never change its history.
+- **Activity:** one configured exercise on one anatomical side. Bilateral configurations expand into sequential sides.
+- **Set:** a block of repetitions within an activity, followed by rest.
+- **Calibration:** capturing the start position and demonstrated endpoints for the current activity and camera setup. Not a clinical assessment.
+- **Observed target:** a position derived from stable calibration evidence. Never "maximum range of motion".
+- **Repetition:** one accepted start → target → start cycle. **Round:** one reach sequence (right, left, up, each with its return).
+- **Practice time:** time credited from usable evidence, excluding pauses, camera waits and lost tracking.
+- **Session summary:** a persistent record of goals, completed work and outcomes.
+- **Key repetitions:** the first, hardest and last repetition of a set, kept as skeletons and optional clips for clinicians.
 
-Support Indonesian and English using String Catalogs. Follow the app's selected language for text and narration; freeze that selection during an active session. Voice command recognition and command phrases remain English (en-US) in both app languages. Use system speech for instructions and counts. Check voice resources before starting; readable guidance remains available if synthesis fails. Camera, microphone, and speech-recognition authorization and available English on-device command recognition are mandatory before therapy. There is no touch-only bypass. Setup returns to Home; an explicit Start Therapy action validates listening startup before navigation. Session entry independently validates readiness before capture, checkpoints, or progression. Home never continuously listens while idle.
+## 3. Architecture
 
-## 2. Domain glossary
+### Target and features
 
-**Caregiver:** The person configuring the routine, positioning the iPad, and assisting recovery. Avoid using this term interchangeably with patient.
-
-**Routine:** A saved, ordered configuration of activities and goals. It is reusable; it is not live session progress.
-
-**Session:** One attempt to perform a snapshot of a routine. Later routine edits never change its history.
-
-**Activity:** A configured exercise performed on a selected anatomical side. Bilateral movement configuration expands into sequential left/right activities, with an explicit first side.
-
-**Calibration:** Capturing starting positions and demonstrated endpoints for the current activity and camera setup. It is not a clinical assessment.
-
-**Observed target:** A position derived from valid stable calibration evidence. Avoid calling it a clinical maximum range of motion.
-
-**Repetition:** One accepted start-to-target-to-start movement cycle.
-
-**Round:** One sequence of milestones in reaching. Avoid presenting a partial round as complete.
-
-**Practice time:** Time credited from usable active evidence, excluding pauses, camera waits, and unavailable tracking.
-
-**Session summary:** A persistent record of goals, completed work, and outcomes. It is not a replay or diagnostic recording.
-
-## 3. Code conventions and organization
-
-Use KISS and YAGNI: clear names, straightforward control flow, guard clauses, focused helpers, and no speculative frameworks or extension points. Follow the multiline formatting, shallow control flow, and equal readability/performance priorities detailed in the Navigation, typography, and code conventions section. Comment nontrivial purpose, not obvious syntax.
-
-Use one app target, generated by XcodeGen. Organize vertically by feature, then by responsibility. The concrete tree and ownership rules in section 14 are authoritative. Each therapy activity has its own directory and autonomous implementation; the session coordinates them through a shared lifecycle contract.
-
-Keep distinct responsibilities in dedicated files without mechanically splitting tiny related types. Create folders only when they contain real code, except DesignSystem, which starts with its ownership README. Physical folders are the source of truth for generated Xcode groups. Introduce no additional targets or packages.
-
-Reusable UI controls and styling belong in Tuntun/DesignSystem. Every agent doing UI work must inspect that folder and read its README first, reuse suitable components, and create a reusable component there before use when none fits. Extend compatible components instead of duplicating controls or styling in feature folders. Screens may use native SwiftUI layout directly; navigation must use the feature's router. Add components only as needed; do not wrap every SwiftUI primitive or build a speculative library. Components accept values, bindings, content, and actions as needed, without depending on feature view models, repositories, or exercise logic.
-
-Use MVVM. Views render state, bind configuration, and forward actions. They contain no counting, calibration, timer rules, inference, file access, or audio coordination. View models own presentation state and coordinate workflows; domain types own exercise invariants.
-
-Use `@MainActor @Observable` final view models. Each screen's view model conforms to a `@MainActor` `…ViewModelProtocol: AnyObject, Observable`, and the screen is generic over that protocol (and over its content builder when it builds destinations). The owning view retains its model through `@State`; use `@Bindable` only where bindings are required. Do not use `ObservableObject`, `@Published`, or `@StateObject`. Mark dependencies and cancellable storage `@ObservationIgnored` where appropriate. Prefer cohesive extracted view sections and dedicated subviews for meaningful complexity.
-
-Prefer Combine for asynchronous service events and reactive coordination. Store subscriptions with their owner and cancel them when the session ends. Observation is the UI source of truth; do not mirror every observable property into a subject. Do not use Combine to disguise synchronous domain calls or ordinary conditionals.
-
-Use protocol-oriented programming at useful substitution boundaries. Inject services through initializers. Avoid service locators, global mutable dependencies, generic base view models, a universal event bus, and one protocol per domain helper.
-
-## 4. Responsibilities and contracts
-
-Construct concrete dependencies once at the composition root. Keep domain types independent of SwiftUI, AVFoundation, Vision, Speech, Combine, and file storage.
-
-| Component | Owns | Interface |
-| --- | --- | --- |
-| Session engine | Session progression, deadlines, pause reasons, activity selection, completed results | `handle(event) -> transition`, exposing current snapshot and requested effects |
-| Activity logic | Calibration, geometry, evidence acceptance, milestones, counting | Concrete movement/reach implementations selected by activity kind |
-| Session view model | Service coordination and presentation mapping | Observable state and typed user-action methods |
-| Tracking service | Capture, orientation, inference, freshness, detector lifecycle | Configuration/start/stop/retry commands; publisher of observation and availability events |
-| Audio service | Sole audio-session ownership, synthesis, recognition, interruptions | Start/stop/speak/cancel commands; publisher of commands, completion, availability and interruption events |
-| RoutineRepository | Saved routine configurations | Asynchronous load/save/delete using routine domain types |
-| SessionRepository | Active-session checkpoint, summaries, history queries | Asynchronous checkpoint/finalize/query/delete using session domain types |
-| Animation renderer | Loading, framing, side reflection, playback cancellation | Asset and playback-mode inputs; loading/failure state |
-
-Define typed `SessionCommand`, `SessionEvent`, `SessionSnapshot`, `SessionEffect`, `TrackingObservation`, `TrackingAvailability`, `AudioEvent`, `Routine`, and `SessionSummary`. Never route strings such as `"Pause"` through the camera layer. Use command cases for pause, resume, stop, repeat instruction, retry calibration, and caregiver skip. Localization maps recognized words to these values at the audio boundary.
-
-Every observation carries a monotonic capture timestamp, capture generation, image dimensions, anatomical landmarks and confidence. Domain coordinates are unmirrored, normalized image coordinates with explicit aspect correction. Presentation transforms alone map them to an aspect-fitted preview and apply mirroring. Never derive anatomical left/right from screen position.
-
-Engine inputs include observation, monotonic tick, user command, capture availability, instruction completion/failure, and lifecycle changes. Outputs include immutable snapshot, identified narration/cancellation requests, tracking requirements, and completed-result notifications. A command returns one transition; effects never mutate the engine directly. Tag asynchronous effects with session/activity generation and request identity; ignore obsolete completions.
-
-Serialize engine mutations on the main actor, receiving Combine service events there. Keep per-frame inference and file I/O off the main thread. Engine work must remain short. Use one capture/inference owner with bounded latest-result delivery; discard superseded work rather than queue unbounded frames. Camera services do not own or invoke therapy progression.
-
-## 5. Session lifecycle and failure behavior
+One app target generated by XcodeGen from `project.yml` (ADR-007). No packages, test targets or extra targets. The project spec is the source of truth; the generated `.xcodeproj` is ignored.
 
 ```text
-configuration → preparing → calibrating → instruction/demo → countdown
-              → active → feedback → rest → next activity → summary
-```
-
-Model pause/readiness as explicit suspension reasons around the current stage, retaining its resume destination. A normal pause preserves captured targets and completed work, but clears pending holds and incomplete cycles. Camera changes, real capture discontinuities, and incompatible geometry changes invalidate calibration before scoring resumes. Discard partial current-round milestones on recalibration; retain completed rounds.
-
-Keep one preview mounted throughout a live session, including guidance, activity transitions, feedback, and rest. Stop capture at summary or exit. Guidance requires capture readiness, an attached preview reporting video, and a fresh current-generation frame. It does not require a detected patient merely to begin instructions. Camera waits freeze deadlines and evidence acceptance. On recovery, rebase deadlines and replay interrupted instructions with a new identity.
-
-Backgrounding pauses the session, stops capture/listening, and cancels narration. Foregrounding can restart capture but never automatically resumes progress. Audio interruptions pause the session. Exiting finalizes the partial summary and releases all subscriptions, timers, audio, preview, capture, and temporary keep-awake settings.
-
-Pause and stop remain available through touch at all stages. Resume is explicit. Caregiver retry repeats affected calibration; skip records the activity as skipped. Stop records a stopped session and preserves completed work. Missing/ambiguous evidence never produces credit. A resource error must expose explanation and retry or caregiver action rather than silently advancing.
-
-For runtime scoring, reject observations older than 300 ms, from a prior generation, nonfinite, or nonincreasing in timestamp. Missing evidence clears pending holds. Do not credit intervals without usable evidence. Use monotonic time for deadlines and durations; wall-clock time is only for history dates.
-
-## 6. Exercise rules to preserve
-
-These rules were checked against the current therapy implementation. Do not substitute the separate legacy rehabilitation analyzer's angular thresholds.
-
-### Common geometry
-
-For body-based activities, require one person and usable required joints (confidence at least 0.5). Correct horizontal distances by image width/height. Draw and accept against the same geometry. Body-based radius is 20% of the reference limb length. With a valid viewport, clamp bubble diameter to 68–120 points, then cap it at 80% of center separation; close targets may therefore produce smaller bubbles. Without a viewport, retain body-relative radius. Arm raise and elbow bend are the exception: their start bubble, target bubble and calibration hold ring are one fixed 100 points across (`MovementActivity.zoneDiameter`), converted with the same viewport height as other bubbles.
-
-### Arm raise and elbow bend
-
-| Rule | Requirement |
-| --- | --- |
-| Geometry | Arm raise uses hip–shoulder–elbow; elbow bend uses shoulder–elbow–wrist. Store offsets relative to the middle joint and normalize by its reference segment. |
-| Start capture | Three contiguous steady seconds. |
-| Target capture | Three contiguous steady seconds. |
-| Valid geometry | Reference segment and tracked displacement exceed 0.03 aspect-correct image-height units. |
-| Stability | Reset hold if displacement from its first sample exceeds 10% of current normalized limb length. Nonincreasing time or a gap over 150 ms clears hold. |
-| Distinct target | Distance from start exceeds 40% of captured starting limb length. Use mean held offsets. |
-| Repetition | Require one second in each accepted zone; start → target → start credits one repetition. The captured start may initialize the first target phase. |
-| Interruption | Gaps over 150 ms clear dwell; over 500 ms, explicit break-cycle, or prolonged missing evidence reset to start. Preserve completed repetitions. |
-
-### Directional reaching
-
-Capture a stable starting wrist position relative to the selected shoulder. Require visible face, shoulders, selected elbow and wrist; forearm length and horizontal shoulder separation must exceed 0.015 image-height units. Initial stable capture takes one second, with tolerance half the body radius.
-
-Assess right, left, and up separately for eight usable seconds each. A candidate endpoint requires a one-second stable hold. Accept only positive displacement in the requested direction with forward displacement at least its orthogonal displacement. Select the farthest stable endpoint, not a noisy single-frame extreme. Return to start between directions.
-
-Use the full endpoint as target, not 75% of its distance. Require separation greater than two body radii; otherwise that direction remains unscored. Keep positions shoulder-relative. After a three-second countdown, perform the guided sequence of direction targets and returns. Target and return arrivals require one-second dwell. Each outward attempt has eight usable seconds: record reached, not reached, or unscored, then continue. A trial/rehearsal precedes counted practice. Credit practice time only during practice; per-sample time increments are capped at 200 ms, with gaps above 300 ms contributing nothing.
-
-Routine defaults: movement goals five per side, left first; reach one round; rest 15 seconds; timed-practice duration 60 seconds. Permit positive configurable goals. Do not convert failed tracking into successful timed completion; caregiver-selected timed practice is an explicit alternative and must be labeled accordingly.
-
-## 7. Audio and bilingual behavior
-
-One audio service owns synthesis, microphone capture, recognition, interruption handling, and audio-session configuration. Use `SFSpeechRecognizer` for the iPadOS 17 baseline, checking locale availability and `supportsOnDeviceRecognition`, with `requiresOnDeviceRecognition = true`. Never silently send audio to a server. Recognition availability can change mid-session; pause and block resume if command recognition becomes unavailable. Recovery must validate permissions and listening startup, then wait for explicit Resume.
-
-Pause and stop must interrupt narration and counts. Unlike the prototype, do not tear recognition down for every spoken cue. Validate simultaneous playback/listening, echo handling, recognition restart boundaries, and self-trigger rejection on the physical baseline. A startup capability check alone does not prove this requirement. Failure to demonstrate reliable interruption means hands-free mode is not accepted; block therapy rather than advertise continuous listening. Touch Pause and Stop remain available throughout.
-
-Use a deliberately small English command vocabulary, resolved from the English String Catalog entries independently of the app language. Process each recognition utterance once, regardless of revised partial transcripts. Scope callbacks by recognition generation. Stop/pause have priority over queued guidance; resume only applies in a resumable paused state. Display listening/unavailable status. Avoid command phrases inside app narration. Serialize utterances, cancel obsolete cues, and never let an old completion advance a new instruction.
-
-String Catalogs contain UI text, spoken instructions, pluralization, accessibility descriptions, and command phrases. Persist stable identifiers and numeric values, never localized display strings. Format history in the current language. No hard-coded Indonesian domain enum values.
-
-## 8. Local persistence
-
-Use separate protocol-backed routine and session repositories, sharing serialized atomic file mechanics. Keep a versioned routines file, an active-session checkpoint, and one immutable finalized summary file per session. Write atomically. Distinguish missing files from malformed or unsupported versions; do not overwrite unreadable data with empty defaults.
-
-A routine stores stable ID, ordered activity configurations, side/order, goals, rest, and timed-practice settings. A summary stores stable session ID, routine snapshot, start/end dates, session outcome, and activity results: kind, side, prescribed goal, achieved repetitions/rounds or practice seconds, and completed/skipped/interrupted status. Do not persist calibration as resumable state.
-
-Checkpoint the routine snapshot at session start and completed activity results after every completion. On termination, the next launch finalizes the checkpoint as interrupted; unfinished work receives no invented credit. An orderly stop can include observed partial progress, explicitly labeled incomplete. Finalization is idempotent by session ID so a crash between summary write and checkpoint removal cannot duplicate history.
-
-Repository errors are visible. Retry failed saves; require caregiver acknowledgment before continuing without reliable history. Allow deleting saved routines and finalized summaries independently. Deleting a routine never deletes historical routine snapshots. No cloud backup exclusion is implied: document the installation's OS backup policy separately from app-level cloud synchronization.
-
-## 9. Assets and animation
-
-Body-exercise examples are bundled silent H.264 MP4s in `Tuntun/Resources/Animations` (see its README), rendered per `Documentation/AnimationRenderingStandard.md`: arm raise, elbow bend, directional reach, cross-midline, shoulder external/internal rotation, shoulder flexion, and sit-to-stand. Arm clips show the right arm; reflect the rendered picture for left-side examples without reflecting labels; with both arms chosen, the example follows the active arm. Hand and finger exercises use their own bundled MOV examples.
-
-Keep assets self-contained. Loop demonstrations and active examples; a static start example holds the first frame, a static peak example the midpoint, and Reduce Motion shows a paused midpoint.
-
-Keep examples hidden during instruction cards, preparation, countdown, rest, and pause; static start/peak capture examples remain visible when holds reset. Missing assets show text fallback and never block scoring. Ignore obsolete loads. Card delays start when narration completes or fails: eight seconds for full demonstrations and three seconds for ordinary instructions. Identified reading completion is an independent advancement gate, so an elapsed card delay cannot advance until reading also completes. Presentation reports measured reading status to the session engine, which alone owns advancement. VoiceOver requires explicit reading acknowledgment. Replayed or interrupted guidance receives a new identity; obsolete reading and narration callbacks cannot advance it. Movement capture begins only after the post-card five-second preparation stage. The directional-reaching opening failure watchdog remains referenced to guidance start (12 seconds). Verify this timing with both languages. No new generated assets are required.
-
-## 10. Architectural decisions
-
-### ADR-001 — Local single-patient product
-
-Accepted, 2026-10-28. Use local routine and summary storage without accounts or backend. Multi-patient and synchronized records would expand identity, ownership, and data-management requirements beyond this proof of concept. Device replacement does not provide app-managed history transfer.
-
-### ADR-002 — Independent domain engine inside one target
-
-Accepted, 2026-10-28. Keep session and activity rules independent of platform services, with one app target and feature folders. Multiple Swift packages offer stronger build enforcement but add configuration without a current reuse requirement. Keep dependency direction explicit so extraction remains possible without building speculative package seams.
-
-### ADR-003 — Observation for presentation, Combine for events
-
-Accepted, 2026-10-28. Use Observation-based MVVM and Combine service streams. A publisher-only UI model would conflict with the requested Observation convention; duplicating both systems' state adds synchronization hazards. Domain transitions remain ordinary typed calls.
-
-### ADR-004 — Fresh calibration after termination
-
-Accepted, 2026-10-28. Preserve completed results but do not resume saved calibration. Restoring it could apply obsolete targets after camera or patient repositioning. The cost is repeating setup after interruption.
-
-### ADR-005 — Offline voice with interruptible guidance
-
-Accepted, 2026-10-28. Require local recognition and voice interruption during playback, with mandatory readiness and no touch-only fallback when unsupported. Listening only between cues is simpler but leaves periods when the patient cannot issue a voice stop. Physical verification is an acceptance gate, not an assumed framework guarantee.
-
-## 11. Implementation order
-
-1. Establish the single target, feature structure, conventions, glossary, domain types, and repository contracts.
-2. Implement routine configuration, storage, and history with snapshot ownership and interrupted-session recovery.
-3. Implement session lifecycle and movement activity rules; connect camera observations through the tracking boundary.
-4. Add directional reach logic and consistent preview/acceptance geometry.
-5. Add bilingual catalogs, system narration, interruptible voice controls, and mandatory capability gating.
-6. Integrate animation conventions, lifecycle cleanup, error states, and physical-device acceptance.
-
-## 12. Verification and acceptance
-
-No automated tests are requested. Require a successful simulator build with the deployment minimum set to 17.0, plus physical M1-iPad checks. Check API availability explicitly; a build using a newer SDK alone does not establish runtime compatibility.
-
-| Area | Manual scenarios and expected result |
-| --- | --- |
-| Movement | Hold start/target, move too close, leave zone before dwell, interrupt midway, finish prescribed count; only complete valid cycles count. |
-| Reach | Wrong direction, unstable extreme, eight usable seconds with pauses, inadequate separation, reached/not-reached/unscored; full stable endpoint is used. |
-| Geometry | Front/back camera, both landscape orientations, rejection of portrait rotation, anatomical sides, aspect-fit margins; overlay and acceptance agree. |
-| Audio | Both languages, pause/stop during every cue type, ambient conversation, narration self-trigger, repeated partial recognition, permission denial, unavailable locale, interruption; stale callbacks never advance. |
-| Lifecycle | Background during calibration/countdown/practice, explicit resume, normal pause, exit, termination after completed activity; cleanup and partial history are correct. |
-| Storage | Relaunch, routine edit/delete, corrupt file, unsupported schema, failed save, interrupted finalization; no silent data loss or duplicate history. |
-| Resources | Airplane mode after setup, missing voice/animation, slow load, Reduce Motion, mirrored examples; clear fallback without false capability claims. |
-| Performance | Two-minute runs for body practice on baseline hardware; record preview cadence, inference cadence, capture-to-publication age, dropped/stale observations, and thermal behavior. Target 30 FPS preview; do not require 30 inferences/sec. Evidence older than 300 ms never scores. |
-
-Record device, OS, app version, scenario, observed result, and outstanding issue. A responsive preview does not establish measurement validity. Do not mark camera, voice, animation, or offline acceptance complete from a successful build alone.
-
-Verification status for this specification: source inspection only. Clean-project builds and physical-device checks remain pending.
-
-## 13. Framework references
-
-Official documentation consulted through Context7 during design:
-
-- [Observation migration and ownership](https://developer.apple.com/documentation/swiftui/migrating-from-the-observable-object-protocol-to-the-observable-macro)
-- [Observable model ownership](https://developer.apple.com/documentation/swiftui/managing-model-data-in-your-app)
-- [Bindable](https://developer.apple.com/documentation/swiftui/bindable)
-- [On-device recognition capability](https://developer.apple.com/documentation/speech/sfspeechrecognizer/supportsondevicerecognition)
-- [Requiring on-device recognition](https://developer.apple.com/documentation/speech/sfspeechrecognitionrequest/requiresondevicerecognition)
-- [Speech recognizer availability and lifecycle](https://developer.apple.com/documentation/speech/sfspeechrecognizer)
-
-Use current official documentation when implementing AVFoundation capture/audio, Vision, Core ML preprocessing, Combine threading, and RealityKit loading. Do not adopt APIs introduced after iPadOS 17 without availability guards and a defined baseline behavior.
-
-## 14. Vertical project structure
-
-```text
-project.yml
-.gitignore
-SYSTEM_DESIGN.md
-GuidedTherapy/
-  DesignSystem/
-    README.md
-  App/
-    GuidedTherapyApp.swift
-    AppComponent.swift
-    RootView.swift
+Tuntun/
+  MyApp.swift
+  App/            AppComponent (composition root), RootBuilder, RootView + TabRouter, DebugScreenLauncher
+  DesignSystem/   reusable controls and styling (read its README first)
+  Shared/         app-wide infrastructure: Tracking, Audio, Animation, Storage, Permissions, Localization, Accessibility
   Features/
-    Routine/
-      Presentation/
-        Views/
-        ViewModels/
-      Domain/
-        Models/
-        Repositories/
-      Data/
-        Models/
-        Repositories/
+    Routine/      exercise catalog (TherapyKind, FingerExercise, BalanceExercise) and saved programs/settings
+    Home/         Beranda, today's plan, its intro/rest pages and settings
+    History/      the Progress tab: history, reports, replays, interrupted-session recovery
     Therapy/
-      Session/
-        Presentation/
-          Views/
-          ViewModels/
-        Domain/
-          Models/
-          Logic/
-          Repositories/
-        Data/
-          Models/
-          Repositories/
-      Activities/
-        ArmRaise/
-          Presentation/
-            Views/
-            ViewModels/
-          Domain/
-            Models/
-            Logic/
-        ElbowBend/
-          Presentation/
-            Views/
-            ViewModels/
-          Domain/
-            Models/
-            Logic/
-        DirectionalReach/
-          Presentation/
-            Views/
-            ViewModels/
-          Domain/
-            Models/
-            Logic/
-      Shared/
-        Domain/
-          ActivityLifecycle/
-          Movement/
-        Presentation/
-          Components/
-    History/
-      Presentation/
-        Views/
-        ViewModels/
-  Shared/
-    Tracking/
-    Audio/
-    Animation/
-    Storage/
-    Localization/
-  Resources/
-    Assets.xcassets
-    Animations/
-    Models/
-    Localization/
+      Session/    the guided session engine, session storage and the guided session screen
+      Shared/     ActivityLifecycle, Movement primitives, ScriptedRepetitions, LivePose
+      Activities/<Name>/   one flat folder per activity (logic, its views, and its session if it has its own)
+  Resources/      asset catalogs, Animations, Audio, Localization, ML models
 ```
 
-This tree describes ownership, not a requirement to create empty directories. Add activity-local Data/Models and Data/Repositories only when an activity owns distinct persistence. Session results belong to Session. Place reusable UI controls and styling in root DesignSystem (Tuntun/DesignSystem in this repository). Feature views retain screen composition; therapy-specific compositions may remain in Therapy/Shared/Presentation/Components and must use design system controls and styling. Genuinely app-wide infrastructure belongs in root Shared.
+### Folder rules
 
-| Location | Responsibility |
+Inside a feature, files are grouped by kind. Create a kind folder only when it has files; activity folders stay flat.
+
+| Folder | Holds | Rule |
+| --- | --- | --- |
+| `Models/` | Values, configurations, events, snapshots, engines, calibration and counting rules | Foundation only: no SwiftUI, UIKit, Combine, AVFoundation, Vision or file access |
+| `Storage/` | A repository protocol, its `Local…` implementation and its versioned Codable records, side by side | Uses `Shared/Storage` for atomic files |
+| `Services/` | Feature-owned services (`…Service`, with `…ServiceProtocol` when substituted) | Same rules as Shared services; no UI |
+| `ViewModels/` | `@Observable` screen models and their `…ViewModelProtocol` | Coordinates services; no duplicated exercise rules |
+| `Views/` | Layout, bindings, accessibility, forwarding actions | No counting, timers, inference, file or audio work |
+| `Navigation/` | The feature's `…Builder` with its `…Dependency` protocol, and its router with routes | See section 4 |
+
+The Foundation-only rule also applies to logic files in flat activity folders. Keep distinct responsibilities in dedicated files without mechanically splitting tiny related types.
+
+### Dependency direction
+
+- App constructs every concrete service, repository and shared model, and conforms to each feature's `…Dependency`.
+- Home → Routine, Therapy (its builder and `DailyPlanSessionReporting`), History's recovery contract.
+- Therapy → Routine. Sessions report to the plan only through `DailyPlanSessionReporting`; Therapy never names a Home type.
+- History → Therapy's session and finger-session reading types, Routine.
+- Routine → Therapy's finger-session storage only (`FingerHomeViewModel` reads finger history and checkpoints). DesignSystem and Shared depend on no feature.
+- Nothing depends on Home.
+- These are conventions within one target, not compiler-enforced modules (ADR-002).
+
+### Responsibilities
+
+| Component | Owns |
 | --- | --- |
-| DesignSystem | Reusable UI controls and styling, independent of feature view models, repositories, and exercise logic. |
-| Presentation/Views | Layout, bindings, accessibility, and forwarding actions. |
-| Presentation/ViewModels | Observation-based UI state and Combine service coordination; no duplicated domain rules. |
-| Domain/Models | Domain values, configurations, events, snapshots, results, and invariants. |
-| Domain/Logic | Autonomous state machines, calibration, acceptance, and counting. |
-| Domain/Repositories | Small persistence contracts expressed using domain types. |
-| Data/Models | Versioned Codable file representations and explicit domain mappings. |
-| Data/Repositories | Concrete repositories implementing domain contracts. |
-| Shared/Storage | Serialized atomic file mechanics without routine or session knowledge. |
+| `SessionEngine` (Therapy/Session/Models) | Guided progression, deadlines, suspension reasons, activity selection, set ordering, results. `handle(event) -> transition` with snapshot and requested effects |
+| Activities (`TherapyActivity`) | Their own calibration, geometry, evidence acceptance, milestones and counting (ADR-006) |
+| Session view models | Service coordination, effects, presentation mapping |
+| `BodyTrackingService`, `HandCameraService` | Capture, orientation, inference, subject selection, freshness, clip frames |
+| `SessionAudioService` (`SessionAudioServiceProtocol`), `GuidanceAudioService` | Narration, counts, effects, music and recognition. `NarrationAudioSession` alone configures the audio session |
+| `ButtonClickService` | The tap sound, played through the guidance and session audio services |
+| `FingerSessionService` (`FingerSessionServiceProtocol`, Activities/Fingers) | Prepares finger and forearm sessions and holds the open one across the live and closing pages |
+| `HistoryRecoveryService` (`HistoryRecoveryServiceProtocol`, History/Services) | Finalizes a session interrupted by termination, once per launch, before therapy starts |
+| `PermissionService` (`PermissionServiceProtocol`) | Camera, microphone and speech authorization; explicit, serialized, coalesced requests; refreshed on foreground; launch never prompts |
+| Repositories | Routines, finger routines, sessions, finger sessions, daily-plan progress |
 
-A domain `SessionSummary` expresses completed work. A `SessionSummaryRecord` expresses its versioned saved representation. A history view model formats domain summaries for presentation. Do not make storage records observable UI models or move exercise rules into Codable records.
+The finger session (`FingerSessionViewModel`, `FingerSessionEngine`) and Balancing (`BalanceSessionViewModel` with `CrossMidlineBalanceEngine`, `ArmMovementEngine`, `SitToStandBalanceEngine`) still run their own progression. Consolidating them onto shared flow types is proposed in [Documentation/SessionFlowRedesign](Documentation/SessionFlowRedesign/README.md); until a phase lands, the current behaviour described here is authoritative.
 
-Routine owns reusable exercise definitions/configuration and RoutineRepository. Therapy consumes a routine snapshot and owns execution, results, and SessionRepository. History consumes a narrow session-history reading contract defined beside SessionRepository; it neither duplicates session models nor owns session persistence. The existing single TherapyRepository concept is replaced by these two owners.
+### Threading and reactivity
 
-Permitted dependencies: App constructs concrete services and repositories; Presentation depends on Domain, service contracts, and DesignSystem; DesignSystem never depends on features; Data depends on Domain and file infrastructure; Therapy depends on Routine configuration types; History depends on Therapy's history-reading contract. Domain never depends on Presentation, Data implementations, Combine, or platform services. Shared infrastructure never depends on a feature. These are conventions within a single target, not compiler-enforced module boundaries.
+- View models are `@MainActor @Observable final` classes. Do not use `ObservableObject`, `@Published` or `@StateObject`. Observation is the UI source of truth (ADR-003).
+- Combine carries asynchronous service events. Subscriptions are owned and cancelled when the session ends. Domain transitions are ordinary typed calls.
+- Engine mutations are serialized on the main actor and stay short. Per-frame inference and file I/O stay off the main thread. One capture owner delivers the latest result with bounded work; superseded frames are dropped, never queued.
+- Typed values only cross boundaries: `SessionCommand`, `SessionEvent`, `SessionSnapshot`, `SessionEffect`, `TrackingObservation`, `TrackingAvailability`, `AudioEvent`, `Routine`, `SessionSummary`. Never route strings through the camera layer.
 
-## 15. Autonomous activity lifecycle
+## 4. Composition and navigation
 
-Each activity owns its internal states and implementation. Do not force directional assessment and movement target capture into one universal internal sequence.
-
-Define a small `TherapyActivity` protocol under Therapy/Shared/Domain/ActivityLifecycle. It accepts typed activity events through `handle(event)` and returns a transition containing lifecycle status, presentation snapshot, requested effects, and an optional terminal outcome. Events cover commands, timestamped observations, monotonic ticks, availability, and identified guidance completions. Effects describe work; they do not perform camera, audio, navigation, or persistence operations.
-
-Use common lifecycle statuses preparing, running, suspended, and finished. Internal states remain activity-specific. Use a concrete sum type for activity presentation snapshots, with movement and reach payloads; avoid dictionaries, untyped payloads, or a large bag of unrelated optional fields. The common lifecycle does not replace each activity's state machine.
-
-ArmRaiseActivity and ElbowBendActivity live in their own directories and reuse common target-capture, geometry, and repetition logic under Therapy/Shared/Domain/Movement. DirectionalReachActivity retains its distinct assessment/rehearsal/practice rules. Activity view models map snapshots and forward actions; they do not maintain another progression state machine. Session coordination remains the single route for service events and commands, preventing duplicate subscriptions from delivering observations twice.
-
-The session engine selects an implementation through one explicit activity factory switch. It sends events to the current activity, owns session-wide suspension and ordering, and reacts to terminal outcomes. Activities do not reference the session engine or sibling activities, create the next activity, or save history.
-
-Assign a unique execution identity to every activity attempt. Terminal outcomes distinguish completed, skipped, and interrupted. The session records an outcome at most once per execution identity, ignoring obsolete and duplicate completions. Preserve completed results when retrying; invalidate old callbacks before beginning a new attempt. A skipped activity is never counted as completed, and an interrupted session never advances automatically.
-
-Completion automatically enters feedback, waits for identified guidance completion/failure and the existing bounded timing policy, then enters configured rest and starts the next activity. The last activity leads to summary. No Next/Done button is required for ordinary progression. While paused or recovering, hold pending progression; resume explicitly. Pause/stop commands take priority over completion advancement in the same processing turn. Finalization is idempotent so competing stop/completion events cannot append two results.
-
-Required manual scenarios: complete each activity without touch advancement; repeat a completion callback; pause during final feedback; stop at the completion boundary; retry after stale asynchronous work; skip during recovery; and finish the final activity. Verify one saved outcome, correct rest behavior, and exactly one final summary.
-
-## 16. XcodeGen project ownership
-
-Commit project.yml, source, resources, and documentation. Ignore the generated project. All persistent project changes go into the specification, never exclusively into Xcode's generated settings. Record validated Xcode and XcodeGen versions in the clean project's README; folder conventions do not require new targets, packages, templates, or a plugin registry.
-
-The following is a clean-project starting specification. Replace the bundle identifier and supply the development team for signed device builds. Paths are relative to project.yml. Permission text below is the English default; use InfoPlist.xcstrings with English and Indonesian translations for system permission prompts.
-
-```yaml
-name: GuidedTherapy
-options:
-  createIntermediateGroups: true
-configs:
-  Debug: debug
-  Release: release
-targets:
-  GuidedTherapy:
-    type: application
-    platform: iOS
-    deploymentTarget: "17.0"
-    sources:
-      - path: GuidedTherapy
-        type: group
-        excludes:
-          - "**/*.md"
-    settings:
-      base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.example.GuidedTherapy
-        TARGETED_DEVICE_FAMILY: "2"
-        SUPPORTS_MACCATALYST: NO
-        SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD: NO
-        CODE_SIGN_STYLE: Automatic
-        # DEVELOPMENT_TEAM: YOUR_TEAM_ID
-    info:
-      path: Generated/Info.plist
-      properties:
-        CFBundleDisplayName: Guided Therapy
-        UILaunchScreen: {}
-        UIApplicationSceneManifest:
-          UIApplicationSupportsMultipleScenes: false
-        NSCameraUsageDescription: Camera access enables on-device exercise tracking.
-        NSMicrophoneUsageDescription: Microphone access enables spoken exercise controls.
-        NSSpeechRecognitionUsageDescription: Speech recognition enables pause, resume, and stop commands.
-        UISupportedInterfaceOrientations~ipad:
-          - UIInterfaceOrientationLandscapeLeft
-          - UIInterfaceOrientationLandscapeRight
-schemes:
-  GuidedTherapy:
-    build:
-      targets:
-        GuidedTherapy: all
-    run:
-      config: Debug
-    archive:
-      config: Release
-```
-
-The single recursive source entry includes Swift files and discovers resource types. Do not also add Resources as a second overlapping source entry. Use generated groups, not opaque folder references for the entire resource tree: asset catalogs and String Catalogs require their appropriate build processing. Runtime animation lookup uses filenames; preserve resource names when copying into the new Animations directory. Validate actual build phases and output rather than assuming all resources are simple copied files.
-
-Suggested clean-project .gitignore entries:
-
-```gitignore
-*.xcodeproj/
-Generated/
-DerivedData/
-xcuserdata/
-*.xcuserstate
-```
-
-Generate from the repository root:
-
-```sh
-xcodegen generate
-open GuidedTherapy.xcodeproj
-```
-
-Regenerate after changing project settings, sources, folders, or resources. Normal Swift content edits do not require regeneration. Do not add test targets under the current manual-verification policy.
-
-Validation in the clean project: generate the project, inspect the single target and scheme, confirm deployment target/device family and groups, then build for Simulator with signing disabled. Inspect compiled catalogs; launch and verify both animation lookups, both languages, and permission localization. Regenerate twice and confirm stable settings. These generation/build/device checks remain pending; reviewing this documentation does not establish their success.
-
-### ADR-006 — Activity-owned state machines
-
-Accepted, 2026-10-28. Each activity owns its states behind a small shared lifecycle contract. The session owns ordering and completion bookkeeping. A universal activity sequence would constrain distinct rehearsal and assessment workflows, while unconstrained implementations would duplicate session progression. Share concrete movement primitives without introducing a generic state-machine framework.
-
-### ADR-007 — XcodeGen specification as project source of truth
-
-Accepted, 2026-10-28. Commit project.yml and ignore the generated xcodeproj. Generating from physical feature folders keeps groups aligned and avoids manual project-file maintenance. The tradeoff is a required generation step and a recorded toolchain version before opening a clean checkout.
-
-References: [XcodeGen project specification](https://github.com/yonaskolb/XcodeGen/blob/master/Docs/ProjectSpec.md), [generation workflow](https://github.com/yonaskolb/XcodeGen/blob/master/README.md).
+- **Root.** `AppComponent` (App) constructs shared services once and conforms to `HomeDependency`, `HistoryDependency` and `TherapySessionDependency`. It holds each feature builder lazily (`HomeBuilder(dependency: self)`), plus app lifecycle calls. It is never placed in the environment or passed to feature code. `RootBuilder` builds the tabs from the feature builders.
+- **Dependencies.** Each feature declares a `@MainActor protocol …Dependency` beside its builder, listing only what that feature uses. A feature that needs another feature's pages receives that builder through its dependency (Home receives `sessionBuilder`).
+- **Naming.** Name services the way the reference project does: a service type is `…Service`, its protocol (when there is a substitution boundary) is `…ServiceProtocol`, and an injected service is stored and passed as `…Service`, for example `permissionService: any PermissionServiceProtocol`, `audioService: SessionAudioService`. Repositories keep `…Repository`; shared view models, routers and builders keep their own suffixes.
+- **Builders.** `HomeBuilder`, `HistoryBuilder`, `TherapySessionBuilder` take `any …Dependency`, store it as `private let dependency`, and create every view model and view. Views and view models never construct other view models. A view model that wires router hooks (`HomeScreenViewModel`, `ReportsViewModel`, `RootViewModel`) is created once, as a lazy property of its builder or of `AppComponent`, because the app body re-evaluates on a language change and a discarded model would leave its router's hooks dangling.
+- **Content builders.** A screen that builds rows, destinations, sheets or cover pages is generic over a `…ContentBuildable` protocol with associated view types (`HomeContentBuildable`, `PlanCoverBuildable`, `DailyPlanNextContentBuildable`, `PracticePreferencesContentBuildable`, `HistoryContentBuildable`), so previews can pass mock builders. Do not add a `…Buildable` protocol that no view is generic over.
+- **View-model protocols.** Each screen's model conforms to a `@MainActor …ViewModelProtocol: AnyObject, Observable`; the screen is generic over it and keeps it in `@State` (rows hold it as a plain `let`). Previews use `@Observable` mocks; the guided session uses snapshot fixtures (`SessionPresentationFixtures`, Debug only).
+- **Routers.** Closure-hook objects in each feature's `Navigation/`. The screen that owns a stack declares its `NavigationStack(path:)`, destinations, sheets and covers from state on its view model, which wires the router's hooks. `HomeRouter` serves Beranda's sheet, the plan intro and the plan cover; pages receive it as `HomeRouterProtocol`, `DailyPlanRouterProtocol` or `SessionRouterProtocol`. `HistoryRouter` serves the Progress stack; rows navigate themselves through `HistoryRouterProtocol`. Cross-tab navigation goes through `TabRouterProtocol`. Never read a router from the environment.
+- **Plan cover.** The plan runs in one full-screen cover (`TMPlanCoverHost`) that stays mounted while `PlanCover.route` changes between sessions, summaries, rest and the next intro. Sheets and covers re-apply button feedback, typography and the sound button style through `modalEnvironment`.
 
 ## Navigation, typography, and code conventions
+
+Use KISS and YAGNI: clear names, straightforward control flow, guard clauses, focused helpers, and no speculative frameworks or extension points. Use protocols at real substitution boundaries; avoid service locators, global mutable dependencies, generic base view models, a universal event bus and one protocol per helper.
 
 Each feature owns its navigation through its router. The screen that owns a stack declares its `NavigationStack(path:)`, `.navigationDestination`, sheets and covers from state on its screen view model, and that view model wires the feature's `…Router` hooks (closures such as `push`) to that state. Every other page and view model on that stack receives the router through its initializer as a `…RouterProtocol`, and destinations are built only by the feature's builder. Never read a router from the environment; cross-tab navigation goes through `TabRouterProtocol`. Native SwiftUI layout remains allowed.
 
 Use .typography(...) or inherit the root body style for app-authored text. Font names and direct font styling belong only in DesignSystem/Typography.
 
+Reusable UI controls and styling belong in Tuntun/DesignSystem. Read its README first, reuse suitable components, and create a reusable component there before use when none fits. Components accept values, bindings, content and actions, never feature view models, repositories or exercise logic. Therapy-specific compositions may stay in their feature.
+
 Keep body focused on composition. Prefer named private computed view properties, using @ViewBuilder for conditional or multiple-view sections, or dedicated subviews for meaningful sections with inputs, bindings, state, reuse, or substantial complexity. Reusable controls belong in DesignSystem; avoid splitting trivial expressions mechanically.
 
-Inject dependencies through an explicit initializer. A type that receives services, repositories, view models, factories or factory closures declares an `init` listing them, with any plain value inputs, and stores them as `private let` (`@Bindable private var` or `@State private var` where bindings or ownership require it). Do not rely on memberwise initializers for injection. Pages are built only by their feature's builder (`…Builder`, conforming to `…Buildable`) from a `…Component` that its parent component seeds through a `…Dependency` protocol; the root component, `AppComponent`, constructs shared services once. Never place a component in the environment or pass `AppComponent` to feature code. Subviews that take only values or a model from their parent may keep memberwise initializers.
+Inject dependencies through an explicit initializer. A type that receives services, repositories, view models, factories or factory closures declares an `init` listing them, with any plain value inputs, and stores them as `private let` (`@Bindable private var` or `@State private var` where bindings or ownership require it). Do not rely on memberwise initializers for injection. Pages are built only by their feature's builder (`…Builder`), which receives its parent's services through the feature's `…Dependency` protocol; the root, `AppComponent`, constructs shared services once and conforms to those protocols. Never place `AppComponent` or a builder's dependency in the environment or pass `AppComponent` to feature code. Subviews that take only values or a model from their parent may keep memberwise initializers. Name services the way the reference project does: a service type is `…Service`, its protocol (when there is a substitution boundary) is `…ServiceProtocol`, and an injected service is stored and passed as `…Service`, for example `permissionService: any PermissionServiceProtocol`, `audioService: SessionAudioService`. Repositories keep `…Repository`; shared view models, routers and builders keep their own suffixes.
 
 Every newly authored file must have a format-appropriate header with its filename, actual author, and creation date. Use an explicitly supplied author first, otherwise effective git config user.name; ask if neither exists. Never hard-code a team member or use the AI's name. Preserve existing creation authorship. Swift uses Xcode-style // Created by headers; YAML uses comments and Markdown uses HTML comments. Preserve copied binaries and third-party licenses unchanged and document their source separately; never corrupt formats without comment support.
 
@@ -443,783 +136,78 @@ Treat readability and runtime performance as equally important. Choose clear alg
 
 Use /// Markdown API documentation when helpful and // MARK: - sections in longer files. Comment non-obvious purpose, constraints, and lifecycle behavior rather than restating syntax.
 
-## Centralized authorization
-
-Shared/Permissions owns camera, microphone, and speech-recognition authorization through an injected PermissionManaging contract. App constructs one observable PermissionManager and refreshes it on foreground entry. Requests are explicit, serialized, and coalesced; launch never prompts. Tracking and audio services consume authorization while retaining capture, audio-session, and runtime readiness ownership. Camera authorization covers in-app image capture; Photos access is outside this increment. Standard synthesis needs no permission; Personal Voice is excluded. Accessibility Voice Control is enabled by the user in Settings, not an app permission. Future controls must expose meaningful accessibility labels and actions.
-
-Verification: physical-device authorization, localization, Settings recovery, and concurrent request scenarios remain pending.
-
-## Localization implementation
-
-Resources/Localization/Localizable.xcstrings owns app text; InfoPlist.xcstrings owns permission descriptions. Use searchable namespaced string literal keys such as `home.greeting` with native Text and String(localized:) APIs. Reusable SwiftUI controls accept LocalizedStringKey. Do not generate Swift symbols or maintain wrapper APIs or key enums. English is the development/fallback language and Indonesian is supported. Language selection uses a persistent English / Bahasa Indonesia selector on Home, applying immediately to app text, narration, and counts without global bundle overrides. Recognition and voice commands remain English. Sessions retain their selected language. Future audio services resolve the app language and freeze it during sessions. See the localization README for authoring and verification steps. Physical-device language and permission verification remains pending.
-
-## Consolidated session guidance
-
-Each exercise and side presents one concise opening instruction card. Movement activities then show a separate demonstration and five-second preparation. Target capture retains five-second preparation with live cues; return-to-start and practice use live cues without additional instruction cards. Positioning guidance appears on the first opening card only. Identified narration, measured reading, VoiceOver acknowledgment, and recovery gates remain required. This replaces the reference multi-card boundaries.
-
-Patient guidance uses a short immediate action with one optional smaller supporting sentence. English and Indonesian retain relevant side, comfort, and positioning details. The 1–2 second glance target applies to the main cue, not advancement timing. Narration and measured reading include both lines.
-
-## Bystander tolerance and interruptible holds
-
-Accepted, 2026-11-05, at the product owner's request. This section supersedes "Require one person" (section 6, Common geometry), "Missing evidence clears pending holds" (section 5), the 150 ms gap rule for movement capture holds (section 6), and the finger camera's rejection of every multi-hand frame, for the cases below.
-
-**Subject selection.** Tracking services choose the patient instead of discarding frames with several people or hands. `HandSubjectSelector` prefers continuity with the recently tracked hand, then the only hand matching the exercised side, then a hand at least 1.4 times larger than every other. `BodySubjectSelector` measures each person by shoulder width, which arm movement does not change, and remembers the patient's usual place (a slowly updated torso position and size) for 60 seconds within a camera generation. It prefers continuity with the recently tracked torso at a similar size and near that place; after a longer loss it re-acquires only someone back at the usual place within 0.75 to 1.33 times the remembered size, so a nearer bystander walking in front is never followed. Before any place is known it picks a person at least 1.4 times larger than every other, or, among similar sizes, the one clearly nearest the frame centre, where setup places the patient. Otherwise no subject is reported. Selection never uses screen position alone, and anatomical sides still come from the selected subject's own landmarks. Once a patient is selected, `TrackingObservation.personCount` is 1 and bystanders' landmarks are excluded. The hand detector reports up to four hands.
-
-**Interruptible holds.** `InterruptibleHold` (Therapy/Shared/Domain/Movement) owns hold-time arithmetic for finger and balance holds. `StableHold` follows the same rules for movement target capture. Hold time is credited only between consecutive fresh in-zone samples no more than 300 ms apart (150 ms for movement capture). Tracking loss freezes a partial hold for up to 1.5 s. Leaving the zone, or a detector wobble beyond tolerance, freezes it for up to 0.4 s. Interrupted time is never credited, so the patient still holds for the full duration. A longer interruption, trunk compensation, pause, recalibration, a camera generation change, or nonincreasing timestamps clear the hold as before. A frozen hold's bubble stays visible at its last position with its timer paused. Movement repetition dwell keeps the 150 ms gap rule.
-
-Verification: Simulator build only. Physical M1-iPad checks remain pending: a bystander walking behind and in front of the patient, a second hand entering view, occlusion longer and shorter than 1.5 s, and confirmation that no interrupted time is credited.
-
-## Recorded narration
-
-Accepted, 2026-11-05, at the product owner's request for a more natural Indonesian voice. Indonesian instructions may play bundled recordings instead of system speech, extending the bundled count-clip pattern above. `Tools/generate_narration.py` renders each narration String Catalog key once with ElevenLabs (voice "Marizka", model `eleven_multilingual_v2`) into `Tools/NarrationRaw`; `Tools/normalize_narration.swift` then levels every clip to about -15 dBFS speech with a soft limiter under -1 dBFS and encodes 96 kbps AAC into `Resources/Audio/NarrationID`, named by `NarrationClips.resourceName(for:)`. Raw clips stay outside the bundle so loudness can be re-levelled without new generation. Nothing is synthesized over the network at runtime, and no patient data leaves the device. A cue plays only when every line has a recording; otherwise, on any playback failure, or for English, the best installed system voice (`NarrationVoice`) speaks the full text. Completion, cancellation, pause, stop and interruption behave as for speech, and each cue reports completion once. The script's API key comes from the developer's environment and is never stored in the repository. Physical verification of clip timing, ducking and voice-command recognition during playback remains pending.
-
-Narration volume: both narrators configure the session through `NarrationAudioSession`. Without listening they use `.playback` with `.spokenAudio`. While voice commands listen they use `.playAndRecord` with `.default` mode, not `.voiceChat`, so narration stays at normal media volume in every exercise (voice chat plays like a phone call: much quieter, on the separate call volume). This gives up voice chat's echo cancellation; commands are a few English words and narration avoids them, so self-triggering is unlikely. Debug builds launched with `-TuntunVoiceChatAudioMode` restore `.voiceChat` for comparison. Physical checks of loudness, pause/stop recognition during narration, and narration self-trigger rejection in both languages remain pending. Superseded by "One loud speaker configuration" (2026-11-12).
-
-
-## Therapy audio scheduling
-
-Body-therapy preparation and exercise countdowns start after identified introductory speech finishes or fails through bounded recovery. Emit countdown numbers once from all engine transitions, including camera observations; use bundled localized count clips with speech fallback. Preparation remains five seconds, exercise countdowns three seconds, and movement calibration holds two seconds for arm raise, elbow bend and directional reach (see Locked patient and two-second holds).
-
-SessionAudioService remains the sole audio-session owner. Foreground speech retains only the latest pending live prompt; accepted repetition counts are serialized ahead of pending prompts in a bounded queue (32 entries, reporting feedback unavailable on overflow). Stage replacement, pause, stop, and interruption cancel obsolete work. Intentional cancellation is reported separately and never advances guidance; unexpected synthesis cancellation reports failure. Speech has a bounded watchdog.
-
-Target success effects use a separate prepared player, at 40% volume when foreground audio is active and normal volume otherwise. No effect backlog is retained. Finger-therapy audio is unchanged. Physical verification of both languages, pause/stop recognition during playback, route/interruption recovery, missing clips, and narration self-trigger rejection remains pending.
-
-## Mac Catalyst compatibility
-
-Mac Catalyst support is retained from main as an explicit exception to the original iPad-only platform scope. Physical M1-iPad acceptance remains required. Voice commands remain exact English phrases with en-US on-device recognition in both interface languages. Catalyst camera and audio acceptance remains pending.
-
-
-## Arm and Reaching sets and camera preference
-
-Arm raises, elbow bends, and directional reaching configure 1–5 sets per exercise, defaulting to one. Repetition and round goals apply per set and per selected side. Complete all sets on the first selected side before switching sides. Use configured rest between sets and a three-second countdown before subsequent practice. Activities retain their calibration between sets; camera discontinuities or explicit recalibration invalidate it. Rehearsal does not repeat between ordinary sets. Timed-practice fallback uses the configured duration for each remaining set. Skip skips the remaining sets of the current activity/side.
-
-Session coordination owns set ordering and rest. Each completed set records and checkpoints one result with its set number; summaries retain per-set goals and work, so totals are the sum of results. Missing set configuration in older files means one set; missing result set number means set one. Interrupted recovery preserves saved sets and marks the next unfinished set interrupted without inventing work. Calibration is never persisted for reuse after termination.
-
-On iPad, all exercises use the front camera. Body exercises prefer the front ultra-wide camera, then the front wide-angle camera. Hand/finger exercises use the front wide-angle camera. Camera recovery offers retry. Mac Catalyst can use the system webcam when its position is unspecified. Body pose inference runs on a copy of each frame extended downward by a neutral strip (`BodyFramePadder`, 50% of the frame height), because Vision's body pose model drops people and joints when only the upper body is visible. Everything downstream of `BodyTrackingService` stays in original-frame coordinates: normalized `y` is mapped back as `y_original = y_padded * 1.5 - 0.5`, `x` is unchanged, and joints that land below the frame (`y < 0`) are discarded as guesses. Padding applies to body mode only, never hand mode, and is on by default; the `Tuntun.bodyFramePadding` user default turns it off for on-device comparison (launch argument `-Tuntun.bodyFramePadding NO` in the scheme). Since 2026-11-12 padding copies the camera's 8-bit bi-planar YUV planes on the CPU into a buffer of the same format, with a neutral grey strip (luma and chroma 128), instead of a Core Image render to BGRA; other pixel formats run unpadded. Validate lens selection and tracking geometry physically; a Simulator build does not establish device acceptance.
-
-
-## Task-oriented towel folding
-
-Task Oriented is a separate routine category with one activity, Fold Towel. It uses the shared session, router, audio readiness, measured opening/demo guidance, three-second countdown, feedback, sets, rest, checkpoint, and summary infrastructure. Defaults are left hand, one four-fold repetition, one set, and 15-second rest. Goals apply per side and per set; bilateral configuration expands to sequential sides. Only completed four-fold towels count as repetitions. Existing records remain readable.
-
-One empty selected hand controls a virtual towel; the app does not verify physical grasp or detect real towels. Hand-only Vision inference shares BodyTrackingService's capture owner and bounded delivery, disabling body inference and preferring the normal lens. HandPoseExtractor shares the 21-joint ordering with finger tracking. Require one unambiguous matching anatomical hand and a confident wrist, middle knuckle, thumb tip and index tip at confidence 0.5 or greater (superseded from curl to pinch on 2026-11-07; see "Towel folding: pinch grab"). Missing joints never imply a pinch. These defaults require physical validation.
-
-There is no towel calibration or preparation stage. After identified opening/demo speech and measured reading gates, enter a three-second countdown. Its deadline explicitly starts interactive practice. Live narration is replaceable feedback: observations, holds, movement, release and counting run regardless of speech completion, failure, cancellation or silence. Obsolete identities cannot restart countdown or change folding state. Other activities retain their existing speech gates.
-
-Four successive halves alternate right-to-left and bottom-to-top, reframing each accepted folded layer. Fixed normalized image targets preserve the current reach: horizontal (0.8, 0.5) to (0.2, 0.5), vertical (0.5, 0.2) to (0.5, 0.8). Pinch inside the yellow zone (grabs at once since 2026-11-07; see "Towel folding: no grab or destination hold"); arriving already pinched is valid. No opening hold precedes a grab. Leaving yellow or losing usable grip evidence clears the pending hold. Capture the successful grab's wrist position as travel origin, yielding zero initial fold progress for off-center grabs. Closed movement can reverse; perpendicular tolerance is 0.15 and target radius is 0.12 in normalized workspace coordinates. Reaching green while pinched arms release at once, then confirm opening there for 300 ms. Early release cancels the current grasp.
-
-Brief uncertain/missing evidence freezes the fold, hides unavailable cursor evidence and clears pending holds. A usable closed hand must return within 300 ms; then require a fresh contiguous 200 ms closed confirmation near the reacquisition point. Rebase travel at the confirmed wrist position and frozen progress, crediting no displacement during the gap. Destination dwell restarts after recovery. Prolonged loss cancels the grasp. Freshness, timestamps and capture generations follow shared session rules. Ordinary pause discards the unfinished towel and retains completed repetitions. Restart/capture changes restart countdown; subsequent sets also count down without calibration.
-
-The single camera preview fills the exercise area with aspect-fit video. CameraDisplayGeometry supplies the image rectangle excluding letterbox margins for the target overlay and towel workspace. Snapshot image aspect comes from capture evidence. The activity reflects the selected hand into workspace coordinates once using the preview's explicit mirroring flag; rendering does not reflect those coordinates again. Towel fill is 35% opacity with stronger borders and crease lines; overlapping panels remain translucent. The demonstration independently retains opaque fill. Progress marks use a small translucent backplate outside the movement path; screen guidance and controls remain outside that path. Typed interaction phase, hold progress and grab identity drive rings, grabbed styling, destination/release cues and feedback.
-
-Only rendered cursor position and fold progress interpolate, using interruptible critically damped spring transitions (response about 0.16 s, superseding the earlier 50 ms linear rule on 2026-11-10) across frame gaps up to 300 ms. Filtering drives acceptance (see the 2026-11-07 smooth tracking section). Missing evidence, recovery, phase/identity changes, completion, cancellation, pause and capture changes snap to authoritative state; there is no extrapolation. Reduce Motion disables interpolation and uses a flat panel fold/static demo.
-
-SessionAudioService remains the sole audio owner. Identified grab, fold and completed-towel transitions select existing bundled button-click, target-reached and set-complete clips respectively, once per transition, without a backlog. Optional cues respect celebration-sound preferences and duck to 40% of their normal volume during foreground speech/counts. Live guidance replacement cancels obsolete narration before playing the new transition cue. English and Indonesian help explain direct grabbing and movement during narration.
-
-FoldTowelActivity owns evidence acceptance and lifecycle; TowelFoldSequence owns four-fold mechanics; TMTherapyFoldPanel is value-driven and independent of feature logic. Task history uses immutable summaries through SessionRepository. No detailed tracking streams or images are stored; towel practice keeps only the bounded key-repetition hand skeletons and clips described in "Recording for every exercise".
-
-Physical M1-iPad acceptance remains pending: verify both selected hands, both cameras, both landscape orientations, image/overlay alignment, visibility through overlapping panels, both languages, large text, Reduce Motion, grip occlusion and relaxed closure, speech/recognition during movement, route/interruption recovery, pause/background/restart, saved outcomes and two-minute capture-age/thermal measurements. Record device, OS, app version, scenario and observed result separately. Simulator builds and synthetic checks cannot establish these results.
-
-Implementation verification on 2026-11-05: XcodeGen generation, the Simulator build with IPHONEOS_DEPLOYMENT_TARGET=17.0, and diff checks passed. A temporary Swift harness compiled the production domain, geometry and interpolation-policy code without a test target. It checked 200 ms direct/off-center grabbing, opening in yellow, pending-hold cancellation, backward motion, frozen loss/reacquisition with rebased travel, recovery exactly at the destination, prolonged loss, four-fold credit, pause preservation, stop/late callbacks, aspect-fit margins at 4:3/16:9/1:1 image ratios and two landscape viewport sizes, both mirror values, authoritative display resets, opening/demo reading gates, withheld live speech completions, delayed/failed/duplicate/obsolete callbacks, and two sets with automatic rest/feedback. Transition counts were 17 grab cues (including one abandoned on pause), 12 intermediate fold cues, and four completed-towel cues. Intentional audio cancellation remains ignored by the view-model event adapter. These checks do not establish native rendering, animation timing, physical tracking, speech recognition, or device acceptance; the physical matrix above remains pending.
-
-## Calm arm and reaching practice
-
-Accepted, 2026-11-06, at the product owner's request. This section supersedes the following for arm raise, elbow bend and directional reaching only:
-
-- **Dwell** (section 6): repetition and return-to-start dwell, and directional-reach arrival and return dwell, are 2 seconds instead of 1. Calibration capture holds stay at 3 seconds (movement) and 1 second (reach start and candidate endpoints).
-- **Target placement** (section 6, "Distinct target"): the arm raise and elbow bend practice target is 75% of the distance from the captured start to the held endpoint, so it sits within comfortable reach. The distinctness check still uses the held endpoint, and the bubble radius and separation cap use the stored target, so drawing and acceptance agree. Directional reach keeps the full stable endpoint.
-- **Interruptible dwell** (section 6, "Interruption"; Bystander tolerance section): repetition dwell uses `InterruptibleHold`. Leaving the bubble freezes the hold for up to 0.4 s, a tracking gap freezes it for up to 0.5 s (the existing phase-reset limit), and interrupted time is never credited. A longer interruption clears the hold; the 0.5 s reset to start is unchanged. A frozen bubble stays visible with its ring paused. Movement dwell credits at most 150 ms per fresh step; reach dwell, 300 ms.
-- **Presentation**: while practicing these activities, the screen shows the camera, a dot row for repetitions, one cue line and small Pause and Stop buttons, with the listening state as an icon. Touch Pause and Stop remain available at all stages (section 5). Guidance cues avoid error wording. See DesignSystem README, "Calm camera guidance".
-
-Narration: Indonesian recordings for existing keys are unchanged. `session.farther` changed in English only ("Try reaching a little further"); its Indonesian text and bundled clip are unchanged until a clip is regenerated. Tracking-loss cue text changed in both languages for keys without recordings.
-
-Verification: Simulator build with IPHONEOS_DEPLOYMENT_TARGET=17.0 passed. A temporary Swift harness over the production movement code checked: the 2 s return dwell, the 75% target position, a 0.3 s exit freezing the dwell without credit, a 0.6 s exit clearing it, and a full repetition counting once. Physical M1-iPad checks remain pending: tremor and detector jitter, overlay alignment, reach dwell, Pause and Stop by voice and touch, Reduce Motion, both languages and large text.
-
-
-## Preview continuity and startup (2026-11-06)
-
-The session screen uses one layout for every stage of an activity; the calm arm and reaching layout is chosen by activity kind, never by stage, so the camera preview stays mounted through countdowns, preparation and rest (section 5). A replaced preview can no longer report "not ready" after its successor reported ready. A movement countdown advances from the clock as well as from frames, and an interrupted countdown stays pending: resuming re-announces it and starts a fresh three seconds instead of returning to the start bubble. After the frame watchdog stops capture, capture restarts once automatically (bounded); the session still pauses until explicit Resume.
-
-While the session is starting or the camera is becoming ready, the exercise layout stays visible with its inline camera-wait message. Retry appears after three seconds of waiting or on a real failure.
-
-Verification: Simulator build passed and a temporary harness over the movement code confirmed the countdown completes from ticks alone and survives suspend and resume. Physical M1-iPad checks remain pending: interrupt the camera during the countdown, confirm one preview mount across stages, and confirm no retry flash on cold start in both languages.
-
-## Calm guidance visibility (2026-11-06)
-
-Calm guidance stays clearly visible for older patients. Every on-camera shape has a dark underlay; the target outline is at least 10 pt over a mostly opaque fill, the home outline 7 pt, the guidance arrow 9 pt and never fades while the joint is outside the active bubble, the hold ring 10 pt over a visible track, and the joint marker 28 pt. Progress dots are 24 pt on a dark backing, and Pause and Stop remain readable. The 68-120 pt bubble size rule is unchanged for reach; arm raise and elbow bend use a fixed 100 pt (see 2026-11-10 below). Verification: Simulator build only; reading each indicator at 1.5, 2 and 2.5 m in bright and dim rooms remains pending on the M1 iPad.
-
-## Locked patient and two-second holds (2026-11-06)
-
-Accepted at the product owner's request. This supersedes the 3 s arm and elbow calibration capture and the 1 s directional-reach start and endpoint holds: for arm raise, elbow bend and directional reach, calibration holds and arrival holds are all 2 seconds. Movement dwell credits steps up to 300 ms, like reach, so slow frames with several people in view cannot stop a hold from filling; interrupted time is still never credited. Countdowns stay at three seconds.
-
-`BodySubjectSelector` now locks to the first selected patient. Identity is matched by torso position and torso size (which does not change when an arm is raised); a bystander is never adopted because they look larger, and the reference does not drift toward a person who is almost as close. While the patient is missing nothing is reported; only after five seconds without them may the dominance rule pick again. Each new lock increments `TrackingObservation.subjectEpoch`, which makes `MovementLandmarkSmoother` restart so two people are never blended. Frames without a selected patient pass through without resetting the smoother, whose 0.3 s timestamp rule still clears it after a real gap. Arm raise, elbow bend and directional reach all use the smoother. The guidance arrow is a straight shaft with an open chevron tip.
-
-Verification: Simulator build passed; temporary harnesses confirmed the 2 s capture and dwell, that the selector stays on the patient across bystander size changes, order swaps and an adjacent similar-sized bystander, never swaps while the patient is hidden, and relocks only after the timeout. Physical M1-iPad checks remain pending: a second person beside, behind and in front of the patient while reaching, partial occlusion, an arm raise, and stopwatch timing of the 2 s holds.
-
-
-## Stable audio session and short spoken cues (2026-11-07)
-
-Accepted at the product owner's request, after reports of overlapping voices and noise.
-
-**One audio configuration.** During a session the audio session stays at `.playAndRecord` with `.default` mode and `.defaultToSpeaker` (normal media volume, never `.voiceChat`). `NarrationAudioSession.activate` is idempotent: it changes the category or reactivates only when something differs, and `SessionAudioService` always asks for the listening configuration because voice commands are mandatory, so music and narration never see a category switch. The microphone engine enables the system voice processing (echo cancellation and noise suppression) once, before it starts, with other-audio ducking set to minimum (`voiceProcessingOtherAudioDuckingConfiguration`, iOS 17) so music and narration stay loud. If enabling it fails, listening continues without it. Debug builds launched with `-IteraNoVoiceProcessing` skip it for comparison. Superseded by "One loud speaker configuration" (2026-11-12): voice processing is now off by default.
-
-**No overlap.** Starting any narration, count clip or system-speech utterance fades out target and towel effects first. Clip players stamp every play with a token, so a late finish callback cannot complete a newer play, and every stop fades out over about 40 ms before pausing. Count clips are preloaded. Clip watchdogs for counts and the target clip are 2 seconds. Music ducks to 0.10 during any cue. The button click is skipped while the session is narrating.
-
-**Spoken text may differ from displayed text.** An optional `speak.<key>` String Catalog entry replaces the wording that is spoken (`NarrationText.resolve`); without one, speech uses the displayed text. Screen text, the measured-reading gate and card advancement are unchanged. Recorded Indonesian clips remain keyed by the base key, so Indonesian `speak.` entries exist only for cues without a recording (arm raise and elbow bend opening cards, reach directions). For recorded cues (`parity.reachOpening`, `session.reachStart`, `session.farther`, `session.countdown`, `session.rest`, `session.timedPractice`) only English has a short variant until the Indonesian recording is regenerated; the intended Indonesian short wording is "Tahan posisi.", "Jangkau sedikit lebih jauh.", "Bersiap. Tiga, dua, satu.", "Istirahat." and "Latihan waktu." `Tools/generate_narration.py` prefers `speak.<key>` text and includes the new keys for the next run with an ElevenLabs key. The spoken exercise-and-side cue is now just the exercise and side.
-
-Verification: Simulator build passed; the spoken-text resolver was checked against the built English and Indonesian string tables. Physical M1-iPad checks remain pending: overlap at the countdown, after target-reached, at pause and resume and after camera interruption; clicks when listening starts and when music starts, pauses or stops; narration and music loudness, and "pause" and "stop" recognition at 1.5 m and 2.5 m, with and without `-IteraNoVoiceProcessing`; Bluetooth headphones.
-
-## Light arm, reach and towel session (2026-11-07)
-
-Accepted at the product owner's request. For arm raise, elbow bend, directional reach and fold towel, this supersedes the presentation bullet of "Calm arm and reaching practice" (camera with a dot row, one cue line and small Pause and Stop on the camera) and the corner example drawn over the camera. Sit-to-stand keeps the dark screen.
-
-The session is light and follows the finger exercise look (white canvas, ink text, grey panels, pill buttons, mint and peach identity). Practice shows a header, one cue line, and the camera beside a side column holding the animation (arm raise and elbow bend only; reach and fold towel show none during practice, to keep focus on the therapy; fold towel still shows its demonstration on the instruction page) and the repetition panel, so the demonstration never covers the camera. Every stage (instruction, demonstration, countdown, rest, feedback, pause, summary) is light; the summary is light only if every result is a light activity. The layout depends on the activity kind alone, so one preview stays mounted through all stages (section 5). Touch Pause is the header's leading action and Stop is in the header on the practice screen and on every stage page. Overlay colours become mint and peach under the existing dark underlay, with the visibility minimums of "Calm guidance visibility" unchanged. The camera is narrower, so the viewport used for bubble sizing (section 6) changes; drawing and acceptance still share it. No tracking, audio, engine or persistence behaviour changed.
-
-Verification: Simulator build with IPHONEOS_DEPLOYMENT_TARGET=17.0 passed. Not yet checked, on Simulator or device: how each stage looks, both landscape orientations, both languages, large text and Reduce Motion, towel workspace visibility on the narrower camera, and mint/peach overlay legibility on live video at 1.5-2.5 m on the M1 iPad.
-
-Follow-up, 2026-11-07 (startup): the light stage pages force the light color scheme, so they stay light when the device is in dark mode. The camera-wait gate is unchanged; only its wording and visual are calmer.
-
-Follow-up, 2026-11-07: preparation ("Bersiap"), the three-second countdown and rest on the light pages use `TMTherapyCountdownDial`, a very large digit inside a thick ring that sweeps continuously (a linear one-second animation per published second; the engine still publishes whole seconds). The 3D examples use a bright backdrop (`exerciseBackdrop`), a stronger key light, a rim light, a higher image-light exponent and closer framing. The side column was 380 pt with the animation panel taking the free height and a compact repetition card. Verification: Simulator build passed. The look of the 3D lighting and the ring motion was not viewed; check on the Simulator and the M1 iPad.
-
-Arm raise and elbow bend target placement, 2026-11-07: the practice target is now 90% of the distance from the captured start to the held endpoint, superseding the 75% in "Calm arm and reaching practice". At 75% the bubble was judged too forgiving; 90% asks for roughly 20% more of the demonstrated range while staying inside the held extreme. The distinctness check against the held endpoint, the bubble size rule and directional reach (full endpoint) are unchanged. `MovementActivity.targetFraction` is the tuning constant (0.85 easier, 0.95 harder). Verification: Simulator build and a temporary harness only; whether 0.90 is achievable and motivating needs physical M1-iPad checks with patients.
-
-Countdown ring correction, 2026-11-07: preparation and the pre-practice countdown show their full value while their cue is spoken and start their deadline afterwards, so a ring that swept from the moment the page appeared ran ahead of the digit and stalled. `SessionSnapshot.countdownRunning` now reports whether the clock is running (preparation deadline set; activity countdown no longer awaiting `countdownReady`; rest always), and `TMTherapyCountdownDial` sweeps only while running, holds full otherwise, starts a freshly shown dial from this second's value, and uses butt caps so an empty ring draws nothing. Verification: Simulator build and a temporary harness over the production `SessionEngine` (false for the 1.5 s simulated narration, then true, with seconds 5, 4, 3, 2, 1; the 3 s countdown false until ready, then 3, 2, 1). The ring's visual motion was not watched; check it on the Simulator or M1 iPad.
-
-## Directional reach calibration flow (2026-11-07)
-
-Accepted at the product owner's request. This supersedes the hidden five-second reach preparation, the eight-second per-direction assessment budget, and the arrow-only assessment guidance.
-
-- Reach now follows arm raise and elbow bend: opening card, the five-second "Get ready" page, then calibration. The reach activity has no private preparation timer.
-- Start capture and each direction complete on a stable two-second hold (ring drawn around the tracked joint). A direction's endpoint is its first stable hold forward of the start by more than two body radii and not more sideways than forward; wrong-place holds restart. A direction with no accepted hold after 30 usable seconds stays unscored. This replaces "farthest of eight seconds"; the Farthest marker no longer appears.
-- Assessment draws the home bubble and a ghost target bubble in the current direction, with the joint-to-target arrow.
-- The reach countdown also advances from the clock, so lost tracking does not freeze the digit.
-- Cue copy is one short line per step; the tracking-lost message appears only after one second of missing evidence and clears after half a second of good evidence. The light cue reserves its support line for reach, and the status line shows only in rehearsal and practice.
-- Indonesian recordings for `session.reachRight/Left/Up`, `session.returnStart` and `session.reachStart` still use the old wording until regenerated.
-
-Verification: Simulator build only. Physical M1-iPad checks remain pending: ghost target placement and ring legibility, hold timing, tracking-loss debounce, both languages and large text.
-
-Reach calibration, reach-far refinement (2026-11-07): the assessment ghost now sits at 95% of the patient's arm length (upper arm plus forearm, frozen with the body radius), kept inside the image, and is anchored at the shoulder rather than the resting wrist: left and right at shoulder height far out from the body, up above the shoulder. Acceptance is measured along the line from the rest position to the ghost. For the cross direction (right arm to the left, left arm to the right) it extends to at least 1.2 shoulder widths, past the opposite shoulder, so reaching it takes trunk rotation. A held endpoint is accepted only if it covers at least half the ghost distance, so a token hop restarts the hold. Cues read "Reach right/left as far as you can", "Reach across, turn your body" and "Reach up as high as you can" (no Indonesian recordings exist for these keys). Calibration holds tolerate 0.3 s of stray samples. The tracked-joint hold ring is larger (60 pt radius, 14 pt stroke over a dark underlay), visible from the start of the hold with a growing teal fill, and drawn above the bubbles; arm raise and elbow bend start capture use it too. Verification: Simulator build only. Physical M1-iPad checks remain pending: ghost placement for both arms and both camera mirrorings, whether the cross ghost induces trunk rotation, and ring legibility at 1.5–2.5 m.
-
-Arm raise and elbow bend target placement, 2026-11-07 (later): the practice target is now 100% of the distance from the captured start to the held endpoint, superseding the 90% above, so the bubble sits exactly where the patient held. Directional reach already used the full endpoint and is unchanged. `MovementActivity.targetFraction` remains the tuning constant. Verification: Simulator build only; whether the full endpoint is achievable every repetition despite tremor and detector jitter needs physical M1-iPad checks.
-
-Guidance arrow redesign, 2026-11-07: accepted at the product owner's request, superseding the 9 pt straight-shaft arrow in "Calm guidance visibility" and the "guidance arrow is a straight shaft with an open chevron tip" note. The arrow is now a trail of one to four small chevrons (7 pt stroke, about 30 pt wide, 14 pt dark underlay) along the path from the joint to the active bubble, brightening in sequence toward it over 1.5 s (static and brighter toward the target under Reduce Motion). It fades over the last 60 pt before the bubble and is hidden once a hold has begun. This applies to every activity using `TMSessionTargetOverlay`. The 7 pt stroke is below the earlier 9 pt arrow minimum and is offset by the larger chevrons and the underlay; Simulator build only, with legibility at 1.5, 2 and 2.5 m pending on the M1 iPad.
-
-## Towel folding: smooth tracking and guided path (2026-11-07)
-
-Accepted at the product owner's request. For fold towel only, this supersedes "No filtering affects acceptance" in "Task-oriented towel folding" and the "wrist position" evidence it implied.
-
-**Tracking.** Hand inference runs at the full capture rate. The detector reports up to four hands and `HandSubjectSelector` picks the patient's (continuity, then the exercised side's chirality, then dominance); a second hand no longer blanks the frame. `requireHand(_:side:)` carries the exercised side, and `HandPoseExtractor.candidate(for:aspect:)` is the one copy of the selection inputs, shared with `HandCameraService`. The tracked point is the palm center (mean of wrist and the four finger knuckles, at least three confident), which moves much less than the wrist when the fingers curl. `HandCursorFilter` (an adaptive One Euro filter: heavy smoothing at rest, light while moving; restarts after a gap over 0.3 s, a generation change or non-increasing time) filters that point after reflection. The filtered point drives both the cursor and acceptance, so what is drawn is what is scored; thresholds, radii and hold durations are unchanged.
-
-**Grip.** Closed starts at curl 0.35 and open at 0.20, held to 0.30 / 0.25 once confirmed (unchanged). Mid-curl frames keep the last confirmed state for 0.15 s, and a longer mid-curl is `.transitioning` rather than lost tracking while releasing at the destination, so opening the hand no longer cancels the fold. Elsewhere `.transitioning` still clears pending holds or enters the existing 300 ms recovery.
-
-**Guided path.** The workspace shows one gesture at a time: a glowing mint handle with a hold ring (grab), a chevron trail and a peach goal zone (slide), then an open-hand goal icon (release). A step strip (Grab, Slide, Release) and four fold dots sit in the top corners, away from the path. The towel panel is sized from the reach along the fold axis and halves across it after each fold there; its moving edge follows fold progress. Cues no longer name colors. The demonstration is the same workspace driven by a scripted snapshot (`TowelDemoScript`), so example and exercise cannot drift apart. Display interpolation (at most 50 ms, linear) now continues across phase changes within one grab and snaps on new folds, repetitions, recovery, tracking loss and cancelled folds.
-
-Verification: Simulator build with IPHONEOS_DEPLOYMENT_TARGET=17.0 passed. A temporary Swift harness over the production `HandCursorFilter` and `TowelFoldSequence` showed stationary jitter RMS falling from about 0.0048 to 0.0021 of the image, steady-motion lag of about 1% of the image at 0.3-0.6 image widths per second, and a release through mid-curl frames completing the fold (it previously never counted once the grip held at 0.20-0.35). Not checked: how the new workspace and demonstration look, native animation timing, and everything on the M1 iPad: stationary jitter and lag, both hands and cameras, both landscape orientations, a second hand entering view, occlusion, large text, Reduce Motion, 1.5-2.5 m legibility and two-minute capture-age/thermal runs.
-
-## Quiet towel practice (2026-11-07)
-
-Accepted at the product owner's request, after reports that constant speech overloaded the patient. This supersedes "Live narration is replaceable feedback" speaking every instruction change in "Task-oriented towel folding". During live towel practice `TowelSpeechPolicy` allows one spoken cue when practice begins (again for each set) and, if the patient has made no grab or fold progress for 8 s while approaching, one reminder until they next make progress (never within 20 s of another cue). Phase changes inside a fold, recovery and tracking loss are never spoken; the on-screen cue and step strip still follow every phase, and the existing grab, fold and completed-towel sounds mark progress. Opening and demonstration narration, countdown clips, feedback and mechanics are unchanged; narration is still never a practice gate.
-
-Verification: Simulator build passed, and a temporary harness over the production policy showed one start cue, none across four folds with every phase change, one reminder after 9 s stuck and none again until progress, no instant reminder after a 30 s pause gap, and one start cue for the next set. The engine wiring was build-checked only. On the M1 iPad, check that one full repetition feels quiet and that a stuck patient hears exactly one reminder.
-
-## Towel folding: pinch grab (2026-11-07)
-
-Accepted at the product owner's request. For fold towel only, this supersedes the closed-hand (finger curl) grip in "Task-oriented towel folding" and "Towel folding: smooth tracking and guided path". Closing the whole hand occluded finger joints and made hand tracking jitter, so the grab is now a pinch of the thumb and index finger.
-
-**Grip.** `TowelHandMeasurement.pinch` is the thumb-tip to index-tip distance divided by palm length (wrist to middle knuckle), so it does not depend on distance to the camera. It needs the wrist, middle knuckle and both tips at confidence 0.5 or greater and a palm length above 0.04; otherwise grip is uncertain. A pinch starts at a ratio of 0.25 or less and an open hand at 0.55 or more, held to 0.40 / 0.45 once confirmed. Mid-range frames keep the confirmed state for 0.15 s, then read as `.transitioning`. `TowelFoldSequence.Grip.closed` now means pinched; the sequence, hold times, recovery and tracked palm-center position are unchanged. The cursor shows a pinching hand and the English and Indonesian cues ask for a pinch. Release remains opening the hand.
-
-**Not yet checked.** The ratios are first estimates and have had no Simulator or device evaluation of Vision's thumb/index tip stability. Physical M1-iPad validation is pending: pinch reliability for both hands, with a tremor or limited thumb opposition, jitter against the old fist grab, and tuning of the four thresholds.
-
-## Towel folding: no grab or destination hold (2026-11-07)
-
-Accepted at the product owner's request. For fold towel only, this supersedes the 200 ms grab hold and the 500 ms destination hold in "Task-oriented towel folding". Pinching inside the grab zone grabs immediately, and reaching the goal zone while pinched arms release immediately. The 300 ms open confirmation at the goal stays, so one misread frame cannot count a fold, and the 300 ms recovery grace with its 200 ms reconfirmation stays as a tracking-loss safeguard. `TowelFoldSequence.Phase` no longer has `grabbing` or `destinationHold`, and the `towel.grab` and `towel.destinationHold` strings are removed.
-
-**Cue.** The grab zone and the Grab step use a pinch glyph, `towel.approach` asks the patient to pinch their thumb and index finger together, and the cursor changes from a spread hand on a dark backing to a pinching hand on a solid mint backing, slightly smaller, with no animation. The demonstration drops its hold segments.
-
-**Not checked.** Simulator build only. Not evaluated on the M1 iPad: whether the cue alone makes patients pinch, and whether an immediate grab causes accidental grabs when sweeping an open or briefly pinched hand past the grab circle.
-
-Follow-up, 2026-11-07: the light-layout therapies (arm raise, elbow bend, directional reach, fold towel) no longer show a Help button or Help text; Help remains for sit-to-stand. Fold towel keeps its demonstration animation on the instruction page only; practice shows no animation.
-
-## Daily plan and Beranda (2026-11-09)
-
-Accepted at the product owner's request. Beranda becomes today's practice: a centred greeting, a prominent "Mulai Latihan" capsule, and the day's exercises as a timeline. Top-level navigation is unchanged (system `TabView`; on iPadOS 18 it draws the "Beranda | Progres" pill).
-
-**Fixed plan.** `DailyPlan.standard` (Features/Home/Domain/Models) lists, in order: the finger program, arm raise, cross midline, shoulder external rotation, sit to stand and fold towel. There is no plan editor yet; changing the plan means editing that list. Items live under Home rather than Routine because they name Therapy's `BalanceExercise`, and Routine must not depend on Therapy. An item names what to run only: its settings stay owned by the program's own page and are read at launch, so cards and sessions agree. Finger items use the saved finger routine (finger sessions always run every exercise of their category, and resume a saved checkpoint). Therapy items run one `RoutineExercise` from the program's saved configuration (or that kind's defaults) as a one-activity `Routine` through `selectedRoutine`. Balance items use `BalancePracticeSettings`, the single reader of the Balancing screens' UserDefaults values and defaults.
-
-**Running.** `DailyPlanViewModel` (owned by `AppDependencies`) validates readiness once through `HomeViewModel.performAction()` when Mulai Latihan or a card is tapped (SYSTEM_DESIGN §1: an explicit start validates listening), then opens the first undone item, or the tapped one. While a plan runs, each session's finishing action reports `finish(completed:)` instead of its usual exit: the finger closing page's button, the therapy summary's button, and every balance exit (completion End, close, voice stop). Only a session that reached its goal counts (finger outcome `.completed`, therapy summary not stopped, balance phase `.complete`). The model then clears the session's navigation and presents `.planNext` ("Selanjutnya"), whose Lanjut opens the next undone item after a 0.5 s handover so the previous session's `onDisappear` cleanup releases the shared camera and audio first; "Selesai untuk hari ini" ends the run. Leaving before a session could start (entry failure, no camera) and finger save-for-later end the run. Without a running plan every flow behaves as before. All navigation goes through `NavigationRouter`.
-
-**Progress.** `LocalDailyPlanProgressRepository` keeps one versioned record (`daily-plan-progress.json`): the day and the completed item ids, never display strings. Progress from an earlier day reads as empty. A missing file means no progress; an unreadable or unsupported file is never overwritten and shows a message while the plan still runs. Session history is unchanged: finger and therapy sessions record their own summaries; Balancing sessions still record none.
-
-**Scrolling.** The inline start button reports, through `onGeometryChange` as a Bool, when it has scrolled above the scroll view; the same button then appears in `TMTherapyFloatingActionDock` at the bottom over a soft material fade (a solid fade under Reduce Transparency; no slide under Reduce Motion).
-
-Verification: Simulator build with IPHONEOS_DEPLOYMENT_TARGET=17.0. Pending on the M1 iPad: running every item in sequence with real camera and audio handover between session types, voice readiness at plan start, both languages, large text, Reduce Motion and Reduce Transparency, and day rollover of progress.
-
-## Shared exercise screens (2026-11-09)
-
-Accepted at the product owner's request. Every daily-plan exercise (finger program, arm raise, fold towel, cross midline, external rotation, sit to stand) now uses the same five screens, built from `DesignSystem/Components/TherapyExerciseScreens.swift`: intro, live practice, pause dialog, set done and all done. This supersedes, in "Daily plan and Beranda": readiness on Beranda, and the "Selanjutnya" page between items.
-
-**Intro and readiness.** Mulai Latihan or a card on Beranda pushes `.planIntro(itemID)`: "Latihan N" (plan position), the title, the exercise's own instruction video or animation (no new illustrations), a one-sentence focus (`plan.purpose.<id>`), the target, a safety note and Mulai Latihan. That Start is now the explicit start that runs `HomeViewModel.performAction()` (SYSTEM_DESIGN §1) and opens the session; Kembali ends the run. Finishing an exercise opens the next undone item's intro; after the last, `.planNext` shows only the day-complete page. Finger sessions open the closing page directly and automatically save the summary. Save errors offer retry before the user continues to Progress or the next plan item. Previously recorded feelings remain available in history.
-
-**Live screen and stages.** The camera keeps one position in each session view; every other state is an overlay above it (section 5, "Preview continuity"). The cue is a white bubble at the bottom of the camera; camera-wait, failure and recovery notices moved to its top edge. Therapy instruction and demonstration cards keep `TMMeasuredInstructionText` and the reading gate ("Consolidated session guidance"); countdowns keep `TMTherapyCountdownDial`. The towel now shows its demonstration during practice too.
-
-**Pause dialog.** Pause, from the live screen, any stage page or voice, shows "Latihan dijeda" over a frosted layer with the set, the exercise and practice time so far; End on the live screen opens it on its end confirmation, so stopping always takes a second tap. The pause card shows only the set, exercise, elapsed time, End and Resume. Recovery controls appear separately when resuming is blocked. The finger pause is no longer the `.fingerPause` sheet route, which is removed; the dialog is a layer inside the session, so `NavigationRouter` remains the only owner of modal presentation. Practice time comes from `SessionDurationClock`: the finger session already had one; `TherapySessionViewModel` (stopped by pauses, camera waits and the summary) and `BalanceSessionViewModel` (stopped by pauses and after the last set) now do too.
-
-**Set pages.** Feedback and rest after a set are one page: "Set N selesai!", a rest sentence, each set's repetitions and the total, with the rest countdown once it runs, Pause, and (finger) Skip. The last set shows "Latihan selesai, kerja bagus!". Therapy reads earlier sets from the new `SessionSnapshot.results` (a copy of the recorded results); light-activity summaries use the all-done page instead of the list, keeping stopped/interrupted wording and save-error handling; dark activities keep the list. Finger sets end only at their goal, so earlier sets show goal/goal.
-
-**Balancing sets and rest.** `BalancePracticeSettings` adds sets (1–5, default 1) and rest (5–120 s, default 15), edited on the overview page and carried by `.balanceSession(exercise:settings:)`. `BalanceMovementEngine.nextSet()` resets the count and per-repetition state but keeps calibration (cross-midline baseline and home wrists; rotation neutrals, targets and ends; sit-to-stand poses, which replay the seated three-second countdown). Each new set starts with the usual return to start. Between sets the view model keeps tracking, rests (frozen while paused) and announces `session.rest`; only the last set says the exercise's `voice.complete` and stops tracking and music. Backgrounding during a rest keeps calibration; otherwise it is invalidated as before. The completion overlay and its smoothness/compensation chart are removed; Balancing still saves no history.
-
-Verification: Simulator builds with IPHONEOS_DEPLOYMENT_TARGET=17.0 after each step; Simulator screenshots of the intro and of the live, pause, set-done and all-done compositions (debug `-TuntunScreen` launcher with sample values). Not checked: any running session on the Simulator (no camera or on-device speech), and no harness exercised `nextSet()`; the return paths were checked by reading the engines. Pending on the M1 iPad: counting across sets for all three Balancing engines with calibration kept, rest timing and pausing during rest, the practice clock against a stopwatch, the camera staying mounted under every overlay and the dialog, therapy reading gates on the restyled cards, finger pause recovery actions, both languages, large text, Reduce Motion and Reduce Transparency.
-
-**All exercises on Beranda (2026-11-09).** At the product owner's request the fixed plan now lists every exercise, superseding the six-item list above: the five finger movements and forearm rotation each as their own item, then arm raise, elbow bend, directional reach, cross midline, external rotation, internal rotation, shoulder flexion, sit to stand and fold towel. "Semua program" was removed from Beranda. A finger item runs one exercise: `FingerRoutine.only` narrows `exercises` to it for that session only (it is not a saved setting), and `FingerSessionRecord` stores it as an optional `only` field so a single-exercise session saved for later resumes as that exercise; records without it decode as whole-program sessions. A plan finger item resumes a checkpoint only when it was saved from the same exercise. Plan item ids are the exercises' raw values, so progress saved under the earlier "fingers" id no longer matches any item. Cards without a `plan-<id>` illustration show the exercise's existing artwork (hand pictures for finger items). Verification: Simulator build and screenshots of Beranda and a single finger intro; running a single finger exercise end to end, and resuming one saved for later, remain to be checked on the M1 iPad.
-
-**Late audio deactivation (2026-11-09).** With the intro, every plan session is now preceded by the readiness check, which starts listening and then stops with deactivation. `AudioInputWorker` deactivates on its own queue, so the deactivation could land after the next session had activated the shared session, leaving that session mute; the finger narrator never reactivated because it believed the session was still active. `NarrationAudioSession` now counts activation requests, and the worker deactivates only through `deactivate(ifUnchangedSince:)` with the count taken when the stop was requested, so any activation in between keeps the session on. Verification: Simulator build only; hearing narration at the start of every exercise type on the M1 iPad remains pending.
-
-**Holds are not counted aloud (2026-11-09).** At the product owner's request, no session speaks the seconds of a held pose any more: Balancing calibration and reach/return holds, the sit-to-stand seated hold, finger calibration and practice holds, and arm-raise/reach capture holds. This supersedes the spoken hold numbers in earlier sections ("Speak the hold number shown on screen"). The on-screen bubbles, rings and "Tahan N" readouts still show the seconds. Instructions, repetition counts, the target sound, and the pre-practice "Bersiap 3, 2, 1" countdowns are still spoken. `SessionAudioCue.holdSecond`, `SessionAudioService.canSpeakHoldNumber` and `GuidanceAudioService.playHoldSecond` remain but have no callers. Verification: Simulator build only.
-
-**Finger storage errors (2026-11-09).** At the product owner's request the "Kemajuan belum dapat dibaca atau disimpan" banner and its retry are removed from Beranda and from the finger closing page, whose way on now appears once saving finishes, saved or not. This departs from section 8 ("Repository errors are visible"). To keep data safe without the banner, `LocalFingerSessionRepository` no longer lets one unreadable file block everything: an unreadable saved-for-later checkpoint is renamed `active-unreadable-<time>-<name>` (kept, never overwritten or deleted) and treated as absent; finalizing a session no longer fails because the leftover checkpoint is unreadable; history skips an unreadable session file and logs its name. A temporary harness confirmed that single-exercise records encode and validate. Not checked: the cause of the unreadable file on the iPad (its name appears in the device log), and whether any history was missing.
-
-**Guidance and daily-plan colors.** Blue fills the exercise hold rings and marks active targets. Yellow identifies tracked joints and secondary zones, including the towel destination. Completed daily-plan items use solid yellow dots and a solid yellow connector to the next item. Upcoming connectors stay dashed. These are presentation changes only.
-
-**Finger hold feedback.** A tighter, thicker blue ring shows hold progress without a time badge or checkmark. The existing chime plays once when the activity first accepts the completed hold, including the last hold in a repetition. The visible completion acknowledgment and repetition scoring rules remain the same.
-
-**Daily-plan training side.** Beranda Settings can select left, right, or the exercise defaults. An explicit selection applies to the next side-specific daily-plan session and its intro. Sit-to-stand has no selected side. A finger checkpoint resumes only when it matches an explicit side selection.
-
-**Calibration guidance and practice countdown.** Finger, Balancing, and light guided sessions present calibration cues over the mounted live layout, with muted counters. Existing calibration evidence and exercise-specific pose cues remain in use. After calibration, the completion cue and countdown introduction are spoken before the three-second clock starts. Later sets that reuse calibration play only the countdown introduction. Fold towel has no calibration and uses the same countdown overlay after its demonstration. The translucent countdown displays the localized heading and number, with Pause and the accessible End action. Narration uses the existing offline speech fallback for cues without recordings.
-
-The first screen of a calibrated exercise is titled Kalibrasi. For arm raise, elbow bend, and directional reach it is visible while capture starts. Their existing instructions and reading gate are presented inside that layout after the calibration introduction.
-
-The camera stays visible throughout calibration. Guided instruction cards occupy the lower portion of the camera panel. Finger calibration proceeds to countdown as soon as the completion cue finishes, including forearm rotation. There is no fixed demonstration or range-review delay.
-
-**Breathing between sets.** The existing rest clocks drive a six-second inhale and three-second exhale cue across exercise types. The shared rest screen uses a rust ring that expands and intensifies on inhale, then contracts and fades on exhale, and the existing audio services speak each new phase in the session language. Pausing preserves the rest position. Reduce Motion keeps the ring static while the text and voice still change. The guide ends when the configured rest ends, and there is no breath hold or motion scoring.
-
-Arm raise and elbow bend bubble size, 2026-11-10: at the product owner's request, the start bubble, target bubble and calibration hold ring are all a fixed 100 pt across, replacing the body-scaled 68–120 pt clamp and the 80% separation cap for these two activities. Practice bubbles were small and varied with arm length and hip/shoulder jitter, while the calibration ring was 120 pt; all three now match and stay about 3.5 times the 28 pt joint marker. Directional reach keeps the clamp. Acceptance uses the drawn radius, so hit zones follow the new size. Verification: Simulator build only; start and target overlap on short reaches and ring legibility at 1.5–2.5 m need physical M1-iPad checks.
-
-Standardized bubbles and countdown, 2026-11-10: the Balance exercises (cross-midline, rotations, shoulder flexion, sit-to-stand) now draw their target bubble, hold ring, direction cue and joint dot with `TMSessionTargetOverlay`, as arm raise does; `TMBalancePoseOverlay` keeps only the torso, midline, arm chain and hold count. The overlay gained `showsStart` to draw a target without a home bubble. Legacy sit-to-stand uses `TMPracticeCountdown` instead of the dark countdown page. `TMTherapyCountdownDial` is no longer used: the earlier notes about it are superseded by `TMPracticeCountdown` and `TMTherapyBreathingRest`. Verification: Simulator build passed; the visuals were not viewed.
-
-One tracking and bubble look, 2026-11-10: at the product owner's request, every non-finger body exercise (arm raise, elbow bend, directional reach and all Balance exercises) draws its bubbles, joint dot, hold ring, body outline and hold count with `TMSessionTargetOverlay`, and every bubble is the same fixed 100 pt across (`sharedBubbleDiameter`, converted to image height by `sharedBubbleRadius`). This replaces the directional-reach 68–120 pt clamp, the Balance body-ratio radii and the 60 pt joint hold ring. The Balance engines now take the camera frame (`BalanceMovementEngine.viewport`) and accept against the drawn radius, keeping their larger exit radius once a hold starts. `TMBalancePoseOverlay` is removed; its torso, midline and joint chain are `SessionPoseGuide`, drawn with the same dark underlay and 28 pt joint disc, and the hold count is `SessionHoldCountdown`. Fold towel and the finger exercise keep their own visuals. Verification: Simulator build passed; the visuals and the larger hit zones were not viewed, and short reaches where start and target now overlap need checking on the M1 iPad.
-
-One finish page, 2026-11-10: every exercise ends on `TMTherapySetSummary` (heading, results for every set, total) with `TMTherapyFinishActions`. The finger exercises' separate completion page (`TMFingerSessionCompleteView`) now uses it, with the same save step and plan/Progress navigation, replacing its time-of-day message, larger headline and missing results. The "repeat" link is shown only where a restart exists (Balance); the finger and arm/reach/towel sessions have none yet. Verification: Simulator build passed; the pages were not viewed.
-
-### Towel folding: steadier tracking and smoother fold motion
-
-Accepted at the product owner's request, 2026-11-10. `HandCursorFilter` now measures speed from consecutive raw samples (minimum cutoff 1.0 Hz, speed gain 10). `ScalarCursorFilter` smooths the pinch ratio before grip classification, with the same thresholds. `TowelHandMeasurement` keeps a joint already in use down to confidence 0.35 (entry stays 0.5), so the palm-center joint set does not flicker. A missing or weak frame within 100 ms keeps the last cursor and state; a longer loss still calls `loseTracking`. Display interpolation uses an interruptible critically damped spring, also across the jump to the destination and an early release; new folds, repetitions, recovery and tracking loss still snap. Not checked: jitter, lag, fast-fold smoothness and occlusion on the M1 iPad; no Simulator build or tests have been run for this change.
-
-### Shared One Euro filter for body and finger-overlay tracking
-
-Accepted at the product owner's request, 2026-11-10. `OneEuroFilter` (Therapy/Shared/Domain/Movement) is a 2D One Euro filter with named presets. `MovementLandmarkSmoother` now filters each body joint with the `bodyJoint` preset (minimum cutoff 1.0 Hz, speed gain 6, image-height units) instead of its earlier speed-adaptive EMA, and takes a per-activity confidence floor so joints the activity accepts below 0.5 are filtered too instead of flipping between filtered and raw: sit to stand 0.3, the arm movement engine 0.3 (elbow and wrist 0.1), cross midline 0.20; the others keep 0.5. Cross midline no longer has its own frame-rate-dependent blend: its joint cache stores the shared smoother's output, and impossible-jump rejection is still judged on the raw frame. `HandOverlaySmoother` keeps its median and outlier stages and replaces only the final low-pass with the `handOverlay` preset (1.2 Hz, gain 3). Finger scoring still receives raw evidence. Thresholds, radii and hold durations are unchanged, but saved path-smoothness (jerk) values in cross midline and arm movement will differ.
-
-Verification: Simulator build passed. A temporary Swift harness (synthetic 30 fps tracks, 0.006 image-height noise) compared the old body-joint filter with the new one by RMS error against the true path: stationary 0.0038 to 0.0031, 0.5 image heights/s 0.0232 to 0.0216, 1.5/s 0.0613 to 0.0325, 1 Hz sine 0.0376 to 0.0344, but slow 0.15/s motion worsened from 0.0104 to 0.0120. Not checked: how it feels in every exercise on the M1 iPad (jitter, lag, hold timing, occlusion), the finger overlay, and cross midline's change.
-
-## Directional reach adapts to maximum reach (2026-11-10)
-
-Accepted at the product owner's request, because the exercise was too hard to complete. This supersedes "use the full endpoint as target" (Directional reaching), the 50%-of-ghost acceptance rule, the 0.5-radius endpoint hold and the eight-second outward budget for directional reach only.
-
-- Assessment measures the user's own farthest reach along each direction (shoulder-relative). The ghost is a visual cue only: it follows the farthest reach and never gates acceptance. The endpoint is accepted once the wrist settles near its farthest point (within one body radius for 1.5 s) and is no longer extending. If the idle limit passes after a valid outward movement, the farthest point seen is used; with no outward movement the direction stays unscored.
-- The practice target is 85% of the measured reach (`DirectionalReachActivity.practiceTargetFraction`), never closer than two body radii to the start, so it can be repeated without chasing the exact maximum. The 2 s arrival dwell and bubble size rule are unchanged.
-- Each outward attempt has 12 usable seconds (`outwardBudget`).
-
-Verification: Simulator build only; physical M1-iPad checks with patients remain pending.
-
-**Rest between daily-plan exercises.** When a completed exercise has a next plan item, its set summary stays visible without a Continue button. After any required save and four seconds of summary, the plan opens a narrated rest with orange waves. An opening introduces six numbered breathing cycles. Each uses a three-second inhale, a two-second hold, a five-second exhale and a two-second pause. The closing narration names the next exercise before its intro appears. The next exercise's intro displays a ten-second countdown in place of Start, then opens the session automatically. Each exercise retains its own readiness checks and calibration. Pausing during rest or leaving the foreground freezes the transition clock, and ending the plan prevents launch.
-
-After the initial Start, the daily plan keeps one full-screen presentation while switching among sessions, summaries, rest and the next intro. The router replaces the destination inside that presentation and returns to Beranda when the plan ends. Screen changes use a short fade and respect Reduce Motion.
-
-## Finger tracking stability and strict holds (2026-11-10)
-
-Accepted at the product owner's request: finger tracking flickered, worst in thumb opposition ("Sentuh jempol ke jari"), and the blue hold ring must not move unless the pose is done correctly. This supersedes, for finger exercises only, scoring from raw unsmoothed evidence (forearm rotation was the only filtered metric) and the finger overlay's 0.5 drawing confidence.
-
-**Causes found.** (1) Vision's chirality flips for single frames, or reads unknown, while fingers touch or curl; each flip was rejected as "the other hand". (2) Touching fingertips overlap, so Vision rates exactly the two opposition tips below 0.5 and the metric dropped out. (3) The scored metric was unsmoothed, so 15 Hz jitter pushed a held pose in and out of its zone, and a hold was compared with its first, possibly noisy, frame. (4) One bad frame started a tracking problem, and recovery then demanded 0.35 s of good frames, so each dropout froze the hold for about 0.4 s and hid the overlay.
-
-**Changes.**
-- `HandSideStabilizer` (Shared/Tracking) treats chirality as a vote (0.6 s time constant). The confirmed side changes only after a sustained disagreement (about 0.4 s), unknown readings keep it, and the first reading is tentative. It restarts on a generation change or a gap over 1.5 s. Forearm rotation still assigns the exercised side directly. `HandSubjectSelector` is unchanged and still decides which hand is the patient's.
-- Opposition accepts its thumb tip and target fingertip at confidence 0.3 (as forearm rotation does); every other required joint stays at 0.5. The finger overlay and `HandOverlaySmoother` draw joints from 0.3, so the ring on a touching tip stays visible.
-- `FingerMetricFilter`, a scalar One Euro filter (1.2 Hz at rest, plus 1.5 Hz per metric unit per second), now smooths the scored metric of every finger exercise, replacing the forearm-only filter. It restarts on loss of evidence, a gap over 0.3 s, non-increasing time, and whenever the measured finger changes, so it never blends across missing evidence or between fingers.
-- After three samples, hold stability is measured against the hold's running average instead of its first frame.
-- `FingerTrackingRecovery.missingFrame` ignores per-frame misses shorter than 0.3 s; a longer miss starts the problem from when the misses began. Explicit problem starts (camera failure, new generation, resume) are unchanged. Missing frames still freeze the hold and earn no credit (`InterruptibleHold`). During such a dropout the last drawn hand stays on screen for up to 0.3 s, and a frozen hold keeps its paused ring.
-
-**Strict holds.**
-- Opposition counts only real contact: the thumb-to-fingertip distance must be at most 0.35 of palm length (wrist to middle knuckle) to start a hold, and at most 0.45 to keep it. This applies when calibrating the target pose and when holding it in practice; "nearly touching" never runs the ring.
-- Every exercise's target calibration needs a change of more than 0.15 from the start pose (was 0.08).
-- In practice the hold bands are narrower: the target zone is kept down to 75% of the calibrated range (was 70%), and the start zone up to 30% (was 35%). Entry stays at 80% / 25%. Leaving a zone still freezes the ring for up to 0.4 s, then clears it.
-
-**Verification.** A Simulator build, plus a temporary harness with synthetic noisy hands:
-- An open-hand start pose completed.
-- An "almost touching" target (0.6 palm lengths) earned no hold time in 4 s.
-- A touching target with jittery tips at confidence 0.35 completed.
-- For a right hand whose chirality read left on every fourth frame, only the first few frames were rejected, and a sustained left reading switched after six frames.
-
-**Pending on the M1 iPad:**
-- the feel of the overlay and ring in every finger exercise
-- whether patients with limited thumb opposition can reach 0.35, and whether the 0.3 tip confidence ever produces a false touch
-- the smoothing lag on fast movements
-- both hands
-
-**Long rest narration (2026-11-10).** At the product owner's request, the long breathing rest between daily-plan exercises (`DailyPlanNextView`) is narrated in the Marizka voice and tone.
-- **Spoken by key.** The page now speaks each line by its catalog key (`SessionAudioService.speak(id:key:argument:)`) instead of passing finished text, so the bundled clip plays and the system voice is only the fallback. The same applies to the next exercise's title.
-- **Breath counts.** A count before an inhale ("lima napas lagi") is its own clip, played just before the inhale cue; the stage waits for the second clip.
-- **Numbers spoken as words.** `rest.long.remaining %lld` has clips for 2 to 6, rendered with the number spelled out. `speak.rest.long.instructions` spells out "enam".
-- **Rendering.** `Tools/generate_narration.py` lists the 15 `rest.long.*` lines, the five counts and the 15 plan exercise titles, rendered with the shared voice settings, seed and soft lead-in.
-- **Verification.** Simulator build only; listening on the M1 iPad is pending.
-
-**Smoother tracking (2026-11-10).** At the product owner's request, finger and body movement tracking were made smoother.
-- **Merge resolution (2026-11-11).** Body joints retain the shared `OneEuroFilter.bodyJoint` preset and each activity's confidence floor from main. A per-joint gate now holds isolated jumps using the 0.15 aspect-corrected distance and 0.06 confirmation distance below. Short confidence dropouts keep the filter; a gap over 0.3 s restarts it. Achievements and the cup exercise are removed.
-- **Finger inference rate.** `HandCameraService` runs hand inference at 30 Hz instead of 15 Hz (`inferenceInterval`). The drawn hand and ring now update every camera frame, and every time-based filter has twice the samples. Work stays bounded: inference runs on the capture queue and late frames are dropped by the output. Every finger hold, recovery and filter rule is time-based, so none of them change with the rate.
-- **Body joint dropouts.** `MovementLandmarkSmoother` (arm raise, elbow bend, directional reach, rotation and flexion engines, sit to stand) keeps a joint's filter through a one- or two-frame confidence dropout instead of discarding it, so the joint no longer snaps back unfiltered. The filter's 0.3 s gap rule still restarts it after a real loss.
-- **Body single-frame jumps.** Each joint filter holds back a single raw jump larger than 0.15 (aspect-corrected) between frames until the next frame confirms it within 0.06. Vision briefly placing a joint on the wrong limb therefore never reaches drawing or scoring, while a real fast movement is followed one frame later.
-- **Hand evidence.** The smoother now passes `TrackingObservation.hand` through; it was previously dropped.
-
-**Verification.** Simulator build. A temporary harness ran the production smoother against the previous version with synthetic 30 Hz frames:
-
-| Case | Previous | New |
-|---|---|---|
-| A still wrist with one wrong-place frame (biggest drawn step) | 0.093 | 0.003 |
-| A fast real reach at 0.9 image widths per second (worst lag) | 0.045 | 0.042 |
-| One-frame confidence dropout (biggest step) | 0.006 | 0.002 |
-
-**Pending on the M1 iPad.**
-- Inference cadence and thermal behaviour at 30 Hz over two-minute finger runs.
-- Overlay smoothness in every exercise.
-- Whether very fast, jerky movements trigger the jump hold.
-
-## Key-repetition replays for clinicians (2026-11-12)
-
-Clinicians need to see how a patient moves, and whether they struggle, not only how many repetitions were credited. Arm raise, elbow bend, directional reach and every Balancing exercise (cross-midline, external and internal rotation, shoulder flexion, sit-to-stand) therefore keep two kinds of evidence per set.
-
-**Per-repetition metrics.** `SessionActivityResult.repMetrics` holds one `RepMetrics` per credited repetition: duration, start and peak angle, and tracking coverage. Arm raise reports the hip–shoulder–elbow angle and elbow bend reports elbow flexion (180° minus the shoulder–elbow–wrist angle). Directional reach has no single joint angle, so its angles are nil. Start and peak are medians of three samples, so one noisy frame cannot set them. Angles are 2D camera estimates, shown with "≈" and called "observed range", never ROM. Older summaries without the field still decode.
-
-**Key-repetition skeletons.** `KeyRepRecorder` (Therapy/Shared/Domain/Movement) is owned by `SessionEngine` and receives the same gated observations as the activity. A repetition spans the frames between two increases of the presented count, during counted practice only; rehearsal, countdowns and timed practice are ignored. Pauses, camera waits and recalibration discard the unfinished repetition. Frames are thinned to 15 Hz and one repetition keeps at most its last 30 seconds. Only three skeletons are kept per set: the first, the hardest (lowest peak angle; similar peaks or no angle fall back to the slower repetition) and the last. One repetition can hold several roles. Skipped sets and sets without a credited repetition record nothing.
-
-**Storage.** `SessionEffect.saveKeyReps` asks the session view model to save a set through `SessionRepository.saveKeyReps`, which writes `Sessions/<session id>.reps.json` beside the summary. History never decodes that file. Like finger history, session history decodes each summary separately: an unreadable or unsupported summary is logged (`Session history skipped …`), counted and skipped, and the history page says how many were skipped instead of failing as a whole. A failed replay save is logged and never pauses therapy or blocks later saves. An unreadable replay file is reported in the report and is never overwritten. Deleting a session deletes its replay file. `KeyRepRecord` is self-describing for a later export: version, coordinate space (Vision normalized, unmirrored, origin bottom-left), scale, joint order, and per-frame x/y pairs quantized to Int16, with −1 for a joint that was not confidently tracked.
-
-**Presentation.** Movement sessions (`TherapyKind.recordsMovement`) are listed with finger sessions, newest first, in the Progress tab's "Riwayat latihan" (`TMMovementHistoryCard`, with the exercise's own symbol and "Kiri & Kanan" when arms took turns); "Hapus riwayat" deletes both kinds. A card opens `TMSessionReportView` (`AppRoute.sessionReport`, pushed on the reports tab) in the Progress tab's terracotta style, kept to a low reading load. Each set shows a `brand` headline card with the exercise, side and one plain-language sentence (the peak-angle change if any, otherwise the pace change); three `TMTherapyProgressMetric` tiles (repetitions against goal, highest angle, average time per repetition); and one large stick-figure replay (`TMSkeletonReplay`, mirrored like the live preview) chosen with a segmented First / Hardest / Last control that defaults to Hardest. Tracking coverage is mentioned only when below 70%. The per-repetition chart (`TMRepValueChart`) and the remaining notes sit behind "Detail per repetisi", and the measurement disclaimer behind "Tentang pengukuran". The report can delete its session.
-
-**Recording floor and tracking warning (2026-11-13).** At the product owner's request, because replays are important and many showed "Gerakan ini kurang terlihat jelas oleh kamera" for repetitions that scored normally. The recorder had read joints at 0.5 confidence, stricter than scoring, so a seated hip or hanging wrist was dropped from the replay and the repetition flagged. `KeyRepRecorder` now stores body joints from confidence 0.1 (`recordingConfidence`) so a replay keeps as much of the movement as possible, and judges tracking coverage separately at each exercise's own scoring floor (`scoringFloor(for:kind:)`: arm raise and elbow bend 0.3, limbs 0.2; cross-midline 0.2; sit-to-stand 0.3; rotations and flexion 0.3, limbs 0.1; directional reach 0.5; these mirror the activities and must change with them). Start and peak angles use only frames that count as tracked, so a faint joint kept for drawing never sets them. The report warns when coverage is below 50% (was 70%). Hand exercises are unchanged. Sessions saved earlier keep their stored coverage. Verification: Simulator builds and a temporary harness over the production recorder: an arm raise with the hip at 0.4 and the elbow at 0.25 reached 100% coverage (0% before) with every joint kept; an elbow at 0.15 and a reach wrist at 0.4 were drawn but not counted as tracked; a joint at 0.05 was not kept. Pending on the M1 iPad: seated arm raise, elbow bend and cross-midline replays and how often the warning still appears.
-
-### ADR-008 — Key-repetition skeletons instead of video
-
-Accepted, 2026-11-12. Save up to three key-repetition skeletons per arm-practice set, plus per-repetition aggregates. Video or a timelapse would cost hundreds of megabytes per session and would record the patient's face and home; a timelapse also drops the in-repetition detail that shows difficulty. Skeletons record no face or room, are deleted with their session, and take tens of kilobytes. The cost is losing facial strain and fine hand detail, and an amended "no landmarks" rule, bounded to these replays.
-
-**Balancing sessions (2026-11-12).** The Balancing screens now save their sessions through `SessionRepository` like guided sessions. `BalanceSessionLog` (Balance/Domain/Logic) builds a one-exercise routine snapshot from the practice settings and one `SessionActivityResult` per set; `BalanceSessionViewModel` checkpoints after every set, finalizes after the last, and on leaving early records the set in progress as interrupted (with its credited repetitions) and finalizes the session as stopped. A repeat after completion starts a new session. Saves run one at a time; a failed summary save shows an error with retry on the completion page, and a failed replay save is only logged. The exercises are saved as `TherapyKind` `crossMidline`, `externalRotation`, `internalRotation`, `shoulderFlexion` and `sitToStand`; the new kinds have no routine category and the guided engine never runs them. The legacy rule that sit-to-stand has one set is dropped, because Balancing sit-to-stand has sets; routines saved earlier still decode. `SessionActivity.alternatesSides` marks "both arms" and `RepMetrics.side` names the arm of each repetition, so a replay emphasizes the arm that moved.
-
-The recorder takes each Balancing engine's own angle instead of recomputing it from joints, so the report matches what the exercise scored:
-
-| Exercise | Recorded angle | Tracking coverage |
+## 5. Session lifecycle
+
+```text
+intro → readiness → calibration (camera visible, instruction cards over it) → countdown
+      → practice → set done / rest → next set or side → summary → (plan) long rest → next intro
+```
+
+- **Readiness.** Beranda's Mulai Latihan or a card opens the item's intro. The intro may narrate before readiness; Start (or the automatic start after a scripted intro or a long rest) validates permissions and listening through `TherapyReadinessViewModel` before any capture. Session entry validates readiness again. Home never listens while idle.
+- **One preview.** One camera preview stays mounted through every stage of an activity; the layout depends on activity kind, never stage. Capture stops at summary or exit.
+- **Guidance gates.** Opening and demonstration cards advance only after identified narration completes or fails and measured reading completes (VoiceOver needs explicit acknowledgment). Replayed or interrupted guidance gets a new identity; stale callbacks never advance. Arm raise, elbow bend and reach use a five-second preparation before calibration; countdowns are three seconds and start after their cue is spoken. Fold towel has no calibration or preparation.
+- **Suspension.** Pause and Stop are available by touch at every stage; "stop" by voice pauses. Resume is explicit. A normal pause keeps calibration and completed work and clears pending holds and incomplete cycles. Backgrounding pauses, stops capture and listening and cancels narration; foregrounding never resumes automatically. Audio interruptions and lost command recognition pause and block resume until listening is validated.
+- **Camera waits.** Scoring rejects observations older than 300 ms, from an older capture generation, non-finite or non-increasing. Readiness waits `SessionEngine.cameraWaitGrace` (1 s) without a fresh frame before a camera wait, which freezes deadlines and evidence. Capture or preview loss waits at once. After the frame watchdog or a capture runtime error, capture restarts once automatically; the session still waits for explicit Resume. Missing patient evidence alone never opens Pause, in body or finger sessions (log: *Detection waits without automatic pause*).
+- **Completion.** An activity's terminal outcome is completed, skipped or interrupted, recorded once per execution identity. Completion enters the set page, rest (configured seconds, guided breathing: 6 s inhale and 3 s exhale) and the next set or activity automatically. Pause/stop win over completion in the same turn. Skip records the remaining sets as skipped. Stop records a stopped session with completed work.
+- **Sets.** 1–5 sets per exercise (default 1), goals per set and per side; all sets on the first side before switching. Calibration is kept between sets and invalidated by camera discontinuities or explicit recalibration.
+- **Daily plan.** `DailyPlan.standard` begins with thumb opposition, then arm raise, then the remaining finger and forearm exercises, elbow bend, directional reach, the shoulder/trunk exercises and fold towel. Only a session that reached its goal marks its item done. After a set summary (`DailyPlanTiming.completionPreview`, 4 s) the plan shows a narrated long rest of six breathing cycles (3 s inhale, 2 s hold, 5 s exhale, 2 s pause), then the next intro with a ten-second countdown that opens the session. Progress is one versioned record per day (`daily-plan-progress.json`). Beranda Settings can force a training side.
+
+## 6. Exercise rules
+
+Common body rules:
+- `BodySubjectSelector` locks to the patient by torso position and shoulder width, never adopts a bystander for being larger, and relocks only after `relockTimeout` (5 s) without them. Each new lock increments `TrackingObservation.subjectEpoch`. Body inference runs on frames padded downward by 50% (`BodyFramePadder`; `-Tuntun.bodyFramePadding NO` disables it).
+- `MovementLandmarkSmoother` filters joints with `OneEuroFilter.bodyJoint`, keeps a joint through one- or two-frame dropouts, and holds back a single jump over 0.15 until the next frame confirms it within 0.06.
+- Every non-finger body exercise draws bubbles, hold ring, joint dot and guidance arrow with `TMSessionTargetOverlay`. Bubbles are a fixed 100 pt across (`sharedBubbleDiameter`); acceptance uses the drawn radius. Calibration cues are a curved arrow fixed to the body, not the hand.
+- Holds are credited only between consecutive fresh in-zone samples (`InterruptibleHold`, `StableHold`); interrupted time is never credited. Hold seconds are shown, not spoken (except in the Indonesian scripts, section 7).
+- On iPad every exercise uses the front camera: body exercises prefer ultra-wide, hand exercises wide-angle.
+
+| Exercise | Current rules |
+| --- | --- |
+| Arm raise, elbow bend (`MovementActivity`) | Hip–shoulder–elbow / shoulder–elbow–wrist, offsets normalized by the reference segment (> 0.03). Confidence: hip and shoulders 0.3, elbow and wrist 0.2. Start and target capture: 2 s steady holds; target distinct from start by > 40% of limb length; practice target at 100% of the held endpoint (`targetFraction`). Repetition dwell 2 s in each zone; leaving freezes the dwell up to 0.4 s, a tracking gap up to 0.5 s; longer resets to start. Tracking-lost message after 1 s, cleared after 0.5 s. |
+| Directional reach | Start hold 2 s inside the drawn bubble. Each direction (right, left or across, up) runs 8 usable seconds; the target is the farthest sustained reach (within 45° of the direction, beyond two body radii, held 0.3 s), at 100% (`practiceTargetFraction`). Practice bubbles 120 pt. Rehearsal precedes practice; arrival dwell 2 s; outward budget 12 s per attempt, recorded reached, not reached or unscored. Evidence clears after 1 s without frames. |
+| Balancing: cross midline, external/internal rotation, shoulder flexion, sit to stand | Own engines driven by `BalanceSessionViewModel`; `BalancePracticeSettings` (repetitions, hold, arm selection, sets 1–5, rest 5–120 s). Accept against the drawn bubble with a larger exit radius once a hold starts. Saved through `SessionRepository` as one-exercise routines. |
+| Fold towel | One selected hand pinches (thumb–index ratio ≤ 0.25 to start, ≥ 0.55 open) in the grab zone to grab at once, slides to the goal, and opens for 300 ms to fold; four folds make one repetition. Palm-centre cursor filtered by `HandCursorFilter`; 300 ms loss grace with 200 ms reconfirmation. One spoken cue per set plus at most one reminder (`TowelSpeechPolicy`). |
+| Finger exercises, forearm rotation | Chirality voted by `HandSideStabilizer`; scored metric smoothed by `FingerMetricFilter`; opposition counts real contact only (≤ 0.35 palm lengths to start, ≤ 0.45 to keep); calibration needs a change > 0.15. Inference at 30 Hz. |
+
+Older and superseded values (3 s captures, 75%/85%/90% targets, 68–120 pt clamp, 60 s relock, chevron arrows, wind cue) are in the log.
+
+## 7. Audio, narration and voice commands
+
+- **One configuration.** `NarrationAudioSession` alone sets the category: `.playAndRecord`, `.default` mode, `[.defaultToSpeaker, .allowBluetoothA2DP]` (plus HFP for finger sessions), `.playback`/`.spokenAudio` until microphone permission is granted. Receiver output is moved to the speaker. Voice processing is off (`-TuntunVoiceProcessing` enables it in Debug). Activation is counted so a late deactivation cannot mute the next session.
+- **Voice commands.** Exactly two English words in both languages, matched as the whole utterance through `VoiceCommandVocabulary`: "stop" pauses (interrupting narration) and "go" resumes when resumable. Everything else is touch-only. Recognition is on-device en-US with `requiresOnDeviceRecognition`.
+- **Recorded narration.** Instructions play bundled Marizka recordings in both languages (`NarrationClips.resourceName(for:language:)`, `NarrationID`, `NarrationEN`) when every line of a cue has one; otherwise the system voice speaks the whole cue. `speak.<key>` entries may change spoken wording without changing screen text. Counts and countdowns come only from the Marizka number clips (1–100, countdowns 1–10), with system-voice fallback.
+- **Scheduling.** Stage replacement, pause, stop and interruption cancel obsolete work. Repetition counts are queued ahead of pending prompts (bounded to 32). Effects use separate players, ducked during speech; starting narration fades effects; the demo-change chime is the exception.
+- **Indonesian scripts.** Approved UX-writing scripts drive Indonesian arm raise and thumb opposition (`ArmRaiseGuidance`, `OppositionGuidance`, `ScriptedRepetitions`). They follow the plan's set and repetition counts, speaking a recorded line only when its numbers are true and Marizka numbers otherwise. Their holds are 3 s with spoken remaining seconds; first countdown 3 s, next set 5 s; three narrated breaths between sets. Without custom counts, plan arm raise runs two sets of five per arm, left then right, one arm per session.
+- **Generation.** Developer-run tools only, with the API key in the environment: `Tools/generate_marizka_counts.py` for numbers, `Tools/generate_narration.py` (with `--language en`) and its wrappers for instructions, `Tools/normalize_narration.swift` for levelling. See AGENTS.md.
+
+## 8. Persistence, history and recording
+
+- Atomic, versioned JSON files through `Shared/Storage`. Missing files differ from unreadable or unsupported ones, which are never overwritten with defaults.
+- **Routines:** `routines.json`, `routines-task-oriented.json`, finger routines. **Sessions:** `Sessions/` holds an active checkpoint and one immutable summary per session; finalization is idempotent by session ID; a checkpoint left by termination is finalized as interrupted on next launch (`HistoryRecoveryService`). Calibration is never persisted (ADR-004). **Finger sessions:** `FingerSessions/`; an unreadable checkpoint is set aside, never deleted.
+- Summaries store the routine snapshot, dates, outcome and per-set results (`SessionActivityResult`, with `repMetrics`). History skips unreadable summaries and reports how many.
+- **Key repetitions.** `KeyRepRecorder` keeps first, hardest and last repetition per set for every exercise: skeletons (`*.reps.json`, Int16-quantized Vision coordinates) and, optionally, privacy-filtered 320 px, 10 fps HEVC clips (`*.clips/`). A repetition keeps at most 60 s; the clip ring keeps 65 s. Deleting a session deletes both (ADR-008, ADR-009).
+- **Recording levels** (Settings › Rekaman latihan): none, skeleton only, or video (default) with face, background, both (default) or no censoring. Body clips fail closed for faces; hand clips rely on face detection alone. Sessions read the level once at start.
+
+## 9. Debug-only tools
+
+Compiled only under `#if DEBUG`: "Finish exercise" (records remaining sets as completed, deliberately inventing credit), the Beranda plan editor (`DebugPlanLayout`), `-TuntunScreen` galleries and audio comparison flags. Release builds contain none of them.
+
+## 10. Decisions
+
+| ADR | Decision | Log |
 | --- | --- | --- |
-| External / internal rotation, shoulder flexion | `rotationDegrees` (the engine's forearm rotation or shoulder-lift estimate) | Frames with that estimate |
-| Sit-to-stand | `kneeAngle`; the peak is knee straightening when standing, and a repetition's duration is its sit-to-stand time | Frames with a knee angle |
-| Cross-midline | none (duration and replay only) | Shoulders and the working wrist |
-
-Counting starts after calibration and the countdown; the frame that completes a set still closes its last repetition. Fingers and towel folding record the hand; see "Recording for every exercise" (2026-11-13).
-
-**Pending on the M1 iPad.** Replay plausibility for every covered exercise, hardest-repetition choice with a deliberately slowed repetition, file size per session, behaviour after pause, stop and termination, and that recording adds no preview or thermal regression.
-
-## One loud speaker configuration (2026-11-12)
-
-Narration, recorded voice-over, counts and music played sometimes loud and sometimes quiet. Three things caused it: the category flipped between `.playback` (rest narration, finger sessions without listening) and `.playAndRecord` (listening); the therapy listening engine enabled voice processing, whose call-style output path is quieter even with minimum ducking, while the finger engine did not; and the finger button click set `.ambient` outside `NarrationAudioSession`.
-
-`NarrationAudioSession` is now the only code that sets the category or activates and deactivates the session. Everywhere in the app it uses `.playAndRecord` with `.default` mode and `[.defaultToSpeaker, .allowBluetoothA2DP]` (plus `.allowBluetoothHFP` for finger sessions); `activate` no longer takes a listening flag. Until microphone permission is granted it uses `.playback` with `.spokenAudio`, because activating a recording category would trigger the permission prompt. After activation and on every route change, output that lands on the built-in receiver is moved to the speaker with `overrideOutputAudioPort(.speaker)`; headphones and Bluetooth are left alone. Voice processing is off by default; debug builds launched with `-TuntunVoiceProcessing` enable it for comparison (replacing `-IteraNoVoiceProcessing`). This gives up echo cancellation, as already accepted under "Narration volume".
-
-Verification: Simulator build only. Pending on hardware: equal narration loudness on the rest screen, in finger sessions, and in therapy sessions before and after listening starts; the `outputs=` log shows `Speaker`, never `Receiver`, including after Bluetooth disconnects; "pause" and "stop" recognition during narration without voice processing.
-
-## Debug finish exercise (2026-11-12)
-
-Debug builds show a "Finish exercise" action, marked with the design system's `.debugOnly()` ribbon, on the light therapy, Balancing and finger session screens. It records the current exercise's remaining sets as completed at their goal (`SessionCommand.debugFinish` through `SessionProgress.completeCurrentActivityForDebug`, `BalanceSessionViewModel.finishExerciseForDebug`, `FingerSessionEngine.completeCurrentForDebug`), saves no repetition metrics or key-repetition skeletons for them, and then continues exactly as a real finish: the next activity or the all-done page, the daily plan's rest and next intro, and a finalized summary. This deliberately departs from "Missing/ambiguous evidence never produces credit" (section 5), so history on a debug build can hold invented sets. Everything is compiled only under `#if DEBUG`; Release builds contain no part of it. The dark legacy layout is not covered.
-
-Verification: see the change's build notes; running sessions need a camera, so tapping it in each session type remains a device check.
-
-## Curved guidance arrow (2026-11-12)
-
-Accepted at the product owner's request. For every exercise drawn with `TMSessionTargetOverlay`, this supersedes the chevron trail in "Guidance arrow redesign" (2026-11-07). Fold towel keeps its own chevrons.
-
-- **Arrow.** One solid curved arrow replaces the chevrons: a 6 pt shaft over an 11 pt dark underlay ending in an open chevron of the same stroke, its arms about 16 pt back and 28 pt across (reduced after device review, and the filled head replaced by a chevron at the product owner's request; below the earlier 9 pt arrow minimum at the product owner's request). It is trimmed at exact crossings, so its ends slide smoothly as the joint moves. A brighter stretch travels toward the head every 1.5 s; under Reduce Motion the shaft is still and full strength. It keeps the earlier gaps from the joint and the bubble, fades over the last 60 pt, and is hidden once a hold has begun.
-- **Shape.** Arm raise and elbow bend pass the joint the limb turns around (shoulder, elbow) as `SessionBubbleGuide.pivot`, so the arrow sweeps around it the shorter way and ends at the bubble, for both the target and the return. Without a pivot (directional reach, Balance exercises) the arrow bows gently away from the image centre.
-- **Calibration cue.** While the comfortable end is calibrated, `SessionMovementCue` draws the same arrow from the tracked joint. Arm raise and elbow bend turn the joint up to 60° around the pivot (`MovementActivity.calibrationTip`): an arm raise away from the hip, an elbow bend toward the shoulder, never past the reference line. Within 15° of the reference line the bend direction cannot be seen, so an arm raise turns outward (away from the other shoulder) and an elbow bend inward; this tie-break is a first estimate. The cue appears once the start is saved and hides while the patient settles into a hold. External and internal rotation point sideways along the shoulder line (0.9 upper-arm lengths out or in), and shoulder flexion points up the spine (half an arm length), until the end-pose hold starts (`ArmMovementEngine.rangeCalibrationTip`, `BalanceOverlay.calibrationTip`). Cross midline, sit-to-stand and finger calibration show no cue.
-- **Calibration cue steadiness (device review).** The cue is drawn above the joint hold ring, starts just outside it, and is lengthened along the same turn (at most 150° around the pivot) so at least about 90 pt shows. Its turn direction is decided on the first frame of each target capture and kept, so joint jitter near the 15° boundary cannot swing it. It stays visible until 0.5 s of steady holding (movement hold progress 0.25; Balance range progress 0.5 s of the 3 s hold) and returns only when the hold restarts, so ordinary movement never makes it blink; the overlay fades it in and out over 0.25 s (at once under Reduce Motion). Balance range calibration now publishes its overlay after the frame's hold is updated, so the ring and the cue no longer lag a frame. A bow without a pivot curves upward for mostly sideways arrows, otherwise away from the image's vertical centre line.
-
-Verification: Simulator build with IPHONEOS_DEPLOYMENT_TARGET=17.0 passed. After the device review, a second harness over copies of the overlay and hysteresis code confirmed: at least 90 pt visible beyond a 50 pt ring at 60–200 pt radii (or the 150° cap); a start that moves continuously with the joint; no sign flip under ±3° jitter around the boundary, where the unlatched rule flipped 150 times in 300 frames; and the cue staying visible through hold restarts and hiding after 0.5 s of stillness. The first harness, using copies of the turn and arc arithmetic, confirmed: turn directions for both image sides; the hanging-arm and straight-arm tie-breaks; no turn past the reference line; and that pivot arcs end on the tip within 180°. The arrow's look, the overlay wiring and the cue timing were not viewed. Pending on the M1 iPad: legibility at 1.5–2.5 m, both arms and mirrorings, Reduce Motion, whether patients follow the elbow-bend tie-break, and the rotation and flexion cues.
-
-**Stronger curve and quiet live skeleton (2026-11-12).** At the product owner's request, the arrow curves more visibly: without a pivot it bows 35% of the chord (was 20%), and around a pivot its radius bulges outward by up to 15% of the chord at the middle, still ending exactly at the tail and tip. The live skeleton shown while the session is gated (narration speaking, no activity guide yet) now uses `SessionPoseGuide.emphasis = .ambient`: half-strength 3 pt white lines and 12 pt white dots, with no torso fill, midline or yellow joint discs, so the patient knows they are tracked without being overstimulated. This is an exception to the "Calm guidance visibility" minimums, which still apply to every guidance shape; activity pose guides are unchanged. Verification: Simulator build only; how the curve and the quiet skeleton look on live video at 1.5–2.5 m remains pending on the M1 iPad.
-
-**No torso box or midline (2026-11-13).** At the product owner's request, Balancing guidance (cross-midline, external and internal rotation, shoulder flexion) no longer draws the yellow shoulder-hip box or the dashed midline; only the white joint chain and joint discs remain. `SessionPoseGuide` lost `midline` and `warning`, and `BalanceOverlay` lost `showsTorso` and `showsMidline`. A compensation warning is still shown by its feedback pill, no longer by an orange box. The ambient live skeleton keeps its faint torso outline. Verification: Simulator build only; the look on live video remains pending on the M1 iPad.
-
-## Arm raise and elbow bend tracking floor (2026-11-12)
-
-Accepted at the product owner's request, after reports that elbow bend took long to pick up the arm at the start of calibration and showed "Tolong tampilkan seluruh lengan" while no indicator was drawn. For arm raise and elbow bend (`MovementActivity`) only, this supersedes the 0.5 joint confidence of section 6, as the Balance engines already do.
-
-- **Floors.** The hip and shoulders count from confidence 0.3 and the elbow and wrist from 0.2, both in the activity and in its `MovementLandmarkSmoother`. The elbow/wrist floor matches the live skeleton (`LivePose`), so an arm the patient sees drawn is no longer rejected: a wrist hanging beside the hip or folded in front of the body often scored 0.2–0.5, so start capture never began and frames during practice were treated as a missing arm. The smoother's jump gate and One Euro filter damp the extra noise.
-- **Message delay.** `session.movementTrackingLost` appears only after 1 s of missing evidence and clears after 0.5 s of good evidence, as in directional reach. Hold and dwell freezing, grace and resets are unchanged.
-- **Short segment.** A visible arm whose tracked segment is too short to measure (at most 0.03, such as a forearm pointing at the camera) freezes the dwell and earns no hold time, but is not reported as missing and keeps the indicator on the joint.
-
-Verification: Simulator build with IPHONEOS_DEPLOYMENT_TARGET=17.0 passed. A temporary harness over the production `MovementActivity` with synthetic 30 fps elbow-bend frames: a 0.3-confidence wrist captured the start in 2.00 s (the previous version never captured it); one 0.1-confidence frame showed no message and kept the guide; a missing wrist showed the message after 1.00 s, cleared 0.53 s after it returned; a short forearm showed no message and kept the indicator. Pending on the M1 iPad: calibration start time for both exercises, practice without false messages, and no false holds from weak wrists.
-
-**Live skeleton cost (2026-11-12).** "Tolong tampilkan seluruh lengan" also appeared in arm raise while the body was still drawn. The tracking service delivers frames up to 0.8 s old, but the session scores only frames up to 0.3 s old, so a delayed frame still draws the live skeleton while the activity sees nothing. The live skeleton (added earlier the same day) was published every frame and read in the session screen's body whenever the activity had no guide, so each frame rebuilt the whole screen on the main thread, which can delay later frames past 0.3 s and keep the arm "missing". The skeleton is now drawn by its own small view (`TMLiveSkeletonLayer`, `TMBalanceLiveSkeletonLayer`), is published only while it is shown (no activity guide or Balance overlay), and `personVisible` is written only when it changes. `SessionEngine` logs `Session frame rejected as stale age=…` at most every 3 s. Freshness rules are unchanged. This cause is inferred from the code: Simulator build only; on the M1 iPad, check that the message clears promptly in arm raise and elbow bend and that the stale log is rare.
-
-## Stale tracking recovery (2026-11-12)
-
-Reports: on device the skeleton and indicator often disappeared mid-session and the session could not proceed. The causes below are inferred from source inspection; none was reproduced on hardware.
-
-- **Camera-wait grace.** `SessionEngine` entered camera-wait whenever no scoring-fresh frame had arrived for 300 ms, checked every 50 ms tick. Each entry suspended the activity, cancelled speech and cleared guidance, and each recovery replayed the cue, so ordinary inference or main-thread hitches kept cutting narration and guidance never advanced. Readiness now waits `SessionEngine.cameraWaitGrace` (1 s) without a fresh frame before camera-wait. Scoring still rejects frames older than 300 ms (section 5): during the grace the activity receives no frames, so holds freeze and no time is credited. Capture and preview loss still enter camera-wait at once.
-- **Patient relock.** Merge `964c23c` (2026-11-09) replaced the 5 s relock of "Locked patient and two-second holds" with a 60 s usual-place memory, and a person's size switched from shoulder width to a torso-box diagonal whenever one shoulder was hidden (a raised arm, rotation). The switch made the patient look like someone else, and they were then ignored for up to 60 s. This supersedes the 60 s in "Bystander tolerance": `BodySubjectSelector.relockTimeout` is 5 s, after which the first-pick rules apply again. Size is shoulder width only; with a shoulder hidden it is unknown and only position is matched, and the remembered size is not updated. When only one person is in view, re-acquisition at the usual place accepts 0.6–1.8 times the remembered size, so leaning toward the iPad keeps the patient; with several people the 0.75–1.33 range is unchanged. People without a confident torso never take part.
-- **Preview readiness.** A replaced preview leaving its window no longer reports "not ready" over its successor (the same rule as teardown).
-- **Capture generation.** After a capture interruption, the first delivered frame announces the new generation even if no interruption-ended notification arrives. A capture runtime error now gets the same single automatic restart as the frame watchdog, and an explicit start resets that allowance. Switching between body and hand inference at an activity change is a camera wait, not a discontinuity, so it no longer pauses the session until Resume.
-- **Balance retry.** Balancing screens show the capture error with a Retry action instead of waiting indefinitely.
-
-Verification: Simulator build with IPHONEOS_DEPLOYMENT_TARGET=17.0 passed. A temporary harness over the production `BodySubjectSelector`: a one-shoulder dropout, a 1.5× lean-in after a 2 s loss, and a lone patient returning after 3 s and after 10 s were all followed; a larger bystander alone in front of the patient was not adopted within 4 s; a similar bystander beside the patient never took over. A temporary harness over the production `SessionEngine`: a 0.4 s frame gap neither entered camera-wait nor cancelled speech; a 1.2 s gap did both; frames resuming cleared the wait. Pending on the M1 iPad: arm raise and elbow bend with a shoulder hidden, reaching while leaning forward, a bystander walking behind and in front, fold towel after an arm activity (no pause), a Control Center interruption, and how often `Session frame rejected as stale` and `Body frame dropped as stale` appear over two-minute runs (if often, measure `BodyFramePadder` cost).
-
-**Frame padding cost (2026-11-12).** `BodyFramePadder` previously converted every frame from the camera's YUV to colour-managed BGRA with a synchronous Core Image render, which competed with the preview and SwiftUI for the GPU and was never timed. It now copies the YUV planes on the CPU into a pooled buffer of the same format and fills the strip with grey, so padding adds a small fixed cost to each frame's age. Inference is still serialized with drop, so padding never queues frames. Whether padding is worth keeping is undecided: it targets Vision dropping a seated, upper-body-only patient, but it also shrinks the patient in Vision's input, which may cost wrist and elbow precision.
-
-`BodyInferenceTiming` (Shared/Tracking, confined to the tracking queue, preallocated 300-sample windows) logs every 10 s: `Body inference timing ms pad p50/p95 vision p50/p95 age p50/p95 max frames padded dropped`. `pad` is the padding copy; `vision` is Vision and subject selection; `age` is capture-to-delivery age on the tracking queue, before the main-thread hop; `dropped` counts frames over the 0.8 s display limit. When `Session frame rejected as stale` appears while `age` p95 stays well below 300 ms, the main thread, not inference, is delaying frames.
-
-Verification: Simulator build with IPHONEOS_DEPLOYMENT_TARGET=17.0 passed. A temporary harness over the production padder with a synthetic 1280×720 `420f` frame: output 1280×1080 in the same format, luma (720 rows) and chroma (360 rows) byte-identical at the top, the strip exactly 128, BGRA input unpadded, and about 0.09 ms per frame on the development Mac (indicative only). Pending on the M1 iPad: two-minute arm raise and directional reach runs with padding on and off (`-Tuntun.bodyFramePadding NO`), comparing the timing log, `Session frame rejected as stale` counts, how often the seated patient and both wrists are tracked, and wrist jitter. Keep padding only if it measurably improves tracking without raising `age` p95; otherwise default it off.
-
-## Demonstration step changes (2026-11-12)
-
-Accepted at the product owner's request: during a session the demonstration column changed step (for example, from looping to the held start pose, then to the held end pose, during calibration) with no signal, and patients watching the camera missed it.
-
-- **Signal.** When the demonstration moves to a new step on the live screen, its panel shows `TMTherapyDemoHighlight` (a thin rust outline for about four seconds with three gentle pulses: a faint ring rippling outward while the outline glows softly and the panel swells very slightly; no badge, and only the static outline under Reduce Motion), the column title names the step ("Posisi awal" / "Gerakkan dan tahan", otherwise "Ikuti gerakan ini"), VoiceOver announces it, and a soft chime plays.
-- **What counts as a step.** Arm raise and elbow bend: the example's playback (looping, held start, held peak), now derived by `TherapySessionViewModel.demoPlayback` instead of the view. Finger exercises: the looping calibration intro, the held start pose, the held target (or range) pose, practice, and the current finger of a sequential exercise; the move and return halves of each repetition are ignored because they alternate every few seconds. Balancing: only the switch of the active arm when both arms are chosen. Directional reach and fold towel keep one example and never signal.
-- **When it pulses.** A step is signalled once, the first time the live screen shows it (not paused, not waiting for the camera, not behind a stage page, countdown, rest or result page). Every held start or target pose pulses then, even if it first appeared behind a stage page (arm raise and elbow bend reach the held start pose during preparation), because that is when the patient must make a new movement; a held pose reached while paused pulses on resume. A looping step pulses only as a change within the same activity and set: arm raise and elbow bend's return to start after the peak, and a finger change in practice. The first looping step of an activity or set, and finger practice after the countdown, are accepted silently. View models own the last shown step and the revision (`demoRevision`); the views only pass them to the layout.
-- **Chime.** `SessionAudioCue.demoChanged` and `GuidanceSound.demoChanged` play `DemoChangeSound.resourceName` (the existing `closing-chime` clip, otherwise heard only at session end), once per change with no backlog: 0.6 volume, 0.26 while narration plays. It is guidance, so the celebration-sounds preference does not mute it. View models play it after the transition's narration has started, and starting narration does not fade it (an exception to "No overlap" in "Stable audio session and short spoken cues"); pause, stop and cancellation still stop it.
-- **Debug.** The `-TuntunScreen gallery:live` screen has a debug "Next demo step" action that triggers the highlight.
-
-Verification: Simulator build with IPHONEOS_DEPLOYMENT_TARGET=17.0 passed. The highlight, title crossfade and chime were not viewed or heard. Pending on the M1 iPad: whether patients notice the change at 1.5–2.5 m in arm raise, elbow bend and finger calibration and at a finger change, chime audibility beneath narration, that the chime never triggers voice commands, Reduce Motion, VoiceOver announcements and both languages.
-
-## Directional reach timed calibration (2026-11-12)
-
-Accepted at the product owner's request, because reach calibration could not proceed: the start hold and the endpoint settle hold never filled, and nothing visible happened. For directional reach only, this supersedes the settle-hold endpoint and 30 s idle limit ("Directional reach calibration flow", "Directional reach adapts to maximum reach") and the half-radius start tolerance (section 6).
-
-- **Cause.** A tick cleared all evidence whenever the last frame was more than 0.3 s older than the engine clock. Frames are accepted up to 0.3 s old, so late frames kept wiping holds and zeroing credited time. The start tolerance (0.1 forearm lengths) and the endpoint settle tolerance were also smaller than detector jitter. A tick now clears evidence only after 1 s without frames (`trackingLossReset`); frame gaps over 0.3 s still credit nothing.
-- **Start.** The 2 s start hold uses the drawn bubble radius (`sharedBubbleRadius`) as its tolerance, so staying inside the visible ring is enough.
-- **Each direction is timed.** After its cue finishes, each direction runs for 8 usable seconds (`assessmentWindow`), always to the end, with the seconds left drawn beside the wrist (`TargetGuide.countdownSeconds`, shown with `SessionHoldCountdown`) and the joint ring filling with the window. Tracking gaps pause the window.
-- **Farthest sustained reach.** Reach is measured from the shoulder, like the ghost. A sample is valid when the wrist lies within 45° of the direction seen from the shoulder and is out past the resting position along the direction by more than two body radii. Measuring from the hanging resting wrist instead put a shoulder-height reach exactly on the 45° edge, so reaching to or past the ghost, especially slightly above shoulder height, was rejected. Valid samples fill a trailing 0.4 s window; an invalid sample empties it. Once the window spans 0.3 s, its least extended sample is a candidate, so the peak is how far the wrist stayed out, never a single-frame extreme. The farthest candidate is shown with the "farthest" marker and, when the window ends, becomes the target at 85% of its distance (unchanged). Without a candidate the direction stays unscored. The patient then returns to start as before.
-
-- **Farthest marker look.** The marker now matches the calm overlay: a hollow blue ring with a white centre dot instead of a filled diamond, and a "Terjauh" / "Farthest" label in the hold count's badge style (dark capsule, blue edge, 22 pt semibold) instead of a 30 pt label on a black box.
-
-Rehearsal, practice, the 12 s outward budget, the 2 s arrival dwell, outcomes and persistence are unchanged.
-
-Verification: Simulator build with IPHONEOS_DEPLOYMENT_TARGET=17.0 passed. A temporary harness over the production `DirectionalReachActivity` fed synthetic 15 fps frames with ±0.008 jitter, and ticks running 0.25–0.4 s ahead of capture time. The original code never captured the start pose. The new code captured it in 2.1 s; each window ran 8 usable seconds (9.3 s of wall time with a 1 s tracking gap); a single-frame spike 0.15 beyond the held reach did not move the peak; a sideways-only direction stayed unscored; and calibration reached the countdown. Pending on the M1 iPad: both arms and camera mirrorings, the cross direction, countdown legibility at 1.5–2.5 m, and both languages.
-
-## Long rest waves shader (2026-11-12)
-
-At the product owner's request, the orange waves of the long breathing rest between daily-plan exercises move smoothly. The rest loop samples the breath every 80 ms, and the earlier `Canvas` redrew only when that sample changed, so the waves rose and fell in about 12 visible steps per second and stood still between them. `TMTherapyLongRestWaves` (DesignSystem) now draws them with a SwiftUI Metal shader (`LongRestWaves.metal`, `colorEffect`, iOS 17) inside `TimelineView(.animation)` capped at 60 fps. The breath expansion (0 at rest, 1 at a full breath, from the existing intensity) is an animatable shader argument interpolated linearly over 0.12 s toward each sample; edges are feathered over about 1.5 pt; each crest sways by about 1% of the height on a clock that stops while paused, so resuming never jumps. To make expanding and shrinking clearly visible, inhale lifts the three bands by 20%, 16% and 12% of the height (back to front, so they fan apart, replacing the shared 10.5% rise), swells each crest from 5% to 10% of the height at the centre (was a fixed 7%) and brightens the bands up to 10% toward white; exhale reverses it. Colours and band positions at rest are unchanged. Reduce Motion draws static waves at rest height. Breath timing, narration and the 80 ms loop in `DailyPlanNextView` are unchanged.
-
-Verification: Simulator build with IPHONEOS_DEPLOYMENT_TARGET=17.0 passed and `default.metallib` is in the app; the waves were not viewed. Pending on the M1 iPad: perceived smoothness and strength of the breath motion through inhale, hold, exhale and settle, pause and resume, Reduce Motion, GPU and thermal cost over the full rest, and Mac Catalyst rendering.
-
-## Calibration wind cue (2026-11-12)
-
-Accepted at the product owner's request: the calibration cue drew the same curved arrow as practice, so calibrating looked like one more repetition. For every exercise that passes `SessionMovementCue` to `TMSessionTargetOverlay` (arm raise, elbow bend, external and internal rotation, shoulder flexion), this supersedes "draws the same arrow" in the "Calibration cue" bullet of "Curved guidance arrow". The practice arrow, directional reach's assessment ghost and arrow, and fold towel are unchanged.
-
-- **Look.** The `calibrationWind` Metal shader (`DesignSystem/Controls/CalibrationWind.metal`) fills a 72 pt band along the same path the arrow would take (the same pivot turn or bow, the gap outside the hold ring and the 90 pt minimum length). Five lanes of soft comet streaks with white cores and a blue glow flow from the joint at about 90–130 pt/s, at staggered spacings with a slight wobble. The streaks fade in just past the hold ring, then spread apart and dissolve over the last 30%, so there is no head and no end point that could be read as a target.
-- **Direction and visibility.** Each comet is brightest at its front, so a single frame still shows the way. Under Reduce Motion the streaks stand still. A faint dark haze (0.35 at the centre line, fading to the band edges) takes the place of the stroked underlay of "Calm guidance visibility" for this cue. Cores are about 3–7 pt wide, thinner than the 6 pt arrow minimum, and get their contrast from the glow and the haze.
-- **Unchanged.** Cue tips, turn directions, when the cue shows and hides, the 0.25 s fade, and all domain and view-model code. The shader runs only on the band's pixels, inside the overlay's existing 30 fps timeline.
-
-**Softer, pointier, longer (2026-11-12, later).** At the product owner's request, this supersedes the look above:
-- **Streaks.** Each streak is now a needle about 110–150 pt long (spacing 150–200 pt, speed about 110–150 pt/s). It starts as a hairline tail, is widest (a 5 pt core) 80% of the way along, and narrows to a sharp point at its head.
-- **Softer.** Cores peak at 0.8 opacity. The glow is 0.35, reaching about 10 pt. The haze is 0.25. The wobble is 2 pt.
-- **Shape.** The lanes converge to 35% of their spread over the far end, so the whole wind tapers to a point instead of scattering.
-- **Length.** It dissolves over the last 20%. The cue is lengthened to at least 160 pt beyond the hold ring (was 90 pt), still capped at a 150° turn around a pivot.
-
-**Wavy wisps (2026-11-12, later).** At the product owner's request, the wind should look softer and wavier, like the guiding wind in Ghost of Tsushima. This supersedes the needle look and the opacities in the note above.
-- **Ripple.** Each wisp ripples sideways as it flies. The ripple is a long S-curve (about 120 pt, 5–7 pt by lane) plus a finer 55 pt ripple, and its phase travels with the wisp. It is 40% strength near the joint, full strength past the middle, and calms again near the tip, so the converging point stays clean.
-- **Softness.** Cores are a soft line about 3 pt wide at 0.6 opacity. The glow is pale blue at 0.18 and reaches about 12 pt. Each wisp's tail fades out slowly behind it and its front ends in a soft point; it is brightest about 70% of the way along, toward the front. The haze is 0.15 with a quadratic falloff, and the band is 88 pt wide.
-- **Uneven gusts.** Each gust gets its own strength (0.45–1) from a stateless hash.
-- **Visibility.** At the product owner's request, the cue is now further below the "Calm guidance visibility" minimums.
-
-**Wind fixed to the body (2026-11-12, later).** At the product owner's request, the wind is no longer pinned to the tracked joint. Pinned, it followed the hand like the practice arrow, so calibration still felt like chasing a pointer. This supersedes "draws the same arrow from the tracked joint" and the 60° per-frame tip in "Curved guidance arrow".
-- **Arm raise and elbow bend.** The wind starts at the saved start position (`TargetGuide.start`). It turns around the live pivot (shoulder or elbow) by up to 120° (`MovementActivity.calibrationSweep`), in the direction already latched per capture. The elbow-bend room limit still stops it before it crosses the upper arm. The sign is now judged from the saved start; the 60° `calibrationTurn` remains only for that judgement.
-- **Rotations and flexion.** The wind starts at the wrist's resting position (`BalanceOverlay.calibrationTail`, from `homeCenter`). For rotation it runs 1.1 upper-arm lengths out or in along the shoulder line; for flexion it runs 0.6 arm lengths up the spine.
-- **Following the body.** The pivot and the body frame are live, so the wind follows the body if the patient shifts, but not the moving limb.
-- **Passed stretch.** The overlay projects the joint onto the wind's line (`SessionMovementCue.joint`), and the shader fades out the stretch behind it, so wind only blows ahead of the limb.
-- **Drawing.** The wind is drawn under the hold ring and hold count and starts just outside the saved start bubble.
-- **Unchanged.** When the cue shows and hides, and acceptance.
-- **Verification.** Simulator build only. No harness exercised the new tail and tip. Pending on the M1 iPad: alignment with the arm for both sides and mirrorings, behaviour when the patient leans, and whether patients follow a fixed path.
-
-**Prominent gusts (2026-11-12, later).** At the product owner's request, the wind is more prominent and its motion follows the principles of animation. This supersedes the constant-speed wisp train and the opacities in "Wavy wisps"; the fixed path and the passed-stretch fade are unchanged.
-- **Timing and staging.** Wind blows in bursts. Every 2.4 s, five lanes launch gusts that cross the whole path in 1.7 s whatever its length, followed by a short calm.
-- **Slow in, slow out.** A gust's head follows an ease-in-out cubic.
-- **Overlapping action.** The centre lead gust launches first at full strength, and the outer lanes launch 0.05–0.15 s later at 0.75.
-- **Anticipation.** For 0.35 s before a burst a soft glow gathers at the start, then releases over 0.25 s.
-- **Squash and stretch.** A gust is 0.12 of the path long at launch and arrival and up to 0.35 mid-flight, and slightly thinner when stretched.
-- **Exaggeration and follow-through.** The launch ripple is 1.3×. On arrival the ripple grows to 1.5× and curls, then the gust fades over the end of its life.
-- **Secondary action.** Eight 2.5 pt dust motes drift along the band, brighter while a gust passes.
-- **Prominence.** Lines are about 5 pt at up to 0.95 opacity with a 0.45 `guidanceBlue` glow reaching about 14 pt. The haze is 0.3 and the band is 100 pt wide.
-- **Entrance.** On appearing, the wind unrolls from the start over 0.6 s with ease-out. Hiding stays a 0.25 s fade.
-- **Frame rate.** The overlay's timeline runs at 60 fps while a cue is shown (30 fps otherwise).
-- **Reduce Motion.** A still frame with the lead gust mid-path.
-- **Verification.** Simulator build passed. A temporary harness over copies of the timing arithmetic confirmed the head moves monotonically from 0 to 1, the gust length stays within 0.12–0.35, at most one gust per lane is alive at a time (the shader checks two), and the 960 s clock wrap is a whole number of periods. Not viewed. Pending on the M1 iPad: prominence and feel on live video at 1.5–2.5 m, and GPU and thermal cost at 60 fps.
-
-**Calibration arrow restored (2026-11-12, later).** At the product owner's request, the calibration cue is the curved arrow again. This supersedes the wind look ("Calibration wind cue" bullets, "Softer, pointier, longer", "Wavy wisps" and "Prominent gusts"). The `calibrationWind` shader and its drawing code are removed.
-- **Positioning kept.** The positioning from "Wind fixed to the body" stays, now for the arrow. It runs from the saved start (or the wrist's resting position) to the sweep tip, turning around the live pivot, and does not follow the hand.
-- **Passed stretch.** The shaft behind the tracked joint (`SessionMovementCue.joint`, measured by arc length) is drawn at 0.2 strength. The travelling highlight runs only ahead of the joint, and the chevron stays full strength.
-- **Drawing.** The arrow is drawn under the hold ring and hold count, starts just outside the saved start bubble and is at least 160 pt long. The overlay is back to 30 fps.
-- **Shared look.** The arrow's look matches the practice arrow, and that arrow is unchanged.
-- **Verification.** Simulator build only. Pending on the M1 iPad: alignment of the fixed arrow for both arms and mirrorings, the passed fade while moving, and whether calibration still reads as different from a repetition.
-
-Verification: Simulator build with IPHONEOS_DEPLOYMENT_TARGET=17.0 passed and `default.metallib` contains `calibrationWind`. A temporary harness over a copy of the resampler confirmed evenly spaced points with both ends kept. The cue was not viewed. Pending on the M1 iPad: whether the direction reads at 1.5–2.5 m on live video and in both mirrorings, whether patients see it as different from the practice arrow, Reduce Motion, and GPU and thermal cost during calibration.
-
-## Key-repetition clips (2026-11-12)
-
-Accepted at the product owner's request: the skeleton replay alone may not show a clinician enough of how the patient moved. Every exercise that records key-repetition skeletons (`TherapyKind.recordsMovement`) also keeps a short, low-resolution video of the same repetitions (first, hardest, last), filtered on the device before anything is held. This partially supersedes ADR-008 (see ADR-009).
-
-- **Filtering.** `RepClipFrameSource` (Shared/Tracking, owned by `BodyTrackingService` as `clips`) receives the original camera frame after body inference, with the nose, eye, ear and neck points (confidence 0.1 or more) of every detected person, bystanders included. On its own utility queue it scales the frame to 320 px wide (even height), runs `VNGeneratePersonSegmentationRequest` (`.fast`) and `VNDetectFaceRectanglesRequest` on the small image, and composites with one low-priority `CIContext`: the room blurred (sigma 10) under the people kept by the mask, and every head region pixelated over a softened copy. A head region is a square around the face points (at least 1.8 times their spread, 0.9 times the face-to-neck distance and 8% of the height), plus each detected face box enlarged by 30% per side. The frame is then encoded as JPEG (quality 0.6). No unfiltered frame is stored.
-- **Fail closed.** When segmentation or face detection fails, when no head is located, or when a detected person's face points are missing and face detection found no face, the frame reuses head regions seen in the last 0.3 s, otherwise the whole frame is blurred (sigma 16).
-- **Bounds.** Frames are taken at most every 0.1 s (with 10 ms slack for timestamp jitter, so every third 30 fps frame), one at a time; an offer while one is processing is dropped, so inference is never delayed and only one camera buffer is held. A ring keeps the last 35 s (longer than `KeyRepRecorder.maximumRepSeconds`). Hand inference never feeds clips.
-- **Which frames.** `KeyRepRecorder` returns a `KeyRepClipRequest` whenever it credits a repetition: the repetition's first and last recorded capture times and the repetition numbers still holding a key role. The guided engine forwards it as `SessionEffect.keepRepClip`; the Balancing view model calls the source directly. The source copies that range out of the ring and releases clips that lost their role, so the kept clips always match the saved skeletons. Each recorder (one per set) has its own `clipGroup`, so a set can be taken for saving after the next set has started; at most two groups are held.
-- **When recording runs.** Guided sessions enable the source only during the activity stage, not paused, not waiting for the camera and before the summary; Balancing enables it only while repetitions are counted. Disabling stops taking frames but keeps the ring and clips already kept (see the 2026-11-13 fix below). A session start resets everything.
-- **Setting.** Settings › "Video latihan" (`PracticePreferences.recordsRepClips`, default on) turns clips off; skeletons and metrics are recorded either way. A session reads the setting once when it starts.
-- **Storage.** After a set's skeletons are saved, its clips are taken and written by `RepClipWriter` as silent H.264 MP4 (about 250 kbps, the capture times as presentation times) to `Sessions/<session id>.clips/<execution id>-r<repetition>.mp4`, written to a hidden temporary file and moved into place. A failed clip save is logged and never pauses therapy. Deleting a session deletes its clip folder. History never reads clips.
-- **Report.** When the selected repetition has a clip, the report shows a Video / Kerangka control above the replay, defaulting to Video, and `TMRepClipPlayer` (DesignSystem) plays it mirrored like the live preview; otherwise the skeleton replay is shown as before.
-
-Verification: Simulator build with IPHONEOS_DEPLOYMENT_TARGET=17.0 passed. Temporary harnesses on the development Mac over the production code:
-
-- `KeyRepRecorder`, six synthetic arm-raise reps with rep 3 the lowest: the requests kept {1}, {1, 2}, {1, 3} (releasing 2), then {1, 3, 4}, {1, 3, 5}, {1, 3, 6}; the saved roles were 1 first, 3 hardest, 6 last; a rep discarded at a pause did not leak into the next range; every range equals its saved duration.
-- `RepClipFrameSource`: the 50 ms rate limit; frames without heads blurred whole; the 35 s ring bound; role release; the two-group bound; disabling clears the ring; `RepClipWriter` wrote a 5 s 320×180 MP4 (synthetic frames) with no temporary file left.
-- A frame from the bundled arm-raise demonstration: real body pose found the head (five face points) and it was pixelated. Segmentation did not recognise the rendered mannequin as a person, so its body was blurred with the room (the fail-safe direction). The sharp-person path is therefore unverified.
-
-Pending on the M1 iPad: that segmentation keeps a real patient sharp; head coverage when the head is turned, lowered, in profile, partly out of frame or occluded by a raised arm, and a bystander's face; the `Body inference timing` log and `Session frame rejected as stale` counts with clips on and off (`age` p95 must not rise); thermal behaviour over two-minute runs; clip size per session; report playback in both languages; and that deleting a session removes its clips.
-
-**Last repetition without video (fix, 2026-11-13).** In guided sessions the observation that credits a set's last repetition also ends the set. `TherapySessionViewModel` disabled the clip source before handling that transition's `keepRepClip`, and disabling cleared the frame ring, so the last repetition of every set (and of the session) kept its skeleton but no video. Now `setEnabled(false)` only stops taking frames; the ring (bounded to 50 s, copied by time range) is dropped by `releaseFrames()` when a guided, Balancing or finger session ends, after any pending `keep`; and the guided view model updates clip recording after the transition's effects. Clips missing from earlier sessions cannot be recovered. Verification: Simulator build and a temporary harness over the production source: a `keep` sent right after disabling found all 20 frames (none before the fix), a group kept before `releaseFrames()` could still be taken, and a later `keep` found nothing. Pending on the M1 iPad: the Last repetition of each set plays video.
-
-### ADR-009 — Privacy-filtered key-repetition clips
-
-Accepted, 2026-11-12, partially superseding ADR-008. Keep a short, filtered video of each set's key repetitions beside the skeletons, on by default with a caregiver setting. The skeleton alone loses context a clinician uses (trunk lean, hand position, effort), and the clips stay small (about 320 px, 10 fps, three repetitions per set) and are deleted with their session. The cost: on-device blurring is a best-effort filter, not a guarantee. A missed face on a single frame, a recognisable body, clothing or silhouette, or a person segmentation does not detect can still identify someone, which the fail-closed rules reduce but do not remove. The app now stores images of the patient, which must be reflected in consent and the installation's backup policy (section 8).
-
-Amended 2026-11-13: a caregiver may also choose skeleton only, or turn either censor off. With a censor off, the app stores identifiable face or room images by the caregiver's choice; the settings page warns about it.
-
-Amended 2026-11-13 ("Recording privacy levels"): uncensored video was briefly removed, then offered again the same day as the explicit "Tanpa samaran" choice with a warning; every other choice hides the face, the room, or both.
-
-Amended 2026-11-13 (later), at the product owner's choice: hand-exercise clips (fold towel, finger exercises and forearm rotation) are **not** fail-closed for faces. Their cameras run no body pose, so face censoring relies on face detection alone, and a frame with no detected face is kept sharp; a face the detector misses (turned away, partly in view, leaning in) is stored visible. The settings help says so.
-
-## Recording options (2026-11-13)
-
-Accepted at the product owner's request. This supersedes the single "Video latihan" setting of "Key-repetition clips"; recording boundaries, retention, storage and the report are unchanged, and every mode records the same repetitions (first, hardest, last) with skeletons and metrics.
-
-- **Settings › Rekaman latihan.** "Rekam": Kerangka saja (skeleton only, no video) or Video (`PracticePreferences.recordsRepClips`). With Video, "Samarkan wajah" (`censorsFace`) and "Samarkan latar" (`censorsBackground`) are independent toggles. Defaults: Video with both on. The footer explains the choice; with either censor off it shows a warning naming what will be visible. Sessions read all three once at start; `RepClipFrameSource.configure(privacy:)` (`RepClipPrivacy`) is set after `reset()`, so one session never mixes modes.
-- **Filtering per option.** Only the Vision work a chosen filter needs is run, and `BodyTrackingService` builds head evidence only when faces are censored (`needsHeads`).
-
-| Face | Background | Vision | Output | Fail-closed |
-| --- | --- | --- | --- | --- |
-| on | on | segmentation + faces | people sharp over a blurred room, heads pixelated | whole frame blurred |
-| on | off | faces (with pose heads) | sharp frame, heads pixelated | whole frame blurred when no head is located (0.3 s head memory) |
-| off | on | segmentation | people sharp over a blurred room | whole frame blurred if segmentation fails |
-| off | off | none | plain 320 px frame | none |
-
-- **Smaller files.** `RepClipWriter` encodes HEVC at 120 kbps average with a keyframe every 30 frames (3 s), falling back to H.264 at 150 kbps when the writer rejects HEVC. Size (320 px) and rate (10 fps) are unchanged.
-
-Verification: Debug and Release Simulator builds with IPHONEOS_DEPLOYMENT_TARGET=17.0 passed. A temporary harness on the development Mac ran the production `RepClipFrameSource` and `RepClipWriter` on 50 frames of the bundled arm-raise demonstration:
-- Face only: the head was pixelated and the body stayed sharp.
-- Background only and both: the mannequin was not segmented as a person, so its body was blurred with the room, as on 2026-11-12.
-- Neither: the frame was unfiltered.
-
-With camera-like grain and a textured room added, HEVC files were 58% of the previous H.264 at 250 kbps (about 98 KB against 170 KB for 4.9 s unfiltered); censored clips were 8–12 KB for 4.9 s because blur removes the noise. The no-head fail-closed path was not re-exercised (face detection found the mannequin's face); the 2026-11-12 harness covers it. Pending on the M1 iPad: the settings page in both languages and with large text, clips from each mode in the report, real HEVC sizes per session, and inference timing in each mode.
-
-## Recording for every exercise (2026-11-13)
-
-Accepted at the product owner's request: key-repetition recording (per-repetition metrics, first/hardest/last skeletons, and clips under the recording settings) now covers every exercise, adding fold towel, the five finger exercises and forearm rotation. Body exercises are unchanged.
-
-- **Hand skeletons.** `SkeletonFrame.hand` holds 21 points in `HandPoseExtractor` order (wrist, then thumb, index, middle, ring and little, base to tip), unmirrored Vision space, nil where a joint is below confidence 0.3; a frame without the hand has none. `KeyRepRecord.RepRecord.hand` stores them as 21 quantized x, y pairs per frame (an empty array for a frame without the hand) and names them in `KeyRepRecord.handJointOrder`; the file version stays 1 because older files simply lack the field. `KeyRepRecorder` records a `KeyRepSubject`: a guided or Balancing activity, or a finger exercise and side.
-- **Fold towel.** A repetition is one finished towel (four folds), counted only in the towel's practice phase. There is no angle, so the hardest towel is the slowest. `KeyRepRecorder.maximumRepSeconds` rose from 30 s to 45 s and the clip ring from 35 s to 50 s so a slow towel is kept whole. Towel sessions now appear in Progress "Riwayat latihan", the task history offers their report, and the report hides the angle tile and draws a hand.
-- **Finger exercises and forearm rotation.** `FingerSessionViewModel` keeps one recorder per exercise and set, fed with every stable hand frame while the phase is active or feedback (the hold that credits a set's last repetition also ends the set, so the next frame closes it), not paused and tracking-ready. A repetition spans two increases of the in-set count. `FingerActivity.repPeakFraction` is the share of the calibrated range reached at the repetition's target hold (sequential exercises keep their weakest finger), saved as `RepMetrics.peakFraction`; the lowest is the hardest, then the slower. When the exercise or set moves on, or the session ends, the recorder's key repetitions are saved and its clips taken and written; failures are logged only. Debug finish records nothing new.
-- **Finger storage.** `FingerSessions/<session id>.reps.json` (`FingerKeyRepRecord`, version 1: sets keyed by exercise raw value and set number) and `FingerSessions/<session id>.clips/<exercise>-s<set>-r<repetition>.mp4`. History ignores `.reps.json`; deleting a session or all history removes both.
-- **Hand clips.** `HandCameraService` owns its own `RepClipFrameSource` and offers frames after hand inference; `BodyTrackingService` also offers clip frames in hand mode. Both pass no head evidence (`heads: nil`): with face censoring on, only faces the detector finds are pixelated and a frame with no detected face stays sharp (ADR-009, amended). Background censoring still uses person segmentation, which keeps the arms and hands.
-- **Reports.** `TMKeyRepReplaySection` (History) is shared by the movement report and the finger report: First / Hardest / Last (a set with one key repetition shows a note that it is the first, hardest and last instead), Video / Kerangka when a clip exists, a body or hand replay chosen by the recorded frames, and a caption with the angle, else the reached range ("% of the calibrated range"). Hand emphasis (`HandSkeleton`): opposition the thumb and fingertips, curls, spreading and extension the four fingers, forearm rotation and towel the whole hand. `TMFingerReportDetailView` lists a replay card per recorded exercise and set ("Repetisi kunci").
-
-Verification: Debug and Release Simulator builds with IPHONEOS_DEPLOYMENT_TARGET=17.0 passed. Temporary harnesses on the development Mac over the production code: three synthetic towels of 12, 40 and 15 s kept roles first, hardest (the 40 s towel, kept whole with the hand in every frame) and last, and countdown frames were not recorded; four synthetic opposition repetitions reaching 0.95, 0.70, 0.98 and 0.90 kept 1 first, 2 hardest and 4 last with no body joints; a towel `KeyRepRecord` survived a round trip, and the same file without `hand` (the earlier format) still decoded; `FingerKeyRepRecord` round-tripped and a repeated save stayed one set. `RepClipFrameSource` with no head evidence kept a frame without a face as sharp as the unfiltered frame (a body camera blurred it whole), and pixelated the face the detector found in the arm-raise demonstration frame. Pending on the M1 iPad: a towel session and a finger session end to end with replays and clips in both reports, faces leaning into hand clips, hand inference timing with clips on (`HandCameraService` infers at 30 Hz), clip sizes, and that deleting finger history removes replay files and clips.
-
-**Directional reach replays (fix, 2026-11-13).** Directional reach recorded no replay. A recorded repetition there is one round (right, left and up, each with its return; the product owner's choice), and the observation that credits a set's last round also finishes the activity, so it arrives as `ReachPhase.finished`. `KeyRepRecorder` counted reach frames only in `.practice`, so it discarded that round: with the default one-round goal nothing was saved (no skeleton, clip or repetition numbers), and with more rounds the last was lost. The recorder now also counts the finished frame (rehearsal is still excluded). A round can last three 12 s reaches plus holds and returns, so `KeyRepRecorder.maximumRepSeconds` rose from 45 s to 60 s and the clip ring from 50 s to 65 s, superseding the bounds above. Sessions recorded earlier have no reach replay. Verification: Simulator builds and a temporary harness over the production recorder: one 50 s round now gives one key repetition with all 50 s (none before the fix), two rounds keep both (only the first before), and rehearsal frames are not recorded. Pending on the M1 iPad: a reach session shows its replay and video.
-
-## Recording privacy levels (2026-11-13)
-
-Accepted at the product owner's request. This supersedes the settings in "Recording options (2026-11-13)"; filtering per option, storage, reports and the hand-exercise face rule are unchanged.
-
-- **One ladder.** Settings › Rekaman latihan › Rekam is an inline picker of three levels, most private first (`ReplayRecording`, key `practice.replayRecording`): Tanpa rekaman (`off`: no skeleton and no video), Kerangka saja (`skeleton`), Video (`video`: skeleton and video). Default: Video.
-- **Video censoring.** With Video, Samarkan offers exactly Wajah, Latar or Wajah & latar (`VideoCensoring`, key `practice.videoCensoring`, default both). Uncensored video is no longer possible. Face only warns that the room will be visible; background only warns that faces will be visible.
-- **What each level keeps.** The recorder runs at every level, so guided and Balancing results keep their per-repetition numbers (duration, angle, coverage) and the report keeps its tiles and chart. `off` saves no `.reps.json` or clips (the report says there is no replay); `skeleton` saves skeletons only; `video` saves both. Finger sessions have never stored per-repetition numbers in their summary, so at `off` they keep only their totals. Sessions read the level and censoring once when they start.
-- **Migration.** When the new keys are missing, `practice.recordsRepClips == false` becomes `skeleton` (otherwise `video`); `practice.censorsFace` / `practice.censorsBackground` become face or background when only one was on, and both when both were on or both were off.
-
-Verification: Debug and Release Simulator builds with IPHONEOS_DEPLOYMENT_TARGET=17.0 passed. A temporary harness over the production `PracticePreferences` confirmed: a fresh install reads video / both; old "video off" reads skeleton; old face-only and background-only carry over; old uncensored reads both; the new keys win over the old ones; `off` saves neither skeletons nor clips, `skeleton` only skeletons, `video` both. Pending on the M1 iPad: the settings ladder in both languages and with large text, and a session at each level (report shows numbers only, skeleton, or video; no replay files at `off`).
-
-**No blur (2026-11-13, later).** At the product owner's request, Samarkan also offers Tanpa samaran (`VideoCensoring.none`): an uncensored video, which runs no Vision work and stores a plain 320 px frame. The footer warns that faces and the room will be visible and asks for the patient's consent (`settings.recordingWarningNone`). The default stays face & background. Migration now maps the earlier "both censors off" setting to `none` instead of `both`. Verification: Simulator builds and the preferences harness (old both-off reads none with both filters off; the other cases are unchanged). Pending on the M1 iPad: the four choices in both languages and an unblurred clip in the report.
-
-
-## Two-word voice commands (2026-11-13)
-
-Accepted at the product owner's request, because body, balance and finger sessions each recognized a different and growing set of phrases (twelve English phrases in `SessionAudioService`, ten English and Indonesian phrases in `GuidanceAudioService`), and "stop" ended the session.
-
-The voice vocabulary is now exactly two English words: **"stop" pauses** and **"go" resumes**. Both audio services match transcripts through the one `VoiceCommandVocabulary` (Shared/Audio), whose `VoiceCommand` has only `pause` and `resume`; `AudioCommand` and the `command.*` catalog keys are removed. Phrases come from `voice.command.pause` and `voice.command.resume` in the English string table in both app languages, matched as the whole normalized utterance, and are passed to recognition as contextual strings. "Stop" interrupts narration immediately; "go" still waits briefly as an exact phrase and applies only in a resumable paused state. Ending a session, repeat, help, skip, redo, target adjustment, step retry, timed practice and recalibration are touch-only; `SessionCommand` keeps those cases for the screen controls. The routine screen lists only the two phrases. This supersedes the command list implied by "Use a deliberately small English command vocabulary" (section 7), the finger sessions' Indonesian alternates, and voice exit and repeat on the balance screens.
-
-Verification: Simulator build only. Pending on the M1 iPad: "stop" and "go" in therapy, balance and finger sessions, during narration and music, at 1.5 m and 2.5 m; that a single short "go" is recognized reliably; and that narration containing "go" or "stop" inside a sentence (for example `sitToStand.voice.returnSameSide`) never self-triggers.
-
-## Approved left thumb-opposition narration (2026-11-14)
-
-At the product owner's request, the Indonesian left-hand thumb-opposition prescription of two sets and five repetitions uses the supplied UX-writing script. `LeftOppositionGuidance` selects stable catalog keys per phase, finger and credited repetition; `FingerSessionViewModel` coordinates their identified playback through the existing narrator. Other prescriptions, exercises, sides and languages retain their prior guidance. `DailyPlanIntroNarration` reads the daily-plan intro sequentially on entry from the tapped plan item (also automatically after the plan's long rest), with Set before Repetisi and without an intro timer, then routes through the existing readiness/session entry. The requested automatic entry supersedes the intro’s extra Start tap for this prescription; permission/listening validation and session entry checks remain. Mulai Latihan stays enabled while the intro reads; tapping it stops the remaining narration, whose cleared operation rejects its own late launch, and enters the session through the same readiness/session path (`launchAfterRest` after a long rest). The calibration heading identifies the left hand; its positioning cue precedes a wait for actual stable left-hand evidence.
-
-For this prescription, holds take three credited seconds and speak their remaining seconds only from fresh accepted evidence, after the instruction ends. This explicitly supersedes “Holds are not counted aloud” for this prescription only. Normal contact, return, interruption, full-ring acknowledgment and repetition-credit rules remain. The first practice countdown remains three seconds; the next set counts down five. The short rest has exactly three guided inhale/hold/exhale cycles, using minimum durations 6/2/3 seconds; each phase waits for its narration to complete, as does the opening/closing. There is no third set. The following long rest skips the initial spoken six-breath count and the settle cue; its timed phase also waits for speech completion. See `Documentation/LeftOppositionNarration.md` for generation and device checks.
-
-`Tools/generate_narration.py --groups opposition-left` prepares the new lines and count clips with the existing Marizka settings. Generation is developer-run, never a runtime network request. New recordings have not been generated as part of implementation; missing assets retain system-speech fallback. Physical voice, command, timing and tracking acceptance remains pending.
-
-Verification (2026-11-14): XcodeGen and the Debug Simulator build with the iPadOS 17.0 minimum passed. A temporary harness over production domain code checked two sets/ten full repetitions, all finger-specific keys, narration-gated three-second holds, full-ring acknowledgment, three-/five-second countdowns, prescription isolation, and three breaths waiting for narration with no time credited during camera waits. A no-network generator check found 79 unique clip names and all 40 touch/return mappings with unchanged Marizka settings. No test target or generated narration was added; physical checks remain pending.
-
-## Approved left arm-raise narration (2026-11-14)
-
-At the product owner's request, the Indonesian left arm-raise configuration of two sets/five repetitions follows `UX-writing---Angkat-Lengan-Kiri.md`. This is scoped by `LeftArmRaiseGuidance.applies`; other settings and languages retain their guidance. The plan intro reads the focus and goals without a timer, using the shared intro narration view model and router. As with thumb opposition, Mulai Latihan stays enabled during that reading and skips the rest of it. The calibration screen identifies the left arm and bypasses the old demo cards for this script. `SessionEngine` chooses each catalog key from the activity's phase and credited count; praise is serialized before the next instruction, with matching identities, so ticks/observations cannot replace praise or duplicate the next cue. Existing main-branch tracking, smoothing, recorders and clip retention remain.
-
-For this script only, capture and practice holds take three accepted seconds, and remaining seconds are spoken after the pose instruction finishes. This supersedes “Holds are not counted aloud” and the two-second hold default for this configuration. `MovementActivity` gates credit on completed guidance at each new pose; missing evidence freezes/reset holds under the existing rules, and pause preserves only completed work. First practice counts down three seconds, the next set five. The narrated short rest contains exactly three breaths with minimum inhale/hold/exhale times 6/2/3 seconds and identified speech completion gates. `SessionProgress.finishNarratedRest` remains the owner of the resulting set transition. The source's set-three text is omitted because it specifies two sets.
-
-The following daily-plan long rest keeps six breaths, skips the first spoken remaining count and the settle text, waits for speech at phase boundaries, and names the next exercise dynamically. `armRaise.left.*` base keys keep short display text; `speak.armRaise.left.*` stores longer narration. `Tools/generate_arm_raise_left_narration.py` renders the base filenames from spoken variants using the existing Marizka renderer, in a separate raw folder and cache. No API generation is performed by the app or during implementation. See `Documentation/LeftArmRaiseNarration.md` for commands and device verification.
-
-Working-copy migration: `/Users/ameliaaftiana/Developer/Itera` now owns `fixing-ux-n-voice` at main's `0f6f8e8` base. The former `itera` worktree is detached at that base to release the branch; both sets of prior uncommitted changes were retained in named Git stashes. Generated left-opposition recordings were copied unchanged, with their raw takes and cache, and the arm-raise generator is included. No doctor/patient or alternative tracking code from `testing-pengukuran` was merged into this branch.
-
-## Recorded right thumb-opposition mapping (2026-11-14)
-
-At the product owner's request, the generated Marizka recordings for right thumb opposition now run through the same accepted movement flow as left thumb opposition. `LeftOppositionGuidance` and `LeftOppositionRest` were renamed `OppositionGuidance` and `OppositionRest`: progression and credited holds are shared, while cue names and intro lines come from the session's frozen anatomical side. The approved scripts remain two sets/five repetitions, three credited seconds per hold, and first/next-set countdowns of three/five seconds. Other prescriptions keep generic guidance instead of hearing incorrect totals. The right intro omits the left-only voice-command explanation, and calibration waits for the right hand and is titled “Kalibrasi Tangan Kanan”, correcting the source's leftover left-hand labels.
-
-`DailyPlanViewModel` retains the completed opposition side through long rest, independently of the next exercise, and selects `opposition.right.longRest.*` after the right-hand exercise. Short rest, per-finger instructions and repetitions use `opposition.right.*`; left clips keep their existing namespace. The pending narration identity, pause, lost-evidence and full-ring acknowledgment gates are unchanged. The generated JSON's right-side spoken text was added to the app String Catalog using the exact filenames already generated; no recordings were regenerated or renamed. Existing `armRaise.left.*` mapping was checked against the newly available recordings.
-
-Verification: XcodeGen and Debug Simulator build with iPadOS 17.0 minimum passed. Temporary harnesses over production finger domain code completed two sets/ten repetitions for each side and checked all four fingers, speech gates, three-second holds, full-ring acknowledgment, three-/five-second countdowns and three speech-gated breaths. Selected cue names resolved to the matching side's bundled files. Every generated line for right opposition (96 including shared counts) and left arm raise (59 including shared counts) was checked against spoken catalog text and the built app's resources. Physical iPad verification of playback, loudness, Stop/Go, pause/background, real tracking and patient comfort remains pending.
-
-## Recorded right arm-raise mapping (2026-11-14)
-
-At the product owner's request, the generated right arm-raise recordings now follow `UX-writing---Angkat-Lengan-Kanan.md` for the Indonesian two-set/five-repetition configuration. `LeftArmRaiseGuidance` was renamed `ArmRaiseGuidance` and now selects `armRaise.left.*` or `armRaise.right.*` from the configured anatomical side. Movement geometry, confidence floors, smoothing, narration identities, evidence-gated three-second holds and repetition acceptance are unchanged from the approved left script. Other prescriptions retain generic guidance.
-
-`SessionSnapshot.armRaiseScriptSide` retains that side through summary, when `activity` becomes nil; `DailyPlanViewModel.armRaiseRestSide` carries it through the next exercise's long rest. Intro, calibration heading, practice title, per-repetition prompts/praise, short rest, set countdowns and summaries all use the same frozen side. The right script keeps the left arm resting, correcting the source's leftover left-arm movement labels. It uses the existing three-second first countdown, three guided breaths, five-second next-set countdown and six-breath long rest without the initial spoken remaining-six or settle cue. No recordings were renamed or regenerated; playback keys match the existing generated files.
-
-Verification: XcodeGen and Debug Simulator build with minimum iPadOS 17 passed. A temporary harness over production domain code completed both anatomical sides, two sets/ten repetitions each, checking every repetition cue, narration gates, three-second holds, tracking-loss freeze, three complete short-rest breaths, 3/5 countdowns and correct side retention through summary. The built app includes all 58 generated right clips and 59 left clips (including shared counts), and their script text matches the spoken catalog entries. Physical iPad acceptance of playback, loudness/music, Stop/Go, pause/background, real tracking and patient comfort remains pending.
-
-## Scripted long-rest clip alignment (2026-11-14)
-
-At the product owner's request, the recorded long rest after the scripted arm-raise and thumb-opposition exercises was re-checked against the four UX-writing briefs. Three playback mismatches were corrected in `DailyPlanNextView` and `DailyPlanViewModel`; no recordings were regenerated or renamed.
-
-- The hold between inhale and exhale is silent for the scripted rest. The briefs contain no "Tahan sebentar…" line; the generic rest keeps it.
-- The last breath now says "satu napas lagi" before "Sekali lagi", matching the brief's 5…1 counts. The already-generated `*.longRest.remaining-1` clips were previously never played. Only the first of the last breath's two inhale cues carries the count; the generic rest keeps its 5…2 counts.
-- Left-hand thumb opposition now uses the `opposition.right.longRest.*` clips. Both briefs approve identical long-rest wording, but only the right-hand generator rendered it; the left side previously fell back to the older generic `rest.long.*` recordings, which have no "satu napas lagi" clip.
-
-Verification: Debug Simulator build. Listening on an iPad remains pending.
-
-## Daily-plan arm raise follows the briefs (2026-11-14)
-
-At the product owner's request, the Indonesian daily-plan arm raise always runs the approved `UX-writing---Angkat-Lengan-Kiri/Kanan.md` scripts. Previously the script applied only when the saved arm program happened to be one side × two sets × five repetitions. The program default is both sides × one set, so the plan normally fell back to the generic flow: intro timer, old instruction cards, and the system voice for the combined exercise/side cue instead of Marizka.
-
-`DailyPlanViewModel.routineExercise(for: .armRaise)` now applies `ArmRaiseGuidance.sets` (2) and `ArmRaiseGuidance.repetitions` (5) to one arm per session. The plan's training side runs that arm only. With no plan side, the left arm runs first and the right arm second. Each arm gets its own full sequence: intro, calibration, sets, summary and long rest. The plan item stays current between the two arms (`pendingArmRaiseSide`) and is marked done only after the last arm. `hasAutomaticRest` counts the pending arm, so the left session continues automatically even if arm raise were the plan's last item. This explicitly overrides the arm program's saved sets, repetitions and sides for this plan item in Indonesian only. English, the arm program run outside the plan, and other exercises are unchanged. Leaving the plan between arms restarts at the left arm; no partial-item progress is saved.
-
-Verification: Debug Simulator build. Device playback and real tracking remain pending.
-
-## Debug daily-plan editor (2026-11-15)
-
-Debug builds add Settings › "Edit Beranda exercises" (marked `.debugOnly()`), which opens `TMDebugPlanEditorView` as a nested sheet through `NavigationRouter` (`AppRoute.debugPlanEditor`). It lists every `DailyPlan.standard` item: a toggle shows or hides it on Beranda, dragging reorders it, and "Custom sets & reps" sets that item's own sets (1–5) and repetitions (1–20). Done applies; Reset restores the standard plan. This departs from "The plan is fixed" in "Daily plan and Beranda" for Debug builds only; everything, including the route case, is compiled only under `#if DEBUG`.
-
-- **Storage.** `DebugPlanLayout` (Features/Home/Domain/Models) stores stable item ids, visibility and optional counts as JSON in UserDefaults (`debug.dailyPlanLayout`). Unknown ids are dropped and exercises added to the standard plan later are appended as shown. Progress stays keyed by id, so hiding or reordering keeps today's progress; "Latihan N" and day completion follow the shown items.
-- **Counts.** A custom count replaces the program's own setting for that plan item only. `DailyPlanViewModel` applies it wherever counts are resolved, so cards, intros and sessions agree: finger items through `prepareSession(sets:repetitions:)` (a checkpoint resumes only with matching counts), guided items through `routineExercise(for:in:)` (goals per side, and rounds for directional reach), and Balancing items through `balanceSettings(for:)`.
-- **Scripts.** The approved Indonesian scripts always apply, in Debug and Release alike, so custom counts never change what is spoken. In Indonesian, arm raise and thumb opposition ignore custom counts: their recordings fix two sets of five (rep clips 1–5, first and final summaries, spoken goals), so arm raise keeps its two-arm sequence and scripted long rest, and thumb opposition keeps its saved routine. In English and for every other item, custom counts apply. (2026-11-16: replaces the earlier choice to drop a script when its item had custom counts, at the user's request.)
-
-Verification: see the change's build notes. Running sessions with custom counts needs a camera and remains a device check.
-
-## Bilingual Marizka numbers (2026-11-16)
-
-At the product owner's request, the first step toward recorded Indonesian and English narration is repetition counts and numeric countdowns in Marizka's voice. `Tools/generate_marizka_counts.py` generates separate numbers 1–100 for repetition feedback and 1–10 for countdowns in both languages, with a calm slower repetition pace and short countdown takes that must fit the existing one-second clock. It uses the developer's ElevenLabs API key only during asset generation. `NarrationClips`, `SessionAudioService` and `GuidanceAudioService` prefer the bundled language-specific recordings and retain their older recordings or system voice as fallback. The runtime remains offline, with no change to progression timing or the sole audio-session owner. The existing Indonesian narration clips and their generator caches stay separate. On 2026-11-16 all 220 Marizka clips were generated and normalized; five Indonesian countdown takes were retaken to fit the 0.90 s bound. The inventory/duration check and Debug Simulator build passed, and every clip was found in the app bundle. Subjective listening, pronunciation and physical M1-iPad acceptance remain pending.
-
-**Calm, uniform numbers (2026-11-16).** At the product owner's request, every number must sound as low, stable and calm as the bundled Indonesian instructions (`Resources/Audio/NarrationID`), with no energetic or upbeat takes, while staying clear. Listening comparisons rejected higher stability alone and a pitch shift after generation (it sounded altered). Measured with `Tools/measure_pitch.swift`, the earlier counts sat at a median 188 Hz with outliers to 253 Hz (90th percentile), against 163 Hz for the instructions. The generator now:
-
-- uses the instructions' unspoken "explaining slowly" lead-in (`generate_narration.TONE_LEAD_IN`; an English equivalent for English) with stability 0.70;
-- records each clip with three seeds, adding one seed at a time up to ten when none is calm, and keeps the take scoring lowest on semitones above 163 Hz plus any rising ending;
-- rejects takes more than two semitones above the reference, rising more than 1.6 semitones at the end, pausing more than 0.45 s inside the number, or (countdowns) predicted longer than 0.84 s before padding; `--check` applies the same calm gate to the chosen takes;
-- places the previous number after the lead-in for repetitions only, so counts sound like one series, except six Indonesian repetitions (47, 58, 68, 83, 85, 88) that stayed energetic with it. Countdowns get the lead-in only, because number context slowed them past the one-second clock. `next_text` is not sent: it made takes speak the following number;
-- uses one countdown speed per language (1.00 Indonesian, 0.90 English) instead of per-number overrides;
-- trims repetition clips in `Tools/normalize_narration.swift` to 20 ms before and about 100 ms after the number (countdowns keep 20 ms each side), removing about 0.4 s of trailing silence from each queued count;
-- offers `--only`, `--audition`, and `--normalize-only` for targeted retakes, listening at session timing, and re-levelling without credits.
-
-Rejected candidate takes are kept out of git and the bundle. All 220 clips passed the inventory, duration and calm checks (median 162 Hz Indonesian, 160 Hz English; 90th percentile 175 Hz in both). XcodeGen and the Debug Simulator build with the iPadOS 17.0 minimum passed, and the built app contains all 220 clips unchanged. Tone through the iPad speaker, pronunciation, countdown fit and Stop/Go recognition during counts remain physical M1-iPad checks.
-
-
-## English recorded instructions and Marizka-only counts (2026-11-16)
-
-At the product owner's request, English instructions now play in Marizka's voice instead of the system voice, using the calm recipe above. This supersedes "for English, the best installed system voice" in "Recorded narration" and the count-clip fallbacks in "Bilingual Marizka numbers".
-
-- **Generation.** `Tools/generate_narration.py --language en` reads the English String Catalog text of the finger and body keys (the `speak.<key>` variant first, as `NarrationText` does) and records each line with the English "explaining slowly" lead-in and the instructions' settings (stability 0.70, speed 0.88). It records three seeds per sentence, adding one at a time up to ten when none is calm, and keeps the take with the lowest score (semitones above 163 Hz plus any rising ending). Sentences skip the count clips' inner-pause and length checks because commas pause naturally. Chosen takes are kept in `Tools/NarrationRaw/EN`, rejected ones in its ignored `candidates` folder, and the clips are bundled as `Resources/Audio/NarrationEN/narration-en-<key>.m4a`. `--check --language en` reports missing, stray, and not-calm clips. The pitch helpers are shared with `generate_marizka_counts.py`. Indonesian generation, its fingerprints, and the exercise-specific wrappers are unchanged; the approved arm-raise and opposition scripts remain Indonesian only.
-- **Playback.** `NarrationClips` is no longer Indonesian-only. `resourceName(for:language:)` returns `narration-id-…` or `narration-en-…` and also keys both services' clip caches, so a language change between sessions cannot reuse the other language's clip. A cue still plays recordings only when every line has one; otherwise the system voice speaks it. Completion, cancellation, pause, stop, and interruption are unchanged.
-- **Counts.** Marizka clips are the only recorded numbers. `CountsEN`, `CountsID`, and the 100 `narration-id-count-*` clips were removed, along with their raw takes, manifest entries, and the count lines in `generate_narration.py`, the arm-raise wrappers, and the opposition line files. `countURL` no longer falls back to an older clip, and `SessionAudioService` speaks the number with the system voice when a Marizka clip is missing.
-
-Result: 183 English clips with a median of 162 Hz and a 90th percentile of 173 Hz (Indonesian instructions: 163 Hz). One clip, `shoulderFlexion.title` ("Shoulder flexion with rotation", spoken as the next exercise during the long rest), stayed at 191 Hz after ten takes and is the calmest available. XcodeGen and the Debug Simulator build with the iPadOS 17.0 minimum passed. The built app contains 183 English, 448 Indonesian, and 220 Marizka number clips, and no old count clips. Pending on the M1 iPad: English card timing and reading gates with the recorded speech, Stop/Go recognition during English narration (including self-trigger from lines containing "go"), and missing-clip fallback.
-
-## Scripted narration follows custom counts (2026-11-16)
-
-At the product owner's request, the Indonesian arm-raise and thumb-opposition scripts now follow the plan's set and repetition counts instead of forcing two sets of five. This supersedes the "Scripts" bullet ("arm raise and thumb opposition ignore custom counts"). Without custom counts, arm raise still defaults to two sets of five per arm, one arm per session. No new recordings were made. A recorded sentence plays only when the numbers it speaks are true, and Marizka number clips carry the other counts (`ScriptedRepetitions`, Therapy/Shared/Domain).
-
-- **Intro.** `intro.goals` ("dua set… lima repetisi") plays only at 2×5. Otherwise the intro omits it and the screen shows the counts.
-- **Movement lines.** Repetition 1 uses `rep.1.*`, the set's last repetition uses `rep.5.*` ("satu repetisi lagi"), and the repetitions between cycle through `rep.2–4.*`. At five repetitions every repetition maps to itself. Opposition openings come before every repetition but the last. `rep.3.opening` ("repetisi ketiga") is used only for repetition 3; other repetitions get `rep.4.opening` ("Kita lanjut ya").
-- **Praise.** Arm raise keeps its recorded praise for repetitions 1–4. Opposition keeps 1–3, and 4 only when five is the goal, because its "satu repetisi lagi" says so. Any other repetition is praised with Marizka's number:
-  - opposition: a `NarrationLine.number` inside the recorded cue;
-  - arm raise: `.guidance(prefix: .count(n), key:)` before the next movement line.
-- **Set summaries.** `summary.first` plays after set 1 when the goal is five and a second set follows. `summary.final` plays at 2×5. Otherwise Marizka says the set's repetitions, followed by the recorded `session.good` (a later set follows) or `session.feedback` (last set). The light session screen shows the recorded summary only when it was spoken.
-- **Short rest.** `rest.opening` ("set satu selesai… lanjut ke set dua") opens only the rest after set 1. Later rests start at the first breath.
-- **Timing.** The opposition script's three-second holds and five-second next-set countdown are now passed to `FingerActivity` explicitly, for Indonesian opposition at any count. English opposition at exactly 2×5 no longer gets that timing by accident, because the old gate never checked language.
-
-Verification: XcodeGen and the Debug Simulator build with the iPadOS 17.0 minimum passed. A temporary harness over the production guidance sources simulated both scripts and sides at 2×5, 3×3, 1×1, 1×5, 2×8, 3×12 and 5×20. Every chosen line exists as a bundled `narration-id-*` or Marizka clip. At 2×5 the sequence equals the earlier script. No goal or total sentence plays where it would be false. Pending on the M1 iPad, in Debug with custom counts: full 3×3 and 2×8 sessions of each script, listening to the joins between Marizka numbers and recorded lines, the rests and the summaries.
-
-## Directional reach full-reach target (2026-11-16)
-
-At the product owner's request, the directional reach practice target is 100% of the farthest sustained reach (`DirectionalReachActivity.practiceTargetFraction`), so the bubble sits where the patient reached during calibration. This supersedes the 85% in "Directional reach adapts to maximum reach" and "Directional reach timed calibration"; the two-body-radius minimum separation is unchanged. To keep arrival forgiving at the full reach, the practice start and target bubbles are 120 pt across (`practiceBubbleDiameter`), superseding the shared 100 pt bubble for reach practice and rehearsal only. The calibration start hold keeps the shared 100 pt bubble. Acceptance uses the drawn radius, so drawing and acceptance still agree.
-
-Verification: Simulator build only. Physical M1-iPad checks remain pending: the bubble lands on the "Farthest" marker, the 2 s arrival dwell fills at full reach, start and target overlap on short reaches, and legibility at 1.5–2.5 m.
-
-
-## Detection waits without automatic pause (2026-11-16)
-
-At the product owner's request, finger sessions no longer pause after eight seconds of missing hand, wrong-side, unclear-finger or ambiguous-hand evidence, or after thirty seconds without a target calibration hold. The live screen keeps its existing recovery guidance and waits for usable evidence; returning detection recovers automatically through the existing debounce. Missing evidence still earns no hold time or repetitions, and calibration does not finish without valid evidence. Camera delivery failures retain their recovery pause (three seconds, ten on startup); explicit Pause/Stop voice commands, backgrounding, audio interruptions and permission/storage failures retain their existing behavior. Body sessions already wait for missing patient evidence without opening Pause.
-
-Verification: a temporary harness over production `FingerTrackingRecovery` reproduced all four detection-triggered pauses before the change, then verified no pause after two minutes, automatic recovery with fresh evidence, and unchanged camera startup/failure timeouts. Simulator build and physical-device verification are recorded separately; real hand-loss and motionless calibration acceptance remain device checks.
-
-
-## Audible plan introduction before therapy readiness (2026-11-16)
-
-The approved arm-raise and thumb-opposition intros now play before `HomeViewModel.performAction` validates therapy readiness. Previously `DailyPlanIntroNarration.start` returned without playing any line when permission/listening readiness was unavailable or when a first permission request returned false. The intro is non-therapeutic playback; `DailyPlanViewModel.startCurrent` remains the mandatory readiness gate before navigating to a manually initiated session. Automatically sequenced sessions retain their existing independent entry checks. The intro view prepares its readiness model on every entry, including when an automatic intro carries a countdown value. No capture, scoring or permission bypass was added. This supersedes the earlier requirement to validate listening before playing the plan's intro, not the requirement to validate before therapy.
-
-Verification: a temporary harness compiled the production `DailyPlanIntroNarration` with service-boundary fakes. It reproduced silent intro with unavailable readiness before the fix and then verified ordered playback, no session launch until readiness succeeds, pause/resume and ignored stale completions. Device playback remains unverified; a successful Simulator build alone does not establish that the patient hears the intro.
-
-## Scripted exercises lead the daily plan (2026-11-16)
-
-At the product owner's request, `DailyPlan.standard` now starts with Sentuh Jempol ke Jari (`.finger(.opposition)`), then Angkat Lengan (`.therapy(.armRaise)`), followed by the other finger and forearm exercises in `FingerExercise` order, elbow bend, directional reach, the shoulder/trunk exercises and fold towel. This matches the approved Indonesian scripts: the opposition intro opens the day ("Hari ini kita akan mulai…"), and the arm-raise intro follows ("Selanjutnya…"). It supersedes the previous hand-first order. Item ids, and therefore saved daily progress, are unchanged. A Debug `DebugPlanLayout` already saved on a device keeps its saved order until Reset in "Latihan Beranda"; devices without a saved layout, and every Release build, use the new order.
-
-Verification: Debug Simulator build only.
-
-## Intro start waits for the full reading (2026-11-16)
-
-At the product owner's request, Mulai Latihan on a scripted daily-plan intro is disabled while the intro narration reads. It becomes available once the reading has finished (the session then opens automatically as before) or while the reading is paused, when the button resumes it. This supersedes "Mulai Latihan stays enabled while the intro reads; tapping it stops the remaining narration" from `0a9e93b`, in both the thumb-opposition and arm-raise sections; the skip path was removed. Back still stops the narration and leaves the plan.
-
-Verification: Debug Simulator build only.
-
-## Dependency factory (2026-11-16)
-
-Superseded by "Components, builders and feature routers (2026-11-16)".
-
-`AppDependencies` (App) is the composition root and page factory. It constructs every service, repository and shared model once, keeps them private, and exposes one `make…` method per page. Each method injects only what that page uses through its initializer. The container is not placed in the environment and is not passed to feature views or view models. Feature code depends on the injected types alone. `NavigationRouter` remains in the environment, as the navigation conventions require.
-
-Every page and injected type declares an explicit initializer and keeps its injected dependencies private (see "Navigation, typography, and code conventions"); memberwise initializers are not used for injection.
-
-- **Navigation.** `withAppRouter(dependencies:)` passes the factory to the routing modifiers. `AppRouterView.destination(_:dependencies:)` is a switch over the factory methods.
-- **Guided sessions.** A guided session carries its routine snapshot in `AppRoute.therapySession(Routine)`, replacing the mutable `selectedRoutine`.
-- **Finger sessions.** `FingerSessionLauncher` prepares finger and forearm sessions. It holds the open one across the live and closing pages.
-- **History recovery.** `SessionHistoryRecovery` owns interrupted-session recovery (`HistoryRecovering`).
-- **Daily plan.** `DailyPlanViewModel` receives the finger and forearm homes, both routine models and the launcher through `init`.
-
-Verification: Debug and Release Simulator builds with IPHONEOS_DEPLOYMENT_TARGET=17.0 passed. This change does not alter runtime behaviour; the earlier device checks still apply.
-
-## Components, builders and feature routers (2026-11-16)
-
-Accepted at the product owner's request, following the iOS Conference Indonesia 2026 MVVM sample (stage 7) while keeping Observation. This supersedes "Dependency factory" and the shared `NavigationRouter` rules; `NavigationRouter`, `AppRoute`, `AppRouterView` and `withAppRouter` are removed.
-
-- **Components.** `Shared/DependencyInjection/Component.swift` is the base `Component<Dependency>`. Each feature declares a `…Dependency` protocol and a `…Component` subclass holding what its builder needs. A parent component conforms to its children's dependency protocols and seeds them lazily: `AppComponent` (App, formerly `AppDependencies`) seeds `HistoryComponent`, `HomeComponent` and `TherapySessionComponent`; `HistoryComponent` seeds `HistoryCellComponent`. Each dependency protocol lists only what that feature uses; Home receives the session builder through `HomeDependency` (as the sample's detail screen receives its cell builder) instead of passing session services through. `AppComponent` holds dependencies and app lifecycle calls only; the tap sound lives in `ButtonClickPlayer` (Shared/Audio).
-- **Builders.** `…Buildable` protocols with `associatedtype` screens describe what a builder makes; `…ContentBuildable` protocols describe what a screen builds inside itself (rows, destinations, sheets, cover pages, the intro the rest page embeds). Concrete builders (`RootBuilder`, `HistoryBuilder`, `HistoryCellBuilder`, `HomeBuilder`, `TherapySessionBuilder`) create every view model and view; views and view models never construct other view models. Builders live in each feature's `Presentation/Builders`; `RootBuilder` lives in App.
-- **View models.** Every screen's view model conforms to a `…ViewModelProtocol: AnyObject, Observable` that exposes values and actions, and the screen is generic over it. Owning screens keep it in `@State`; rows (`TMHistoryCellView`) hold it as a plain `let`, the Observation counterpart of the sample's `@ObservedObject`, so refreshed rows never keep a stale model. Screen models wrap shared models (`DailyPlanViewModel`, `FingerHomeViewModel`) instead of exposing them: `HomeScreenViewModel`, `PracticePreferencesViewModel`, `DebugPlanEditorViewModel`, `DailyPlanIntroViewModel`, `DailyPlanNextViewModel`, `ReportsViewModel`, `FingerReportDetailViewModel`, `HistoryCellViewModel`, `FingerSessionCompleteViewModel`. Session pages are generic over `TherapySessionViewModelProtocol`, `BalanceSessionViewModelProtocol` and `FingerSessionViewModelProtocol` (through `FingerSessionLaunching`), and report to the plan through `DailyPlanSessionReporting` (Therapy), which `DailyPlanViewModel` implements, so sessions no longer depend on Home's concrete plan.
-- **Routers.** Each feature has route enums and routers in `Presentation/Routing`. The stack-owning screen's view model wires the routers' closure hooks: `ReportsViewModel` (`HistoryRouter`), `HomeScreenViewModel` (`HomeRouter` for the settings sheet, `PlanRouter` for the plan intro and the full-screen cover), `RootViewModel` (`TabRouter`). Pages receive narrow protocols: `HistoryRouterProtocol`, `HomeRouterProtocol`, `DailyPlanRouterProtocol` (injected into `DailyPlanViewModel`), `SessionRouterProtocol` and `TabRouterProtocol`. History rows navigate themselves through `HistoryRouterProtocol`, as the sample's cells do.
-- **Previews.** History, Beranda, settings, the Debug plan editor, the plan intro and next pages and the finger closing page have `#Preview`s with `@Observable` mock view models and mock builders. The guided session keeps its snapshot fixtures (`TherapySessionFixtureBuildable`, Debug only).
-
-Deliberate differences from the sample: Observation instead of `ObservableObject`; sheets and a full-screen cover, which the sample does not have (`TMPlanCoverHost` keeps one cover mounted while `PlanCover.route` changes; sheets and covers re-apply button feedback, typography and the sound button style through `modalEnvironment`); view models that wire router hooks are created once and held by their component (`reportsViewModel`, `homeViewModel`, `rootViewModel`), because the app body re-evaluates on a language change and a discarded model would leave its router's hooks pointing at nothing; `TabRouter` for cross-tab navigation. Session view models still take the concrete `BodyTrackingService`, `SessionAudioService` and `HandCameraService` and expose the capture owner for the camera preview, since those services have no substitution boundary yet; pages take permissions as `any PermissionManaging`. Balance and finger sessions have no mock previews. The readiness model formerly named `HomeViewModel` is `TherapyReadinessViewModel`.
-
-Behaviour notes: a session's leave path outside a running plan dismisses the plan cover (`closeSession`) instead of popping Beranda's stack; sessions only open from the plan, so this path is not normally reached. The nested Debug plan editor closes with SwiftUI `dismiss`.
-
-Verification: Debug and Release Simulator builds and a Mac Catalyst build passed with IPHONEOS_DEPLOYMENT_TARGET=17.0, and the app launches to Beranda on an iPad Simulator. Runtime navigation (tabs, settings and nested editor sheets, plan intro, cover hand-over between sessions and rest, ending a run, report rows, pop and delete) needs a Simulator walk-through and the existing device checks.
-
-## Session flow redesign (proposed, 2026-11-16)
-
-Proposed only; nothing is implemented. Today the guided `SessionEngine`, `FingerSessionViewModel`, `BalanceSessionViewModel` and `DailyPlanNextView` each run their own progression, pause, rest, countdown and narration-gate logic. The plan replaces this with shared domain flow types (`SessionStage`, `Suspension`, `GuidanceGate`, `Countdown`, `BreathingRest`, `ActivityFact`, `GuidancePolicy`) in ten behaviour-preserving phases. See [Documentation/SessionFlowRedesign/README.md](Documentation/SessionFlowRedesign/README.md). ADR-010 will be added when Phase 3 lands. Until a phase is merged, the sections above remain authoritative.
+| ADR-001 | Local single-patient product | Original specification |
+| ADR-002 | Independent domain logic inside one target | Original specification; folder levels removed in *Simplified architecture* |
+| ADR-003 | Observation for presentation, Combine for events | Original specification |
+| ADR-004 | Fresh calibration after termination | Original specification |
+| ADR-005 | Offline voice with interruptible guidance | Original specification |
+| ADR-006 | Activity-owned state machines behind a small lifecycle contract | Section 16 of the original specification |
+| ADR-007 | XcodeGen spec as project source of truth | Section 16 of the original specification |
+| ADR-008 | Key-repetition skeletons instead of video | *Key-repetition replays for clinicians* |
+| ADR-009 | Privacy-filtered key-repetition clips | *Key-repetition clips*, amended by *Recording privacy levels* |
+
+## 11. Verification
+
+- No automated test target. Verify with `xcodegen generate` and a Simulator build with `IPHONEOS_DEPLOYMENT_TARGET=17.0`; temporary harnesses over production logic files are allowed outside the repository.
+- A Simulator build never establishes camera, voice, animation, timing or offline acceptance. Physical M1-iPad checks are recorded with device, OS, app version, scenario and result.
+- Outstanding device checks are listed in each log entry's verification paragraph. The standing matrix: movement and reach acceptance, geometry in both orientations and mirrorings, both languages, Stop/Go during narration and self-trigger rejection, background/interruption/termination recovery, storage corruption and duplicate history, Reduce Motion and large text, and two-minute capture-age and thermal runs.

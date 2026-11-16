@@ -14,7 +14,7 @@ Move the Indonesian arm-raise script out of the engine, `MovementActivity` and t
 - `TherapySessionViewModel.swift:71` decides the language: `scriptedArmRaise: AppLanguage.selected == .indonesian`.
 - `MovementActivity` has `scriptedGuidance` and `waitingForGuidance` (≈ 60-63, 114-118, 126, 140, 209-218, 264, 547-552). Script mode switches it to 3 s dwells and a 5 s next-set countdown.
 - Views branch on `usesArmRaiseScript` and `armRaiseNarrationPrefix`.
-- `ArmRaiseGuidance.swift` and `Shared/Domain/ScriptedRepetitions.swift` hold the key tables.
+- `ArmRaiseGuidance.swift` and `Shared/ScriptedRepetitions.swift` hold the key tables.
 
 ## Changes
 

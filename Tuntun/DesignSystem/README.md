@@ -6,7 +6,7 @@ This folder owns reusable UI controls and styling for Tuntun. Follow the reposit
 
 Every agent doing UI work must inspect `Tuntun/DesignSystem` and read its README first. Use existing reusable controls and styling from that folder. If no suitable component exists, create a reusable one there before using it. Extend compatible components instead of duplicating controls or styling in feature folders.
 
-Screens may use native SwiftUI layout directly; navigation must use the shared router. Feature views own screen composition; therapy-specific compositions may remain in their feature, using design system controls and styling. Add components only as needed; do not build a speculative library or wrap every SwiftUI primitive.
+Screens may use native SwiftUI layout directly; navigation must use the feature's router. Feature views own screen composition; therapy-specific compositions may remain in their feature, using design system controls and styling. Add components only as needed; do not build a speculative library or wrap every SwiftUI primitive.
 
 Design system components accept values, bindings, content, and actions as needed. They must not depend on feature view models, repositories, or exercise logic.
 

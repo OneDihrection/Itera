@@ -8,19 +8,19 @@
 import Foundation
 
 /// The root component: constructs every shared service, repository and model once and seeds each
-/// feature's component by conforming to that feature's dependency protocol.
+/// feature's builder by conforming to that feature's dependency protocol.
 ///
-/// Features receive only their own component, builder and router; this root is never placed in
-/// the environment or handed to feature code (SYSTEM_DESIGN §3, "Inject services through
+/// Features receive only their own dependency, builder and router; this root is never placed in
+/// the environment or handed to feature code (SYSTEM_DESIGN §4 and "Inject services through
 /// initializers").
 @MainActor
-final class AppComponent: Component<Void>, HistoryDependency, HomeDependency, TherapySessionDependency {
+final class AppComponent: HistoryDependency, HomeDependency, TherapySessionDependency {
     // MARK: - Services
 
-    let permissions: PermissionManager
-    let tracking = BodyTrackingService()
-    let audio: SessionAudioService
-    let buttonClick: ButtonClickPlayer
+    let permissionService: PermissionService
+    let trackingService = BodyTrackingService()
+    let audioService: SessionAudioService
+    let buttonClickService: ButtonClickService
 
     // MARK: - Repositories
 
@@ -34,34 +34,35 @@ final class AppComponent: Component<Void>, HistoryDependency, HomeDependency, Th
     let fingers: FingerHomeViewModel
     let armRoutine: RoutineViewModel
     let taskRoutine: RoutineViewModel
-    let fingerSessions: FingerSessionLauncher
-    let historyRecovery: any HistoryRecovering
+    let fingerSessionService: FingerSessionService
+    let historyRecoveryService: any HistoryRecoveryServiceProtocol
     /// Today's plan across programs; Beranda shows it and finishing sessions report to it.
     let dailyPlan: DailyPlanViewModel
 
     // MARK: - Routers
 
-    /// Beranda's settings sheet.
+    /// Beranda's sheet, plan intro and full-screen cover; shared by the plan and its sessions.
     let homeRouter = HomeRouter()
-    /// The plan's intro and full-screen cover; shared by the plan and its sessions.
-    let planRouter = PlanRouter()
     /// Concrete because `RootViewModel` wires it; features receive `tabRouter`.
     private let tabs = TabRouter()
 
-    init(permissions: PermissionManager) {
-        self.permissions = permissions
+    init(permissionService: PermissionService) {
+        self.permissionService = permissionService
 
-        let audio = SessionAudioService()
-        let guidanceAudio = GuidanceAudioService()
-        self.audio = audio
-        buttonClick = ButtonClickPlayer(guidance: guidanceAudio, narration: audio)
+        let audioService = SessionAudioService()
+        let guidanceAudioService = GuidanceAudioService()
+        self.audioService = audioService
+        buttonClickService = ButtonClickService(
+            guidanceAudioService: guidanceAudioService,
+            audioService: audioService
+        )
 
         let directory = URL.applicationSupportDirectory.appendingPathComponent(
             "Sessions",
             isDirectory: true
         )
         sessions = LocalSessionRepository(directory: directory)
-        historyRecovery = SessionHistoryRecovery(sessions: sessions)
+        historyRecoveryService = HistoryRecoveryService(sessions: sessions)
 
         armRoutine = RoutineViewModel(repository: LocalRoutineRepository(
             url: URL.applicationSupportDirectory.appendingPathComponent("routines.json")
@@ -84,12 +85,12 @@ final class AppComponent: Component<Void>, HistoryDependency, HomeDependency, Th
             routineRepository: LocalFingerRoutineRepository(category: .forearm)
         )
 
-        fingerSessions = FingerSessionLauncher(
+        fingerSessionService = FingerSessionService(
             fingers: fingers,
             forearm: forearm,
-            camera: HandCameraService(),
-            audio: guidanceAudio,
-            permissions: permissions,
+            cameraService: HandCameraService(),
+            guidanceAudioService: guidanceAudioService,
+            permissionService: permissionService,
             fingerRepository: fingerRepository,
             forearmRepository: forearmRepository
         )
@@ -100,11 +101,10 @@ final class AppComponent: Component<Void>, HistoryDependency, HomeDependency, Th
             forearm: forearm,
             armRoutine: armRoutine,
             taskRoutine: taskRoutine,
-            fingerSessions: fingerSessions,
-            router: planRouter
+            fingerSessionService: fingerSessionService,
+            router: homeRouter
         )
 
-        super.init(with: ())
     }
 
     var tabRouter: any TabRouterProtocol {
@@ -113,14 +113,19 @@ final class AppComponent: Component<Void>, HistoryDependency, HomeDependency, Th
 
     /// Session pages live in the plan's cover, so they use the plan's router.
     var sessionRouter: any SessionRouterProtocol {
-        planRouter
+        homeRouter
+    }
+
+    /// Sessions report to today's plan without depending on Home.
+    var planReporting: any DailyPlanSessionReporting {
+        dailyPlan
     }
 
     // MARK: - Feature builders
 
-    lazy var historyBuilder = HistoryBuilder(component: HistoryComponent(dependency: self))
-    lazy var sessionBuilder = TherapySessionBuilder(component: TherapySessionComponent(dependency: self))
-    lazy var homeBuilder = HomeBuilder(component: HomeComponent(dependency: self))
+    lazy var historyBuilder = HistoryBuilder(dependency: self)
+    lazy var sessionBuilder = TherapySessionBuilder(dependency: self)
+    lazy var homeBuilder = HomeBuilder(dependency: self)
 
     // MARK: - Root
 
@@ -129,7 +134,7 @@ final class AppComponent: Component<Void>, HistoryDependency, HomeDependency, Th
     lazy var rootViewModel = RootViewModel(
         router: tabs,
         playButtonClick: { [unowned self] in
-            buttonClick.play()
+            buttonClickService.play()
         }
     )
 
@@ -137,12 +142,12 @@ final class AppComponent: Component<Void>, HistoryDependency, HomeDependency, Th
 
     /// Finalizes a session interrupted by termination, once per launch.
     func recoverHistory() async {
-        await historyRecovery.recoverHistory()
+        await historyRecoveryService.recoverHistory()
     }
 
     /// Re-reads authorization when the app returns to the foreground.
     func refreshPermissions() {
-        permissions.refresh()
+        permissionService.refresh()
     }
 
     #if DEBUG

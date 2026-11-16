@@ -72,4 +72,4 @@ Verification: a temporary source-policy replay exposed the 180° mismatch for fr
 
 ## Saved sessions and movement replays (12 November 2026)
 
-Every Balancing exercise now saves its session to the shared session history (`BalanceSessionLog`, `SessionRepository`) with per-repetition metrics and first, hardest and last skeleton replays. Sessions appear in Progress → Riwayat latihan and open the movement report. See "Key-repetition replays for clinicians" in SYSTEM_DESIGN.md for the recorded angle per exercise and the save and exit rules.
+Every Balancing exercise now saves its session to the shared session history (`BalanceSessionLog`, `SessionRepository`) with per-repetition metrics and first, hardest and last skeleton replays. Sessions appear in Progress → Riwayat latihan and open the movement report. See "Key-repetition replays for clinicians" in Documentation/DesignLog.md for the recorded angle per exercise and the save and exit rules.

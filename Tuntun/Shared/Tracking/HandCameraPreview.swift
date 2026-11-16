@@ -9,15 +9,15 @@ import AVFoundation
 import SwiftUI
 
 struct TMHandCameraPreview: UIViewRepresentable {
-    let camera: HandCameraService
+    let cameraService: HandCameraService
     let ready: (Bool) -> Void
     let videoBoundsChanged: (CGRect?) -> Void
 
     func makeUIView(context: Context) -> TMCameraPreviewView {
         let view = TMCameraPreviewView()
-        view.preview.session = camera.session
+        view.preview.session = cameraService.session
         view.preview.videoGravity = .resizeAspect
-        view.camera = camera
+        view.cameraService = cameraService
         view.ready = ready
         view.videoBoundsChanged = videoBoundsChanged
         return view
@@ -37,7 +37,7 @@ struct TMHandCameraPreview: UIViewRepresentable {
 final class TMCameraPreviewView: UIView {
     override class var layerClass: AnyClass { AVCaptureVideoPreviewLayer.self }
     var preview: AVCaptureVideoPreviewLayer { layer as! AVCaptureVideoPreviewLayer }
-    weak var camera: HandCameraService?
+    weak var cameraService: HandCameraService?
     var ready: ((Bool) -> Void)?
     var videoBoundsChanged: ((CGRect?) -> Void)?
     private var videoBounds: CGRect?
@@ -89,7 +89,7 @@ final class TMCameraPreviewView: UIView {
         #endif
         if appliedOrientation != orientation {
             appliedOrientation = orientation
-            camera?.orient(orientation)
+            cameraService?.orient(orientation)
         }
         CATransaction.begin()
         CATransaction.setDisableActions(true)

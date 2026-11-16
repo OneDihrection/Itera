@@ -16,12 +16,12 @@ Progression logic currently lives in **four separate engines**, and each handles
 
 | Path | Where progression lives | Main problems |
 |---|---|---|
-| Guided body therapy | `Session/Domain/Logic/SessionEngine.swift` (≈1045 lines), `SessionProgress.swift` | Two stage enums kept in sync by hand (`SessionSnapshot.Stage`, `SessionProgress.Stage`). About 25 private flags stand in for state. "Paused" lives in 6 layers. `deadline` means something different in each stage. Instruction strings such as `"calibration.complete"` are used as state. About 25 `usesArmRaiseScript` branches across the engine, `MovementActivity` and views. The engine works out domain events by comparing old and new activity presentation. |
-| Finger | `Session/Presentation/ViewModels/FingerSessionViewModel.swift` (≈1332 lines) | A second progression machine runs on a 0.1 s timer in the view model: scripted rest (`OppositionRest`), countdown gate (`practiceCountdownReady`), speech watchdog, 9 `previousInstruction = ""` resets, a `calibrationMessage` string that gates scoring, and `canResume` built from 7 flags. |
-| Balance | `Activities/Balance/Presentation/ViewModels/BalanceSessionViewModel.swift` (≈997 lines) | The view model owns the whole flow: an `OpeningCue` enum, sets, and rest as a `Task` loop that sleeps 1 s at a time. |
-| Daily plan | `Features/Home/Presentation/Views/DailyPlanNextView.swift` | An 11-stage long-rest machine as view `@State`, with an 80 ms polling `.task`. The 4 s completion auto-advance `Task.sleep` is copied into three views. |
+| Guided body therapy | `Session/Models/SessionEngine.swift` (≈1045 lines), `SessionProgress.swift` | Two stage enums kept in sync by hand (`SessionSnapshot.Stage`, `SessionProgress.Stage`). About 25 private flags stand in for state. "Paused" lives in 6 layers. `deadline` means something different in each stage. Instruction strings such as `"calibration.complete"` are used as state. About 25 `usesArmRaiseScript` branches across the engine, `MovementActivity` and views. The engine works out domain events by comparing old and new activity presentation. |
+| Finger | `Activities/Fingers/FingerSessionViewModel.swift` (≈1332 lines) | A second progression machine runs on a 0.1 s timer in the view model: scripted rest (`OppositionRest`), countdown gate (`practiceCountdownReady`), speech watchdog, 9 `previousInstruction = ""` resets, a `calibrationMessage` string that gates scoring, and `canResume` built from 7 flags. |
+| Balance | `Activities/Balance/BalanceSessionViewModel.swift` (≈997 lines) | The view model owns the whole flow: an `OpeningCue` enum, sets, and rest as a `Task` loop that sleeps 1 s at a time. |
+| Daily plan | `Features/Home/Views/DailyPlanNextView.swift` | An 11-stage long-rest machine as view `@State`, with an 80 ms polling `.task`. The 4 s completion auto-advance `Task.sleep` is copied into three views. |
 
-This breaks SYSTEM_DESIGN §3, §15 and ADR-006 ("Activity view models … do not maintain another progression state machine").
+This breaks SYSTEM_DESIGN §3 and ADR-006 (original specification §3 and §15 in the design log) ("Activity view models … do not maintain another progression state machine").
 
 ### Known bugs (confirmed in source, 2026-11-16)
 
@@ -38,7 +38,7 @@ This breaks SYSTEM_DESIGN §3, §15 and ADR-006 ("Activity view models … do no
 
 ## Target architecture
 
-New shared types go in `Tuntun/Features/Therapy/Shared/Domain/SessionFlow/`. They are concrete, use Foundation only, and are not a generic state-machine framework. ADR-006 allows shared concrete primitives.
+New shared types go in `Tuntun/Features/Therapy/Shared/SessionFlow/`. They are concrete, use Foundation only, and are not a generic state-machine framework. ADR-006 allows shared concrete primitives.
 
 | Type | Replaces |
 |---|---|
@@ -160,9 +160,9 @@ Each phase is one pull request. It must build on its own and match the golden tr
 
 - New files get an Xcode-style header with the actual author and creation date (AGENTS.md).
 - View models are `@MainActor @Observable` and receive dependencies through an explicit `init`. Pages are built only by `AppDependencies`.
-- Domain files import Foundation only. The harness build fails if a domain file imports anything else, which also enforces SYSTEM_DESIGN §4.
+- Domain files import Foundation only. The harness build fails if a domain file imports anything else, which also enforces the `Models/` rule in SYSTEM_DESIGN §3.
 - There is no test target. Harnesses are temporary and live outside the repository.
-- Each phase adds a dated section to SYSTEM_DESIGN.md. ADR-010 lands in Phase 3 and is extended in Phases 6 to 8.
+- Each phase updates the affected rules in SYSTEM_DESIGN.md and appends a dated entry to Documentation/DesignLog.md. ADR-010 lands in Phase 3 and is extended in Phases 6 to 8.
 
 ## Verification for every phase
 
@@ -174,7 +174,7 @@ Each phase is one pull request. It must build on its own and match the golden tr
      IPHONEOS_DEPLOYMENT_TARGET=17.0 CODE_SIGNING_ALLOWED=NO build
    ```
 2. Rerun the Phase 0 harness and compare its output with the golden transcripts. The only allowed differences are the phase's listed fixes.
-3. Run the SYSTEM_DESIGN §15 scenarios as harness scripts:
+3. Run the original specification's §15 scenarios (Documentation/DesignLog.md) as harness scripts:
    - Complete each activity without touch.
    - Deliver a completion callback twice.
    - Pause during the final feedback.

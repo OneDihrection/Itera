@@ -8,14 +8,8 @@
 import SwiftUI
 
 /// Builds the app's root: the two tabs, each from its feature's builder.
-protocol RootBuildable {
-    associatedtype RootScreen: View
-
-    @ViewBuilder @MainActor func buildRoot() -> RootScreen
-}
-
 @MainActor
-final class RootBuilder: RootBuildable {
+final class RootBuilder {
     private let component: AppComponent
 
     init(component: AppComponent) {
