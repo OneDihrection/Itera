@@ -35,12 +35,12 @@ enum DebugScreenLauncher {
     }
 
     @MainActor
-    static func openIntroIfRequested(plan: DailyPlanViewModel, router: NavigationRouter) {
+    static func openIntroIfRequested(plan: DailyPlanViewModel) {
         guard let argument, argument.hasPrefix("intro:") else {
             return
         }
 
-        plan.begin(from: String(argument.dropFirst("intro:".count)), router: router)
+        plan.begin(from: String(argument.dropFirst("intro:".count)))
     }
 }
 

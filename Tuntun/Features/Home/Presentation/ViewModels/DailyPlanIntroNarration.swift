@@ -25,10 +25,9 @@ final class DailyPlanIntroNarration {
     @ObservationIgnored private var completion: (() -> Void)?
 
     func start(
-        readiness: HomeViewModel,
+        readiness: TherapyReadinessViewModel,
         plan: DailyPlanViewModel,
         audio: SessionAudioService,
-        router: NavigationRouter,
         itemID: String,
         automatic: Bool,
         lines: [String]
@@ -53,12 +52,9 @@ final class DailyPlanIntroNarration {
                     return
                 }
                 if automatic {
-                    plan.launchAfterRest(router: router)
+                    plan.launchAfterRest()
                 } else {
-                    await plan.startCurrent(
-                        readiness: readiness,
-                        router: router
-                    )
+                    await plan.startCurrent(readiness: readiness)
                 }
             }
         }

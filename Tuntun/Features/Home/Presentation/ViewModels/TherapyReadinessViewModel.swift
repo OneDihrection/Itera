@@ -1,5 +1,5 @@
 //
-//  HomeViewModel.swift
+//  TherapyReadinessViewModel.swift
 //  Tuntun
 //
 //  Created by dimaswisodewo on 28/10/2026.
@@ -18,7 +18,7 @@ protocol HistoryRecovering: AnyObject {
 
 @MainActor
 @Observable
-final class HomeViewModel {
+final class TherapyReadinessViewModel {
     private(set) var busy = false
     private(set) var message = "home.setup"
     private(set) var action = "home.enablePermissions"

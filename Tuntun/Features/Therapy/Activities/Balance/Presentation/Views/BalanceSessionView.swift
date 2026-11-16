@@ -8,20 +8,22 @@
 import SwiftUI
 
 struct TMBalanceSessionView: View {
-    @Environment(NavigationRouter.self) private var router
     @Environment(\.scenePhase) private var scenePhase
     @State private var model: BalanceSessionViewModel
     private let plan: DailyPlanViewModel
     private let permissions: PermissionManager
+    private let router: any SessionRouterProtocol
 
     init(
         model: BalanceSessionViewModel,
         plan: DailyPlanViewModel,
-        permissions: PermissionManager
+        permissions: PermissionManager,
+        router: any SessionRouterProtocol
     ) {
         _model = State(initialValue: model)
         self.plan = plan
         self.permissions = permissions
+        self.router = router
     }
 
     /// Set when End was tapped on the live screen, so the pause dialog opens on its confirmation.
@@ -416,21 +418,21 @@ struct TMBalanceSessionView: View {
         model.stop()
 
         guard plan.isRunning else {
-            router.pop()
+            router.closeSession()
             return
         }
 
-        plan.finish(completed: completed, router: router)
+        plan.finish(completed: completed)
     }
 
     /// Without camera access the session never started, so a running plan ends here.
     private func leaveWithoutResult() {
         guard plan.isRunning else {
-            router.pop()
+            router.closeSession()
             return
         }
 
-        plan.end(router: router)
+        plan.end()
     }
 }
 

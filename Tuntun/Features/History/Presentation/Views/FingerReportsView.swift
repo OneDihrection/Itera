@@ -7,29 +7,43 @@
 
 import SwiftUI
 
-/// The Progress tab presents the current week, repetition totals and saved practice.
-struct TMFingerReportsView: View {
-    private let home: FingerHomeViewModel
-    /// Arm, towel and Balancing summaries for the shared history list.
-    private let sessions: any SessionRepository
+/// The Progress tab presents the current week, repetition totals and saved practice. It owns the
+/// tab's navigation stack.
+struct TMFingerReportsView<ViewModel: ReportsViewModelProtocol, Builder: HistoryContentBuildable>: View {
+    @State private var viewModel: ViewModel
+    private let builder: Builder
 
-    @Environment(NavigationRouter.self) private var router
     @Environment(\.locale) private var locale
     @State private var confirmingHistoryDeletion = false
-    @State private var deletingHistory = false
-    /// Arm practice and the Balancing exercises are saved by the session repository; their
-    /// sessions join the same list.
-    @State private var armHistory: TaskReportsViewModel?
 
-    init(home: FingerHomeViewModel, sessions: any SessionRepository) {
-        self.home = home
-        self.sessions = sessions
+    init(viewModel: ViewModel, builder: Builder) {
+        _viewModel = State(initialValue: viewModel)
+        self.builder = builder
     }
 
     var body: some View {
-        let report = PracticeReport(history: home.history)
+        NavigationStack(path: $viewModel.path) {
+            content
+                .navigationDestination(for: HistoryRoute.self) { route in
+                    destination(route)
+                }
+        }
+    }
 
-        ScrollView {
+    @ViewBuilder
+    private func destination(_ route: HistoryRoute) -> some View {
+        switch route {
+        case .fingerReport(let id):
+            builder.buildFingerReport(id: id)
+        case .sessionReport(let id):
+            builder.buildSessionReport(id: id)
+        }
+    }
+
+    private var content: some View {
+        let report = PracticeReport(history: viewModel.fingerHistory)
+
+        return ScrollView {
             LazyVStack(alignment: .leading, spacing: 30) {
                 weekSummary(report)
 
@@ -53,8 +67,8 @@ struct TMFingerReportsView: View {
         .foregroundStyle(TherapyPalette.ink)
         .background(TherapyPalette.canvas)
         .toolbar(.hidden, for: .navigationBar)
-        .task { await refreshProgress() }
-        .refreshable { await refreshProgress() }
+        .task { await viewModel.refresh() }
+        .refreshable { await viewModel.refresh() }
     }
 
     private func sectionTitle(_ title: LocalizedStringKey) -> some View {
@@ -148,7 +162,7 @@ struct TMFingerReportsView: View {
 
     /// Finger and arm sessions, newest first.
     private func historyEntries(_ finger: [FingerSessionSummary]) -> [HistoryEntry] {
-        let arm = armHistory?.summaries ?? []
+        let arm = viewModel.armHistory
 
         return (finger.map(HistoryEntry.finger) + arm.map(HistoryEntry.arm))
             .sorted { $0.date > $1.date }
@@ -164,10 +178,10 @@ struct TMFingerReportsView: View {
                     .foregroundStyle(TherapyPalette.muted)
             }
 
-            if let error = home.errorKey ?? armHistory?.errorKey {
+            if let error = viewModel.errorKey {
                 TMTherapyError(key: error)
                 TMTherapyButton(title: "action.retry", secondary: true, pill: true) {
-                    Task { await refreshProgress() }
+                    Task { await viewModel.refresh() }
                 }
             } else if sessions.isEmpty {
                 Text("reports.emptyDetail").typography(.body).foregroundStyle(TherapyPalette.muted)
@@ -181,14 +195,14 @@ struct TMFingerReportsView: View {
                 switch entry {
                 case .finger(let summary):
                     Button {
-                        router.push(.report(summary.id))
+                        viewModel.openFingerReport(id: summary.id)
                     } label: {
                         TMFingerHistoryCard(summary: summary)
                     }
                     .buttonStyle(TMTherapySoundButtonStyle())
                 case .arm(let summary):
                     Button {
-                        router.push(.sessionReport(summary.id))
+                        viewModel.openSessionReport(id: summary.id)
                     } label: {
                         TMMovementHistoryCard(summary: summary)
                     }
@@ -203,10 +217,10 @@ struct TMFingerReportsView: View {
             if confirmingHistoryDeletion {
                 Text("progress.deleteHistoryMessage").typography(.body)
                 HStack {
-                    TMTherapyButton(title: "progress.cancelHistoryDeletion", secondary: true, disabled: deletingHistory) {
+                    TMTherapyButton(title: "progress.cancelHistoryDeletion", secondary: true, disabled: viewModel.deletingHistory) {
                         confirmingHistoryDeletion = false
                     }
-                    TMTherapyButton(title: "progress.deleteHistory", destructive: true, disabled: deletingHistory) {
+                    TMTherapyButton(title: "progress.deleteHistory", destructive: true, disabled: viewModel.deletingHistory) {
                         Task { await deleteHistory() }
                     }
                 }
@@ -219,30 +233,9 @@ struct TMFingerReportsView: View {
     }
 
     private func deleteHistory() async {
-        guard !deletingHistory else {
-            return
-        }
-
-        deletingHistory = true
-        defer { deletingHistory = false }
-        await home.deleteHistory()
-        await armHistory?.deleteAll()
-        if home.errorKey == nil, armHistory?.errorKey == nil {
+        if await viewModel.deleteHistory() {
             confirmingHistoryDeletion = false
         }
-    }
-
-    private func refreshProgress() async {
-        guard !deletingHistory else {
-            return
-        }
-
-        await home.refresh()
-
-        if armHistory == nil {
-            armHistory = TaskReportsViewModel(repository: sessions)
-        }
-        await armHistory?.load()
     }
 }
 
@@ -371,31 +364,16 @@ private struct TMFingerHistoryCard: View {
     }
 }
 
-struct TMFingerReportDetailView: View {
-    private let id: UUID
-    private let home: FingerHomeViewModel
-    private let replayRepository: any FingerSessionRepository
+struct TMFingerReportDetailView<ViewModel: FingerReportDetailViewModelProtocol>: View {
+    @State private var viewModel: ViewModel
 
-    @Environment(NavigationRouter.self) private var router
-    @State private var replays: FingerReplayViewModel?
-
-    private var summary: FingerSessionSummary? {
-        home.history.first { $0.id == id }
-    }
-
-    init(
-        id: UUID,
-        home: FingerHomeViewModel,
-        replayRepository: any FingerSessionRepository
-    ) {
-        self.id = id
-        self.home = home
-        self.replayRepository = replayRepository
+    init(viewModel: ViewModel) {
+        _viewModel = State(initialValue: viewModel)
     }
 
     var body: some View {
         ScrollView {
-            if let summary {
+            if let summary = viewModel.summary {
                 report(summary).padding(32)
             } else {
                 Text("reports.loading").typography(.title).padding(40)
@@ -405,11 +383,7 @@ struct TMFingerReportDetailView: View {
         .navigationTitle("report.titleShort")
         .navigationBarTitleDisplayMode(.inline)
         .task {
-            await home.refresh()
-
-            let replays = FingerReplayViewModel(sessionID: id, repository: replayRepository)
-            await replays.load()
-            self.replays = replays
+            await viewModel.load()
         }
     }
 
@@ -473,11 +447,7 @@ struct TMFingerReportDetailView: View {
             .typography(.body).tint(TherapyPalette.green)
             TMTherapyButton(title: "report.delete", symbol: "trash", secondary: true) {
                 Task {
-                    await home.delete(summary)
-                    if home.errorKey == nil {
-                        router.popToRoot()
-                        router.push(.reports)
-                    }
+                    await viewModel.delete(summary)
                 }
             }
         }
@@ -488,7 +458,7 @@ struct TMFingerReportDetailView: View {
     /// The first, hardest and last repetition of every recorded set, as a hand replay or clip.
     @ViewBuilder
     private func replaySection(_ summary: FingerSessionSummary) -> some View {
-        if let replays {
+        if let replays = viewModel.replays {
             let recorded = summary.results.filter { !replays.sets(for: $0.kind).isEmpty }
 
             if !recorded.isEmpty {

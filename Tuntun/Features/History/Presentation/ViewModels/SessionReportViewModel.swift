@@ -8,11 +8,32 @@
 import Foundation
 import Observation
 
+@MainActor
+protocol SessionReportViewModelProtocol: AnyObject, Observable {
+    var summary: SessionSummary? { get }
+    var loading: Bool { get }
+    var errorKey: String? { get }
+    var replaysUnavailable: Bool { get }
+    var results: [SessionActivityResult] { get }
+
+    func load() async
+    /// Deletes the session and returns to the reports list; shows an error on failure.
+    func delete() async
+    func headline(for result: SessionActivityResult) -> LocalizedStringResource?
+    func averageDuration(for result: SessionActivityResult) -> Double?
+    func peakTitleKey(for result: SessionActivityResult) -> String
+    func highestPeak(for result: SessionActivityResult) -> Double?
+    func clipURL(for rep: KeyRep, in result: SessionActivityResult) -> URL?
+    func isTrackingLow(_ rep: KeyRep) -> Bool
+    func keyReps(for result: SessionActivityResult) -> [KeyRep]
+    func notes(for result: SessionActivityResult) -> [LocalizedStringResource]
+}
+
 /// Loads one session's arm-movement results with their key-repetition replays, and words the
 /// plain-language comparisons a clinician reads first.
 @MainActor
 @Observable
-final class SessionReportViewModel {
+final class SessionReportViewModel: SessionReportViewModelProtocol {
     /// Changes smaller than these read as steady, given 2D camera noise.
     private static let durationChangeSeconds = 0.5
     private static let peakChangeDegrees = 5.0
@@ -30,10 +51,16 @@ final class SessionReportViewModel {
     /// Privacy-filtered clips by set execution and repetition number.
     private var clipURLs: [UUID: [Int: URL]] = [:]
     @ObservationIgnored private let repository: any SessionRepository
+    @ObservationIgnored private let router: any HistoryRouterProtocol
 
-    init(sessionID: UUID, repository: any SessionRepository) {
+    init(
+        sessionID: UUID,
+        repository: any SessionRepository,
+        router: any HistoryRouterProtocol
+    ) {
         self.sessionID = sessionID
         self.repository = repository
+        self.router = router
     }
 
     var results: [SessionActivityResult] {
@@ -101,15 +128,16 @@ final class SessionReportViewModel {
         rep.metrics.trackingCoverage < Self.lowTrackingCoverage
     }
 
-    /// Deletes the session and its replays; returns whether it succeeded.
-    func delete() async -> Bool {
+    /// Deletes the session and its replays, then returns to the reports list.
+    func delete() async {
         do {
             try await repository.delete(id: sessionID)
-            return true
         } catch {
             errorKey = "towel.deleteError"
-            return false
+            return
         }
+
+        router.pop()
     }
 
     // MARK: - Repetitions

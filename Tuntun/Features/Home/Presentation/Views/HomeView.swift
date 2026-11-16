@@ -8,32 +8,71 @@
 import SwiftUI
 
 /// Beranda shows today's plan as a timeline. The start button floats at the bottom
-/// once the inline button scrolls away.
-struct TMHomeView: View {
-    private let home: FingerHomeViewModel
-    private let routine: RoutineViewModel
-    private let taskRoutine: RoutineViewModel
-    private let plan: DailyPlanViewModel
-    @Environment(NavigationRouter.self) private var router
+/// once the inline button scrolls away. It owns the Home tab's stack, its settings sheet and
+/// the full-screen cover that runs today's plan.
+struct TMHomeView<ViewModel: HomeViewModelProtocol, Builder: HomeContentBuildable>: View {
+    @State private var viewModel: ViewModel
+    private let builder: Builder
+    @Environment(\.buttonFeedback) private var buttonFeedback
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @AppStorage(PracticePreferences.patientName) private var patientName = ""
 
     /// True once the inline start button has scrolled under the top edge.
     @State private var startButtonHidden = false
 
-    init(
-        home: FingerHomeViewModel,
-        routine: RoutineViewModel,
-        taskRoutine: RoutineViewModel,
-        plan: DailyPlanViewModel
-    ) {
-        self.home = home
-        self.routine = routine
-        self.taskRoutine = taskRoutine
-        self.plan = plan
+    private var home: FingerHomeViewModel {
+        viewModel.fingers
+    }
+
+    private var plan: DailyPlanViewModel {
+        viewModel.plan
+    }
+
+    init(viewModel: ViewModel, builder: Builder) {
+        _viewModel = State(initialValue: viewModel)
+        self.builder = builder
     }
 
     var body: some View {
+        NavigationStack(path: $viewModel.path) {
+            content
+                .navigationDestination(for: HomeRoute.self) { route in
+                    destination(route)
+                }
+        }
+        .sheet(item: $viewModel.sheet) { sheet in
+            NavigationStack {
+                sheetContent(sheet)
+            }
+            .modalEnvironment(buttonFeedback: buttonFeedback)
+        }
+        .fullScreenCover(item: $viewModel.cover) { cover in
+            TMPlanCoverHost(route: cover.route, builder: builder)
+                .modalEnvironment(buttonFeedback: buttonFeedback)
+        }
+    }
+
+    // MARK: - Navigation
+
+    @ViewBuilder
+    private func destination(_ route: HomeRoute) -> some View {
+        switch route {
+        case .planIntro(let itemID):
+            builder.buildDailyPlanIntro(itemID: itemID)
+        }
+    }
+
+    @ViewBuilder
+    private func sheetContent(_ sheet: HomeSheet) -> some View {
+        switch sheet {
+        case .practicePreferences:
+            builder.buildPracticePreferences()
+        }
+    }
+
+    // MARK: - Content
+
+    private var content: some View {
         ScrollView {
             VStack(spacing: 56) {
                 header
@@ -55,7 +94,7 @@ struct TMHomeView: View {
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
                 Button {
-                    router.presentSheet(.practicePreferences)
+                    viewModel.openPracticePreferences()
                 } label: {
                     Label("cognitive.settings", systemImage: "gearshape")
                 }
@@ -66,13 +105,10 @@ struct TMHomeView: View {
         }
     }
 
-    private static let scrollSpace = "home.scroll"
+    private static var scrollSpace: String { "home.scroll" }
 
     private func refresh() async {
-        await home.refresh()
-        await routine.load()
-        await taskRoutine.load()
-        await plan.load()
+        await viewModel.refresh()
     }
 
     // MARK: - Header
@@ -158,7 +194,7 @@ struct TMHomeView: View {
     /// Opens the intro of the next exercise (or the tapped one); the intro's own Start is the
     /// explicit start that validates permissions and listening.
     private func startPlan(from itemID: String?) {
-        plan.begin(from: itemID, router: router)
+        viewModel.begin(from: itemID)
     }
 
     // MARK: - Timeline

@@ -9,12 +9,11 @@ import SwiftUI
 
 /// One arm-practice session for a clinician, kept to a low reading load: per set one sentence,
 /// three numbers and one replay, with the rest behind disclosures.
-struct TMSessionReportView: View {
-    @State private var model: SessionReportViewModel
-    @Environment(NavigationRouter.self) private var router
+struct TMSessionReportView<ViewModel: SessionReportViewModelProtocol>: View {
+    @State private var model: ViewModel
 
-    init(model: SessionReportViewModel) {
-        _model = State(initialValue: model)
+    init(viewModel: ViewModel) {
+        _model = State(initialValue: viewModel)
     }
 
     var body: some View {
@@ -91,9 +90,7 @@ struct TMSessionReportView: View {
 
             TMTherapyButton(title: "history.report.delete", symbol: "trash", secondary: true, pill: true) {
                 Task {
-                    if await model.delete() {
-                        router.pop()
-                    }
+                    await model.delete()
                 }
             }
         }
@@ -102,9 +99,9 @@ struct TMSessionReportView: View {
 
 // MARK: - One set
 
-private struct TMSetReportSection: View {
+private struct TMSetReportSection<ViewModel: SessionReportViewModelProtocol>: View {
     let result: SessionActivityResult
-    let model: SessionReportViewModel
+    let model: ViewModel
 
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {

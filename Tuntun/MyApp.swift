@@ -10,12 +10,11 @@ import SwiftUI
 @main
 struct MyApp: App {
     @Environment(\.scenePhase) private var scenePhase
-    @State private var router = NavigationRouter()
-    @State private var dependencies: AppDependencies
+    @State private var component: AppComponent
     @AppStorage(AppLanguage.storageKey) private var language = AppLanguage.selected.rawValue
 
     init() {
-        _dependencies = State(initialValue: AppDependencies(permissions: PermissionManager()))
+        _component = State(initialValue: AppComponent(permissions: PermissionManager()))
         AppFont.configureNavigationBars()
     }
 
@@ -23,21 +22,19 @@ struct MyApp: App {
         WindowGroup {
             root
                 .typography(.body)
-                .withAppRouter(dependencies: dependencies)
-                // Applied outside the router so tab stacks, sheets and covers share the language.
+                // Applied at the root so tab stacks, sheets and covers share the language.
                 .environment(\.locale, (AppLanguage(rawValue: language) ?? .indonesian).locale)
-                .environment(router)
-                .environment(\.buttonFeedback, dependencies.playButtonClick)
+                .environment(\.buttonFeedback, component.playButtonClick)
                 .buttonStyle(TMTherapySoundButtonStyle())
                 .task {
                     #if DEBUG
-                    dependencies.openDebugIntroIfRequested(router: router)
+                    component.openDebugIntroIfRequested()
                     #endif
-                    await dependencies.recoverHistory()
+                    await component.recoverHistory()
                 }
                 .onChange(of: scenePhase) { _, phase in
                     if phase == .active {
-                        dependencies.refreshPermissions()
+                        component.refreshPermissions()
                     }
                 }
         }
@@ -49,10 +46,10 @@ struct MyApp: App {
         if let screen = DebugScreenLauncher.galleryScreen {
             TMDebugScreenGallery(screen: screen)
         } else {
-            dependencies.makeHomeView()
+            component.buildRoot()
         }
         #else
-        dependencies.makeHomeView()
+        component.buildRoot()
         #endif
     }
 }

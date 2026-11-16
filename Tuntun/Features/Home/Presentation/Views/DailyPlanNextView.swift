@@ -14,7 +14,6 @@ struct TMDailyPlanNextView: View {
     /// Builds the next exercise's intro shown after the rest, with its own dependencies.
     private let makeIntro: (_ itemID: String, _ countdownSeconds: Int?, _ automatic: Bool) -> TMDailyPlanIntroView
 
-    @Environment(NavigationRouter.self) private var router
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     private enum Stage: Equatable {
@@ -151,7 +150,7 @@ struct TMDailyPlanNextView: View {
 
             if stage == .countdown, elapsed >= Self.countdownDuration {
                 audio.cancelSpeech()
-                plan.launchAfterRest(router: router)
+                plan.launchAfterRest()
                 return
             }
 
@@ -363,7 +362,7 @@ struct TMDailyPlanNextView: View {
     private func stop() {
         audio.stopMusic()
         audio.cancelSpeech()
-        plan.end(router: router)
+        plan.end()
     }
 
     private var completionPage: some View {
@@ -385,7 +384,7 @@ struct TMDailyPlanNextView: View {
             Spacer(minLength: 24)
 
             TMTherapyButton(title: "plan.backHome", symbol: "house.fill", prominent: true) {
-                plan.end(router: router)
+                plan.end()
             }
 
             Spacer(minLength: 24)

@@ -206,11 +206,12 @@ enum SessionPresentationFixtures {
 
 struct SessionPresentationFixturePreviews: PreviewProvider {
     static var previews: some View {
-        let dependencies = AppDependencies(permissions: PermissionManager())
+        let sessions = HomeComponent(
+            dependency: AppComponent(permissions: PermissionManager())
+        ).sessionBuilder
 
         ForEach(SessionPresentationFixtures.all) { fixture in
-            dependencies.makeTherapySessionView(fixture: fixture.snapshot)
-                .environment(NavigationRouter())
+            sessions.buildTherapySession(fixture: fixture.snapshot)
                 .preferredColorScheme(.dark)
                 .previewLayout(.fixed(width: 1366, height: 1024))
                 .previewDisplayName(fixture.id)

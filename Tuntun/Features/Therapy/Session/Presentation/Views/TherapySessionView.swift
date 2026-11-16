@@ -16,7 +16,6 @@ struct TMTherapySessionView: View {
     @State var voiceOver = UIAccessibility.isVoiceOverRunning
     @ScaledMetric(relativeTo: .largeTitle) var instructionSize = 96.0
     @ScaledMetric(relativeTo: .title3) var calibrationCaptionSize = TMTherapyInstructionBubble.baseFontSize
-    @Environment(NavigationRouter.self) var router
     @Environment(\.scenePhase) private var scenePhase
     @AppStorage(PracticePreferences.calmMode) private var calmMode = false
     @State private var celebrationStart: Date?
@@ -29,28 +28,33 @@ struct TMTherapySessionView: View {
     @State var model: TherapySessionViewModel
     let plan: DailyPlanViewModel
     let permissions: PermissionManager
+    private let router: any SessionRouterProtocol
 
     private var presentationOnly = false
 
     init(
         model: TherapySessionViewModel,
         plan: DailyPlanViewModel,
-        permissions: PermissionManager
+        permissions: PermissionManager,
+        router: any SessionRouterProtocol
     ) {
         _model = State(initialValue: model)
         self.plan = plan
         self.permissions = permissions
+        self.router = router
     }
 
     #if DEBUG
     init(
         fixture: SessionSnapshot,
         plan: DailyPlanViewModel,
-        permissions: PermissionManager
+        permissions: PermissionManager,
+        router: any SessionRouterProtocol
     ) {
         _model = State(initialValue: .presentationFixture(fixture))
         self.plan = plan
         self.permissions = permissions
+        self.router = router
         presentationOnly = true
     }
     #endif
@@ -869,21 +873,21 @@ struct TMTherapySessionView: View {
 
     func leaveSummary(_ summary: SessionSummary) {
         guard plan.isRunning else {
-            router.pop()
+            router.closeSession()
             return
         }
 
-        plan.finish(completed: !summary.stopped && !summary.interrupted, router: router)
+        plan.finish(completed: !summary.stopped && !summary.interrupted)
     }
 
     /// Leaving before the session could start ends a running plan instead of skipping ahead.
     private func leaveWithoutResult() {
         guard plan.isRunning else {
-            router.popToRoot()
+            router.closeSession()
             return
         }
 
-        plan.end(router: router)
+        plan.end()
     }
 
     private func summaryRow(_ result: SessionActivityResult) -> some View {
