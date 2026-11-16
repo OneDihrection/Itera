@@ -653,9 +653,6 @@ final class FingerSessionViewModel {
         if activity.phase == .target, trackingReady, instructionSince > 0,
            now - instructionSince >= 15, activity.holdElapsed == 0 {
             calibrationNeedsHelp = true
-            if now - instructionSince >= 30 {
-                pause()
-            }
         }
     }
 

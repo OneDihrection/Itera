@@ -64,14 +64,23 @@ struct DailyPlanItem: Identifiable, Hashable {
 }
 
 enum DailyPlan {
-    /// The daily exercises in practice order: hand and forearm first, then arm,
-    /// shoulder, trunk and the task. The plan is fixed for now; change this list to change it.
-    /// Debug builds can hide, reorder and resize items with `DebugPlanLayout`.
+    /// The daily exercises in practice order: the two scripted exercises first, then the other
+    /// hand and forearm exercises, arm, shoulder, trunk and the task. The plan is fixed for now;
+    /// change this list to change it. Debug builds can hide, reorder and resize items with
+    /// `DebugPlanLayout`.
     static let standard: [DailyPlanItem] = {
-        let fingers = FingerExercise.allCases.map { DailyPlanItem(exercise: .finger($0)) }
+        // The approved scripts open with Sentuh Jempol ke Jari ("Hari ini kita akan mulai…")
+        // and continue with Angkat Lengan ("Selanjutnya…"), so both lead the plan.
+        let scripted: [DailyPlanItem] = [
+            DailyPlanItem(exercise: .finger(.opposition)),
+            DailyPlanItem(exercise: .therapy(.armRaise)),
+        ]
+
+        let fingers = FingerExercise.allCases
+            .filter { $0 != .opposition }
+            .map { DailyPlanItem(exercise: .finger($0)) }
 
         let arm: [DailyPlanItem] = [
-            DailyPlanItem(exercise: .therapy(.armRaise)),
             DailyPlanItem(exercise: .therapy(.elbowBend)),
             DailyPlanItem(exercise: .therapy(.directionalReach)),
         ]
@@ -84,7 +93,7 @@ enum DailyPlan {
             DailyPlanItem(exercise: .balance(.sitToStand)),
         ]
 
-        return fingers + arm + shoulderAndTrunk + [DailyPlanItem(exercise: .therapy(.foldTowel))]
+        return scripted + fingers + arm + shoulderAndTrunk + [DailyPlanItem(exercise: .therapy(.foldTowel))]
     }()
 }
 

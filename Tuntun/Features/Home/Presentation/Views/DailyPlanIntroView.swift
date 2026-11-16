@@ -52,9 +52,7 @@ struct TMDailyPlanIntroView: View {
                 .toolbar(.hidden, for: .navigationBar)
                 .toolbar(.hidden, for: .tabBar)
                 .task {
-                    if countdownSeconds == nil {
-                        prepareReadiness()
-                    }
+                    prepareReadiness()
                     if usesScript {
                         start()
                     }
@@ -83,7 +81,7 @@ struct TMDailyPlanIntroView: View {
             targetTitle: "plan.targetTitle",
             safetyNote: "exercise.safetyNote",
             startTitle: narration.paused ? "session.resume" : "exercise.start",
-            startDisabled: starting && !narration.running && !narration.paused,
+            startDisabled: startDisabled,
             message: readinessMessage,
             countdownSeconds: usesScript ? nil : countdownSeconds,
             onBack: {
@@ -200,11 +198,6 @@ struct TMDailyPlanIntroView: View {
             return
         }
 
-        if narration.running {
-            skipNarration()
-            return
-        }
-
         guard let readiness, !starting else {
             return
         }
@@ -232,28 +225,14 @@ struct TMDailyPlanIntroView: View {
         }
     }
 
-    /// Start tapped while the scripted intro still reads: stops the narration, whose cleared
-    /// operation rejects its own late launch, and opens the session the way its completion would.
-    private func skipNarration() {
-        guard let readiness, !starting else {
-            return
+    /// Mulai Latihan waits until the scripted intro has been read in full, so the patient hears
+    /// every instruction before the session opens. While the intro is paused the same button
+    /// reads "Lanjutkan" and stays enabled to resume it.
+    private var startDisabled: Bool {
+        guard !narration.paused else {
+            return false
         }
 
-        narration.stop()
-        starting = true
-
-        Task {
-            if automatic {
-                dependencies.dailyPlan.launchAfterRest(dependencies: dependencies, router: router)
-            } else {
-                await dependencies.dailyPlan.startCurrent(
-                    readiness: readiness,
-                    dependencies: dependencies,
-                    router: router
-                )
-            }
-
-            starting = false
-        }
+        return starting || narration.running
     }
 }

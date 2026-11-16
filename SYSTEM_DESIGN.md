@@ -1159,3 +1159,29 @@ Verification: XcodeGen and the Debug Simulator build with the iPadOS 17.0 minimu
 At the product owner's request, the directional reach practice target is 100% of the farthest sustained reach (`DirectionalReachActivity.practiceTargetFraction`), so the bubble sits where the patient reached during calibration. This supersedes the 85% in "Directional reach adapts to maximum reach" and "Directional reach timed calibration"; the two-body-radius minimum separation is unchanged. To keep arrival forgiving at the full reach, the practice start and target bubbles are 120 pt across (`practiceBubbleDiameter`), superseding the shared 100 pt bubble for reach practice and rehearsal only. The calibration start hold keeps the shared 100 pt bubble. Acceptance uses the drawn radius, so drawing and acceptance still agree.
 
 Verification: Simulator build only. Physical M1-iPad checks remain pending: the bubble lands on the "Farthest" marker, the 2 s arrival dwell fills at full reach, start and target overlap on short reaches, and legibility at 1.5–2.5 m.
+
+
+## Detection waits without automatic pause (2026-11-16)
+
+At the product owner's request, finger sessions no longer pause after eight seconds of missing hand, wrong-side, unclear-finger or ambiguous-hand evidence, or after thirty seconds without a target calibration hold. The live screen keeps its existing recovery guidance and waits for usable evidence; returning detection recovers automatically through the existing debounce. Missing evidence still earns no hold time or repetitions, and calibration does not finish without valid evidence. Camera delivery failures retain their recovery pause (three seconds, ten on startup); explicit Pause/Stop voice commands, backgrounding, audio interruptions and permission/storage failures retain their existing behavior. Body sessions already wait for missing patient evidence without opening Pause.
+
+Verification: a temporary harness over production `FingerTrackingRecovery` reproduced all four detection-triggered pauses before the change, then verified no pause after two minutes, automatic recovery with fresh evidence, and unchanged camera startup/failure timeouts. Simulator build and physical-device verification are recorded separately; real hand-loss and motionless calibration acceptance remain device checks.
+
+
+## Audible plan introduction before therapy readiness (2026-11-16)
+
+The approved arm-raise and thumb-opposition intros now play before `HomeViewModel.performAction` validates therapy readiness. Previously `DailyPlanIntroNarration.start` returned without playing any line when permission/listening readiness was unavailable or when a first permission request returned false. The intro is non-therapeutic playback; `DailyPlanViewModel.startCurrent` remains the mandatory readiness gate before navigating to a manually initiated session. Automatically sequenced sessions retain their existing independent entry checks. The intro view prepares its readiness model on every entry, including when an automatic intro carries a countdown value. No capture, scoring or permission bypass was added. This supersedes the earlier requirement to validate listening before playing the plan's intro, not the requirement to validate before therapy.
+
+Verification: a temporary harness compiled the production `DailyPlanIntroNarration` with service-boundary fakes. It reproduced silent intro with unavailable readiness before the fix and then verified ordered playback, no session launch until readiness succeeds, pause/resume and ignored stale completions. Device playback remains unverified; a successful Simulator build alone does not establish that the patient hears the intro.
+
+## Scripted exercises lead the daily plan (2026-11-16)
+
+At the product owner's request, `DailyPlan.standard` now starts with Sentuh Jempol ke Jari (`.finger(.opposition)`), then Angkat Lengan (`.therapy(.armRaise)`), followed by the other finger and forearm exercises in `FingerExercise` order, elbow bend, directional reach, the shoulder/trunk exercises and fold towel. This matches the approved Indonesian scripts: the opposition intro opens the day ("Hari ini kita akan mulai…"), and the arm-raise intro follows ("Selanjutnya…"). It supersedes the previous hand-first order. Item ids, and therefore saved daily progress, are unchanged. A Debug `DebugPlanLayout` already saved on a device keeps its saved order until Reset in "Latihan Beranda"; devices without a saved layout, and every Release build, use the new order.
+
+Verification: Debug Simulator build only.
+
+## Intro start waits for the full reading (2026-11-16)
+
+At the product owner's request, Mulai Latihan on a scripted daily-plan intro is disabled while the intro narration reads. It becomes available once the reading has finished (the session then opens automatically as before) or while the reading is paused, when the button resumes it. This supersedes "Mulai Latihan stays enabled while the intro reads; tapping it stops the remaining narration" from `0a9e93b`, in both the thumb-opposition and arm-raise sections; the skip path was removed. Back still stops the narration and leaves the plan.
+
+Verification: Debug Simulator build only.

@@ -108,10 +108,12 @@ struct FingerTrackingRecovery {
     }
 
     func requiresPause(at now: Double, cameraStartup: Bool = false) -> Bool {
-        guard let problemSince else {
+        // A missing hand or unfinished pose waits for evidence without opening Pause.
+        // A camera that is no longer delivering frames still needs explicit recovery.
+        guard problem == .camera, let problemSince else {
             return false
         }
-        let timeout = problem == .camera ? (cameraStartup ? 10.0 : 3.0) : 8.0
+        let timeout = cameraStartup ? 10.0 : 3.0
         return now - problemSince >= timeout
     }
 }
