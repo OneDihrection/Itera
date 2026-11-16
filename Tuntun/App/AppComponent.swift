@@ -11,7 +11,7 @@ import Foundation
 /// feature's builder by conforming to that feature's dependency protocol.
 ///
 /// Features receive only their own dependency, builder and router; this root is never placed in
-/// the environment or handed to feature code (SYSTEM_DESIGN §3, "Inject services through
+/// the environment or handed to feature code (SYSTEM_DESIGN §4 and "Inject services through
 /// initializers").
 @MainActor
 final class AppComponent: HistoryDependency, HomeDependency, TherapySessionDependency {
