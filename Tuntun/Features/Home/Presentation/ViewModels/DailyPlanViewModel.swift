@@ -72,6 +72,7 @@ final class DailyPlanViewModel {
     @ObservationIgnored private let armRoutine: RoutineViewModel
     @ObservationIgnored private let taskRoutine: RoutineViewModel
     @ObservationIgnored private let fingerSessions: FingerSessionLauncher
+    @ObservationIgnored private let router: any DailyPlanRouterProtocol
     @ObservationIgnored private var loadFailed = false
 
     #if DEBUG
@@ -85,6 +86,7 @@ final class DailyPlanViewModel {
     ///   - armRoutine: the arm program's saved configuration for arm therapy items.
     ///   - taskRoutine: the task-oriented program's saved configuration.
     ///   - fingerSessions: prepares the finger session a finger item opens.
+    ///   - router: opens intros and runs the plan's full-screen cover.
     init(
         items: [DailyPlanItem] = DailyPlan.standard,
         repository: any DailyPlanProgressRepository,
@@ -92,7 +94,8 @@ final class DailyPlanViewModel {
         forearm: FingerHomeViewModel,
         armRoutine: RoutineViewModel,
         taskRoutine: RoutineViewModel,
-        fingerSessions: FingerSessionLauncher
+        fingerSessions: FingerSessionLauncher,
+        router: any DailyPlanRouterProtocol
     ) {
         self.standardItems = items
         self.repository = repository
@@ -101,6 +104,7 @@ final class DailyPlanViewModel {
         self.armRoutine = armRoutine
         self.taskRoutine = taskRoutine
         self.fingerSessions = fingerSessions
+        self.router = router
 
         #if DEBUG
         let layout = DebugPlanLayout.load(for: items)
@@ -469,7 +473,7 @@ final class DailyPlanViewModel {
 
     /// Opens the intro of the first undone item, or of `itemID` when a card was tapped.
     /// Nothing starts yet: the intro's own Start is the explicit start.
-    func begin(from itemID: String? = nil, router: NavigationRouter) {
+    func begin(from itemID: String? = nil) {
         let chosen = itemID.flatMap { id in items.firstIndex { $0.id == id } }
 
         guard let index = chosen ?? nextIndex ?? items.indices.first else {
@@ -479,14 +483,13 @@ final class DailyPlanViewModel {
         isRunning = true
         currentIndex = index
         pendingArmRaiseSide = nil
-        router.push(.planIntro(items[index].id))
+        router.showIntro(itemID: items[index].id)
     }
 
     /// "Mulai Latihan" on an intro: validates permissions and listening once, as an explicit
     /// start requires, then opens that item's session.
     func startCurrent(
-        readiness: HomeViewModel,
-        router: NavigationRouter
+        readiness: TherapyReadinessViewModel
     ) async {
         guard isRunning, let currentIndex else {
             return
@@ -497,18 +500,18 @@ final class DailyPlanViewModel {
             return
         }
 
-        launch(currentIndex, router: router)
+        launch(currentIndex)
     }
 
     /// Called by a session's finishing action while the plan runs. Only a session that reached
     /// its goal counts as done. A completed item leads to rest, or to the day-complete page.
-    func finish(completed: Bool, router: NavigationRouter) {
+    func finish(completed: Bool) {
         guard isRunning, !restingBeforeNext, let currentIndex else {
             return
         }
 
         guard completed else {
-            end(router: router)
+            end()
             return
         }
 
@@ -519,7 +522,7 @@ final class DailyPlanViewModel {
            let nextSide = armRaiseSide(after: side) {
             pendingArmRaiseSide = nextSide
             restingBeforeNext = true
-            presentPlanNext(router: router)
+            presentPlanNext()
             return
         }
 
@@ -531,45 +534,43 @@ final class DailyPlanViewModel {
         let next = upcomingIndex
         self.currentIndex = next
         restingBeforeNext = next != nil
-        presentPlanNext(router: router)
+        presentPlanNext()
     }
 
-    private func presentPlanNext(router: NavigationRouter) {
-        if router.presentedFullScreenCovers.isEmpty {
-            router.presentFullScreenCover(.planNext)
+    private func presentPlanNext() {
+        if router.isCoverPresented {
+            router.replaceCover(with: .planNext)
         } else {
-            router.replaceFullScreenCover(with: .planNext)
+            router.presentCover(.planNext)
         }
     }
 
-    func launchAfterRest(router: NavigationRouter) {
+    func launchAfterRest() {
         guard isRunning, restingBeforeNext, let currentIndex else {
             return
         }
         restingBeforeNext = false
-        launch(currentIndex, router: router, replacingRest: true)
+        launch(currentIndex, replacingRest: true)
     }
 
     /// "Kembali" on an intro, "Kembali ke Beranda" after the last item, or leaving a session
     /// without continuing.
-    func end(router: NavigationRouter) {
+    func end() {
         isRunning = false
         restingBeforeNext = false
         currentIndex = nil
         pendingArmRaiseSide = nil
-        router.dismiss()
-        router.popToRoot()
+        router.endRun()
     }
 
     private func launch(
         _ index: Int,
-        router: NavigationRouter,
         replacingRest: Bool = false
     ) {
         currentIndex = index
         oppositionRestSide = nil
         armRaiseRestSide = nil
-        let route: AppRoute
+        let route: PlanCoverRoute
 
         switch items[index].exercise {
         case .finger(let exercise):
@@ -611,9 +612,9 @@ final class DailyPlanViewModel {
         }
 
         if replacingRest {
-            router.replaceFullScreenCover(with: route)
+            router.replaceCover(with: route)
         } else {
-            router.presentFullScreenCover(route)
+            router.presentCover(route)
         }
     }
 

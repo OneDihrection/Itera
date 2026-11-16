@@ -19,9 +19,7 @@ struct TMDailyPlanIntroView: View {
     /// Readiness waits for interrupted-session recovery before therapy can start.
     private let history: any HistoryRecovering
 
-    @Environment(NavigationRouter.self) private var router
-
-    @State private var readiness: HomeViewModel?
+    @State private var readiness: TherapyReadinessViewModel?
     @State private var starting = false
     @State private var narration = DailyPlanIntroNarration()
     @Environment(\.scenePhase) private var scenePhase
@@ -113,7 +111,7 @@ struct TMDailyPlanIntroView: View {
                 if countdownSeconds != nil {
                     audio.cancelSpeech()
                 }
-                plan.end(router: router)
+                plan.end()
             },
             onStart: start
         ) {
@@ -206,7 +204,7 @@ struct TMDailyPlanIntroView: View {
 
     private func prepareReadiness() {
         if readiness == nil {
-            readiness = HomeViewModel(
+            readiness = TherapyReadinessViewModel(
                 permissions: permissions,
                 audio: audio,
                 history: history
@@ -233,17 +231,13 @@ struct TMDailyPlanIntroView: View {
                     readiness: readiness,
                     plan: plan,
                     audio: audio,
-                    router: router,
                     itemID: itemID,
                     automatic: automatic,
                     lines: scriptIntroduction
                 )
                 starting = false
             } else {
-                await plan.startCurrent(
-                    readiness: readiness,
-                    router: router
-                )
+                await plan.startCurrent(readiness: readiness)
                 starting = false
             }
         }

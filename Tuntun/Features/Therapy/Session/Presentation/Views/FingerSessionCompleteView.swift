@@ -14,8 +14,9 @@ struct TMFingerSessionCompleteView: View {
     private let plan: DailyPlanViewModel
     /// Refreshed after saving so Beranda and Progress show the new session.
     private let home: FingerHomeViewModel
+    private let tabs: any TabRouterProtocol
+    private let router: any SessionRouterProtocol
 
-    @Environment(NavigationRouter.self) private var router
     @Environment(\.scenePhase) private var scenePhase
     @State private var savingFinished = false
 
@@ -26,11 +27,15 @@ struct TMFingerSessionCompleteView: View {
     init(
         launcher: FingerSessionLauncher,
         plan: DailyPlanViewModel,
-        home: FingerHomeViewModel
+        home: FingerHomeViewModel,
+        tabs: any TabRouterProtocol,
+        router: any SessionRouterProtocol
     ) {
         self.launcher = launcher
         self.plan = plan
         self.home = home
+        self.tabs = tabs
+        self.router = router
     }
 
     var body: some View {
@@ -136,11 +141,11 @@ struct TMFingerSessionCompleteView: View {
 
     private func close() {
         guard !plan.isRunning else {
-            plan.finish(completed: completed, router: router)
+            plan.finish(completed: completed)
             return
         }
 
-        router.dismissFullScreenCover()
-        router.push(.reports)
+        router.closeSession()
+        tabs.showProgress()
     }
 }

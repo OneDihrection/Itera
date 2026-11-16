@@ -7,11 +7,15 @@
 
 import SwiftUI
 
-struct TMPracticePreferencesView: View {
+struct TMPracticePreferencesView<Builder: PracticePreferencesContentBuildable>: View {
     @AppStorage(ExerciseMusicTrack.storageKey) private var musicTrack = ExerciseMusicTrack.defaultValue
-    @Environment(NavigationRouter.self) private var router
     @Bindable private var home: FingerHomeViewModel
     @Bindable private var plan: DailyPlanViewModel
+    private let router: any HomeRouterProtocol
+    private let builder: Builder
+    @Environment(\.buttonFeedback) private var buttonFeedback
+    /// The nested Debug plan editor sheet.
+    @State private var editingPlan = false
     @AppStorage(PracticePreferences.calmMode) private var calmMode = false
     @AppStorage(PracticePreferences.buttonSounds) private var buttonSounds = true
 
@@ -22,9 +26,16 @@ struct TMPracticePreferencesView: View {
     @AppStorage(PracticePreferences.videoCensoring) private var videoCensoring = PracticePreferences.videoCensoringChoice
     @AppStorage(AppLanguage.storageKey) private var language = AppLanguage.selected.rawValue
 
-    init(home: FingerHomeViewModel, plan: DailyPlanViewModel) {
+    init(
+        home: FingerHomeViewModel,
+        plan: DailyPlanViewModel,
+        router: any HomeRouterProtocol,
+        builder: Builder
+    ) {
         _home = Bindable(home)
         _plan = Bindable(plan)
+        self.router = router
+        self.builder = builder
     }
 
     var body: some View {
@@ -115,6 +126,14 @@ struct TMPracticePreferencesView: View {
         }
         .presentationDetents([.large])
         .onDisappear { Task { _ = await home.saveRoutine() } }
+        #if DEBUG
+        .sheet(isPresented: $editingPlan) {
+            NavigationStack {
+                builder.buildDebugPlanEditor()
+            }
+            .modalEnvironment(buttonFeedback: buttonFeedback)
+        }
+        #endif
     }
 
     #if DEBUG
@@ -123,7 +142,7 @@ struct TMPracticePreferencesView: View {
     private var debugSection: some View {
         Section {
             TMDebugActionButton(title: "debug.planEditor.open", symbol: "list.bullet") {
-                router.presentSheet(.debugPlanEditor)
+                editingPlan = true
             }
         }
     }

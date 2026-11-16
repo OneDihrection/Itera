@@ -11,7 +11,7 @@ import SwiftUI
 /// Debug builds only: chooses which daily-plan exercises Beranda shows, their order, and
 /// custom sets and repetitions per exercise. Edits a copy and applies it on Done.
 struct TMDebugPlanEditorView: View {
-    @Environment(NavigationRouter.self) private var router
+    @Environment(\.dismiss) private var dismiss
     private let plan: DailyPlanViewModel
     @State private var layout: DebugPlanLayout?
 
@@ -111,7 +111,7 @@ struct TMDebugPlanEditorView: View {
                     plan.applyDebugLayout(layout)
                 }
 
-                router.dismissSheet()
+                dismiss()
             }
             .typography(.headline)
             .frame(minHeight: 44)

@@ -10,16 +10,21 @@ import SwiftUI
 struct TMFingerSessionView: View {
     private let launcher: FingerSessionLauncher
     private let plan: DailyPlanViewModel
+    private let router: any SessionRouterProtocol
 
-    @Environment(NavigationRouter.self) private var router
     @Environment(\.scenePhase) private var scenePhase
     /// Set when End was tapped on the live screen, so the pause dialog opens on its confirmation.
     @State private var endRequested = false
     @State private var videoBounds: CGRect?
 
-    init(launcher: FingerSessionLauncher, plan: DailyPlanViewModel) {
+    init(
+        launcher: FingerSessionLauncher,
+        plan: DailyPlanViewModel,
+        router: any SessionRouterProtocol
+    ) {
         self.launcher = launcher
         self.plan = plan
+        self.router = router
     }
 
     var body: some View {
@@ -39,7 +44,7 @@ struct TMFingerSessionView: View {
                     .onChange(of: model.hasFinished) { _, finished in
                         if finished {
                             plan.markOppositionRest(model.usesOppositionScript ? model.routine.side : nil)
-                            router.replaceFullScreenCover(with: .sessionComplete)
+                            router.showFingerSessionComplete()
                         }
                     }
             }
