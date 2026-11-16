@@ -26,7 +26,7 @@ protocol HomeViewModelProtocol: AnyObject, Observable {
 }
 
 /// Beranda: owns its navigation stack, its sheet and the full-screen cover that runs today's
-/// plan, and wires `HomeRouter` and `PlanRouter` to them.
+/// plan, and wires `HomeRouter` to them.
 @MainActor
 @Observable
 final class HomeScreenViewModel: HomeViewModelProtocol {
@@ -38,26 +38,22 @@ final class HomeScreenViewModel: HomeViewModelProtocol {
     private let plan: DailyPlanViewModel
     @ObservationIgnored private let armRoutine: RoutineViewModel
     @ObservationIgnored private let taskRoutine: RoutineViewModel
-    @ObservationIgnored private let homeRouter: HomeRouter
-    @ObservationIgnored private let planRouter: PlanRouter
+    @ObservationIgnored private let router: HomeRouter
 
     init(
         fingers: FingerHomeViewModel,
         armRoutine: RoutineViewModel,
         taskRoutine: RoutineViewModel,
         plan: DailyPlanViewModel,
-        homeRouter: HomeRouter,
-        planRouter: PlanRouter
+        router: HomeRouter
     ) {
         self.fingers = fingers
         self.armRoutine = armRoutine
         self.taskRoutine = taskRoutine
         self.plan = plan
-        self.homeRouter = homeRouter
-        self.planRouter = planRouter
+        self.router = router
 
-        wire(homeRouter)
-        wire(planRouter)
+        wire(router)
     }
 
     var rows: [DailyPlanRow] {
@@ -84,7 +80,7 @@ final class HomeScreenViewModel: HomeViewModelProtocol {
     }
 
     func openPracticePreferences() {
-        homeRouter.openPracticePreferences()
+        router.openPracticePreferences()
     }
 
     func begin(from itemID: String?) {
@@ -100,9 +96,6 @@ final class HomeScreenViewModel: HomeViewModelProtocol {
         router.dismissPresentedSheet = { [weak self] in
             self?.sheet = nil
         }
-    }
-
-    private func wire(_ router: PlanRouter) {
         router.pushIntro = { [weak self] itemID in
             self?.path.append(.planIntro(itemID))
         }

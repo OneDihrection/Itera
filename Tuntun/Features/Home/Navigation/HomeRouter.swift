@@ -76,28 +76,16 @@ protocol SessionRouterProtocol: AnyObject {
     func closeSession()
 }
 
-// MARK: - Routers
+// MARK: - Router
 
-/// Beranda's own router: its settings sheet. The plan's pages use `PlanRouter`.
+/// Beranda's router: its settings sheet, the plan intro pushed on its stack, and the
+/// full-screen cover the plan's sessions, rest and next intro share. Beranda's screen model owns
+/// that state and wires these hooks; the settings page, the plan and the session pages each
+/// receive this router through their initializers as their own narrow protocol.
 @MainActor
-final class HomeRouter: HomeRouterProtocol {
+final class HomeRouter: HomeRouterProtocol, DailyPlanRouterProtocol, SessionRouterProtocol {
     var presentSheet: ((HomeSheet) -> Void)?
     var dismissPresentedSheet: (() -> Void)?
-
-    func openPracticePreferences() {
-        presentSheet?(.practicePreferences)
-    }
-
-    func dismissSheet() {
-        dismissPresentedSheet?()
-    }
-}
-
-/// The plan's router: the intro pushed on Beranda's stack and the full-screen cover its
-/// sessions, rest and next intro share. Beranda's screen model owns that state and wires these
-/// hooks; the plan and the session pages receive this router through their initializers.
-@MainActor
-final class PlanRouter: DailyPlanRouterProtocol, SessionRouterProtocol {
     var pushIntro: ((String) -> Void)?
     var returnHome: (() -> Void)?
     var presentPlanCover: ((PlanCoverRoute) -> Void)?
@@ -107,6 +95,14 @@ final class PlanRouter: DailyPlanRouterProtocol, SessionRouterProtocol {
 
     var isCoverPresented: Bool {
         coverPresented?() ?? false
+    }
+
+    func openPracticePreferences() {
+        presentSheet?(.practicePreferences)
+    }
+
+    func dismissSheet() {
+        dismissPresentedSheet?()
     }
 
     func showIntro(itemID: String) {

@@ -19,9 +19,8 @@ protocol HomeDependency {
     var permissions: PermissionManager { get }
     /// Readiness waits for interrupted-session recovery before therapy can start.
     var historyRecovery: any HistoryRecovering { get }
+    /// Shared with `DailyPlanViewModel`, which drives the plan's navigation, and with the sessions.
     var homeRouter: HomeRouter { get }
-    /// Shared with `DailyPlanViewModel`, which drives the plan's navigation.
-    var planRouter: PlanRouter { get }
     /// Builds the session pages the plan's cover shows; no session UI is written in Home.
     var sessionBuilder: TherapySessionBuilder { get }
 }
@@ -74,8 +73,7 @@ final class HomeBuilder: HomeContentBuildable, PracticePreferencesContentBuildab
         armRoutine: dependency.armRoutine,
         taskRoutine: dependency.taskRoutine,
         plan: dependency.dailyPlan,
-        homeRouter: dependency.homeRouter,
-        planRouter: dependency.planRouter
+        router: dependency.homeRouter
     )
 
     init(dependency: any HomeDependency) {

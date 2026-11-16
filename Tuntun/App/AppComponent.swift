@@ -41,10 +41,8 @@ final class AppComponent: HistoryDependency, HomeDependency, TherapySessionDepen
 
     // MARK: - Routers
 
-    /// Beranda's settings sheet.
+    /// Beranda's sheet, plan intro and full-screen cover; shared by the plan and its sessions.
     let homeRouter = HomeRouter()
-    /// The plan's intro and full-screen cover; shared by the plan and its sessions.
-    let planRouter = PlanRouter()
     /// Concrete because `RootViewModel` wires it; features receive `tabRouter`.
     private let tabs = TabRouter()
 
@@ -101,7 +99,7 @@ final class AppComponent: HistoryDependency, HomeDependency, TherapySessionDepen
             armRoutine: armRoutine,
             taskRoutine: taskRoutine,
             fingerSessions: fingerSessions,
-            router: planRouter
+            router: homeRouter
         )
 
     }
@@ -112,7 +110,7 @@ final class AppComponent: HistoryDependency, HomeDependency, TherapySessionDepen
 
     /// Session pages live in the plan's cover, so they use the plan's router.
     var sessionRouter: any SessionRouterProtocol {
-        planRouter
+        homeRouter
     }
 
     /// Sessions report to today's plan without depending on Home.
