@@ -321,8 +321,12 @@ struct DirectionalReachActivity: TherapyActivity {
         }
     }
 
-    /// Share of the measured maximum reach used as the practice target, so it can be hit repeatedly.
-    private static let practiceTargetFraction = 0.85
+    /// Share of the measured maximum reach used as the practice target. 1.0 puts the target on the
+    /// farthest sustained reach; the larger practice bubble absorbs tremor and detector jitter.
+    private static let practiceTargetFraction = 1.0
+    /// Diameter, in points, of the practice start and target bubbles. Larger than the shared
+    /// 100 pt bubble because the target sits on the full measured reach, so arrival stays forgiving.
+    private static let practiceBubbleDiameter = 120.0
     /// Seconds allowed to reach the practice target before the attempt counts as not reached.
     private static let outwardBudget = 12.0
     /// Keeps the ghost this far inside the image edge, in image-height units.
@@ -561,7 +565,8 @@ struct DirectionalReachActivity: TherapyActivity {
         }
     }
 
-    /// Stores the practice target as a fraction of the measured reach and moves on to the return.
+    /// Stores the practice target at `practiceTargetFraction` of the measured reach, never closer
+    /// than two body radii to the start, and moves on to the return.
     private mutating func commitTarget(measured: TherapyPoint, start: TherapyPoint) {
         let offset = measured - start
         let length = offset.length
@@ -686,7 +691,11 @@ struct DirectionalReachActivity: TherapyActivity {
             return false
         }
         let target = targets[direction] ?? start
-        let effective = sharedBubbleRadius(aspect: frame.aspect, viewport: viewport)
+        let effective = fixedBubbleRadius(
+            diameter: Self.practiceBubbleDiameter,
+            aspect: frame.aspect,
+            viewport: viewport
+        )
         let inside = (relative - (outward ? target : start)).length <= effective
 
         // Stepping out briefly or a jittery sample freezes the dwell; only a longer exit clears it.
