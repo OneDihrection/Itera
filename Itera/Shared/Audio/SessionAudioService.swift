@@ -123,6 +123,9 @@ final class SessionAudioService: NSObject, VoiceReadinessProviding, AVSpeechSynt
         for number in 1...20 {
             prepareClip(countClipName(number))
         }
+        for number in 1...10 {
+            prepareClip(countdownClipName(number))
+        }
 
         for name in ["button-click", "target-reached", "set-complete"] {
             if let url = Bundle.main.url(forResource: name, withExtension: "wav") {
@@ -217,20 +220,25 @@ final class SessionAudioService: NSObject, VoiceReadinessProviding, AVSpeechSynt
         clips[name] = try? PreparedAudioClip(url: url)
     }
 
-    /// Effects and older count clips are WAV; recorded narration is AAC.
+    /// Effects are WAV; recorded narration and numbers are AAC.
     private func clipURL(_ name: String) -> URL? {
         Bundle.main.url(forResource: name, withExtension: "wav")
             ?? Bundle.main.url(forResource: name, withExtension: "m4a")
     }
 
-    /// Marizka's recorded number when bundled, otherwise the older count clip.
+    /// Marizka's recorded number. Callers speak the number with the system voice when the
+    /// clip is missing.
     private func countClipName(_ number: Int) -> String {
-        if NarrationClips.countURL(number, language: language) != nil {
-            return NarrationClips.resourceName(for: NarrationLine(key: "count", argument: number))
+        NarrationClips.countResourceName(number, language: language, countdown: false)
+    }
+
+    /// Marizka's short countdown take, or her full-length number when no short take exists.
+    private func countdownClipName(_ number: Int) -> String {
+        if let url = NarrationClips.countdownURL(number, language: language) {
+            return url.deletingPathExtension().lastPathComponent
         }
 
-        let code = synthesisLocale.hasPrefix("id") ? "id" : "en"
-        return "count-\(code)-\(number)"
+        return countClipName(number)
     }
 
     func play(id: UUID, cue: SessionAudioCue) {
@@ -297,7 +305,7 @@ final class SessionAudioService: NSObject, VoiceReadinessProviding, AVSpeechSynt
         case .countdown(let number):
             // Countdown time is authoritative; never queue an expired number.
             cancelSpeech()
-            let name = countClipName(number)
+            let name = countdownClipName(number)
             if clipURL(name) != nil {
                 // A spoken number can outlast one second with its natural pauses; the next
                 // number cancels this one first, so the longer watchdog never doubles it.
@@ -316,8 +324,7 @@ final class SessionAudioService: NSObject, VoiceReadinessProviding, AVSpeechSynt
                 name = "target-reached"
                 timeout = 2
             case .count(let number):
-                let language = synthesisLocale.hasPrefix("id") ? "id" : "en"
-                name = "count-\(language)-\(number)"
+                name = countClipName(number)
                 timeout = 20
             default:
                 // Recorded Marizka narration when bundled, otherwise the system voice.
@@ -392,7 +399,7 @@ final class SessionAudioService: NSObject, VoiceReadinessProviding, AVSpeechSynt
             pendingSpeech = (id, text, line)
             return
         }
-        let name = NarrationClips.resourceName(for: line)
+        let name = NarrationClips.resourceName(for: line, language: language)
         if narrationClips[name] == nil, let url = NarrationClips.url(for: line, language: language) {
             narrationClips[name] = try? PreparedAudioClip(url: url)
         }

@@ -16,30 +16,40 @@ struct NarrationLine: Equatable {
 
 /// Human-sounding narration recorded ahead of time and bundled with the app.
 ///
-/// `Tools/generate_narration.py` renders each Indonesian narration string once with
-/// ElevenLabs, and `Tools/normalize_narration.swift` levels it to a clear, even loudness
-/// as AAC under `Resources/Audio/NarrationID`. Sessions stay offline:
-/// nothing is synthesized over the network at runtime. A missing clip, or any other
-/// language, falls back to the on-device system voice.
+/// `Tools/generate_narration.py` renders sentences in Indonesian and English, while
+/// `Tools/generate_marizka_counts.py` renders number takes in both languages, all in Marizka's
+/// voice. `Tools/normalize_narration.swift` levels them as bundled AAC. Sessions stay offline:
+/// nothing is synthesized over the network at runtime. A missing clip falls back to the
+/// on-device system voice.
 enum NarrationClips {
-    /// Only Indonesian narration is recorded; English keeps the system voice.
-    static let recordedLanguage = AppLanguage.indonesian
-
     static func url(for line: NarrationLine, language: AppLanguage) -> URL? {
-        guard language == recordedLanguage else {
-            return nil
-        }
-
-        return Bundle.main.url(forResource: resourceName(for: line), withExtension: "m4a")
+        Bundle.main.url(forResource: resourceName(for: line, language: language), withExtension: "m4a")
     }
 
-    /// The recorded spoken number ("tiga") for countdowns and repetition counts.
+    /// A full-length Marizka number for repetition feedback and evidence-timed holds.
     static func countURL(_ number: Int, language: AppLanguage) -> URL? {
-        url(for: NarrationLine(key: "count", argument: number), language: language)
+        Bundle.main.url(
+            forResource: countResourceName(number, language: language, countdown: false),
+            withExtension: "m4a"
+        )
     }
 
-    /// The bundled file name for a line. Must match `clip_name` in Tools/generate_narration.py.
-    static func resourceName(for line: NarrationLine) -> String {
+    /// A separate short take that fits the existing one-second countdown clock.
+    static func countdownURL(_ number: Int, language: AppLanguage) -> URL? {
+        Bundle.main.url(
+            forResource: countResourceName(number, language: language, countdown: true),
+            withExtension: "m4a"
+        ) ?? countURL(number, language: language)
+    }
+
+    static func countResourceName(_ number: Int, language: AppLanguage, countdown: Bool) -> String {
+        let kind = countdown ? "countdown" : "repetition"
+        return "marizka-\(language.rawValue)-\(kind)-\(number)"
+    }
+
+    /// The bundled file name for a line in one language, such as "narration-en-session.ready".
+    /// Must match `clip_name` in Tools/generate_narration.py.
+    static func resourceName(for line: NarrationLine, language: AppLanguage) -> String {
         var name = line.key.replacingOccurrences(of: " %lld", with: "")
 
         if let argument = line.argument {
@@ -50,7 +60,7 @@ enum NarrationClips {
             isSafe(scalar) ? Character(scalar) : "_"
         }
 
-        return "narration-id-" + String(safe)
+        return "narration-\(language.rawValue)-" + String(safe)
     }
 
     private static func isSafe(_ scalar: Unicode.Scalar) -> Bool {

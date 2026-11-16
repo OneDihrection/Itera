@@ -61,6 +61,65 @@ func softLimit(_ value: Double, ceiling: Double) -> Double {
     return value < 0 ? -limited : limited
 }
 
+/// Silence kept around a spoken number after trimming, in seconds.
+struct EdgePadding {
+    let leading: Double
+    let trailing: Double
+}
+
+/// Number takes are trimmed; other narration keeps its recorded edges.
+///
+/// Countdown takes have their own one-second clock, so only a short breath of space stays
+/// on both sides. Marizka repetition takes play back to back in the count queue; about
+/// 100 ms after the number keeps the last syllable's natural decay without the ~0.4 s of
+/// trailing silence ElevenLabs adds. The older `narration-id-*` clips are left unchanged.
+func edgePadding(forClipNamed name: String) -> EdgePadding? {
+    if name.contains("-countdown-") {
+        return EdgePadding(leading: 0.02, trailing: 0.02)
+    }
+
+    if name.hasPrefix("marizka-"), name.contains("-repetition-") {
+        return EdgePadding(leading: 0.02, trailing: 0.10)
+    }
+
+    return nil
+}
+
+/// Removes edge silence, keeping `padding` around the spoken sound.
+func trimEdges(_ buffer: AVAudioPCMBuffer, padding: EdgePadding) {
+    let frames = Int(buffer.frameLength)
+    let channels = Int(buffer.format.channelCount)
+    guard let data = buffer.floatChannelData, frames > 0 else {
+        return
+    }
+
+    let threshold: Float = 0.008
+    let leadingFrames = Int(buffer.format.sampleRate * padding.leading)
+    let trailingFrames = Int(buffer.format.sampleRate * padding.trailing)
+    var first = frames
+    var last = -1
+
+    for index in 0..<frames {
+        for channel in 0..<channels where abs(data[channel][index]) >= threshold {
+            first = min(first, index)
+            last = index
+        }
+    }
+
+    guard last >= first else {
+        return
+    }
+
+    let start = max(0, first - leadingFrames)
+    let end = min(frames, last + trailingFrames + 1)
+    for channel in 0..<channels {
+        for index in 0..<(end - start) {
+            data[channel][index] = data[channel][start + index]
+        }
+    }
+    buffer.frameLength = AVAudioFrameCount(end - start)
+}
+
 func normalize(_ source: URL, into destination: URL) throws -> (before: Double, gain: Double, after: Double) {
     let input = try AVAudioFile(forReading: source)
     let format = input.processingFormat
@@ -89,7 +148,11 @@ func normalize(_ source: URL, into destination: URL) throws -> (before: Double, 
         }
     }
 
-    let after = decibels(speechRMS(data[0], count: frames))
+    if let padding = edgePadding(forClipNamed: source.deletingPathExtension().lastPathComponent) {
+        trimEdges(buffer, padding: padding)
+    }
+
+    let after = decibels(speechRMS(data[0], count: Int(buffer.frameLength)))
 
     // AVAudioFile pads AAC output with ~55 KB per file, so write lossless audio first and
     // let Apple's afconvert produce a tightly packed AAC file.
@@ -98,10 +161,19 @@ func normalize(_ source: URL, into destination: URL) throws -> (before: Double, 
         .appendingPathExtension("caf")
     defer { try? FileManager.default.removeItem(at: temporary) }
 
+    guard let pcmFormat = AVAudioFormat(
+        commonFormat: .pcmFormatFloat32,
+        sampleRate: format.sampleRate,
+        channels: format.channelCount,
+        interleaved: false
+    ) else {
+        throw CocoaError(.fileReadCorruptFile)
+    }
+
     do {
         let lossless = try AVAudioFile(
             forWriting: temporary,
-            settings: format.settings,
+            settings: pcmFormat.settings,
             commonFormat: .pcmFormatFloat32,
             interleaved: false
         )

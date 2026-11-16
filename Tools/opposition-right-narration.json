@@ -2,42 +2,6 @@
   "_comment": "opposition-right-narration.json — Created by Amelia Putri Aftiana on 14/11/2026. Source: UX-writing---Sentuh-Jempol-ke-Jari-Kanan.md. Right-side copy; the source’s left-hand calibration labels and third-set paragraph are treated as copy errors.",
   "lines": [
     {
-      "key": "count",
-      "argument": 1,
-      "text": "Satu.",
-      "name": "narration-id-count-1"
-    },
-    {
-      "key": "count",
-      "argument": 2,
-      "text": "Dua.",
-      "name": "narration-id-count-2"
-    },
-    {
-      "key": "count",
-      "argument": 3,
-      "text": "Tiga.",
-      "name": "narration-id-count-3"
-    },
-    {
-      "key": "count",
-      "argument": 4,
-      "text": "Empat.",
-      "name": "narration-id-count-4"
-    },
-    {
-      "key": "count",
-      "argument": 5,
-      "text": "Lima.",
-      "name": "narration-id-count-5"
-    },
-    {
-      "key": "count",
-      "argument": 6,
-      "text": "Enam.",
-      "name": "narration-id-count-6"
-    },
-    {
       "key": "opposition.right.calibration.complete",
       "argument": null,
       "text": "Oke kita sudah tahu titik awal gerakannya. Sekarang, kita siap mulai latihan.",

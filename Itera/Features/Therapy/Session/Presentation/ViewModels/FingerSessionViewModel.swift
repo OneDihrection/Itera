@@ -302,7 +302,7 @@ final class FingerSessionViewModel {
             if cue != lastCountdownCue {
                 lastCountdownCue = cue
                 // Marizka says "tiga, dua, satu" when recorded; otherwise the beep as before.
-                if countdown > 0, !audio.playCount(countdown) {
+                if countdown > 0, !audio.playCountdown(countdown) {
                     _ = audio.speak(String(countdown))
                 }
             }

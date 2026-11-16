@@ -137,7 +137,7 @@ final class GuidanceAudioService: NSObject, AVSpeechSynthesizerDelegate {
         var clips: [PreparedAudioClip] = []
 
         for line in lines {
-            let name = NarrationClips.resourceName(for: line)
+            let name = NarrationClips.resourceName(for: line, language: language)
 
             if let cached = loadedClips[name] {
                 clips.append(cached)
@@ -252,7 +252,15 @@ final class GuidanceAudioService: NSObject, AVSpeechSynthesizerDelegate {
     /// never cancels narration. Returns false when no recording exists, so the caller can
     /// fall back to the beep.
     func playCount(_ number: Int) -> Bool {
-        guard let url = NarrationClips.countURL(number, language: narrationLanguage) else {
+        playNumber(NarrationClips.countURL(number, language: narrationLanguage))
+    }
+
+    func playCountdown(_ number: Int) -> Bool {
+        playNumber(NarrationClips.countdownURL(number, language: narrationLanguage))
+    }
+
+    private func playNumber(_ url: URL?) -> Bool {
+        guard let url else {
             return false
         }
 

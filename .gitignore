@@ -27,3 +27,7 @@ fastlane/test_output/
 *.p12
 *.mobileprovision
 .env
+
+# Rejected seeded narration takes (Tools/generate_marizka_counts.py keeps only the chosen ones)
+Tools/NarrationRaw/MarizkaCounts/candidates/
+Tools/NarrationRaw/EN/candidates/

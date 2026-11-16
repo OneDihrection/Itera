@@ -15,6 +15,41 @@ Select the Itera scheme and an iPad Simulator or connected iPad, then Run. For d
 
 Validated tooling: Xcode 27.1 (27A9275), XcodeGen 2.45.4. Minimum deployment is iPadOS 17.0, iPad only, landscape in either direction. If command-line tools point at CommandLineTools, choose Xcode under Xcode Settings → Locations, or set `DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer` for build commands.
 
+### Marizka number recordings
+
+The count generator uses ElevenLabs only on the developer's Mac. Add Marizka to **My Voices**, then set `ELEVENLABS_API_KEY` in the terminal environment or the repository's ignored `.env` file. From the repository root:
+
+```sh
+PYTHONDONTWRITEBYTECODE=1 python3 Tools/generate_marizka_counts.py --dry-run
+PYTHONDONTWRITEBYTECODE=1 python3 Tools/generate_marizka_counts.py
+PYTHONDONTWRITEBYTECODE=1 python3 Tools/generate_marizka_counts.py --check
+xcodegen generate
+```
+
+Use `--voice-id` if the account has several voices named Marizka. The script creates 100 slow repetition takes and 10 short countdown takes per language, caches raw MP3s and request fingerprints under `Tools`, and bundles normalized AAC under `Itera/Resources/Audio/MarizkaCounts`. No ElevenLabs credential or network call goes into the app. Until new clips are bundled, Indonesian uses its existing recordings and English retains its existing count fallback.
+
+Every number must sound as low, stable and calm as the Indonesian instructions in `Itera/Resources/Audio/NarrationID`. Each clip is recorded with three seeds (up to ten when none is calm), and `Tools/measure_pitch.swift` keeps the take closest to the instructions' pitch without a rising ending or an odd pause. Rejected takes stay in the ignored `Tools/NarrationRaw/MarizkaCounts/candidates` folder. `--check` fails missing or stray clips, countdowns over 0.90 seconds, and any chosen take that is not calm, and prints the `--only` command that tries more seeds for just those clips. To listen at session timing without API calls:
+
+```sh
+PYTHONDONTWRITEBYTECODE=1 python3 Tools/generate_marizka_counts.py --audition countdown --language id
+PYTHONDONTWRITEBYTECODE=1 python3 Tools/generate_marizka_counts.py --audition repetition --language en
+```
+
+Generated on 16 November 2026 with the ElevenLabs voice "Marizka - Neutral, Deadpan and Clear" and `eleven_multilingual_v2`. The raw MP3s in `Tools/NarrationRaw/MarizkaCounts` are the source for the bundled AAC; the manifest stores only request fingerprints and chosen seeds, never the API key. All 220 clips passed the inventory, countdown-duration and calm checks (median pitch 162 Hz Indonesian and 160 Hz English, against 163 Hz for the instructions), and the Simulator build bundled all 220. Repetition takes span 0.69–2.69 seconds; countdown takes span 0.42–0.85 seconds. Subjective tone, pronunciation and Stop/Go recognition during playback still need listening checks on the M1 iPad.
+
+### English instruction recordings
+
+English instructions use the same Marizka voice and calm recipe, through the shared narration generator:
+
+```sh
+PYTHONDONTWRITEBYTECODE=1 python3 Tools/generate_narration.py --language en --dry-run
+PYTHONDONTWRITEBYTECODE=1 python3 Tools/generate_narration.py --language en
+PYTHONDONTWRITEBYTECODE=1 python3 Tools/generate_narration.py --language en --check
+xcodegen generate
+```
+
+It records the finger and body instruction keys (spoken `speak.<key>` variants first) with three seeds each, up to six when none is calm, keeps the calmest take in `Tools/NarrationRaw/EN`, and bundles AAC in `Itera/Resources/Audio/NarrationEN` as `narration-en-<key>`. Rejected takes stay in the ignored `Tools/NarrationRaw/EN/candidates`. A cue without every recording falls back to the system voice, as in Indonesian.
+
 Home and Reports use native system tabs, with separate paths owned by the shared NavigationRouter. Native navigation bars, settings forms, and sheets provide familiar controls. Home and the plan list use image cards and shorter Indonesian copy; detailed caregiver and measurement explanations remain available through disclosure controls. Colors adapt to system light/dark appearance; accessibility text sizes stack the home/plan columns vertically. Plus Jakarta Sans, large touch targets, and the original session/calibration rules are retained.
 
 Indonesian and English are in String Catalogs. Select Bahasa Indonesia as the app language in iPad Settings for Indonesian text, narration, and voice commands. No custom language picker overrides the OS. The session freezes its selected narration/recognition language.

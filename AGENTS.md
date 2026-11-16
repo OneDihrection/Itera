@@ -28,6 +28,14 @@ xcodegen generate
 
 Make persistent project configuration changes in project.yml, not exclusively in the generated Xcode project. Follow the design's single-target and manual-verification policy. Do not claim physical-device acceptance from a successful Simulator build.
 
+## Narration generation and standardization
+
+Generate Indonesian and English repetition counts and numeric countdowns with `Tools/generate_marizka_counts.py`. Do not create or replace those clips through manual ElevenLabs exports or the older count scripts. The generator owns the Marizka voice, model, per-line pacing, filenames, raw-take cache, and normalized AAC output through `Tools/normalize_narration.swift`.
+
+For other spoken instructions, use or extend the existing `Tools/generate_narration.py` pipeline and its exercise-specific wrappers; record English instructions with `--language en`, which keeps the calmest of several seeded takes and fails `--check --language en` on any take higher or more upbeat than the Indonesian instructions. Counts never come from these scripts. Keep new narration consistent with the established Marizka voice and normalization, and preserve the playback key-to-filename contract. Do not add a separate runtime ElevenLabs connection; sessions use bundled audio offline. Read the generator's usage instructions before rendering, keep `ELEVENLABS_API_KEY` only in the environment or ignored `.env`, and never commit credentials.
+
+After generating counts, run the script's `--check`, regenerate with `xcodegen generate`, and verify the clips are bundled. Check tone, pronunciation, countdown fit, and Stop/Go recognition on the baseline iPad before claiming physical-device acceptance.
+
 ## Current documentation with Context7
 
 Use the ctx7 CLI to fetch current documentation whenever a task concerns a library, framework, SDK, API, CLI tool, or cloud service, including syntax, configuration, migration, library-specific debugging, or setup. Prefer this over web search. Do not use it for ordinary refactoring, scripts from scratch, business logic debugging, code review, or general programming concepts.

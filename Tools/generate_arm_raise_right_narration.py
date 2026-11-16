@@ -43,15 +43,8 @@ def collect_approved_lines(groups):
                 "name": narrator.clip_name(key, argument),
             })
 
-    for number in range(1, 7):
-        lines.append({
-            "key": "count",
-            "argument": number,
-            "text": narrator.indonesian_number(number).capitalize() + ".",
-            "name": narrator.clip_name("count", number),
-        })
-
-    if len(lines) <= 6:
+    # Repetition counts are Marizka numbers from Tools/generate_marizka_counts.py.
+    if not lines:
         sys.exit(f"No armRaise.left narration found in {narrator.CATALOG}.")
     if len({line["name"] for line in lines}) != len(lines):
         sys.exit("Duplicate narration filenames; generation stopped.")

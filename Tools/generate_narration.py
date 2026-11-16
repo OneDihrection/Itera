@@ -1,32 +1,41 @@
 #!/usr/bin/env python3
 # generate_narration.py
 # Created by Amelia Putri Aftiana on 05/11/2026.
-"""Renders Itera's Indonesian narration once with ElevenLabs, for bundling in the app.
+"""Renders Itera's narration once with ElevenLabs, for bundling in the app.
 
-Each spoken sentence is a String Catalog key. This script reads the Indonesian text of
-those keys and saves one MP3 per key under Tools/NarrationRaw, then runs
-Tools/normalize_narration.swift to level their loudness into Itera/Resources/Audio/NarrationID
-as AAC. The app
-plays a recording when one exists and otherwise uses the iPad voice, so sessions stay
-offline and nothing is sent anywhere while a patient exercises.
+Each spoken sentence is a String Catalog key. This script reads the text of those keys in
+one language and saves one MP3 per key under Tools/NarrationRaw (Indonesian) or
+Tools/NarrationRaw/EN (English), then runs Tools/normalize_narration.swift to level their
+loudness into Itera/Resources/Audio/NarrationID or NarrationEN as AAC. The app plays a
+recording when one exists and otherwise uses the iPad voice, so sessions stay offline and
+nothing is sent anywhere while a patient exercises.
 
 Usage, from the repository root:
     export ELEVENLABS_API_KEY="..."          # your own key; never commit it
     python3 Tools/generate_narration.py --dry-run
     python3 Tools/generate_narration.py
+    python3 Tools/generate_narration.py --language en
+    python3 Tools/generate_narration.py --language en --check
     xcodegen generate
 
-Only new or changed sentences are rendered on later runs (see Tools/narration-manifest.json).
+Only new or changed sentences are rendered on later runs (see Tools/narration-manifest.json
+and Tools/narration-en-manifest.json). English sentences are recorded the way the Marizka
+counts are: every line must sound as low, stable and calm as the Indonesian instructions, so
+each is recorded with several seeds and Tools/measure_pitch.swift keeps the calmest take.
+Numbers are not rendered here; Tools/generate_marizka_counts.py owns them.
 """
 
 import argparse
 import hashlib
 import json
+import math
 import os
 import re
 import ssl
 import subprocess
+import shutil
 import sys
+import tempfile
 import time
 import urllib.error
 import urllib.parse
@@ -41,8 +50,17 @@ OUTPUT = ROOT / "Itera/Resources/Audio/NarrationID"
 NORMALIZER = ROOT / "Tools/normalize_narration.swift"
 # Kept outside the app's sources so it is never bundled.
 MANIFEST = ROOT / "Tools/narration-manifest.json"
+# English recordings: same pipeline, separate folders, so the Indonesian caches stay untouched.
+RAW_EN = ROOT / "Tools/NarrationRaw/EN"
+OUTPUT_EN = ROOT / "Itera/Resources/Audio/NarrationEN"
+MANIFEST_EN = ROOT / "Tools/narration-en-manifest.json"
+# The language being rendered; main() switches RAW, OUTPUT and MANIFEST for English.
+LANGUAGE = "id"
+LANGUAGES = ("id", "en")
 API = "https://api.elevenlabs.io"
-SUPPORTED_GROUPS = {"finger", "body", "numbers", "opposition-left", "arm-raise-left"}
+SUPPORTED_GROUPS = {"finger", "body", "opposition-left", "arm-raise-left"}
+# The approved arm-raise and opposition scripts are Indonesian only.
+ENGLISH_GROUPS = {"finger", "body"}
 
 # Finger exercises: FingerSessionViewModel.narrate() speaks these keys in order.
 FINGER_PREFIXES = ("baseline.", "move.", "demo.", "return.", "finger.", "recovery.")
@@ -124,8 +142,6 @@ BODY_KEYS = (
 # recording is rendered from it. Rendering a spoken variant for a key that already has a recording
 # replaces that recording on the next run, because the text fingerprint changes.
 SPOKEN_PREFIX = "speak."
-# Spoken numbers for countdowns and repetition counts, one clip each ("narration-id-count-3").
-NUMBER_RANGE = range(1, 101)
 UNITS = ["", "satu", "dua", "tiga", "empat", "lima", "enam", "tujuh", "delapan", "sembilan"]
 
 
@@ -143,6 +159,23 @@ def indonesian_number(n):
         return f"{UNITS[n - 10]} belas"
     tens, unit = divmod(n, 10)
     return f"{UNITS[tens]} puluh" + (f" {UNITS[unit]}" if unit else "")
+
+
+def english_number(number):
+    """English words for 1-100: eleven, twenty one, one hundred."""
+    small = (
+        "zero", "one", "two", "three", "four", "five", "six", "seven", "eight",
+        "nine", "ten", "eleven", "twelve", "thirteen", "fourteen", "fifteen",
+        "sixteen", "seventeen", "eighteen", "nineteen",
+    )
+    if number < 20:
+        return small[number]
+    if number == 100:
+        return "one hundred"
+
+    tens = ("", "", "twenty", "thirty", "forty", "fifty", "sixty", "seventy", "eighty", "ninety")
+    quotient, remainder = divmod(number, 10)
+    return tens[quotient] + (" " + small[remainder] if remainder else "")
 
 
 # Calm, clear delivery for older patients. `speed` below 1 slows speech slightly.
@@ -175,7 +208,7 @@ RETAKE_SEEDS = {
 
 
 def seed_for(line):
-    return RETAKE_SEEDS.get(line["name"], SEED)
+    return line.get("seed") or RETAKE_SEEDS.get(line["name"], SEED)
 
 
 # Short commands the model reads in a rush even with another seed (about 13-15 characters per
@@ -205,6 +238,8 @@ def settings_for(line):
 
 
 TONE_LEAD_IN = "Dengan suara yang lembut, tenang, dan sabar, ia menjelaskan pelan-pelan:"
+# The same "explaining slowly" direction for English, which measured as calm as Indonesian.
+TONE_LEAD_IN_EN = "In a soft, calm and patient voice, she explains slowly:"
 
 # Lines that should sound exactly like a particular instruction are rendered as its next
 # sentence: that instruction is added to the unspoken lead-in, so the model carries on in the
@@ -215,20 +250,33 @@ LEAD_INS = {
 
 
 def lead_in_for(line):
+    if LANGUAGE == "en":
+        return TONE_LEAD_IN_EN
     return LEAD_INS.get(line["name"], TONE_LEAD_IN)
 
 
 def clip_name(key, argument=None):
-    """Must match NarrationClips.resourceName(for:) in the app."""
+    """Must match NarrationClips.resourceName(for:language:) in the app."""
     name = key.replace(" %lld", "")
     if argument is not None:
         name += f"-{argument}"
-    return "narration-id-" + re.sub(r"[^A-Za-z0-9._-]", "_", name)
+    return f"narration-{LANGUAGE}-" + re.sub(r"[^A-Za-z0-9._-]", "_", name)
+
+
+def localized_text(entry, language):
+    unit = entry.get("localizations", {}).get(language, {}).get("stringUnit")
+    return unit.get("value") if unit else None
 
 
 def indonesian_text(entry):
-    unit = entry.get("localizations", {}).get("id", {}).get("stringUnit")
-    return unit.get("value") if unit else None
+    return localized_text(entry, "id")
+
+
+def spoken_number(argument, key):
+    """Counts the patient hears are spelled out ("enam napas lagi", "six breaths left")."""
+    if key not in SPELLED_FORMAT_KEYS and key != "armRaise.left.longRest.remaining %lld":
+        return str(argument)
+    return indonesian_number(argument) if LANGUAGE == "id" else english_number(argument)
 
 
 def collect_lines(groups):
@@ -254,27 +302,20 @@ def collect_lines(groups):
         for key, values in FORMAT_KEYS.items():
             wanted.extend((key, value) for value in values)
 
-    numbers = []
-    if groups & {"numbers", "opposition-left", "arm-raise-left"}:
-        number_range = NUMBER_RANGE if "numbers" in groups else range(1, 7)
-        for n in number_range:
-            # A full stop gives each number a clean, final ending.
-            text = indonesian_number(n).capitalize() + "."
-            numbers.append({"key": "count", "argument": n, "text": text, "name": clip_name("count", n)})
-
     lines = []
     for key, argument in wanted:
-        text = indonesian_text(strings.get(SPOKEN_PREFIX + key, {})) or indonesian_text(strings.get(key, {}))
+        text = (
+            localized_text(strings.get(SPOKEN_PREFIX + key, {}), LANGUAGE)
+            or localized_text(strings.get(key, {}), LANGUAGE)
+        )
         if not text:
-            print(f"skip {key}: no Indonesian text", file=sys.stderr)
+            print(f"skip {key}: no {LANGUAGE} text", file=sys.stderr)
             continue
         if argument is not None:
-            # Counts the patient hears are spelled out ("enam napas lagi"), as the number clips are.
-            spoken = indonesian_number(argument) if key in SPELLED_FORMAT_KEYS or key == "armRaise.left.longRest.remaining %lld" else str(argument)
-            text = text.replace("%lld", spoken)
+            text = text.replace("%lld", spoken_number(argument, key))
         lines.append({"key": key, "argument": argument, "text": text, "name": clip_name(key, argument)})
 
-    return sorted(lines + numbers, key=lambda line: line["name"])
+    return sorted(lines, key=lambda line: line["name"])
 
 
 def tls_context():
@@ -338,28 +379,118 @@ def find_voice(api_key, name):
     )
 
 
+# MARK: - Calm takes
+
+PITCH_SOURCE = ROOT / "Tools/measure_pitch.swift"
+# Compiled once per change: the interpreted script is too slow for hundreds of takes.
+PITCH_TOOL = Path(tempfile.gettempdir()) / "itera-measure-pitch"
+# Median pitch of the 548 Indonesian instruction clips in NarrationID, measured with
+# Tools/measure_pitch.swift on 2026-11-16 (90th percentile 184 Hz, about 2 semitones above).
+REFERENCE_PITCH_HZ = 163.0
+MAX_SEMITONES_ABOVE_REFERENCE = 2.0
+# The instructions' 90th-percentile ending rise; anything higher sounds upbeat or unfinished.
+MAX_ENDING_RISE_SEMITONES = 1.6
+# English sentences are recorded with these seeds, one more at a time up to MAX_TAKES while
+# none passes the calm gate; recorded takes are cached by fingerprint.
+TAKE_SEEDS = (SEED, SEED + 1, SEED + 2)
+MAX_TAKES = 10
+
+
+def pitch_tool():
+    """Path of the compiled measure_pitch.swift, rebuilt when the source changes."""
+    if PITCH_TOOL.exists() and PITCH_TOOL.stat().st_mtime >= PITCH_SOURCE.stat().st_mtime:
+        return PITCH_TOOL
+
+    print("Compiling Tools/measure_pitch.swift...", flush=True)
+    subprocess.run(["swiftc", "-O", "-o", str(PITCH_TOOL), str(PITCH_SOURCE)], check=True)
+    return PITCH_TOOL
+
+
+def measure(paths):
+    """{file stem: (median Hz, ending rise in semitones, trimmed seconds, longest pause)}."""
+    if not paths:
+        return {}
+
+    result = subprocess.run(
+        [str(pitch_tool()), *map(str, paths)],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    measurements = {}
+    for row in result.stdout.splitlines():
+        name, *values = row.split("\t")
+        measurements[name] = tuple(float(value) for value in values)
+    return measurements
+
+
+def semitones_above_reference(hertz):
+    return 12 * math.log2(hertz / REFERENCE_PITCH_HZ)
+
+
+def sentence_problems(measurement):
+    """Why a sentence take is not calm, or an empty list. Commas pause naturally, so
+    sentences skip the count clips' inner-pause and length checks."""
+    if measurement is None:
+        return ["no measurable voice"]
+
+    hertz, rise = measurement[0], measurement[1]
+    problems = []
+    if semitones_above_reference(hertz) > MAX_SEMITONES_ABOVE_REFERENCE:
+        problems.append(f"{hertz:.0f} Hz")
+    if rise > MAX_ENDING_RISE_SEMITONES:
+        problems.append(f"ending rises {rise:+.1f} st")
+    return problems
+
+
+def sentence_score(measurement):
+    """Lower is calmer: semitones above the instructions' pitch plus any rising ending."""
+    if measurement is None:
+        return math.inf
+
+    hertz, rise = measurement[0], measurement[1]
+    return max(0.0, semitones_above_reference(hertz)) + max(0.0, rise)
+
+
 def fingerprint(line, voice_id, model):
     payload = json.dumps([line["text"], voice_id, model, settings_for(line), seed_for(line), lead_in_for(line)], sort_keys=True)
     return hashlib.sha256(payload.encode()).hexdigest()
 
 
 def main():
+    global LANGUAGE, RAW, OUTPUT, MANIFEST
+
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--voice-name", default="Marizka")
     parser.add_argument("--voice-id", help="Use this voice ID instead of searching by name.")
     parser.add_argument("--model", default="eleven_multilingual_v2")
-    parser.add_argument("--groups", default="finger,body,numbers,opposition-left,arm-raise-left", help="Comma-separated: finger, body, numbers, opposition-left, arm-raise-left.")
+    parser.add_argument("--language", choices=LANGUAGES, default="id", help="Catalog language to record.")
+    parser.add_argument(
+        "--groups",
+        help="Comma-separated: finger, body, opposition-left, arm-raise-left (English: finger, body).",
+    )
     parser.add_argument("--dry-run", action="store_true", help="List sentences and characters only.")
     parser.add_argument("--force", action="store_true", help="Re-render every sentence.")
     parser.add_argument("--normalize-only", action="store_true", help="Re-level existing raw clips; no API calls.")
+    parser.add_argument("--check", action="store_true", help="English: report missing and not-calm clips.")
     args = parser.parse_args()
 
-    groups = {group.strip() for group in args.groups.split(",")}
-    unknown = groups - SUPPORTED_GROUPS
+    LANGUAGE = args.language
+    allowed = ENGLISH_GROUPS if LANGUAGE == "en" else SUPPORTED_GROUPS
+    if LANGUAGE == "en":
+        RAW, OUTPUT, MANIFEST = RAW_EN, OUTPUT_EN, MANIFEST_EN
+
+    groups = {group.strip() for group in (args.groups or ",".join(sorted(allowed))).split(",")}
+    unknown = groups - allowed
     if unknown:
-        parser.error("Unknown groups: " + ", ".join(sorted(unknown)))
+        parser.error("Unknown groups for this language: " + ", ".join(sorted(unknown)))
     lines = collect_lines(groups)
     characters = sum(len(line["text"]) for line in lines)
+
+    if args.check:
+        if LANGUAGE != "en":
+            parser.error("--check measures English recordings; use --language en.")
+        sys.exit(0 if check_calm(lines) else 1)
 
     if args.normalize_only:
         normalize()
@@ -368,12 +499,13 @@ def main():
     if args.dry_run:
         for line in lines:
             print(f'{line["name"]}: {line["text"]}')
-        print(f"\n{len(lines)} sentences, {characters} characters in total.")
+        takes = len(TAKE_SEEDS) if LANGUAGE == "en" else 1
+        print(f"\n{len(lines)} sentences, {characters} characters in total ({takes} take(s) each).")
         return
 
-    api_key = os.environ.get("ELEVENLABS_API_KEY")
+    api_key = os.environ.get("ELEVENLABS_API_KEY") or local_api_key()
     if not api_key:
-        sys.exit("Set ELEVENLABS_API_KEY in this terminal first (it is never stored).")
+        sys.exit("Set ELEVENLABS_API_KEY in this terminal or the ignored .env file (it is never stored).")
 
     voice_id, voice_name = (args.voice_id, args.voice_id) if args.voice_id else find_voice(api_key, args.voice_name)
     print(f"Voice: {voice_name} ({voice_id}), model {args.model}")
@@ -383,32 +515,131 @@ def main():
     rendered = 0
 
     for line in lines:
+        if LANGUAGE == "en":
+            rendered += record_calmest(line, voice_id, args.model, api_key, manifest, args.force)
+            continue
+
         target = RAW / (line["name"] + ".mp3")
         stamp = fingerprint(line, voice_id, args.model)
         if not args.force and target.exists() and manifest.get(line["name"]) == stamp:
             continue
 
         print(f'render {line["name"]}: {line["text"]}')
-        audio = request(
-            "POST", f"/v1/text-to-speech/{voice_id}", api_key,
-            query={"output_format": "mp3_44100_128"},
-            body={
-                "text": line["text"],
-                "model_id": args.model,
-                "voice_settings": settings_for(line),
-                "seed": seed_for(line),
-                "previous_text": lead_in_for(line),
-            },
-            accept="audio/mpeg",
-        )
-        target.write_bytes(audio)
+        target.write_bytes(render_take(line, voice_id, args.model, api_key))
         manifest[line["name"]] = stamp
         MANIFEST.write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n")
         rendered += 1
 
-    print(f"\nRendered {rendered} of {len(lines)} sentences into {RAW.relative_to(ROOT)}.")
+    print(f"\nRendered {rendered} takes for {len(lines)} sentences into {RAW.relative_to(ROOT)}.")
     normalize()
+    if LANGUAGE == "en" and not check_calm(lines):
+        sys.exit(1)
     print("Next: run `xcodegen generate` so the new clips are bundled.")
+
+
+def local_api_key():
+    """Read only the named key from the repo's ignored .env, without executing it."""
+    local_env = ROOT / ".env"
+    if not local_env.is_file():
+        return None
+
+    for row in local_env.read_text(encoding="utf-8").splitlines():
+        name, separator, value = row.partition("=")
+        if separator and name.strip() == "ELEVENLABS_API_KEY":
+            return value.strip().strip('"\'')
+    return None
+
+
+def render_take(line, voice_id, model, api_key):
+    return request(
+        "POST", f"/v1/text-to-speech/{voice_id}", api_key,
+        query={"output_format": "mp3_44100_128"},
+        body={
+            "text": line["text"],
+            "model_id": model,
+            "voice_settings": settings_for(line),
+            "seed": seed_for(line),
+            "previous_text": lead_in_for(line),
+        },
+        accept="audio/mpeg",
+    )
+
+
+def record_calmest(line, voice_id, model, api_key, manifest, force):
+    """Records seeded takes of one sentence and keeps the calmest as its raw clip.
+
+    Returns how many takes were rendered; cached takes with an unchanged fingerprint are reused.
+    """
+    candidates = RAW / "candidates"
+    candidates.mkdir(parents=True, exist_ok=True)
+    rendered = 0
+    paths = []
+    measurements = {}
+
+    def record(seed):
+        nonlocal rendered
+        take = {**line, "seed": seed}
+        path = candidates / f'{line["name"]}-{seed}.mp3'
+        key = f'{line["name"]}@{seed}'
+        stamp = fingerprint(take, voice_id, model)
+        if force or not path.exists() or manifest.get(key) != stamp:
+            print(f'render {line["name"]} seed {seed}: {line["text"]}', flush=True)
+            path.write_bytes(render_take(take, voice_id, model, api_key))
+            manifest[key] = stamp
+            MANIFEST.write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n")
+            rendered += 1
+        paths.append(path)
+
+    for seed in TAKE_SEEDS:
+        record(seed)
+    measurements.update(measure(paths))
+
+    def calmest():
+        return min(paths, key=lambda path: sentence_score(measurements.get(path.stem)))
+
+    next_seed = TAKE_SEEDS[-1] + 1
+    while sentence_problems(measurements.get(calmest().stem)) and len(paths) < MAX_TAKES:
+        record(next_seed)
+        measurements.update(measure(paths[-1:]))
+        next_seed += 1
+
+    chosen = calmest()
+    shutil.copyfile(chosen, RAW / (line["name"] + ".mp3"))
+    manifest[line["name"]] = int(chosen.stem.rsplit("-", 1)[1])
+    MANIFEST.write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n")
+    return rendered
+
+
+def check_calm(lines):
+    """Reports missing English clips and chosen takes that fail the calm gate."""
+    missing = [line["name"] for line in lines if not (OUTPUT / (line["name"] + ".m4a")).is_file()]
+    takes = [RAW / (line["name"] + ".mp3") for line in lines]
+    measurements = measure([path for path in takes if path.is_file()])
+    not_calm = [
+        (line["name"], sentence_problems(measurements.get(line["name"])))
+        for line, path in zip(lines, takes)
+        if path.is_file() and sentence_problems(measurements.get(line["name"]))
+    ]
+    stray = sorted(
+        path.name for path in OUTPUT.glob("*.m4a")
+        if path.stem not in {line["name"] for line in lines}
+    ) if OUTPUT.exists() else []
+
+    pitches = sorted(value[0] for value in measurements.values())
+    if pitches:
+        print(
+            f"English pitch: median {pitches[len(pitches) // 2]:.0f} Hz, "
+            f"90th percentile {pitches[int(len(pitches) * 0.9)]:.0f} Hz "
+            f"(Indonesian instructions: {REFERENCE_PITCH_HZ:.0f} Hz)"
+        )
+    print(f"Missing clips: {len(missing)}; stray clips: {len(stray)}; not calm: {len(not_calm)}")
+    for name in missing[:10]:
+        print(f"  missing {name}")
+    for name in stray[:10]:
+        print(f"  stray {name}")
+    for name, problems in not_calm:
+        print(f"  not calm {name}: {', '.join(problems)}")
+    return not missing and not stray and not not_calm
 
 
 def normalize():
