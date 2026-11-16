@@ -83,7 +83,7 @@ struct TMDailyPlanIntroView: View {
             targetTitle: "plan.targetTitle",
             safetyNote: "exercise.safetyNote",
             startTitle: narration.paused ? "session.resume" : "exercise.start",
-            startDisabled: (starting || narration.running) && !narration.paused,
+            startDisabled: starting && !narration.running && !narration.paused,
             message: readinessMessage,
             countdownSeconds: usesScript ? nil : countdownSeconds,
             onBack: {
@@ -199,6 +199,12 @@ struct TMDailyPlanIntroView: View {
             narration.resume()
             return
         }
+
+        if narration.running {
+            skipNarration()
+            return
+        }
+
         guard let readiness, !starting else {
             return
         }
@@ -223,6 +229,31 @@ struct TMDailyPlanIntroView: View {
                 )
                 starting = false
             }
+        }
+    }
+
+    /// Start tapped while the scripted intro still reads: stops the narration, whose cleared
+    /// operation rejects its own late launch, and opens the session the way its completion would.
+    private func skipNarration() {
+        guard let readiness, !starting else {
+            return
+        }
+
+        narration.stop()
+        starting = true
+
+        Task {
+            if automatic {
+                dependencies.dailyPlan.launchAfterRest(dependencies: dependencies, router: router)
+            } else {
+                await dependencies.dailyPlan.startCurrent(
+                    readiness: readiness,
+                    dependencies: dependencies,
+                    router: router
+                )
+            }
+
+            starting = false
         }
     }
 }
