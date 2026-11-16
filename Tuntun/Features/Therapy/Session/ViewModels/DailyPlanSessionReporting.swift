@@ -23,3 +23,8 @@ protocol DailyPlanSessionReporting: AnyObject {
     func markOppositionRest(_ side: HandSide?)
     func markArmRaiseRest(_ side: TherapySide?)
 }
+
+enum DailyPlanTiming {
+    /// How long a finished session's summary stays visible before a running plan moves on.
+    static let completionPreview: Duration = .seconds(4)
+}

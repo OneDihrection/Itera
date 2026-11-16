@@ -78,7 +78,7 @@ struct TMBalanceSessionView<ViewModel: BalanceSessionViewModelProtocol>: View {
         .task { await model.start(permissions: permissions) }
         .task(id: automaticallyRests && scenePhase == .active) {
             guard automaticallyRests, scenePhase == .active else { return }
-            try? await Task.sleep(for: DailyPlanViewModel.completionPreviewDuration)
+            try? await Task.sleep(for: DailyPlanTiming.completionPreview)
             guard !Task.isCancelled, automaticallyRests else { return }
             leave()
         }

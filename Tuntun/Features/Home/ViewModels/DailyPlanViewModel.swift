@@ -42,7 +42,6 @@ struct DailyPlanRow: Identifiable, Equatable {
 @MainActor
 @Observable
 final class DailyPlanViewModel: DailyPlanSessionReporting {
-    static let completionPreviewDuration: Duration = .seconds(4)
     /// The exercises Beranda shows, in order. Always `standardItems` in Release builds.
     private(set) var items: [DailyPlanItem]
     /// Every exercise the plan knows, in standard order.

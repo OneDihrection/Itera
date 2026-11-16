@@ -50,7 +50,7 @@ final class TherapySessionBuilder: TherapySessionBuildable {
 
         TMTherapySessionView(
             model: model,
-            plan: component.dailyPlan,
+            plan: component.planReporting,
             permissions: component.permissions,
             router: component.sessionRouter
         )
@@ -65,7 +65,7 @@ final class TherapySessionBuilder: TherapySessionBuildable {
 
         TMTherapySessionView(
             model: model,
-            plan: component.dailyPlan,
+            plan: component.planReporting,
             permissions: component.permissions,
             router: component.sessionRouter,
             presentationOnly: true
@@ -87,7 +87,7 @@ final class TherapySessionBuilder: TherapySessionBuildable {
 
         TMBalanceSessionView(
             model: model,
-            plan: component.dailyPlan,
+            plan: component.planReporting,
             permissions: component.permissions,
             router: component.sessionRouter
         )
@@ -97,7 +97,7 @@ final class TherapySessionBuilder: TherapySessionBuildable {
     @ViewBuilder func buildFingerSession() -> some View {
         TMFingerSessionView(
             launcher: component.fingerSessions,
-            plan: component.dailyPlan,
+            plan: component.planReporting,
             router: component.sessionRouter
         )
     }
@@ -105,7 +105,7 @@ final class TherapySessionBuilder: TherapySessionBuildable {
     @ViewBuilder func buildFingerSessionComplete() -> some View {
         let viewModel: some FingerSessionCompleteViewModelProtocol = FingerSessionCompleteViewModel(
             launcher: component.fingerSessions,
-            plan: component.dailyPlan,
+            plan: component.planReporting,
             home: component.fingers,
             tabs: component.tabRouter,
             router: component.sessionRouter

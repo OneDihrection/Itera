@@ -17,7 +17,7 @@ protocol TherapySessionDependency {
     var fingers: FingerHomeViewModel { get }
     var fingerSessions: FingerSessionLauncher { get }
     /// Sessions report their finishing action to today's plan.
-    var dailyPlan: DailyPlanViewModel { get }
+    var planReporting: any DailyPlanSessionReporting { get }
     var sessionRouter: any SessionRouterProtocol { get }
     var tabRouter: any TabRouterProtocol { get }
 }
@@ -30,7 +30,7 @@ final class TherapySessionComponent: Component<TherapySessionDependency> {
     let permissions: PermissionManager
     let fingers: FingerHomeViewModel
     let fingerSessions: FingerSessionLauncher
-    let dailyPlan: DailyPlanViewModel
+    let planReporting: any DailyPlanSessionReporting
     let sessionRouter: any SessionRouterProtocol
     let tabRouter: any TabRouterProtocol
 
@@ -41,7 +41,7 @@ final class TherapySessionComponent: Component<TherapySessionDependency> {
         self.permissions = dependency.permissions
         self.fingers = dependency.fingers
         self.fingerSessions = dependency.fingerSessions
-        self.dailyPlan = dependency.dailyPlan
+        self.planReporting = dependency.planReporting
         self.sessionRouter = dependency.sessionRouter
         self.tabRouter = dependency.tabRouter
         super.init(with: dependency)

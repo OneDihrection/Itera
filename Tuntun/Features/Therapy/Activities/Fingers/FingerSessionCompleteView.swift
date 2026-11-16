@@ -55,7 +55,7 @@ struct TMFingerSessionCompleteView<ViewModel: FingerSessionCompleteViewModelProt
                 return
             }
 
-            try? await Task.sleep(for: DailyPlanViewModel.completionPreviewDuration)
+            try? await Task.sleep(for: DailyPlanTiming.completionPreview)
 
             guard !Task.isCancelled, scenePhase == .active, automaticallyRests else {
                 return

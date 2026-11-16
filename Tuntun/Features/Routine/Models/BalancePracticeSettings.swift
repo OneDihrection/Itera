@@ -44,3 +44,10 @@ struct BalancePracticeSettings: Hashable {
         restSeconds = min(Self.restRange.upperBound, max(Self.restRange.lowerBound, savedRest))
     }
 }
+
+/// Which arm a Balancing exercise works: one side, or both in turn.
+enum BalanceArmSelection: String, CaseIterable, Hashable {
+    case right
+    case left
+    case both
+}

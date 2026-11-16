@@ -142,7 +142,7 @@ struct TMTherapySessionView<ViewModel: TherapySessionViewModelProtocol>: View {
         }
         .task(id: canAutomaticallyContinuePlan && scenePhase == .active) {
             guard canAutomaticallyContinuePlan, scenePhase == .active else { return }
-            try? await Task.sleep(for: DailyPlanViewModel.completionPreviewDuration)
+            try? await Task.sleep(for: DailyPlanTiming.completionPreview)
             guard !Task.isCancelled, canAutomaticallyContinuePlan, let summary = model.snapshot.summary else { return }
             leaveSummary(summary)
         }

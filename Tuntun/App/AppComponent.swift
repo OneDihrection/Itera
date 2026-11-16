@@ -116,6 +116,11 @@ final class AppComponent: Component<Void>, HistoryDependency, HomeDependency, Th
         planRouter
     }
 
+    /// Sessions report to today's plan without depending on Home.
+    var planReporting: any DailyPlanSessionReporting {
+        dailyPlan
+    }
+
     // MARK: - Feature builders
 
     lazy var historyBuilder = HistoryBuilder(component: HistoryComponent(dependency: self))
