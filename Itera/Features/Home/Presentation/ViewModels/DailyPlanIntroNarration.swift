@@ -37,8 +37,9 @@ final class DailyPlanIntroNarration {
         }
         let operation = UUID()
         operationID = operation
-        let ready = automatic ? true : await readiness.performAction()
-        guard operationID == operation, ready, dependencies.dailyPlan.isRunning,
+        // The intro is playback, not therapy. Do not silence it when microphone or command
+        // recognition readiness is pending; startCurrent validates that before opening capture.
+        guard operationID == operation, dependencies.dailyPlan.isRunning,
               dependencies.dailyPlan.nextSessionItemID == itemID else {
             return
         }
