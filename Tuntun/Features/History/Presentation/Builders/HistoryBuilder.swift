@@ -14,8 +14,8 @@ protocol HistoryBuildable {
     @ViewBuilder @MainActor func buildReports() -> ReportsScreen
 }
 
-/// The pages the reports list can push onto its stack.
-protocol HistoryContentBuildable {
+/// What the reports list builds inside itself: its rows, and the pages it pushes.
+protocol HistoryContentBuildable: HistoryCellBuildable {
     associatedtype FingerReportScreen: View
     associatedtype SessionReportScreen: View
 
@@ -41,7 +41,10 @@ final class HistoryBuilder: HistoryBuildable, HistoryContentBuildable {
         let viewModel: some FingerReportDetailViewModelProtocol = FingerReportDetailViewModel(
             id: id,
             home: component.fingers,
-            replayRepository: component.fingerReplayRepository,
+            replays: FingerReplayViewModel(
+                sessionID: id,
+                repository: component.fingerReplayRepository
+            ),
             router: component.router
         )
 
@@ -57,5 +60,10 @@ final class HistoryBuilder: HistoryBuildable, HistoryContentBuildable {
 
         TMSessionReportView(viewModel: viewModel)
             .environment(\.locale, AppLanguage.selected.locale)
+    }
+
+    /// Reuses the row builder the component seeded; no row UI is written here.
+    @ViewBuilder func buildCell(entry: HistoryEntry) -> some View {
+        component.cellBuilder.buildCell(entry: entry)
     }
 }

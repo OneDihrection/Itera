@@ -16,8 +16,8 @@ import SwiftUI
 
 /// After each set, and through the rest that follows: what was done and what comes next.
 /// The last set of a movement shows the all-done wording.
-struct TMFingerSetSummaryPage: View {
-    let model: FingerSessionViewModel
+struct TMFingerSetSummaryPage<Model: FingerSessionViewModelProtocol>: View {
+    let model: Model
     /// "Latihan N" while today's plan runs.
     let exerciseNumber: Int?
 
@@ -47,7 +47,7 @@ struct TMFingerSetSummaryPage: View {
 
     /// Another movement of the finger program follows this one.
     private var moreMovements: Bool {
-        model.engine.summary.exerciseIndex < model.routine.exercises.count - 1
+        model.exerciseIndex < model.routine.exercises.count - 1
     }
 
     /// Finger sets end only when the goal is reached, so every finished set is goal/goal.
@@ -108,8 +108,8 @@ struct TMFingerSetSummaryPage: View {
 // MARK: - Next up
 
 /// Shown at the end of a rest, with the next movement's demonstration playing.
-struct TMFingerUpcomingPage: View {
-    let model: FingerSessionViewModel
+struct TMFingerUpcomingPage<Model: FingerSessionViewModelProtocol>: View {
+    let model: Model
 
     var body: some View {
         VStack(spacing: 0) {
@@ -177,8 +177,8 @@ struct TMFingerUpcomingPage: View {
 // MARK: - Shared header
 
 /// The page header used across session pages: a close circle that pauses the session.
-struct TMFingerSessionCloseHeader: View {
-    let model: FingerSessionViewModel
+struct TMFingerSessionCloseHeader<Model: FingerSessionViewModelProtocol>: View {
+    let model: Model
     let title: LocalizedStringKey?
     var trailingContentWidth: CGFloat = 0
 

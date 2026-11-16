@@ -206,9 +206,7 @@ enum SessionPresentationFixtures {
 
 struct SessionPresentationFixturePreviews: PreviewProvider {
     static var previews: some View {
-        let sessions = HomeComponent(
-            dependency: AppComponent(permissions: PermissionManager())
-        ).sessionBuilder
+        let sessions = AppComponent(permissions: PermissionManager()).sessionBuilder
 
         ForEach(SessionPresentationFixtures.all) { fixture in
             sessions.buildTherapySession(fixture: fixture.snapshot)

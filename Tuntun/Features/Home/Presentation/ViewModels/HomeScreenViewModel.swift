@@ -13,9 +13,11 @@ protocol HomeViewModelProtocol: AnyObject, Observable {
     var path: [HomeRoute] { get set }
     var sheet: HomeSheet? { get set }
     var cover: PlanCover? { get set }
-    /// The finger program, whose saved checkpoint decides the start button's wording.
-    var fingers: FingerHomeViewModel { get }
-    var plan: DailyPlanViewModel { get }
+    var rows: [DailyPlanRow] { get }
+    var errorKey: String? { get }
+    var isFinishedToday: Bool { get }
+    /// Some of today's plan is done, or a finger session was saved for later.
+    var hasProgress: Bool { get }
 
     func refresh() async
     func openPracticePreferences()
@@ -24,7 +26,7 @@ protocol HomeViewModelProtocol: AnyObject, Observable {
 }
 
 /// Beranda: owns its navigation stack, its sheet and the full-screen cover that runs today's
-/// plan, and wires the shared `HomeRouter` to them.
+/// plan, and wires `HomeRouter` and `PlanRouter` to them.
 @MainActor
 @Observable
 final class HomeScreenViewModel: HomeViewModelProtocol {
@@ -32,26 +34,46 @@ final class HomeScreenViewModel: HomeViewModelProtocol {
     var sheet: HomeSheet?
     var cover: PlanCover?
 
-    @ObservationIgnored let fingers: FingerHomeViewModel
-    @ObservationIgnored let plan: DailyPlanViewModel
+    private let fingers: FingerHomeViewModel
+    private let plan: DailyPlanViewModel
     @ObservationIgnored private let armRoutine: RoutineViewModel
     @ObservationIgnored private let taskRoutine: RoutineViewModel
-    @ObservationIgnored private let router: HomeRouter
+    @ObservationIgnored private let homeRouter: HomeRouter
+    @ObservationIgnored private let planRouter: PlanRouter
 
     init(
         fingers: FingerHomeViewModel,
         armRoutine: RoutineViewModel,
         taskRoutine: RoutineViewModel,
         plan: DailyPlanViewModel,
-        router: HomeRouter
+        homeRouter: HomeRouter,
+        planRouter: PlanRouter
     ) {
         self.fingers = fingers
         self.armRoutine = armRoutine
         self.taskRoutine = taskRoutine
         self.plan = plan
-        self.router = router
+        self.homeRouter = homeRouter
+        self.planRouter = planRouter
 
-        wire(router)
+        wire(homeRouter)
+        wire(planRouter)
+    }
+
+    var rows: [DailyPlanRow] {
+        plan.rows()
+    }
+
+    var errorKey: String? {
+        plan.errorKey
+    }
+
+    var isFinishedToday: Bool {
+        plan.isFinishedToday
+    }
+
+    var hasProgress: Bool {
+        plan.completedCount > 0 || fingers.checkpoint != nil
     }
 
     func refresh() async {
@@ -62,7 +84,7 @@ final class HomeScreenViewModel: HomeViewModelProtocol {
     }
 
     func openPracticePreferences() {
-        router.openPracticePreferences()
+        homeRouter.openPracticePreferences()
     }
 
     func begin(from itemID: String?) {
@@ -72,17 +94,21 @@ final class HomeScreenViewModel: HomeViewModelProtocol {
     // MARK: - Router hooks
 
     private func wire(_ router: HomeRouter) {
-        router.push = { [weak self] route in
-            self?.path.append(route)
-        }
-        router.reset = { [weak self] in
-            self?.path.removeAll()
-        }
         router.presentSheet = { [weak self] sheet in
             self?.sheet = sheet
         }
         router.dismissPresentedSheet = { [weak self] in
             self?.sheet = nil
+        }
+    }
+
+    private func wire(_ router: PlanRouter) {
+        router.pushIntro = { [weak self] itemID in
+            self?.path.append(.planIntro(itemID))
+        }
+        router.returnHome = { [weak self] in
+            self?.sheet = nil
+            self?.path.removeAll()
         }
         router.presentPlanCover = { [weak self] route in
             self?.cover = PlanCover(route: route)

@@ -10,8 +10,8 @@ import UIKit
 
 /// "Latihan dijeda" over the finger session: where the patient is, practice time, and resume
 /// or end. It is a layer inside the session rather than a sheet, so the camera stays mounted.
-struct TMFingerPauseDialog: View {
-    let model: FingerSessionViewModel
+struct TMFingerPauseDialog<Model: FingerSessionViewModelProtocol>: View {
+    let model: Model
     /// Opens on the end confirmation when End was tapped on the live screen.
     var confirmingEndInitially = false
     let onResume: () -> Void
@@ -25,7 +25,7 @@ struct TMFingerPauseDialog: View {
             elapsedSeconds: Int(model.sessionElapsedSeconds),
             resumeDisabled: !model.canResume,
             confirmingEndInitially: confirmingEndInitially,
-            onEnd: { model.finish() },
+            onEnd: { model.finish(completed: false) },
             onResume: {
                 onResume()
                 model.handleCommand(.resume)

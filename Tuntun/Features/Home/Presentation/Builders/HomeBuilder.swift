@@ -21,12 +21,24 @@ protocol PlanCoverBuildable {
     @ViewBuilder @MainActor func buildCoverPage(_ route: PlanCoverRoute) -> CoverPage
 }
 
-/// What Beranda can push, present as a sheet, or show in its plan cover.
-protocol HomeContentBuildable: PlanCoverBuildable {
+/// The intro the next-exercise page embeds after its rest.
+protocol DailyPlanNextContentBuildable {
     associatedtype DailyPlanIntroScreen: View
+
+    /// - Parameters:
+    ///   - countdownSeconds: shown in place of Start when the plan opens this intro after a rest.
+    ///   - automatic: the intro was opened by the plan, so its reading leads into the session.
+    @ViewBuilder @MainActor func buildDailyPlanIntro(
+        itemID: String,
+        countdownSeconds: Int?,
+        automatic: Bool
+    ) -> DailyPlanIntroScreen
+}
+
+/// What Beranda can push, present as a sheet, or show in its plan cover.
+protocol HomeContentBuildable: PlanCoverBuildable, DailyPlanNextContentBuildable {
     associatedtype PracticePreferencesScreen: View
 
-    @ViewBuilder @MainActor func buildDailyPlanIntro(itemID: String) -> DailyPlanIntroScreen
     @ViewBuilder @MainActor func buildPracticePreferences() -> PracticePreferencesScreen
 }
 
@@ -57,22 +69,45 @@ final class HomeBuilder: HomeBuildable, HomeContentBuildable, PracticePreference
 
     // MARK: - Stack and sheets
 
-    @ViewBuilder func buildDailyPlanIntro(itemID: String) -> some View {
-        makeDailyPlanIntro(itemID: itemID)
+    @ViewBuilder func buildDailyPlanIntro(
+        itemID: String,
+        countdownSeconds: Int?,
+        automatic: Bool
+    ) -> some View {
+        let viewModel: some DailyPlanIntroViewModelProtocol = DailyPlanIntroViewModel(
+            itemID: itemID,
+            countdownSeconds: countdownSeconds,
+            automatic: automatic,
+            plan: component.dailyPlan,
+            audio: component.audio,
+            readiness: TherapyReadinessViewModel(
+                permissions: component.permissions,
+                audio: component.audio,
+                history: component.historyRecovery
+            ),
+            narration: DailyPlanIntroNarration()
+        )
+
+        TMDailyPlanIntroView(viewModel: viewModel)
     }
 
     @ViewBuilder func buildPracticePreferences() -> some View {
-        TMPracticePreferencesView(
+        let viewModel: some PracticePreferencesViewModelProtocol = PracticePreferencesViewModel(
             home: component.fingers,
             plan: component.dailyPlan,
-            router: component.homeRouter,
-            builder: self
+            router: component.homeRouter
         )
+
+        TMPracticePreferencesView(viewModel: viewModel, builder: self)
     }
 
     #if DEBUG
     @ViewBuilder func buildDebugPlanEditor() -> some View {
-        TMDebugPlanEditorView(plan: component.dailyPlan)
+        let viewModel: some DebugPlanEditorViewModelProtocol = DebugPlanEditorViewModel(
+            plan: component.dailyPlan
+        )
+
+        TMDebugPlanEditorView(viewModel: viewModel)
     }
     #endif
 
@@ -89,35 +124,12 @@ final class HomeBuilder: HomeBuildable, HomeContentBuildable, PracticePreference
         case .fingerSessionComplete:
             component.sessionBuilder.buildFingerSessionComplete()
         case .planNext:
-            TMDailyPlanNextView(
+            let viewModel: some DailyPlanNextViewModelProtocol = DailyPlanNextViewModel(
                 plan: component.dailyPlan,
                 audio: component.audio
-            ) { [unowned self] itemID, countdownSeconds, automatic in
-                makeDailyPlanIntro(
-                    itemID: itemID,
-                    countdownSeconds: countdownSeconds,
-                    automatic: automatic
-                )
-            }
+            )
+
+            TMDailyPlanNextView(viewModel: viewModel, builder: self)
         }
-    }
-
-    // MARK: - Helpers
-
-    /// The intro is pushed from Beranda, and embedded after a rest by the next-exercise page.
-    private func makeDailyPlanIntro(
-        itemID: String,
-        countdownSeconds: Int? = nil,
-        automatic: Bool = false
-    ) -> TMDailyPlanIntroView {
-        TMDailyPlanIntroView(
-            itemID: itemID,
-            countdownSeconds: countdownSeconds,
-            automatic: automatic,
-            plan: component.dailyPlan,
-            audio: component.audio,
-            permissions: component.permissions,
-            history: component.historyRecovery
-        )
     }
 }

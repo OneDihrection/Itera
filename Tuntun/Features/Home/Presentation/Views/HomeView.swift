@@ -20,14 +20,6 @@ struct TMHomeView<ViewModel: HomeViewModelProtocol, Builder: HomeContentBuildabl
     /// True once the inline start button has scrolled under the top edge.
     @State private var startButtonHidden = false
 
-    private var home: FingerHomeViewModel {
-        viewModel.fingers
-    }
-
-    private var plan: DailyPlanViewModel {
-        viewModel.plan
-    }
-
     init(viewModel: ViewModel, builder: Builder) {
         _viewModel = State(initialValue: viewModel)
         self.builder = builder
@@ -58,7 +50,11 @@ struct TMHomeView<ViewModel: HomeViewModelProtocol, Builder: HomeContentBuildabl
     private func destination(_ route: HomeRoute) -> some View {
         switch route {
         case .planIntro(let itemID):
-            builder.buildDailyPlanIntro(itemID: itemID)
+            builder.buildDailyPlanIntro(
+                itemID: itemID,
+                countdownSeconds: nil,
+                automatic: false
+            )
         }
     }
 
@@ -151,7 +147,7 @@ struct TMHomeView<ViewModel: HomeViewModelProtocol, Builder: HomeContentBuildabl
 
     @ViewBuilder
     private var statusMessages: some View {
-        if let error = plan.errorKey {
+        if let error = viewModel.errorKey {
             TMTherapyError(key: error)
         }
 
@@ -162,7 +158,7 @@ struct TMHomeView<ViewModel: HomeViewModelProtocol, Builder: HomeContentBuildabl
     private var startButton: some View {
         TMTherapyButton(
             title: startTitle,
-            symbol: plan.isFinishedToday ? "checkmark" : "play.fill",
+            symbol: viewModel.isFinishedToday ? "checkmark" : "play.fill",
             prominent: true
         ) {
             startPlan(from: nil)
@@ -170,11 +166,11 @@ struct TMHomeView<ViewModel: HomeViewModelProtocol, Builder: HomeContentBuildabl
     }
 
     private var startTitle: LocalizedStringKey {
-        if plan.isFinishedToday {
+        if viewModel.isFinishedToday {
             return "plan.doneToday"
         }
 
-        if plan.completedCount > 0 || home.checkpoint != nil {
+        if viewModel.hasProgress {
             return "plan.continue"
         }
 
@@ -200,7 +196,7 @@ struct TMHomeView<ViewModel: HomeViewModelProtocol, Builder: HomeContentBuildabl
     // MARK: - Timeline
 
     private var timeline: some View {
-        let rows = plan.rows()
+        let rows = viewModel.rows
 
         return VStack(spacing: 0) {
             ForEach(rows.indices, id: \.self) { index in
@@ -248,3 +244,46 @@ struct TMHomeView<ViewModel: HomeViewModelProtocol, Builder: HomeContentBuildabl
         }
     }
 }
+
+// MARK: - Previews
+
+#if DEBUG
+@MainActor
+@Observable
+private final class MockHomeViewModel: HomeViewModelProtocol {
+    var path: [HomeRoute] = []
+    var sheet: HomeSheet?
+    var cover: PlanCover?
+    let rows: [DailyPlanRow] = []
+    let errorKey: String? = nil
+    let isFinishedToday = false
+    let hasProgress = false
+
+    func refresh() async {}
+    func openPracticePreferences() {}
+    func begin(from itemID: String?) {}
+}
+
+@MainActor
+private struct MockHomeBuilder: HomeContentBuildable {
+    @ViewBuilder func buildCoverPage(_ route: PlanCoverRoute) -> some View {
+        Text(verbatim: "Plan cover")
+    }
+
+    @ViewBuilder func buildDailyPlanIntro(
+        itemID: String,
+        countdownSeconds: Int?,
+        automatic: Bool
+    ) -> some View {
+        Text(verbatim: "Intro \(itemID)")
+    }
+
+    @ViewBuilder func buildPracticePreferences() -> some View {
+        Text(verbatim: "Settings")
+    }
+}
+
+#Preview("Beranda") {
+    TMHomeView(viewModel: MockHomeViewModel(), builder: MockHomeBuilder())
+}
+#endif

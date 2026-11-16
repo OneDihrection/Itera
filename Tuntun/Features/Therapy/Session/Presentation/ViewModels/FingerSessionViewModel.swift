@@ -10,8 +10,70 @@ import Observation
 import UIKit
 
 @MainActor
+protocol FingerSessionViewModelProtocol: AnyObject, Observable {
+    var sessionLanguage: AppLanguage { get }
+    var sessionElapsedSeconds: Double { get }
+    var activity: FingerActivity { get }
+    var routine: FingerRoutine { get }
+    /// The current movement's position in the routine.
+    var exerciseIndex: Int { get }
+    var paused: Bool { get }
+    var canResume: Bool { get }
+    var hasFinished: Bool { get }
+    var finalSummary: FingerSessionSummary? { get }
+    var finalSummarySaved: Bool { get }
+    var saving: Bool { get }
+    var errorKey: String? { get }
+    var trackingReady: Bool { get }
+    var waitingForCamera: Bool { get }
+    var recovering: Bool { get }
+    var needsPermissionSettings: Bool { get }
+    var recoveryGuidanceKey: String? { get }
+    var recoveryPanelKey: String? { get }
+    var calibrationMessage: String? { get }
+    var calibrationNeedsHelp: Bool { get }
+    var isCalibrating: Bool { get }
+    var countdown: Int { get }
+    var restBreath: RestBreath? { get }
+    var scriptedRest: OppositionRest? { get }
+    var scriptedCueKey: String? { get }
+    var usesOppositionScript: Bool { get }
+    var upcoming: (exercise: FingerExercise, set: Int)? { get }
+    var showsUpcomingPreview: Bool { get }
+    var showsGuideIndicators: Bool { get }
+    var showsGuideTimer: Bool { get }
+    var guideEvidence: HandEvidence? { get }
+    var instructionKey: String { get }
+    var liveFeedbackKey: String { get }
+    var fingerKey: String { get }
+    var exerciseTitle: String { get }
+    var demoRevision: Int { get }
+    var demoTitleKey: String { get }
+    var demoAnnouncement: String { get }
+    /// The capture owner the camera preview attaches to.
+    var camera: HandCameraService { get }
+
+    func start() async
+    func pause()
+    func handleCommand(_ command: VoiceCommand)
+    func finish(completed: Bool)
+    func saveFinalSummary() async
+    func skipRest()
+    func remeasureRange()
+    func retryCalibration()
+    func retryRecovery() async
+    func holdCompletionPresented(_ id: UUID)
+    func previewReady(_ ready: Bool)
+    func background()
+    func foreground()
+    #if DEBUG
+    func finishExerciseForDebug()
+    #endif
+}
+
+@MainActor
 @Observable
-final class FingerSessionViewModel {
+final class FingerSessionViewModel: FingerSessionViewModelProtocol {
     let sessionLanguage = AppLanguage.selected
     private(set) var sessionElapsedSeconds = 0.0
     @ObservationIgnored private var durationClock = SessionDurationClock()
@@ -134,6 +196,7 @@ final class FingerSessionViewModel {
 
 
     var activity: FingerActivity { engine.activity }
+    var exerciseIndex: Int { engine.summary.exerciseIndex }
     var paused: Bool { engine.paused }
     var routine: FingerRoutine { engine.summary.routine }
     /// Brief misses retain a drawing anchor only; stale positions are never scored again.

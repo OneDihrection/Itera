@@ -76,17 +76,30 @@ protocol SessionRouterProtocol: AnyObject {
     func closeSession()
 }
 
-// MARK: - Router
+// MARK: - Routers
 
-/// Beranda's router. The Beranda screen model owns the stack, sheet and cover state and wires
-/// these hooks to them; the plan, intro and sessions receive the router through their
-/// initializers.
+/// Beranda's own router: its settings sheet. The plan's pages use `PlanRouter`.
 @MainActor
-final class HomeRouter: HomeRouterProtocol, DailyPlanRouterProtocol, SessionRouterProtocol {
-    var push: ((HomeRoute) -> Void)?
-    var reset: (() -> Void)?
+final class HomeRouter: HomeRouterProtocol {
     var presentSheet: ((HomeSheet) -> Void)?
     var dismissPresentedSheet: (() -> Void)?
+
+    func openPracticePreferences() {
+        presentSheet?(.practicePreferences)
+    }
+
+    func dismissSheet() {
+        dismissPresentedSheet?()
+    }
+}
+
+/// The plan's router: the intro pushed on Beranda's stack and the full-screen cover its
+/// sessions, rest and next intro share. Beranda's screen model owns that state and wires these
+/// hooks; the plan and the session pages receive this router through their initializers.
+@MainActor
+final class PlanRouter: DailyPlanRouterProtocol, SessionRouterProtocol {
+    var pushIntro: ((String) -> Void)?
+    var returnHome: (() -> Void)?
     var presentPlanCover: ((PlanCoverRoute) -> Void)?
     var replacePlanCover: ((PlanCoverRoute) -> Void)?
     var dismissPlanCover: (() -> Void)?
@@ -96,16 +109,8 @@ final class HomeRouter: HomeRouterProtocol, DailyPlanRouterProtocol, SessionRout
         coverPresented?() ?? false
     }
 
-    func openPracticePreferences() {
-        presentSheet?(.practicePreferences)
-    }
-
-    func dismissSheet() {
-        dismissPresentedSheet?()
-    }
-
     func showIntro(itemID: String) {
-        push?(.planIntro(itemID))
+        pushIntro?(itemID)
     }
 
     func presentCover(_ route: PlanCoverRoute) {
@@ -117,9 +122,8 @@ final class HomeRouter: HomeRouterProtocol, DailyPlanRouterProtocol, SessionRout
     }
 
     func endRun() {
-        dismissPresentedSheet?()
         dismissPlanCover?()
-        reset?()
+        returnHome?()
     }
 
     func showFingerSessionComplete() {

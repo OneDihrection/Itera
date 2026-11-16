@@ -7,17 +7,17 @@
 
 import SwiftUI
 
-struct TMBalanceSessionView: View {
+struct TMBalanceSessionView<ViewModel: BalanceSessionViewModelProtocol>: View {
     @Environment(\.scenePhase) private var scenePhase
-    @State private var model: BalanceSessionViewModel
-    private let plan: DailyPlanViewModel
-    private let permissions: PermissionManager
+    @State private var model: ViewModel
+    private let plan: any DailyPlanSessionReporting
+    private let permissions: any PermissionManaging
     private let router: any SessionRouterProtocol
 
     init(
-        model: BalanceSessionViewModel,
-        plan: DailyPlanViewModel,
-        permissions: PermissionManager,
+        model: ViewModel,
+        plan: any DailyPlanSessionReporting,
+        permissions: any PermissionManaging,
         router: any SessionRouterProtocol
     ) {
         _model = State(initialValue: model)
@@ -440,8 +440,8 @@ struct TMBalanceSessionView: View {
 ///
 /// It is its own view so only this layer reads `livePose`, which changes every camera frame;
 /// reading it in the session screen's body would rebuild the whole screen 30 times a second.
-private struct TMBalanceLiveSkeletonLayer: View {
-    let model: BalanceSessionViewModel
+private struct TMBalanceLiveSkeletonLayer<ViewModel: BalanceSessionViewModelProtocol>: View {
+    let model: ViewModel
 
     var body: some View {
         if let skeleton = model.livePose {

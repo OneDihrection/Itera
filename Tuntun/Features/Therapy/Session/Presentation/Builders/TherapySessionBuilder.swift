@@ -7,6 +7,15 @@
 
 import SwiftUI
 
+#if DEBUG
+/// Debug-only: the session screen filled from a fixed snapshot.
+protocol TherapySessionFixtureBuildable {
+    associatedtype FixtureScreen: View
+
+    @ViewBuilder @MainActor func buildTherapySession(fixture: SessionSnapshot) -> FixtureScreen
+}
+#endif
+
 /// Builds the session pages today's plan runs in its full-screen cover.
 protocol TherapySessionBuildable {
     associatedtype TherapySessionScreen: View
@@ -32,7 +41,7 @@ final class TherapySessionBuilder: TherapySessionBuildable {
     }
 
     @ViewBuilder func buildTherapySession(routine: Routine) -> some View {
-        let model = TherapySessionViewModel(
+        let model: some TherapySessionViewModelProtocol = TherapySessionViewModel(
             tracking: component.tracking,
             audio: component.audio,
             repository: component.sessions,
@@ -50,12 +59,16 @@ final class TherapySessionBuilder: TherapySessionBuildable {
     }
 
     #if DEBUG
+    /// Debug fixtures render a fixed snapshot without capture or audio.
     @ViewBuilder func buildTherapySession(fixture: SessionSnapshot) -> some View {
+        let model: some TherapySessionViewModelProtocol = TherapySessionViewModel.presentationFixture(fixture)
+
         TMTherapySessionView(
-            fixture: fixture,
+            model: model,
             plan: component.dailyPlan,
             permissions: component.permissions,
-            router: component.sessionRouter
+            router: component.sessionRouter,
+            presentationOnly: true
         )
     }
     #endif
@@ -64,7 +77,7 @@ final class TherapySessionBuilder: TherapySessionBuildable {
         exercise: BalanceExercise,
         settings: BalancePracticeSettings
     ) -> some View {
-        let model = BalanceSessionViewModel(
+        let model: some BalanceSessionViewModelProtocol = BalanceSessionViewModel(
             tracking: component.tracking,
             audio: component.audio,
             repository: component.sessions,
@@ -90,12 +103,18 @@ final class TherapySessionBuilder: TherapySessionBuildable {
     }
 
     @ViewBuilder func buildFingerSessionComplete() -> some View {
-        TMFingerSessionCompleteView(
+        let viewModel: some FingerSessionCompleteViewModelProtocol = FingerSessionCompleteViewModel(
             launcher: component.fingerSessions,
             plan: component.dailyPlan,
             home: component.fingers,
             tabs: component.tabRouter,
             router: component.sessionRouter
         )
+
+        TMFingerSessionCompleteView(viewModel: viewModel)
     }
 }
+
+#if DEBUG
+extension TherapySessionBuilder: TherapySessionFixtureBuildable {}
+#endif

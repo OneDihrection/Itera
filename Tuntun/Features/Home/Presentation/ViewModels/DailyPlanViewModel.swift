@@ -41,7 +41,7 @@ struct DailyPlanRow: Identifiable, Equatable {
 /// program's own storage at launch, so the cards and the session always agree.
 @MainActor
 @Observable
-final class DailyPlanViewModel {
+final class DailyPlanViewModel: DailyPlanSessionReporting {
     static let completionPreviewDuration: Duration = .seconds(4)
     /// The exercises Beranda shows, in order. Always `standardItems` in Release builds.
     private(set) var items: [DailyPlanItem]

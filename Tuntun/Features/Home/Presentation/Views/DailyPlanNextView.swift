@@ -5,14 +5,17 @@
 //  Created by Amelia Putri Aftiana on 09/11/2026.
 //
 
+import Combine
 import SwiftUI
 
 /// The rest and countdown between exercises, or the page after the last exercise.
-struct TMDailyPlanNextView: View {
-    private let plan: DailyPlanViewModel
-    private let audio: SessionAudioService
+struct TMDailyPlanNextView<
+    ViewModel: DailyPlanNextViewModelProtocol,
+    Builder: DailyPlanNextContentBuildable
+>: View {
+    @State private var viewModel: ViewModel
     /// Builds the next exercise's intro shown after the rest, with its own dependencies.
-    private let makeIntro: (_ itemID: String, _ countdownSeconds: Int?, _ automatic: Bool) -> TMDailyPlanIntroView
+    private let builder: Builder
 
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -29,18 +32,14 @@ struct TMDailyPlanNextView: View {
     @State private var narrationFinished = false
     @State private var paused = false
 
-    private static let countdownDuration = 10.0
+    private static var countdownDuration: Double { 10.0 }
 
     private var showingNextIntro: Bool {
         stage == .countdownIntro || stage == .countdown
     }
 
     private var usesNextScript: Bool {
-        guard let itemID = plan.nextSessionItemID else {
-            return false
-        }
-        return plan.usesOppositionScript(itemID: itemID)
-            || plan.usesArmRaiseScript(itemID: itemID)
+        viewModel.usesNextScript
     }
 
     private var countdownSeconds: Int {
@@ -52,19 +51,14 @@ struct TMDailyPlanNextView: View {
         LongRestBreath.count - breath.number + 1
     }
 
-    init(
-        plan: DailyPlanViewModel,
-        audio: SessionAudioService,
-        makeIntro: @escaping (_ itemID: String, _ countdownSeconds: Int?, _ automatic: Bool) -> TMDailyPlanIntroView
-    ) {
-        self.plan = plan
-        self.audio = audio
-        self.makeIntro = makeIntro
+    init(viewModel: ViewModel, builder: Builder) {
+        _viewModel = State(initialValue: viewModel)
+        self.builder = builder
     }
 
     var body: some View {
         Group {
-            if let itemID = plan.nextSessionItemID {
+            if let itemID = viewModel.nextSessionItemID {
                 transitionPage(itemID: itemID)
             } else {
                 completionPage
@@ -76,10 +70,10 @@ struct TMDailyPlanNextView: View {
     private func transitionPage(itemID: String) -> some View {
         ZStack {
             if showingNextIntro {
-                makeIntro(
-                    itemID,
-                    usesNextScript ? nil : countdownSeconds,
-                    usesNextScript
+                builder.buildDailyPlanIntro(
+                    itemID: itemID,
+                    countdownSeconds: usesNextScript ? nil : countdownSeconds,
+                    automatic: usesNextScript
                 )
                     .environment(\.colorScheme, .light)
                     .transition(.opacity)
@@ -99,15 +93,15 @@ struct TMDailyPlanNextView: View {
             }
         }
         .animation(reduceMotion ? nil : .easeInOut(duration: 0.25), value: showingNextIntro)
-        .onReceive(audio.events) { event in
+        .onReceive(viewModel.audioEvents) { event in
             if case .completed(let id, _) = event, id == narrationID {
                 narrationFinished = true
             }
         }
         .task(id: paused || scenePhase != .active) {
             if paused || scenePhase != .active {
-                audio.pauseMusic()
-                audio.cancelSpeech()
+                viewModel.pauseMusic()
+                viewModel.cancelSpeech()
             } else {
                 await runTransition()
             }
@@ -122,12 +116,12 @@ struct TMDailyPlanNextView: View {
             } catch {
                 return
             }
-            audio.prepareRestNarration()
+            viewModel.prepareRestNarration()
             audioPrepared = true
         }
 
         if !showingNextIntro {
-            audio.startMusic()
+            viewModel.startMusic()
         }
 
         var startedAt = ProcessInfo.processInfo.systemUptime - elapsed
@@ -139,7 +133,7 @@ struct TMDailyPlanNextView: View {
             }
             let now = ProcessInfo.processInfo.systemUptime
             let proposedElapsed = now - startedAt
-            if stage == .breathing, plan.usesScriptedLongRest,
+            if stage == .breathing, viewModel.usesScriptedLongRest,
                !narrationFinished {
                 let boundary = LongRestBreath.narrationBoundary(at: elapsed)
                 elapsed = min(proposedElapsed, boundary.nextDown)
@@ -149,15 +143,15 @@ struct TMDailyPlanNextView: View {
             }
 
             if stage == .countdown, elapsed >= Self.countdownDuration {
-                audio.cancelSpeech()
-                plan.launchAfterRest()
+                viewModel.cancelSpeech()
+                viewModel.launchAfterRest()
                 return
             }
 
             if stage == .countdown {
                 let seconds = countdownSeconds
                 if seconds != lastSpokenSecond {
-                    audio.play(id: UUID(), cue: .countdown(seconds))
+                    viewModel.playCountdown(seconds)
                     lastSpokenSecond = seconds
                 }
             } else {
@@ -173,7 +167,7 @@ struct TMDailyPlanNextView: View {
 
             if let next = nextStage {
                 if next == .countdownIntro {
-                    audio.stopMusic()
+                    viewModel.stopMusic()
                 }
                 stage = next
                 elapsed = 0
@@ -202,7 +196,7 @@ struct TMDailyPlanNextView: View {
         case .restInvitation: return .instructions
         case .instructions: return .posture
         case .posture:
-            return plan.usesScriptedLongRest ? .breathing : .firstBreathCount
+            return viewModel.usesScriptedLongRest ? .breathing : .firstBreathCount
         case .firstBreathCount: return .breathing
         case .closing: return .nextExercise
         case .nextExercise: return .exerciseName
@@ -218,7 +212,7 @@ struct TMDailyPlanNextView: View {
         guard let line = baseRestLine(breath: breath) else {
             return nil
         }
-        guard let prefix = plan.longRestNarrationPrefix,
+        guard let prefix = viewModel.longRestNarrationPrefix,
               line.key.hasPrefix("rest.long.") else {
             return line
         }
@@ -245,7 +239,7 @@ struct TMDailyPlanNextView: View {
         case .nextExercise:
             return NarrationLine(key: "rest.long.nextExercise")
         case .exerciseName:
-            return plan.nextSessionTitleKey.map { NarrationLine(key: $0) }
+            return viewModel.nextSessionTitleKey.map { NarrationLine(key: $0) }
         case .countdownIntro, .countdown:
             return NarrationLine(key: "calibration.countdown")
         case .breathing:
@@ -263,7 +257,7 @@ struct TMDailyPlanNextView: View {
         case .inhale:
             switch breath.number {
             case 1:
-                return plan.usesScriptedLongRest ? "rest.long.inhale" : "rest.long.inhaleFirst"
+                return viewModel.usesScriptedLongRest ? "rest.long.inhale" : "rest.long.inhaleFirst"
             case LongRestBreath.count:
                 let lastBreathStart = Double(LongRestBreath.count - 1) * LongRestBreath.cycleDuration
                 return elapsed - lastBreathStart < 1.4 ? "rest.long.inhaleLast" : "rest.long.inhale"
@@ -272,11 +266,11 @@ struct TMDailyPlanNextView: View {
             }
         case .hold:
             // The approved long-rest script has no spoken hold between inhale and exhale.
-            return plan.usesScriptedLongRest ? "" : "rest.long.hold"
+            return viewModel.usesScriptedLongRest ? "" : "rest.long.hold"
         case .exhale:
             switch breath.number {
             case 1:
-                return plan.usesScriptedLongRest ? "rest.long.exhale" : "rest.long.exhaleSlow"
+                return viewModel.usesScriptedLongRest ? "rest.long.exhale" : "rest.long.exhaleSlow"
             case 5:
                 return "rest.long.exhaleSlow"
             case 3:
@@ -287,11 +281,11 @@ struct TMDailyPlanNextView: View {
                 return "rest.long.exhale"
             }
         case .settle:
-            return plan.usesScriptedLongRest ? "" : "rest.long.settle"
+            return viewModel.usesScriptedLongRest ? "" : "rest.long.settle"
         }
     }
 
-    private static let remainingKey = "rest.long.remaining %lld"
+    private static var remainingKey: String { "rest.long.remaining %lld" }
 
     /// The displayed text of a line, with a format key's number filled in.
     private func text(for line: NarrationLine?) -> String {
@@ -311,7 +305,7 @@ struct TMDailyPlanNextView: View {
     }
 
     private func speak(_ line: NarrationLine?, breath: LongRestBreath?) {
-        audio.cancelSpeech()
+        viewModel.cancelSpeech()
 
         guard let line else {
             narrationID = nil
@@ -322,9 +316,9 @@ struct TMDailyPlanNextView: View {
         // The breath count is spoken before the timed inhale so the longer cue has the full
         // phase. The two recordings play back to back; the stage waits for the second.
         if let breath, breath.phase == .inhale, announcesRemainingBreaths(before: breath, line: line) {
-            audio.speak(
+            viewModel.speak(
                 id: UUID(),
-                key: plan.longRestNarrationPrefix.map { $0 + "remaining %lld" }
+                key: viewModel.longRestNarrationPrefix.map { $0 + "remaining %lld" }
                     ?? Self.remainingKey,
                 argument: remainingBreaths(afterStarting: breath)
             )
@@ -333,7 +327,7 @@ struct TMDailyPlanNextView: View {
         let id = UUID()
         narrationID = id
         narrationFinished = false
-        audio.speak(id: id, key: line.key, argument: line.argument)
+        viewModel.speak(id: id, key: line.key, argument: line.argument)
     }
 
     /// Whether "N napas lagi" precedes this inhale cue.
@@ -350,7 +344,7 @@ struct TMDailyPlanNextView: View {
             return true
         }
 
-        return plan.usesScriptedLongRest
+        return viewModel.usesScriptedLongRest
             && line.key.hasSuffix("inhaleLast")
     }
 
@@ -360,9 +354,9 @@ struct TMDailyPlanNextView: View {
     }
 
     private func stop() {
-        audio.stopMusic()
-        audio.cancelSpeech()
-        plan.end()
+        viewModel.stopMusic()
+        viewModel.cancelSpeech()
+        viewModel.end()
     }
 
     private var completionPage: some View {
@@ -384,7 +378,7 @@ struct TMDailyPlanNextView: View {
             Spacer(minLength: 24)
 
             TMTherapyButton(title: "plan.backHome", symbol: "house.fill", prominent: true) {
-                plan.end()
+                viewModel.end()
             }
 
             Spacer(minLength: 24)
@@ -396,3 +390,43 @@ struct TMDailyPlanNextView: View {
         .environment(\.colorScheme, .light)
     }
 }
+
+// MARK: - Previews
+
+#if DEBUG
+@MainActor
+@Observable
+private final class MockDailyPlanNextViewModel: DailyPlanNextViewModelProtocol {
+    let nextSessionItemID: String? = nil
+    let nextSessionTitleKey: String? = nil
+    let usesNextScript = false
+    let usesScriptedLongRest = false
+    let longRestNarrationPrefix: String? = nil
+    let audioEvents = Empty<AudioEvent, Never>().eraseToAnyPublisher()
+
+    func prepareRestNarration() {}
+    func startMusic() {}
+    func pauseMusic() {}
+    func stopMusic() {}
+    func cancelSpeech() {}
+    func playCountdown(_ seconds: Int) {}
+    func speak(id: UUID, key: String, argument: Int?) {}
+    func launchAfterRest() {}
+    func end() {}
+}
+
+@MainActor
+private struct MockNextBuilder: DailyPlanNextContentBuildable {
+    @ViewBuilder func buildDailyPlanIntro(
+        itemID: String,
+        countdownSeconds: Int?,
+        automatic: Bool
+    ) -> some View {
+        Text(verbatim: "Intro \(itemID)")
+    }
+}
+
+#Preview("Day complete") {
+    TMDailyPlanNextView(viewModel: MockDailyPlanNextViewModel(), builder: MockNextBuilder())
+}
+#endif

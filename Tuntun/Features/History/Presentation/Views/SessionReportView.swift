@@ -325,3 +325,58 @@ extension TherapyKind {
         }
     }
 }
+
+// MARK: - Previews
+
+#if DEBUG
+@MainActor
+@Observable
+private final class MockSessionReportViewModel: SessionReportViewModelProtocol {
+    let summary: SessionSummary? = nil
+    let loading = false
+    let errorKey: String? = "history.report.missing"
+    let replaysUnavailable = false
+    let results: [SessionActivityResult] = []
+
+    func load() async {}
+    func delete() async {}
+
+    func headline(for result: SessionActivityResult) -> LocalizedStringResource? {
+        nil
+    }
+
+    func averageDuration(for result: SessionActivityResult) -> Double? {
+        nil
+    }
+
+    func peakTitleKey(for result: SessionActivityResult) -> String {
+        ""
+    }
+
+    func highestPeak(for result: SessionActivityResult) -> Double? {
+        nil
+    }
+
+    func clipURL(for rep: KeyRep, in result: SessionActivityResult) -> URL? {
+        nil
+    }
+
+    func isTrackingLow(_ rep: KeyRep) -> Bool {
+        false
+    }
+
+    func keyReps(for result: SessionActivityResult) -> [KeyRep] {
+        []
+    }
+
+    func notes(for result: SessionActivityResult) -> [LocalizedStringResource] {
+        []
+    }
+}
+
+#Preview("Session report") {
+    NavigationStack {
+        TMSessionReportView(viewModel: MockSessionReportViewModel())
+    }
+}
+#endif

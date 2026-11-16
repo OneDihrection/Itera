@@ -7,7 +7,7 @@
 
 import SwiftUI
 
-struct TMTherapySessionView: View {
+struct TMTherapySessionView<ViewModel: TherapySessionViewModelProtocol>: View {
     @AppStorage(ExerciseMusicTrack.storageKey) var musicTrack = ExerciseMusicTrack.defaultValue
     @Environment(\.locale) private var locale
     @Environment(\.dynamicTypeSize) var dynamicTypeSize
@@ -25,39 +25,26 @@ struct TMTherapySessionView: View {
     /// Set when End was tapped on the live screen, so the pause dialog opens on its confirmation.
     @State var endRequested = false
     @State var videoBounds: CGRect?
-    @State var model: TherapySessionViewModel
-    let plan: DailyPlanViewModel
-    let permissions: PermissionManager
+    @State var model: ViewModel
+    let plan: any DailyPlanSessionReporting
+    let permissions: any PermissionManaging
     private let router: any SessionRouterProtocol
-
-    private var presentationOnly = false
+    /// A Debug fixture renders a fixed snapshot without starting capture or audio.
+    private let presentationOnly: Bool
 
     init(
-        model: TherapySessionViewModel,
-        plan: DailyPlanViewModel,
-        permissions: PermissionManager,
-        router: any SessionRouterProtocol
+        model: ViewModel,
+        plan: any DailyPlanSessionReporting,
+        permissions: any PermissionManaging,
+        router: any SessionRouterProtocol,
+        presentationOnly: Bool = false
     ) {
         _model = State(initialValue: model)
         self.plan = plan
         self.permissions = permissions
         self.router = router
+        self.presentationOnly = presentationOnly
     }
-
-    #if DEBUG
-    init(
-        fixture: SessionSnapshot,
-        plan: DailyPlanViewModel,
-        permissions: PermissionManager,
-        router: any SessionRouterProtocol
-    ) {
-        _model = State(initialValue: .presentationFixture(fixture))
-        self.plan = plan
-        self.permissions = permissions
-        self.router = router
-        presentationOnly = true
-    }
-    #endif
 
     var body: some View {
         sessionContent
@@ -185,7 +172,7 @@ struct TMTherapySessionView: View {
         return Self.lightKinds.contains(kind)
     }
 
-    private static let lightKinds: Set<TherapyKind> = [.armRaise, .elbowBend, .directionalReach, .foldTowel]
+    private static var lightKinds: Set<TherapyKind> { [.armRaise, .elbowBend, .directionalReach, .foldTowel] }
 
     /// The whole screen is light while a light activity runs. The summary is light only when every
     /// result is, so a routine mixing in sit-to-stand does not flip themes at the end.
@@ -316,7 +303,7 @@ struct TMTherapySessionView: View {
     // MARK: - Activity layout
 
     /// Seconds the camera may take to become ready before recovery buttons are offered.
-    private static let cameraRecoveryDelay = 3.0
+    private static var cameraRecoveryDelay: Double { 3.0 }
 
     private func revealCameraRecoveryAfterDelay() async {
         showsCameraRecovery = false
@@ -1009,8 +996,8 @@ struct TMTherapySessionView: View {
 /// The skeleton changes every camera frame. Reading it in the session screen's body would rebuild
 /// the whole screen 30 times a second on the main thread, delaying camera frames until the session
 /// rejects them as stale and reports the arm as missing.
-private struct TMLiveSkeletonLayer: View {
-    let model: TherapySessionViewModel
+private struct TMLiveSkeletonLayer<ViewModel: TherapySessionViewModelProtocol>: View {
+    let model: ViewModel
 
     var body: some View {
         if let skeleton = model.livePose {
