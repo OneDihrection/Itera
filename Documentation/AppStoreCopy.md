@@ -124,15 +124,48 @@ The first release of Tuntun includes guided movement practice, camera-based repe
 
 ## App Review notes — English
 
+Replace the bracketed recording, build, and physical-test details with facts from the **submitted build** before pasting this text into App Store Connect. Attach the recording in App Review Information or provide a reviewer-accessible link. Apple's Notes field is limited to 4,000 bytes. Confirm distribution rights for the supplied hand rig before making the content-rights statement below; its provenance file does not include a license.
+
 ```text
-Tuntun is an iPad landscape app for guided movement practice. No account, payment, or external hardware is required. A caregiver may configure a plan before the patient starts.
+Physical-device recording: [ATTACHMENT NAME OR REVIEWER-ACCESSIBLE URL]. It begins with a fresh launch of the submitted build [VERSION/BUILD] on [IPAD MODEL], iPadOS [VERSION]. We tested that build on [DEVICE/OS AND DATE; BRIEF RESULT].
 
-For review: open Home, select a practice area, adjust the plan, and start a session. A physical iPad with a visible person or hand in camera view is needed to verify movement tracking and count a repetition. Camera permission is requested when starting camera-based practice. Voice control is optional; enabling it requests microphone and speech-recognition permission and uses on-device recognition. Sessions can also be controlled on screen. The app does not upload camera frames, audio, or session reports to a developer service.
+Purpose and audience: Tuntun is intended for people recovering from stroke who have hemiparesis (weakness on one side of the body), with a caregiver helping set up the iPad and practice plan. It guides clinician-recommended motor exercises at home through visual and spoken cues. The app records observed repetitions, practice time, and session history; the caregiver may also keep short video or movement-skeleton replays of selected repetitions. The patient or caregiver can show these locally stored reports and replays to their doctor during a follow-up visit to discuss practice. Tuntun does not send records to a doctor or provide a clinician portal. It is an exercise aid, not a diagnostic tool or validated clinical measurement, and does not prescribe treatment.
 
-Settings > Practice recordings offers Off, Skeleton only, and Video. Video defaults to obscuring both faces and background, but automated obscuring is imperfect. The caregiver may select face only, background only, or unblurred video after the in-app warning. Reports may include short clips of selected repetitions when Video is enabled.
+Access: No account, registration, login, sample files, subscription, in-app purchase, or paid feature is required. Launch in landscape on an iPad. On Beranda (Home), use Settings to choose language, exercise side, goals, and recording preference. Choose a daily-plan item or Start Practice, view the introduction, grant camera, microphone, and speech-recognition permissions, then start. Therapy requires available on-device English command recognition even when the app language is Indonesian. Position one person or hand in the front camera view; follow the calibration and exercise cues. Say “stop” to pause and “go” to resume, or use the on-screen controls. Complete or stop a session, then open Progress to inspect its summary and optional key-repetition replay. A person in view is needed for camera-based counting. No external accessory is needed.
 
-Camera-derived repetitions and movement estimates are exercise aids, not validated clinical measurements. The app does not diagnose a condition or prescribe a rehabilitation dose. Practice plans should follow the patient's healthcare professional.
+Data and services: Movement tracking uses Apple's on-device Vision framework; voice commands use Apple's on-device Speech framework. Instructions, animation, counts, and other resources are bundled. ElevenLabs was used during development to generate bundled narration, but the released app does not connect to ElevenLabs. There is no runtime backend, third-party authentication, payment processor, analytics, advertising, or developer cloud sync. Practice data and optional camera clips stay on the device. Locally recorded clips are not posted to other users in the app, so there is no in-app user-generated-content feed, reporting, or blocking flow.
+
+Regions and content: The same features are available in every distribution region. The app offers Indonesian and English; its two voice commands are English in both languages.
+
+Rights and clinical scope: The app does not claim diagnosis, treatment efficacy, or clinical measurement. Body demonstrations are app-produced renders; hand demonstrations derive from a supplied rig. Plus Jakarta Sans is included under the SIL Open Font License. [CONFIRM AND DESCRIBE RIGHTS TO THE SUPPLIED HAND RIG AND GENERATED NARRATION; ATTACH AUTHORIZATION IF REQUIRED.] Any required regulatory clearance or other authorization for the submitted claims and distribution regions is [ATTACHED / NOT APPLICABLE WITH REASON].
 ```
+
+### Recording and release evidence to complete
+
+- Capture the **submitted Release/TestFlight build** on a physical supported iPad running the latest available iPadOS. Begin at app launch; show Home, Settings, permission setup, an introduction, real camera calibration and practice, a completed repetition, the summary, and Progress/replay. Include both language choices if practical. Keep patient consent and camera privacy in mind.
+- Test the same build on supported physical iPads and record device model, OS, build, date, and results. The current system design's physical acceptance matrix remains pending; a Simulator build is insufficient evidence.
+- Confirm rights to `ArtSource/Reference/rigged_hand.blend`, the derivative hand animations, and generated narration. Attach any relevant authorization. Confirm whether the product's clinical claims or availability regions require regulatory documentation; do not assert “not applicable” without that review.
+- Verify the final binary and App Store metadata match these notes. In particular, therapy currently requires microphone and speech-recognition permission; keep all public descriptions consistent with that requirement.
+
+## China mainland declarations — separate from App Review Notes
+
+Apple describes **AI-generated or synthetic services** and features requiring a **Security Assessment** under [Availability in China mainland](https://developer.apple.com/help/app-store-connect/reference/app-information/app-and-compliance-information). The current app does not offer AI generation or content publishing, but it does bundle prerecorded narration generated with ElevenLabs. Disclose that fact in either explanation field. These drafts describe app behavior; they do not establish whether the bundled audio triggers a filing or assessment obligation. Confirm the exact question and any required documentation before submitting China mainland availability. Do not enter a filing or assessment number unless one has actually been issued.
+
+### AI Generated or Synthetic Content — explanation
+
+```text
+Tuntun does not offer users an AI-generation or synthetic-content creation service. Users cannot enter prompts, generate text, images, audio, or video, alter a voice or face, or publish generated content through the app. Movement tracking uses Apple's on-device Vision framework, and voice commands use Apple's on-device Speech framework. Some fixed spoken exercise instructions and number clips were generated with ElevenLabs during development and are bundled with the app. The released app does not connect to ElevenLabs or any generative-AI service and does not synthesize new narration at runtime.
+```
+
+If the actual yes/no question asks whether the app **offers an AI-generation service**, the current app behavior supports **No**. If it asks whether the app **contains any AI-generated or synthetic material**, the truthful answer is **Yes** because of the bundled narration. Keep the explanation above with either selection if App Store Connect offers a text field.
+
+### Security Assessment — explanation
+
+```text
+Tuntun is an offline, single-patient iPad app for guided movement practice. It has no accounts, public feed, content upload or publishing, user-to-user messaging, or end-to-end encrypted instant messaging. It does not let users generate or distribute AI-generated or synthetic content. Its only prerecorded synthetic material is fixed exercise narration generated before release and included in the app bundle. Camera frames, voice-command audio, practice reports, and optional repetition clips are processed or stored locally and are not uploaded to a Tuntun service or made available to other users.
+```
+
+Apple also names **distribution of AI-generated or synthetic content** as an example that may require proof of a completed Security Assessment. Because it does not define whether distributing an app with fixed synthetic narration falls within that example, confirm applicability with Apple or qualified China mainland counsel before selecting **No assessment required**. If an assessment is required, obtain its proof and report from the National Internet Security Management Service Platform; explanatory text cannot substitute for those documents.
 
 ## App Privacy questionnaire — proposed answer
 
