@@ -1304,3 +1304,13 @@ At the product owner's request, the rendered body demonstrations no longer loop 
 - `staticPeak` previously sought to 50% of the clip, which is wrong for reach (three poses) and sit to stand (seated at 50%). Peak times are now the middle of each keyframed hold in `Tools/author_body_demonstrations.py`, `(frame − 1) / 24`: arm raise and elbow bend 55, reach 40 / 100 / 166, cross midline 61, rotations 79, shoulder flexion 67, sit to stand 121 (standing). They live in `ExerciseAnimationAsset.peakSeconds(reachPose:)` and `TMBalanceExerciseDemonstrationView.peakSeconds` and must change with a re-export.
 
 Verification: XcodeGen and Debug Simulator build with IPHONEOS_DEPLOYMENT_TARGET=17.0. Pending on the M1 iPad: each body exercise's practice shows the intended still pose (left arm mirrored), the intro still loops, reach changes pose with each direction, pause and resume keep the still, and calibration poses for arm raise and elbow bend are unchanged.
+
+## Demonstrations mirror the patient (2026-11-17)
+
+At the product owner's request, body demonstrations now mirror the patient. Every arm clip shows the right arm facing the viewer, so unreflected the moving arm is on the screen's left, while the mirrored camera preview shows the patient's right arm on the screen's right. Previously the clip played as is for the right arm and reflected for the left, so the demonstration moved on the opposite side from the patient's image. Now a right-side exercise reflects the clip and a left-side exercise plays it as is, superseding the left-arm reflection in *Torso-framed demonstrations* and the Animations README.
+
+- Applies to arm raise, elbow bend, directional reach (`TherapySessionView`, `DailyPlanIntroViewModel`) and cross midline, external and internal rotation and shoulder flexion (`TMBalanceExerciseDemonstrationView`, which still follows the active arm when both are chosen), on the intro, demonstration card and live screen.
+- Sit to stand is never reflected. Finger and forearm examples are unchanged.
+- Reach's held pose (`demoReachPose`) is anatomical (outward, across, up) and unaffected.
+
+Verification: XcodeGen and Debug Simulator build with IPHONEOS_DEPLOYMENT_TARGET=17.0. Pending on the M1 iPad: for each body exercise and both sides, the demonstrated arm moves on the same side of the screen as the patient's arm in the preview; Balancing with both arms flips at the switch; reach's held pose matches the cue direction.

@@ -162,6 +162,7 @@ Common body rules:
 - On iPad every exercise uses the front camera: body exercises prefer ultra-wide, hand exercises wide-angle.
 - Body demonstrations for the seated exercises (arm raise, elbow bend, directional reach, cross midline, external and internal rotation, shoulder flexion) are framed from the waist up, so the standing rig does not suggest standing practice. Sit to stand keeps the full body. Framing and export live in `Tools/author_body_demonstrations.py` (log: *Torso-framed demonstrations*).
 - Body demonstrations loop on the intro and demonstration card but hold the target pose during practice (arm raise and elbow bend also hold the start or peak pose being calibrated; reach holds the current direction; Balancing loops while calibrating). Peak times follow the authoring tool's keyframes (log: *Still demonstration during practice*).
+- Body arm clips show the right arm and are reflected for a right-side exercise and shown as is for the left, so the demonstrated arm matches the patient in the mirrored camera preview; sit to stand is never reflected (log: *Demonstrations mirror the patient*).
 
 | Exercise | Current rules |
 | --- | --- |

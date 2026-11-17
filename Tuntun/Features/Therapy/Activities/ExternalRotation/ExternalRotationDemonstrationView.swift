@@ -18,7 +18,9 @@ struct TMBalanceExerciseDemonstrationView: View {
     /// Holds the target pose instead of looping, as during practice.
     var holdsPeak = false
 
-    /// The bundled recording for this exercise; every arm clip shows the right arm.
+    /// The bundled recording for this exercise. Every arm clip shows the right arm and is
+    /// reflected for the right arm, so the moving arm sits on the same side of the screen as the
+    /// patient's own arm in the mirrored camera preview. Sit to stand is never reflected.
     private var movieResource: String {
         switch exercise {
         case .crossMidline:
@@ -77,7 +79,7 @@ struct TMBalanceExerciseDemonstrationView: View {
         TMShoulderRotationMovieView(
             resource: resource,
             paused: paused,
-            mirrored: (arm ?? selection?.initialArm) == .left,
+            mirrored: exercise != .sitToStand && (arm ?? selection?.initialArm) == .right,
             holdsPeakAt: holdsPeak ? peakSeconds : nil,
             accessibilityKey: accessibilityKey
         )

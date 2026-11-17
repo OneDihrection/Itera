@@ -131,7 +131,7 @@ final class DailyPlanIntroViewModel: DailyPlanIntroViewModelProtocol {
             let exercise = plan.routineExercise(for: kind)
             return .movement(
                 Self.asset(for: kind),
-                mirrored: exercise.activities.first?.side == .left
+                mirrored: exercise.activities.first?.side == .right
             )
 
         case .balance(let exercise):

@@ -650,7 +650,7 @@ struct TMTherapySessionView<ViewModel: TherapySessionViewModelProtocol>: View {
         if let activity = model.snapshot.activity, activity.kind == .armRaise || activity.kind == .elbowBend || activity.kind == .directionalReach {
             TMExerciseExample(
                 asset: activity.kind == .armRaise ? .armRaise : activity.kind == .elbowBend ? .elbowBend : .directionalReach,
-                mirrored: activity.side == .left,
+                mirrored: activity.side == .right,
                 mode: model.demoPlayback,
                 reachPose: model.demoReachPose
             )

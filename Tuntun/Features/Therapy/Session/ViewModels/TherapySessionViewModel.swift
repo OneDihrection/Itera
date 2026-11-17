@@ -638,8 +638,8 @@ extension TherapySessionViewModel {
 
     /// The reach clip's pose to hold: 0 outward, 1 across the body, 2 up.
     ///
-    /// The clip shows the right arm and is mirrored for the left, so the screen's right is
-    /// outward for the right arm and across the body for the left.
+    /// The poses are anatomical, so reflecting the clip does not change them: the screen's right
+    /// is outward for the right arm and across the body for the left.
     var demoReachPose: Int {
         guard case .reach(let reach) = snapshot.presentation else {
             return 0
