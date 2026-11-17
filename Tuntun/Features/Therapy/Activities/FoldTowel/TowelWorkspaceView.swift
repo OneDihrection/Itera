@@ -34,8 +34,7 @@ struct TMTowelWorkspaceView: View {
             ZStack {
                 board(geometry)
                 trail(geometry)
-                zones(geometry)
-                cursor(geometry)
+                indicator(geometry)
 
                 if showsHeader {
                     header
@@ -76,39 +75,21 @@ struct TMTowelWorkspaceView: View {
         )
     }
 
-    private func zones(_ geometry: CameraDisplayGeometry) -> some View {
-        let size = CGSize(
-            width: geometry.imageRect.width * TowelBoard.zoneDiameter,
-            height: geometry.imageRect.height * TowelBoard.zoneDiameter
+    /// Only the zone of the current step, with the hand as a small circle that joins it while the
+    /// hand counts as inside (`TMTherapyMergingGuide`, the finger exercises' indicator).
+    private func indicator(_ geometry: CameraDisplayGeometry) -> some View {
+        let zone = step == 0 ? snapshot.grabPoint : snapshot.destination
+
+        return TMTowelIndicator(
+            // Without a hand the point rests inside the zone, so a tracking blink never swaps views.
+            hand: snapshot.handPosition ?? zone,
+            zone: zone,
+            symbol: step == 0 ? Self.grabSymbol : destinationSymbol,
+            progress: snapshot.interaction == .readyToRelease ? snapshot.holdProgress : 0,
+            showsTimer: snapshot.interaction == .readyToRelease,
+            geometry: geometry
         )
-
-        return ZStack {
-            TMTherapyGuideZone(
-                tint: TherapyPalette.guidanceBlue,
-                symbol: "hand.pinch.fill",
-                emphasized: step == 0
-            )
-            .frame(width: size.width, height: size.height)
-            .position(screen(snapshot.grabPoint, geometry))
-
-            TMTherapyGuideZone(
-                tint: TherapyPalette.guidanceYellow,
-                symbol: destinationSymbol,
-                progress: snapshot.interaction == .readyToRelease ? snapshot.holdProgress : 0,
-                emphasized: step > 0
-            )
-            .frame(width: size.width, height: size.height)
-            .position(screen(snapshot.destination, geometry))
-        }
-    }
-
-    @ViewBuilder
-    private func cursor(_ geometry: CameraDisplayGeometry) -> some View {
-        if let hand = snapshot.handPosition {
-            TMTherapyHandCursor(closed: snapshot.grip == .closed, holding: step > 0)
-                .position(screen(hand, geometry))
-                .animation(motion, value: hand)
-        }
+        .animation(motion, value: snapshot.handPosition)
     }
 
     /// Kept to the top corners, away from the path (grab and drop zones sit at the center column
@@ -142,6 +123,8 @@ struct TMTowelWorkspaceView: View {
             return 2
         }
     }
+
+    private static let grabSymbol = "hand.pinch.fill"
 
     private var destinationSymbol: String {
         if snapshot.interaction == .readyToRelease {
@@ -182,6 +165,55 @@ enum TowelBoard {
         }
 
         return CGSize(width: across, height: reach)
+    }
+}
+
+// MARK: - Indicator
+
+/// The current zone and the hand, drawn with `TMTherapyMergingGuide`.
+///
+/// Calm on purpose: the hand circle always sits on the hand (the fixed anchor never pulls it), it
+/// carries no glyph, and it joins the zone with a short ease, without bounce, only while the hand
+/// is within the activity's 0.12 acceptance distance. Animatable over the hand position, so the
+/// display spring eases the hand between frames. The zone is drawn as a circle as tall as the 0.24
+/// acceptance region; on a wider image the region reaches a little further sideways.
+private struct TMTowelIndicator: View, Animatable {
+    var hand: TherapyPoint
+    let zone: TherapyPoint
+    let symbol: String
+    let progress: Double
+    let showsTimer: Bool
+    let geometry: CameraDisplayGeometry
+
+    private static let handDiameter: CGFloat = 48
+
+    var animatableData: AnimatablePair<Double, Double> {
+        get { AnimatablePair(hand.x, hand.y) }
+        set { hand = TherapyPoint(x: newValue.first, y: newValue.second) }
+    }
+
+    var body: some View {
+        TMTherapyMergingGuide(
+            first: screen(hand),
+            second: screen(zone),
+            diameter: geometry.imageRect.height * TowelBoard.zoneDiameter,
+            firstDiameter: Self.handDiameter,
+            merge: inside ? 1 : 0,
+            anchor: .fixed,
+            progress: progress,
+            active: true,
+            showsTimer: showsTimer,
+            secondSymbol: symbol,
+            mergeAnimation: .easeOut(duration: 0.25)
+        )
+    }
+
+    private var inside: Bool {
+        (hand - zone).length <= TowelBoard.zoneDiameter / 2
+    }
+
+    private func screen(_ point: TherapyPoint) -> CGPoint {
+        geometry.point(CGPoint(x: point.x, y: point.y))
     }
 }
 

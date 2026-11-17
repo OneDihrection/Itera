@@ -304,12 +304,3 @@ public extension View {
         modifier(TMTypographyModifier(size: size, weight: weight, isItalic: isItalic, relativeTo: relativeTo))
     }
 }
-
-// MARK: - Canvas labels
-
-extension AppTypography {
-    /// Canvas resolves Text rather than a modified View; font construction stays here.
-    static func overlayText(_ key: LocalizedStringKey, size: CGFloat, weight: AppFontWeight) -> Text {
-        Text(key).font(AppFont.font(weight, size: size)).foregroundColor(.white)
-    }
-}

@@ -204,9 +204,7 @@ struct TMBalanceSessionView<ViewModel: BalanceSessionViewModelProtocol>: View {
             )
 
             if let overlay = model.snapshot.overlay {
-                targetOverlay(overlay)
-            } else if !model.cameraWaiting {
-                TMBalanceLiveSkeletonLayer(model: model)
+                bubbleOverlay(overlay)
             }
 
             cameraStatus
@@ -242,26 +240,15 @@ struct TMBalanceSessionView<ViewModel: BalanceSessionViewModelProtocol>: View {
         }
     }
 
-    /// The standard pose, target bubble, hold ring and countdown shared with the movement exercises.
-    private func targetOverlay(_ overlay: BalanceOverlay) -> some View {
-        func normalized(_ point: TherapyPoint) -> CGPoint {
+    /// The target bubble, the wrist and the calibration cue, shared with the movement exercises;
+    /// no skeleton.
+    @ViewBuilder
+    private func bubbleOverlay(_ overlay: BalanceOverlay) -> some View {
+        let normalized = { (point: TherapyPoint) in
             CGPoint(x: point.x / overlay.aspect, y: point.y)
         }
-
-        let imageSize = CGSize(width: overlay.aspect, height: 1)
-        let pose = SessionPoseGuide(chain: overlay.armChain.map(normalized))
-        let countdown = overlay.target.flatMap { target in
-            overlay.holdSecondsRemaining.map { seconds in
-                SessionHoldCountdown(
-                    seconds: seconds,
-                    center: normalized(target),
-                    radius: overlay.targetRadius
-                )
-            }
-        }
-
-        // While the comfortable end is shown, wind flows from the wrist's resting position; the
-        // wrist moves through it.
+        // While the comfortable end is shown, the cue runs from the wrist's resting position; the
+        // wrist moves along it.
         let movementCue: SessionMovementCue? = {
             guard let wrist = overlay.wrist,
                   let tip = overlay.calibrationTip else {
@@ -275,50 +262,42 @@ struct TMBalanceSessionView<ViewModel: BalanceSessionViewModelProtocol>: View {
             )
         }()
 
-        guard let target = overlay.target else {
-            return TMSessionTargetOverlay(
-                imageSize: imageSize,
+        if let target = overlay.target {
+            if overlay.isCalibrationHold {
+                // The patient's own wrist is the marker while the end pose is held still.
+                TMSessionBubbleOverlay(
+                    imageAspect: overlay.aspect,
+                    bubbleGuide: nil,
+                    captureJoint: overlay.wrist.map(normalized),
+                    holdProgress: overlay.targetProgress,
+                    holdRadius: overlay.targetRadius,
+                    mirrored: true
+                )
+            } else {
+                TMSessionBubbleOverlay(
+                    imageAspect: overlay.aspect,
+                    bubbleGuide: SessionBubbleGuide(
+                        startCenter: normalized(target),
+                        targetCenter: normalized(target),
+                        trackedJoint: overlay.wrist.map(normalized),
+                        radius: overlay.targetRadius,
+                        activeZone: overlay.isReturnTarget ? .start : .target,
+                        trackedJointInside: overlay.wrist.map { ($0 - target).length <= overlay.targetRadius } ?? false,
+                        dwellProgress: overlay.targetProgress
+                    ),
+                    singleZone: overlay.isReturnTarget,
+                    showsStart: false,
+                    mirrored: true
+                )
+            }
+        } else {
+            TMSessionBubbleOverlay(
+                imageAspect: overlay.aspect,
                 bubbleGuide: nil,
                 movementCue: movementCue,
-                poseGuide: pose,
                 mirrored: true
             )
         }
-
-        guard !overlay.isCalibrationHold else {
-            // The patient's own wrist is the marker while the end pose is held still.
-            return TMSessionTargetOverlay(
-                imageSize: imageSize,
-                bubbleGuide: nil,
-                captureJoint: overlay.wrist.map(normalized),
-                holdProgress: overlay.targetProgress,
-                holdRadius: overlay.targetRadius,
-                poseGuide: pose,
-                holdCountdown: countdown,
-                mirrored: true
-            )
-        }
-
-        let inside = overlay.wrist.map { ($0 - target).length <= overlay.targetRadius } ?? false
-        let bubble = SessionBubbleGuide(
-            startCenter: normalized(target),
-            targetCenter: normalized(target),
-            trackedJoint: overlay.wrist.map(normalized),
-            radius: overlay.targetRadius,
-            activeZone: overlay.isReturnTarget ? .start : .target,
-            trackedJointInside: inside,
-            dwellProgress: overlay.targetProgress
-        )
-
-        return TMSessionTargetOverlay(
-            imageSize: imageSize,
-            bubbleGuide: bubble,
-            singleZone: overlay.isReturnTarget,
-            showsStart: false,
-            poseGuide: pose,
-            holdCountdown: countdown,
-            mirrored: true
-        )
     }
 
     private func requestEnd() {
@@ -434,24 +413,5 @@ struct TMBalanceSessionView<ViewModel: BalanceSessionViewModelProtocol>: View {
         }
 
         plan.end()
-    }
-}
-
-/// The tracked skeleton alone, before the engine draws targets over it.
-///
-/// It is its own view so only this layer reads `livePose`, which changes every camera frame;
-/// reading it in the session screen's body would rebuild the whole screen 30 times a second.
-private struct TMBalanceLiveSkeletonLayer<ViewModel: BalanceSessionViewModelProtocol>: View {
-    let model: ViewModel
-
-    var body: some View {
-        if let skeleton = model.livePose {
-            TMSessionTargetOverlay(
-                imageSize: skeleton.imageSize,
-                bubbleGuide: nil,
-                poseGuide: skeleton.guide,
-                mirrored: true
-            )
-        }
     }
 }

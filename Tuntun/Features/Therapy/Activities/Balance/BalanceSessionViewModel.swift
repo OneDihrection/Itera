@@ -13,7 +13,6 @@ import UIKit
 protocol BalanceSessionViewModelProtocol: AnyObject, Observable {
     var exercise: BalanceExercise { get }
     var snapshot: BalanceSnapshot { get }
-    var livePose: LivePose.Skeleton? { get }
     var permissionDenied: Bool { get }
     var cameraWaiting: Bool { get }
     var failure: String? { get }
@@ -56,9 +55,6 @@ protocol BalanceSessionViewModelProtocol: AnyObject, Observable {
 @Observable
 final class BalanceSessionViewModel: BalanceSessionViewModelProtocol {
     private(set) var snapshot = BalanceSnapshot()
-    /// The tracked skeleton from the first camera frame, shown until the engine draws its own overlay.
-    private(set) var livePose: LivePose.Skeleton?
-    @ObservationIgnored private var livePoseTracker = LivePose()
     private(set) var permissionDenied = false
     private(set) var cameraWaiting = true
     private(set) var failure: String?
@@ -217,15 +213,6 @@ final class BalanceSessionViewModel: BalanceSessionViewModelProtocol {
             .sink { [weak self] frame in
                 guard let self else { return }
 
-                // The tracker sees every frame so its smoother stays warm, but the skeleton is
-                // published only while it is drawn, before the engine shows its own overlay.
-                let skeleton = self.livePoseTracker.skeleton(for: frame)
-                if self.snapshot.overlay == nil {
-                    self.livePose = skeleton
-                } else if self.livePose != nil {
-                    self.livePose = nil
-                }
-
                 guard self.advanceOpeningIfReady(at: frame.timestamp) else {
                     if self.paused {
                         self.engine.consume(frame, scoringEnabled: false)
@@ -259,11 +246,9 @@ final class BalanceSessionViewModel: BalanceSessionViewModelProtocol {
                     self.failure = nil
                 case .waiting:
                     self.cameraWaiting = true
-                    self.clearLivePose()
                     self.interruptOpening()
                 case .discontinuity:
                     self.cameraWaiting = true
-                    self.clearLivePose()
                     self.recorder.discardCurrentRep()
                     self.resetOpening()
                     self.engine.invalidateCalibration()
@@ -406,7 +391,6 @@ final class BalanceSessionViewModel: BalanceSessionViewModelProtocol {
         finishLog(stopped: false)
         clock.pause(at: Self.now)
         trackingService.stop()
-        clearLivePose()
         audioService.stopMusic()
     }
     #endif
@@ -514,7 +498,6 @@ final class BalanceSessionViewModel: BalanceSessionViewModelProtocol {
             snapshot = engine.snapshot
         }
         trackingService.stop()
-        clearLivePose()
         audioService.stop()
         voiceListening = false
     }
@@ -532,7 +515,6 @@ final class BalanceSessionViewModel: BalanceSessionViewModelProtocol {
         trackingService.clips.setEnabled(false)
         trackingService.clips.releaseFrames()
         trackingService.stop()
-        clearLivePose()
         audioService.stop()
         subscriptions.removeAll()
         UIApplication.shared.isIdleTimerDisabled = wasIdleTimerDisabled
@@ -615,11 +597,6 @@ final class BalanceSessionViewModel: BalanceSessionViewModelProtocol {
         practiceCountdown = remaining
         speakCountdown(remaining)
         return false
-    }
-
-    private func clearLivePose() {
-        livePose = nil
-        livePoseTracker.reset()
     }
 
     /// Shows the live skeleton while spoken guidance or the countdown holds practice back, so the

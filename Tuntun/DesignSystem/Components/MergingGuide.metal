@@ -29,17 +29,19 @@ static half4 tinted(half4 color, float alpha) {
 
 /// Two guide circles drawn as one gooey shape that becomes a single circle as they merge.
 ///
-/// `first` and `second` are the circle centres in this layer's points and `radius` their radius.
-/// `smoothing` is the bridge width; the caller widens it and pulls the centres together as the
-/// circles merge. The outline is a `ringWidth` band centred on the edge, so a SwiftUI stroke of
-/// the same width and radius sits exactly on it. Under it lies a dark underlay for contrast on
-/// bright video, outside the outline only, and inside it a soft fill. The source colour is ignored.
+/// `first` and `second` are the circle centres in this layer's points, `firstRadius` and
+/// `secondRadius` their radii. `smoothing` is the bridge width; the caller widens it and pulls
+/// the centres together as the circles merge. The outline is a `ringWidth` band centred on the
+/// edge, so a SwiftUI stroke of the same width and radius sits exactly on it. Under it lies a
+/// dark underlay for contrast on bright video, outside the outline only, and inside it a soft
+/// fill. The source colour is ignored.
 [[ stitchable ]] half4 mergingGuide(
     float2 position,
     half4 color,
     float2 first,
     float2 second,
-    float radius,
+    float firstRadius,
+    float secondRadius,
     float smoothing,
     float ringWidth,
     half4 fill,
@@ -50,8 +52,8 @@ static half4 tinted(half4 color, float alpha) {
     float underlayOpacity
 ) {
     float distance = smoothUnion(
-        length(position - first) - radius,
-        length(position - second) - radius,
+        length(position - first) - firstRadius,
+        length(position - second) - secondRadius,
         max(smoothing, 0.0001)
     );
 

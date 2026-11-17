@@ -524,10 +524,7 @@ struct TMTherapySessionView<ViewModel: TherapySessionViewModelProtocol>: View {
                     model.snapshot.stage == .activity,
                     let guide = model.snapshot.presentation?.guide
                 {
-                    targetOverlay(guide, size: geometry.size)
-                } else if !model.snapshot.paused, !model.snapshot.cameraWaiting {
-                    // Until the activity draws its guide, the tracked body shows tracking has begun.
-                    TMLiveSkeletonLayer(model: model)
+                    bubbleOverlay(guide)
                 }
                 if !model.snapshot.paused, !model.snapshot.cameraWaiting,
                    model.snapshot.stage == .activity,
@@ -933,10 +930,12 @@ struct TMTherapySessionView<ViewModel: TherapySessionViewModelProtocol>: View {
         kind.titleKey
     }
 
-    private func targetOverlay(_ guide: TargetGuide, size: CGSize) -> some View {
+    /// The target bubble, the tracked joint and the guidance arrows; no skeleton or count.
+    private func bubbleOverlay(_ guide: TargetGuide) -> some View {
         func normalized(_ point: TherapyPoint) -> CGPoint {
             CGPoint(x: point.x / guide.aspect, y: point.y)
         }
+
         let active = guide.targetActive ? guide.target : guide.start
         let inside = guide.acceptedInside ?? ((guide.tracked - active).length <= guide.radius)
         let bubble = SessionBubbleGuide(
@@ -959,55 +958,31 @@ struct TMTherapySessionView<ViewModel: TherapySessionViewModelProtocol>: View {
                 joint: normalized(guide.tracked)
             )
         }
-        // A farthest marker alone still needs a direction guide to carry it; its arrow stays hidden
-        // so the bubble guide's arrow remains the only one.
         let carriesArrow = guide.directionOnly || guide.directionTip != nil
-        let direction = (carriesArrow || guide.farthest != nil) ? SessionDirectionGuide(
-            origin: normalized(guide.start),
-            tip: normalized(guide.directionTip ?? guide.target),
-            trackedJoint: normalized(guide.tracked),
-            showsArrow: carriesArrow && guide.showsDirectionArrow,
-            farthestPosition: guide.farthest.map(normalized)
-        ) : nil
-        let countdown = guide.countdownSeconds.map { seconds in
-            SessionHoldCountdown(
-                seconds: seconds,
-                center: normalized(guide.tracked),
-                radius: guide.radius
+        let reachArrow = carriesArrow && guide.showsDirectionArrow
+            ? SessionReachArrow(
+                origin: normalized(guide.start),
+                tip: normalized(guide.directionTip ?? guide.target)
             )
-        }
-        return TMSessionTargetOverlay(
-            imageSize: CGSize(width: guide.aspect, height: 1),
-            bubbleGuide: guide.capturing ? (guide.savedStart ? bubble : nil) : (guide.directionOnly ? nil : bubble),
+            : nil
+        let shownBubble: SessionBubbleGuide? = guide.capturing
+            ? (guide.savedStart ? bubble : nil)
+            : (guide.directionOnly ? nil : bubble)
+
+        return TMSessionBubbleOverlay(
+            imageAspect: guide.aspect,
+            bubbleGuide: shownBubble,
             singleZone: guide.start == guide.target,
             settingUp: guide.capturing,
             captureJoint: (guide.capturing || guide.jointHold) ? normalized(guide.tracked) : nil,
             holdProgress: guide.progress,
             holdRadius: guide.radius,
-            directionGuide: direction,
+            trackedJoint: guide.directionOnly && !guide.capturing && !guide.jointHold
+                ? normalized(guide.tracked)
+                : nil,
             movementCue: movementCue,
-            holdCountdown: countdown,
+            reachArrow: reachArrow,
             mirrored: true
         )
-    }
-}
-
-/// The live skeleton, in its own view so only this layer reads `livePose`.
-///
-/// The skeleton changes every camera frame. Reading it in the session screen's body would rebuild
-/// the whole screen 30 times a second on the main thread, delaying camera frames until the session
-/// rejects them as stale and reports the arm as missing.
-private struct TMLiveSkeletonLayer<ViewModel: TherapySessionViewModelProtocol>: View {
-    let model: ViewModel
-
-    var body: some View {
-        if let skeleton = model.livePose {
-            TMSessionTargetOverlay(
-                imageSize: skeleton.imageSize,
-                bubbleGuide: nil,
-                poseGuide: skeleton.guide,
-                mirrored: true
-            )
-        }
     }
 }

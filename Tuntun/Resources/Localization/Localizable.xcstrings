@@ -3973,6 +3973,7 @@
     },
     "debug.startExercise" : {
       "comment" : "Debug builds only: skips the plan intro narration and opens the exercise at once.",
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {

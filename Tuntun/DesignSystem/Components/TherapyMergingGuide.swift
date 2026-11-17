@@ -10,18 +10,35 @@ import SwiftUI
 /// Two guide circles that flow together into one as `merge` goes from 0 to 1.
 ///
 /// The `mergingGuide` Metal shader draws both circles as one gooey shape: a rounded bridge
-/// forms as they approach, the centres slide to their midpoint and the result settles into a
-/// single, slightly larger circle, so only one indicator remains. The hold progress arc is a
-/// `TMTherapyGuideBubble` laid exactly on the shader's outline, which keeps the bubble's
-/// completion acknowledgment. The caller decides `merge` from its own geometry; changes are
-/// eased with a short spring, and Reduce Motion applies them at once.
+/// forms as they approach and the result settles into a single circle, so only one indicator
+/// remains. With the `.midpoint` anchor both centres slide to their midpoint and the merged
+/// circle grows a little; with `.second` the second circle stays put and the first slides into
+/// it, so the merged circle is exactly the second one (a target whose drawn outline is its
+/// acceptance boundary). The hold progress arc is a `TMTherapyGuideBubble` laid exactly on the
+/// shader's outline, which keeps the bubble's completion acknowledgment. The caller decides
+/// `merge` from its own geometry; changes are eased with a short spring, and Reduce Motion
+/// applies them at once.
 struct TMTherapyMergingGuide: View {
+    enum Anchor {
+        /// Both circles meet halfway and the merged circle grows slightly.
+        case midpoint
+        /// The second circle stays fixed; the first slides into it and takes its size.
+        case second
+        /// Neither circle moves or changes size; `merge` only widens the bridge, so a tracked
+        /// point stays on the tracked point. The progress arc is drawn on the second circle only.
+        case fixed
+    }
+
     let first: CGPoint
     let second: CGPoint
+    /// The second circle's diameter, and the first's unless `firstDiameter` is set.
     let diameter: CGFloat
-    /// 0 keeps two circles; 1 shows one merged circle at the midpoint.
+    var firstDiameter: CGFloat? = nil
+    /// 0 keeps two circles; 1 shows one merged circle.
     let merge: Double
+    var anchor: Anchor = .midpoint
     let progress: Double
+    /// False draws a quiet outline with no fill, for a target that is not the current one.
     let active: Bool
     var showsTimer = false
     var completionID: UUID? = nil
@@ -29,6 +46,11 @@ struct TMTherapyMergingGuide: View {
     var tint: Color = TherapyPalette.guidanceOrange
     /// Plays the pop burst on the arc when a hold completes.
     var popsOnCompletion = false
+    /// SF Symbols drawn at each circle's centre; the first fades out as the circles merge.
+    var firstSymbol: String? = nil
+    var secondSymbol: String? = nil
+    /// How `merge` changes ease; pass a curve without bounce for a calmer indicator.
+    var mergeAnimation: Animation = .spring(duration: 0.35, bounce: 0.15)
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
@@ -36,19 +58,50 @@ struct TMTherapyMergingGuide: View {
         MergingGuideLayer(
             first: first,
             second: second,
-            diameter: diameter,
+            firstDiameter: firstDiameter ?? diameter,
+            secondDiameter: diameter,
             merge: min(1, max(0, merge)),
+            anchor: anchor,
             progress: progress,
             active: active,
             showsTimer: showsTimer,
             completionID: completionID,
             onCompletionPresented: onCompletionPresented,
             tint: tint,
-            popsOnCompletion: popsOnCompletion
+            popsOnCompletion: popsOnCompletion,
+            firstSymbol: firstSymbol,
+            secondSymbol: secondSymbol
         )
-        .animation(reduceMotion ? nil : .spring(duration: 0.35, bounce: 0.15), value: merge)
+        .animation(reduceMotion ? nil : mergeAnimation, value: merge)
         .allowsHitTesting(false)
         .accessibilityHidden(true)
+    }
+}
+
+extension TMTherapyMergingGuide {
+    /// One circle in the same look, for a hold ring, a lone joint marker or a target without a
+    /// tracked point.
+    init(
+        center: CGPoint,
+        diameter: CGFloat,
+        progress: Double = 0,
+        active: Bool,
+        showsTimer: Bool = false,
+        tint: Color = TherapyPalette.guidanceOrange,
+        symbol: String? = nil
+    ) {
+        self.init(
+            first: center,
+            second: center,
+            diameter: diameter,
+            merge: 1,
+            anchor: .second,
+            progress: progress,
+            active: active,
+            showsTimer: showsTimer,
+            tint: tint,
+            secondSymbol: symbol
+        )
     }
 }
 
@@ -58,8 +111,10 @@ struct TMTherapyMergingGuide: View {
 private struct MergingGuideLayer: View, Animatable {
     let first: CGPoint
     let second: CGPoint
-    let diameter: CGFloat
+    let firstDiameter: CGFloat
+    let secondDiameter: CGFloat
     var merge: Double
+    let anchor: TMTherapyMergingGuide.Anchor
     let progress: Double
     let active: Bool
     let showsTimer: Bool
@@ -67,13 +122,16 @@ private struct MergingGuideLayer: View, Animatable {
     let onCompletionPresented: (UUID) -> Void
     let tint: Color
     let popsOnCompletion: Bool
+    let firstSymbol: String?
+    let secondSymbol: String?
 
     var animatableData: Double {
         get { merge }
         set { merge = newValue }
     }
 
-    /// The merged circle grows a little, so joining reads as one combined target.
+    /// With the midpoint anchor the merged circle grows a little, so joining reads as one
+    /// combined target.
     private static let mergedGrowth = 0.12
     /// Bridge width as a fraction of the radius: almost none while apart, so distant circles
     /// stay cleanly separate, and a wide neck while merging.
@@ -82,34 +140,81 @@ private struct MergingGuideLayer: View, Animatable {
     /// Below this the two centres coincide on screen and one arc is drawn instead of two.
     private static let singleThreshold = 0.999
 
-    private var midpoint: CGPoint {
-        CGPoint(x: (first.x + second.x) / 2, y: (first.y + second.y) / 2)
+    /// Where the circles end up once merged.
+    private var mergedCenter: CGPoint {
+        switch anchor {
+        case .midpoint:
+            return CGPoint(x: (first.x + second.x) / 2, y: (first.y + second.y) / 2)
+        case .second, .fixed:
+            return second
+        }
     }
 
-    /// Each centre slides toward the midpoint as the circles merge.
+    private var mergedDiameter: CGFloat {
+        switch anchor {
+        case .midpoint:
+            return max(firstDiameter, secondDiameter) * (1 + Self.mergedGrowth)
+        case .second, .fixed:
+            return secondDiameter
+        }
+    }
+
+    /// Each centre slides toward the merged centre as the circles merge.
     private func shown(_ point: CGPoint) -> CGPoint {
+        guard anchor != .fixed else {
+            return point
+        }
+
         let remaining = 1 - merge
 
         return CGPoint(
-            x: midpoint.x + (point.x - midpoint.x) * remaining,
-            y: midpoint.y + (point.y - midpoint.y) * remaining
+            x: mergedCenter.x + (point.x - mergedCenter.x) * remaining,
+            y: mergedCenter.y + (point.y - mergedCenter.y) * remaining
         )
     }
 
-    private var shownDiameter: CGFloat {
-        diameter * (1 + Self.mergedGrowth * merge)
+    /// Each diameter eases toward the merged diameter as the circles merge.
+    private func shown(_ diameter: CGFloat) -> CGFloat {
+        guard anchor != .fixed else {
+            return diameter
+        }
+
+        return diameter + (mergedDiameter - diameter) * merge
+    }
+
+    /// Bridge width for these shown circles.
+    ///
+    /// The smooth union grows the shape by up to a quarter of this width where the circles
+    /// overlap, so it fades out as the centres come together: coincident circles (merged, or the
+    /// single-circle form) keep exactly their radius, which the progress arc matches.
+    private func smoothing(_ a: CGPoint, _ b: CGPoint, radius: CGFloat) -> CGFloat {
+        guard radius > 0 else {
+            return 0
+        }
+
+        let gap = hypot(a.x - b.x, a.y - b.y)
+        let closeness = min(1, gap / radius)
+        let width = Self.separateSmoothing + (Self.mergedSmoothing - Self.separateSmoothing) * merge
+
+        return radius * width * closeness
     }
 
     /// Matches `TMTherapyGuideBubble`'s ring, so the progress arc covers the shader outline.
-    private var ringWidth: CGFloat {
-        min(14, max(6, shownDiameter * 0.17))
+    private static func ringWidth(for diameter: CGFloat) -> CGFloat {
+        min(14, max(6, diameter * 0.17))
     }
 
     var body: some View {
         let a = shown(first)
         let b = shown(second)
-        let radius = shownDiameter / 2
-        let padding = radius + ringWidth + 4
+        let firstShownDiameter = shown(firstDiameter)
+        let secondShownDiameter = shown(secondDiameter)
+        // One outline width for the whole shape: the larger circle's, which carries the arc.
+        let ringWidth = Self.ringWidth(for: max(firstShownDiameter, secondShownDiameter))
+        let largerRadius = max(firstShownDiameter, secondShownDiameter) / 2
+        let bridge = smoothing(a, b, radius: largerRadius)
+        // Room for the ring, its underlay and the bridge's growth, so nothing is clipped square.
+        let padding = largerRadius + bridge / 4 + ringWidth + 4
         let bounds = CGRect(
             x: min(a.x, b.x) - padding,
             y: min(a.y, b.y) - padding,
@@ -118,48 +223,101 @@ private struct MergingGuideLayer: View, Animatable {
         )
 
         ZStack(alignment: .topLeading) {
-            shape(first: a, second: b, radius: radius, bounds: bounds)
+            shape(
+                first: a,
+                second: b,
+                firstRadius: firstShownDiameter / 2,
+                secondRadius: secondShownDiameter / 2,
+                smoothing: bridge,
+                ringWidth: ringWidth,
+                bounds: bounds
+            )
 
-            ForEach(arcCenters(a, b), id: \.offset) { _, center in
+            ForEach(arcs(a, b, firstShownDiameter, secondShownDiameter), id: \.offset) { _, arc in
                 TMTherapyGuideBubble(
                     progress: progress,
                     active: active,
                     completionID: completionID,
                     onCompletionPresented: onCompletionPresented,
                     showsTimer: showsTimer,
-                    diameter: shownDiameter,
+                    diameter: arc.diameter,
                     tint: tint,
                     drawsBackground: false,
                     popsOnCompletion: popsOnCompletion
                 )
-                .position(center)
+                .position(arc.center)
             }
+
+            symbols(first: a, second: b)
         }
     }
 
-    /// One arc once the circles have become one, otherwise one per circle.
-    private func arcCenters(_ a: CGPoint, _ b: CGPoint) -> [(offset: Int, element: CGPoint)] {
-        let centers = merge >= Self.singleThreshold ? [midpoint] : [a, b]
-        return Array(centers.enumerated()).map { ($0.offset, $0.element) }
+    /// One arc once the circles have become one (always on the second with the fixed anchor),
+    /// otherwise one per circle.
+    private func arcs(
+        _ a: CGPoint,
+        _ b: CGPoint,
+        _ firstShownDiameter: CGFloat,
+        _ secondShownDiameter: CGFloat
+    ) -> [(offset: Int, element: (center: CGPoint, diameter: CGFloat))] {
+        let arcs = anchor == .fixed || merge >= Self.singleThreshold
+            ? [(center: mergedCenter, diameter: mergedDiameter)]
+            : [(center: a, diameter: firstShownDiameter), (center: b, diameter: secondShownDiameter)]
+
+        return Array(arcs.enumerated()).map { ($0.offset, $0.element) }
     }
 
-    private func shape(first a: CGPoint, second b: CGPoint, radius: CGFloat, bounds: CGRect) -> some View {
-        let smoothing = radius * (Self.separateSmoothing + (Self.mergedSmoothing - Self.separateSmoothing) * merge)
+    @ViewBuilder
+    private func symbols(first a: CGPoint, second b: CGPoint) -> some View {
+        if let firstSymbol {
+            symbol(firstSymbol, diameter: firstDiameter)
+                .opacity(1 - merge)
+                .position(a)
+        }
 
-        return Rectangle()
+        if let secondSymbol {
+            symbol(secondSymbol, diameter: secondDiameter)
+                .opacity(active ? 1 : 0.6)
+                .position(b)
+        }
+    }
+
+    /// A white glyph over a dark disc, so it reads on the tinted fill and on bright video.
+    private func symbol(_ name: String, diameter: CGFloat) -> some View {
+        let backing = min(64, max(36, diameter * 0.5))
+
+        return Image(systemName: name)
+            .typography(size: backing * 0.53, weight: .bold)
+            .foregroundStyle(.white)
+            .frame(width: backing, height: backing)
+            .background(TherapyPalette.calmUnderlay, in: Circle())
+    }
+
+    private func shape(
+        first a: CGPoint,
+        second b: CGPoint,
+        firstRadius: CGFloat,
+        secondRadius: CGFloat,
+        smoothing: CGFloat,
+        ringWidth: CGFloat,
+        bounds: CGRect
+    ) -> some View {
+        Rectangle()
             .fill(.black)
             .frame(width: bounds.width, height: bounds.height)
             .colorEffect(
                 ShaderLibrary.mergingGuide(
                     .float2(Float(a.x - bounds.minX), Float(a.y - bounds.minY)),
                     .float2(Float(b.x - bounds.minX), Float(b.y - bounds.minY)),
-                    .float(Float(radius)),
+                    .float(Float(firstRadius)),
+                    .float(Float(secondRadius)),
                     .float(Float(smoothing)),
                     .float(Float(ringWidth)),
-                    .color(active ? tint : .white),
-                    .float(active ? 0.22 : 0.9),
+                    .color(tint),
+                    // A quiet target keeps only a dimmer outline, so the current one stands out.
+                    .float(active ? 0.22 : 0),
                     .color(.white),
-                    .float(active ? 0.85 : 0),
+                    .float(active ? 0.85 : 0.5),
                     .color(.black),
                     .float(0.5)
                 )

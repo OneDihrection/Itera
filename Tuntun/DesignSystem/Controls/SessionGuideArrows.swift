@@ -1,26 +1,13 @@
 //
-//  SessionTargetOverlay.swift
+//  SessionGuideArrows.swift
 //  Tuntun
 //
-//  Created by dimaswisodewo on 28/10/2026.
+//  Created by dimaswisodewo on 17/11/2026.
 //
-// Drawing adapted from VisionPoc/SessionTargetOverlay.swift.
+// Drawing moved unchanged from SessionTargetOverlay.swift (removed 2026-11-17), itself adapted
+// from VisionPoc/SessionTargetOverlay.swift.
 
 import SwiftUI
-
-struct SessionBubbleGuide {
-    enum Zone { case start, target }
-    let startCenter: CGPoint
-    let targetCenter: CGPoint
-    let trackedJoint: CGPoint?
-    let radius: Double
-    let activeZone: Zone
-    let trackedJointInside: Bool
-    let dwellProgress: Double
-    /// The joint the limb turns around, such as the shoulder for an arm raise. When set, the arrow
-    /// to the active bubble follows that turn instead of a gentle bow.
-    var pivot: CGPoint? = nil
-}
 
 /// Which way to move a limb when there is no bubble yet, such as while a target is calibrated.
 ///
@@ -35,67 +22,28 @@ struct SessionMovementCue {
     var joint: CGPoint? = nil
 }
 
-struct SessionDirectionGuide {
+/// A reach direction drawn from the start, kept visible at the image edge.
+struct SessionReachArrow {
     let origin: CGPoint
     let tip: CGPoint
-    let trackedJoint: CGPoint
-    var showsArrow = true
-    var farthestPosition: CGPoint?
 }
 
-/// The tracked body, in normalized image coordinates: a chain of joints such as shoulder, elbow
-/// and wrist, and for the ambient skeleton an optional shoulder-hip outline.
-struct SessionPoseGuide {
-    /// Shoulders and hips in drawing order, outlined only by the ambient skeleton; fewer than three
-    /// points draws no outline.
-    var torso: [CGPoint] = []
-    var chain: [CGPoint] = []
-    /// Further joint chains drawn like `chain`, such as both arms of a whole-body skeleton.
-    var limbs: [[CGPoint]] = []
-    /// How strongly the body is drawn: full guidance, or a quiet outline that only shows tracking.
-    enum Emphasis { case guidance, ambient }
-    var emphasis: Emphasis = .guidance
-}
-
-/// The seconds left in a hold, drawn beside the bubble so it never hides the joint.
-struct SessionHoldCountdown {
-    let seconds: Int
-    let center: CGPoint
-    let radius: Double
-}
-
-/// Calm camera guidance: a breathing target bubble, a quiet outline-only home bubble, one curved
-/// fading arrow and a slow hold ring.
+/// The body exercises' guidance arrows, in normalized image coordinates: one solid curved arrow
+/// from the joint to the active bubble (hidden once the joint arrives or a hold begins), the
+/// calibration cue along a fixed path, and the reach direction.
 ///
-/// Shape, not color alone, tells the zones apart (filled and breathing versus outline), and the
-/// overlay never uses red. Breathing animates only a halo outside the zone, so the accepted
-/// boundary is always the drawn outline. Reduce Motion freezes the halo.
-struct TMSessionTargetOverlay: View {
-    let imageSize: CGSize?
-    let bubbleGuide: SessionBubbleGuide?
-    var singleZone = false
-    /// False draws only the target bubble, for exercises whose start is not a place to return to.
-    var showsStart = true
+/// A brighter stretch travels toward each open chevron tip every 1.5 s, still and full strength
+/// under Reduce Motion. Every stroke lies over a dark underlay so it reads at 2.5 m. It takes
+/// values only; the bubbles and joint are drawn by `TMSessionBubbleOverlay` on top.
+struct TMSessionGuideArrows: View {
+    let imageAspect: Double
+    /// The arrow to the active bubble; nil draws none.
+    let approach: SessionBubbleGuide?
     var settingUp = false
-    var captureJoint: CGPoint? = nil
-    var holdProgress = 0.0
-    /// Hold ring radius in normalized image height, like a bubble radius; nil keeps the default size.
-    var holdRadius: Double? = nil
-    var directionGuide: SessionDirectionGuide? = nil
-    /// Drawn at full strength whatever the stage, because it guides calibration. Drawn as the
-    /// curved arrow along a fixed path from the limb's start, which the joint moves along.
+    /// Drawn at full strength whatever the stage, because it guides calibration.
     var movementCue: SessionMovementCue? = nil
-    var poseGuide: SessionPoseGuide? = nil
-    var holdCountdown: SessionHoldCountdown? = nil
+    var reachArrow: SessionReachArrow? = nil
     let mirrored: Bool
-    var viewportChanged: ((CGSize) -> Void)? = nil
-
-    /// A finished hold: where the accepted bubble was, in normalized image coordinates.
-    private struct Pop {
-        let center: CGPoint
-        let radius: Double
-        let start: Date
-    }
 
     /// The calibration cue's last shape and when it last appeared or went away, kept so it can
     /// fade out after the caller drops it. A reference, so updating it while drawing never
@@ -106,149 +54,69 @@ struct TMSessionTargetOverlay: View {
     }
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @State private var pop: Pop?
-    @State private var lastActive: (center: CGPoint, radius: Double)?
     @State private var cueMemory = CueMemory()
 
-    private let breathingPeriod = 4.0
-    private let popDuration = 0.6
     private let arrowSweepPeriod = 1.5
     private let cueFadeDuration = 0.25
 
     var body: some View {
         TimelineView(.animation(minimumInterval: 1.0 / 30.0, paused: reduceMotion)) { timeline in
-            canvas(breath: breath(at: timeline.date), now: timeline.date)
-        }
-        .onChange(of: bubbleGuide?.dwellProgress) { old, new in
-            trackAcceptance(old: old, new: new)
+            canvas(now: timeline.date)
         }
         .onChange(of: movementCue != nil) {
             trackCueVisibility()
-        }
-        .background {
-            GeometryReader { proxy in
-                Color.clear
-                    .onAppear { viewportChanged?(proxy.size) }
-                    .onChange(of: proxy.size) { _, size in
-                        viewportChanged?(size)
-                    }
-            }
         }
         .allowsHitTesting(false)
         .accessibilityHidden(true)
     }
 
-    /// 0...1, easing in and out over `breathingPeriod`; a resting value under Reduce Motion.
-    private func breath(at date: Date) -> Double {
-        guard !reduceMotion else {
-            return 0.5
-        }
-
-        let phase = date.timeIntervalSinceReferenceDate / breathingPeriod
-
-        return 0.5 - 0.5 * cos(phase * 2 * .pi)
-    }
-
-    /// The snapshot resets a hold's progress the moment it is accepted, so a drop from a nearly
-    /// full ring is the acceptance cue. Frozen or cleared holds fall from lower values.
-    private func trackAcceptance(old: Double?, new: Double?) {
-        if let guide = bubbleGuide {
-            lastActive = (
-                guide.activeZone == .start ? guide.startCenter : guide.targetCenter,
-                guide.radius
-            )
-        }
-
-        guard !reduceMotion,
-              let old,
-              old >= 0.85,
-              (new ?? 0) < old,
-              let lastActive else {
-            return
-        }
-
-        pop = Pop(center: lastActive.center, radius: lastActive.radius, start: Date())
-    }
-
-    private func canvas(breath: Double, now: Date) -> some View {
+    private func canvas(now: Date) -> some View {
         Canvas { context, size in
-            guard let image = imageSize, image.width > 0, image.height > 0 else { return }
-            let geometry = CameraDisplayGeometry(aspect: image.width / image.height, viewport: size)
-            let scale = geometry.imageRect.height / image.height
-            let offset = geometry.imageRect.origin
+            guard imageAspect > 0 else {
+                return
+            }
+
+            let geometry = CameraDisplayGeometry(aspect: imageAspect, viewport: size)
+            let scale = geometry.imageRect.height
+            let imageBounds = geometry.imageRect
             func point(_ point: CGPoint) -> CGPoint {
                 geometry.point(point, mirrored: mirrored)
             }
-            let imageBounds = CGRect(
-                origin: offset,
-                size: CGSize(width: image.width * scale, height: image.height * scale)
-            )
 
-            if let poseGuide {
-                drawPose(poseGuide, point: point, context: &context)
+            if let reachArrow {
+                drawReachDirection(
+                    from: point(reachArrow.origin),
+                    to: point(reachArrow.tip),
+                    bounds: imageBounds,
+                    now: now,
+                    context: &context
+                )
             }
 
-            if let directionGuide {
-                if directionGuide.showsArrow {
-                    drawReachDirection(
-                        from: point(directionGuide.origin),
-                        to: point(directionGuide.tip),
-                        bounds: imageBounds,
-                        now: now,
-                        context: &context
-                    )
-                }
-
-                if let farthest = directionGuide.farthestPosition {
-                    drawFarthest(point(farthest), bounds: imageBounds, context: &context)
-                }
-
-                drawJoint(point(directionGuide.trackedJoint), context: &context)
+            // The saved start is only a reference during reach capture, never a destination.
+            // Once a hold has begun, the hold arc is the only active cue.
+            if let guide = approach,
+               !settingUp,
+               !guide.trackedJointInside,
+               guide.dwellProgress == 0,
+               let tracked = guide.trackedJoint {
+                drawDirection(
+                    from: point(tracked),
+                    to: point(guide.activeZone == .start ? guide.startCenter : guide.targetCenter),
+                    radius: guide.radius * scale,
+                    pivot: guide.pivot.map(point),
+                    bounds: imageBounds,
+                    now: now,
+                    context: &context
+                )
             }
 
-            if let guide = bubbleGuide {
-                let radius = guide.radius * image.height * scale
-                let start = point(guide.startCenter)
-                let target = point(guide.targetCenter)
-
-                // The saved start is only a reference during reach capture, never a destination.
-                // Once a hold has begun, the hold ring is the only active cue.
-                if !settingUp, !guide.trackedJointInside, guide.dwellProgress == 0, let tracked = guide.trackedJoint {
-                    drawDirection(
-                        from: point(tracked),
-                        to: guide.activeZone == .start ? start : target,
-                        radius: radius,
-                        pivot: guide.pivot.map(point),
-                        bounds: imageBounds,
-                        now: now,
-                        context: &context
-                    )
-                }
-
-                if showsStart || singleZone {
-                    drawBubble(.start, center: start, radius: radius, breath: breath, guide: guide, context: &context)
-                }
-
-                if !settingUp && !singleZone {
-                    drawBubble(.target, center: target, radius: radius, breath: breath, guide: guide, context: &context)
-                }
-
-                if !settingUp, let tracked = guide.trackedJoint {
-                    drawJoint(point(tracked), context: &context)
-                }
-            }
-
-            if let pop {
-                drawPop(pop, scale: scale, imageHeight: image.height, at: point(pop.center), now: now, context: &context)
-            }
-
-            // The calibration arrow is a fixed path the joint moves along, so it sits under the hold
-            // ring and the hold count, which stay crisp on top of it.
+            // The calibration arrow is a fixed path the joint moves along, under the circles.
             if let cue = movementCue ?? cueMemory.cue {
                 cueMemory.cue = cue
 
                 // Start just outside the saved start bubble when one is drawn.
-                let gap = bubbleGuide.map { $0.radius * image.height * scale + 6 } ?? 26
+                let gap = approach.map { $0.radius * scale + 6 } ?? 26
 
                 drawCurvedArrow(
                     from: point(cue.tail),
@@ -264,29 +132,6 @@ struct TMSessionTargetOverlay: View {
                     context: &context
                 )
             }
-
-            if let holdCountdown {
-                drawCountdown(
-                    holdCountdown,
-                    center: point(holdCountdown.center),
-                    radius: holdCountdown.radius * image.height * scale,
-                    bounds: imageBounds,
-                    context: &context
-                )
-            }
-
-            let holdRingRadius = holdRadius.map { $0 * image.height * scale } ?? 60
-
-            if let joint = captureJoint {
-                let center = point(joint)
-                drawJointHold(
-                    center: center,
-                    progress: holdProgress,
-                    radius: holdRingRadius,
-                    context: &context
-                )
-            }
-
         }
     }
 
@@ -364,301 +209,6 @@ struct TMSessionTargetOverlay: View {
             bounds: bounds,
             now: now,
             context: &context
-        )
-    }
-
-    /// The farthest reach so far: a hollow blue ring around a white point, with a label in the hold
-    /// count's badge style below it.
-    ///
-    /// Hollow and much smaller than a bubble, so it reads as a reference rather than a destination,
-    /// and its color and shape keep it apart from the yellow joint disc.
-    private func drawFarthest(_ point: CGPoint, bounds: CGRect, context: inout GraphicsContext) {
-        let ringRadius = 18.0
-        let ring = Path(ellipseIn: CGRect(
-            x: point.x - ringRadius,
-            y: point.y - ringRadius,
-            width: ringRadius * 2,
-            height: ringRadius * 2
-        ))
-        strokeWithUnderlay(ring, color: TherapyPalette.guidanceBlue, width: 6, context: &context)
-
-        let dot = CGRect(x: point.x - 5, y: point.y - 5, width: 10, height: 10)
-        context.fill(Path(ellipseIn: dot.insetBy(dx: -3, dy: -3)), with: .color(TherapyPalette.calmUnderlay))
-        context.fill(Path(ellipseIn: dot), with: .color(.white))
-
-        let text = context.resolve(AppTypography.overlayText("parity.farthest", size: 22, weight: .semiBold))
-        let measured = text.measure(in: CGSize(width: max(1, bounds.width - 16), height: .infinity))
-        let width = min(max(0, bounds.width - 16), measured.width + 28)
-        let height = min(max(0, bounds.height - 16), measured.height + 12)
-
-        guard width > 0, height > 0 else {
-            return
-        }
-
-        // Only the label moves at the image edge; the mark stays on the measured point. Below the
-        // mark unless that leaves the picture, then above it, so the label never covers the mark.
-        let below = point.y + ringRadius + 12
-        let above = point.y - ringRadius - 12 - height
-        let top = below + height <= bounds.maxY - 8 ? below : above
-        let rect = CGRect(
-            x: min(max(point.x - width / 2, bounds.minX + 8), bounds.maxX - width - 8),
-            y: min(max(top, bounds.minY + 8), bounds.maxY - height - 8),
-            width: width,
-            height: height
-        )
-        let badge = Path(roundedRect: rect, cornerRadius: height / 2)
-        context.fill(badge, with: .color(TherapyPalette.calmUnderlay))
-        context.stroke(badge, with: .color(TherapyPalette.guidanceBlue), lineWidth: 3)
-        context.draw(text, at: CGPoint(x: rect.midX, y: rect.midY))
-    }
-
-    /// The body under the bubbles: the joint chains in the same dark-underlay style as every
-    /// other line. Guidance draws no torso, so only the moving limb stands out.
-    private func drawPose(
-        _ pose: SessionPoseGuide,
-        point: (CGPoint) -> CGPoint,
-        context: inout GraphicsContext
-    ) {
-        if pose.emphasis == .ambient {
-            drawAmbientPose(pose, point: point, context: &context)
-            return
-        }
-
-        for joints in [pose.chain] + pose.limbs {
-            guard let chain = chainPath(joints, point: point) else {
-                continue
-            }
-
-            strokeWithUnderlay(chain, color: .white, width: 6, context: &context)
-            joints.forEach { drawJoint(point($0), context: &context) }
-        }
-    }
-
-    /// The tracked body while no guidance is shown, such as during narration: thin, half-strength
-    /// lines and small dots that only tell the patient they are followed. It carries no guidance,
-    /// so the visibility minimums for guidance shapes do not apply.
-    private func drawAmbientPose(
-        _ pose: SessionPoseGuide,
-        point: (CGPoint) -> CGPoint,
-        context: inout GraphicsContext
-    ) {
-        // One layer, so overlapping lines and dots fade together instead of stacking.
-        context.drawLayer { layer in
-            layer.opacity = 0.5
-
-            if pose.torso.count > 2 {
-                var torso = Path()
-                torso.move(to: point(pose.torso[0]))
-                pose.torso.dropFirst().forEach { torso.addLine(to: point($0)) }
-                torso.closeSubpath()
-                strokeWithUnderlay(torso, color: .white, width: 3, context: &layer)
-            }
-
-            for joints in [pose.chain] + pose.limbs {
-                guard let chain = chainPath(joints, point: point) else {
-                    continue
-                }
-
-                strokeWithUnderlay(chain, color: .white, width: 3, context: &layer)
-                joints.forEach { drawAmbientJoint(point($0), context: &layer) }
-            }
-        }
-    }
-
-    /// The joints joined in order; nil for fewer than two joints.
-    private func chainPath(_ joints: [CGPoint], point: (CGPoint) -> CGPoint) -> Path? {
-        guard joints.count > 1 else {
-            return nil
-        }
-
-        var chain = Path()
-        chain.move(to: point(joints[0]))
-        joints.dropFirst().forEach { chain.addLine(to: point($0)) }
-
-        return chain
-    }
-
-    /// The count sits just outside the bubble, above it unless that would leave the picture.
-    private func drawCountdown(
-        _ countdown: SessionHoldCountdown,
-        center: CGPoint,
-        radius: Double,
-        bounds: CGRect,
-        context: inout GraphicsContext
-    ) {
-        let badge = 54.0
-        let gap = 14.0
-        let above = center.y - radius - gap - badge / 2
-        let badgeCenter = CGPoint(
-            x: center.x,
-            y: above - badge / 2 >= bounds.minY ? above : center.y + radius + gap + badge / 2
-        )
-        let rect = CGRect(
-            x: badgeCenter.x - badge / 2,
-            y: badgeCenter.y - badge / 2,
-            width: badge,
-            height: badge
-        )
-
-        context.fill(Path(ellipseIn: rect), with: .color(TherapyPalette.calmUnderlay))
-        context.stroke(Path(ellipseIn: rect), with: .color(TherapyPalette.guidanceBlue), lineWidth: 3)
-        context.draw(
-            context.resolve(
-                AppTypography.overlayText(LocalizedStringKey(String(countdown.seconds)), size: 32, weight: .bold)
-            ),
-            at: badgeCenter
-        )
-    }
-
-    /// The tracked joint: a large yellow disc the patient can always find.
-    private func drawJoint(_ point: CGPoint, context: inout GraphicsContext) {
-        let rect = CGRect(x: point.x - 14, y: point.y - 14, width: 28, height: 28)
-        let disc = Path(ellipseIn: rect)
-        context.fill(Path(ellipseIn: rect.insetBy(dx: -7, dy: -7)), with: .color(TherapyPalette.calmUnderlay))
-        context.fill(disc, with: .color(TherapyPalette.guidanceYellow))
-        context.stroke(disc, with: .color(.white), lineWidth: 5)
-    }
-
-    /// A small white joint dot for the ambient body, with no yellow and no ring.
-    private func drawAmbientJoint(_ point: CGPoint, context: inout GraphicsContext) {
-        let rect = CGRect(x: point.x - 6, y: point.y - 6, width: 12, height: 12)
-        context.fill(Path(ellipseIn: rect.insetBy(dx: -2, dy: -2)), with: .color(TherapyPalette.calmUnderlay))
-        context.fill(Path(ellipseIn: rect), with: .color(.white))
-    }
-
-    private func drawBubble(
-        _ zone: SessionBubbleGuide.Zone,
-        center: CGPoint,
-        radius: Double,
-        breath: Double,
-        guide: SessionBubbleGuide,
-        context: inout GraphicsContext
-    ) {
-        let rect = CGRect(x: center.x - radius, y: center.y - radius, width: radius * 2, height: radius * 2)
-        let outline = Path(ellipseIn: rect)
-        let active = !settingUp && guide.activeZone == zone
-        let arrived = active && guide.trackedJointInside
-
-        switch zone {
-        case .start:
-            // Home: outline only, so it reads differently from the filled target.
-            if active {
-                strokeWithUnderlay(outline, color: TherapyPalette.guidanceYellow, width: 7, context: &context)
-            } else {
-                strokeWithUnderlay(
-                    outline,
-                    color: TherapyPalette.guidanceYellow.opacity(0.7),
-                    width: 3.5,
-                    style: StrokeStyle(lineWidth: 3.5, lineCap: .round, dash: [8, 10]),
-                    context: &context
-                )
-            }
-        case .target:
-            guard active else {
-                strokeWithUnderlay(outline, color: TherapyPalette.guidanceBlue.opacity(0.7), width: 3.5, context: &context)
-                break
-            }
-
-            // The halo breathes outside the zone; the filled disc and outline do not move.
-            let halo = radius * (1.06 + 0.12 * breath)
-            let haloRect = CGRect(x: center.x - halo, y: center.y - halo, width: halo * 2, height: halo * 2)
-            context.stroke(
-                Path(ellipseIn: haloRect),
-                with: .color(TherapyPalette.guidanceBlue.opacity(0.4 + 0.3 * (1 - breath))),
-                lineWidth: 10
-            )
-            context.fill(
-                outline,
-                with: .radialGradient(
-                    Gradient(colors: [
-                        TherapyPalette.guidanceBlue.opacity(arrived ? 0.65 : 0.5),
-                        TherapyPalette.guidanceBlue.opacity(arrived ? 0.9 : 0.75)
-                    ]),
-                    center: center,
-                    startRadius: 0,
-                    endRadius: radius
-                )
-            )
-            strokeWithUnderlay(outline, color: TherapyPalette.guidanceBlue, width: 10, context: &context)
-            context.stroke(
-                Path(ellipseIn: rect.insetBy(dx: 7, dy: 7)),
-                with: .color(.white.opacity(0.9)),
-                lineWidth: 3
-            )
-        }
-
-        if active, guide.dwellProgress > 0 {
-            // Progress follows the perimeter; the acceptance boundary never moves.
-            drawRing(center: center, radius: radius, progress: guide.dwellProgress, context: &context)
-        }
-    }
-
-    /// The hold around the tracked joint: a large ring that is visible from the first frame of the
-    /// hold, with a blue fill that grows as the hold completes. It carries no numbers.
-    private func drawJointHold(
-        center: CGPoint,
-        progress: Double,
-        radius: Double,
-        context: inout GraphicsContext
-    ) {
-        let clamped = min(1, max(0, progress))
-        let track = Path(ellipseIn: CGRect(x: center.x - radius, y: center.y - radius, width: radius * 2, height: radius * 2))
-
-        // Dark underlay first, so the ring reads on any camera image.
-        context.stroke(track, with: .color(TherapyPalette.calmUnderlay), lineWidth: 22)
-        context.stroke(track, with: .color(.white.opacity(0.45)), lineWidth: 14)
-
-        if clamped > 0 {
-            let fill = radius * clamped
-            context.fill(
-                Path(ellipseIn: CGRect(x: center.x - fill, y: center.y - fill, width: fill * 2, height: fill * 2)),
-                with: .color(TherapyPalette.guidanceBlue.opacity(0.35))
-            )
-
-            var arc = Path()
-            arc.addArc(
-                center: center, radius: radius,
-                startAngle: .degrees(-90), endAngle: .degrees(-90 + 360 * clamped),
-                clockwise: false
-            )
-            context.stroke(arc, with: .color(TherapyPalette.calmUnderlay), style: StrokeStyle(lineWidth: 22, lineCap: .round))
-            context.stroke(arc, with: .color(TherapyPalette.guidanceBlue), style: StrokeStyle(lineWidth: 14, lineCap: .round))
-        }
-
-        drawJoint(center, context: &context)
-    }
-
-    /// A bold progress ring over a faint full track. It carries no numbers.
-    private func drawRing(center: CGPoint, radius: Double, progress: Double, context: inout GraphicsContext) {
-        let clamped = min(1, max(0, progress))
-        guard clamped > 0 else { return }
-
-        let track = Path(ellipseIn: CGRect(x: center.x - radius, y: center.y - radius, width: radius * 2, height: radius * 2))
-        context.stroke(track, with: .color(.white.opacity(0.3)), lineWidth: 10)
-
-        var arc = Path()
-        arc.addArc(
-            center: center, radius: radius,
-            startAngle: .degrees(-90), endAngle: .degrees(-90 + 360 * clamped),
-            clockwise: false
-        )
-        strokeWithUnderlay(arc, color: .white, width: 10, context: &context)
-    }
-
-    /// A soft expanding, fading ring where a hold was just accepted. Never flashes.
-    private func drawPop(
-        _ pop: Pop, scale: Double, imageHeight: Double, at center: CGPoint, now: Date, context: inout GraphicsContext
-    ) {
-        let progress = now.timeIntervalSince(pop.start) / popDuration
-        guard progress >= 0, progress < 1 else { return }
-
-        let eased = 1 - pow(1 - progress, 3)
-        let radius = pop.radius * imageHeight * scale * (1 + 0.35 * eased)
-        let rect = CGRect(x: center.x - radius, y: center.y - radius, width: radius * 2, height: radius * 2)
-        context.stroke(
-            Path(ellipseIn: rect),
-            with: .color(TherapyPalette.guidanceBlue.opacity(0.85 * (1 - progress))),
-            lineWidth: 8 * (1 - progress) + 1
         )
     }
 

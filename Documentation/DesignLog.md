@@ -1325,3 +1325,47 @@ At the product owner's request, every daily-plan intro opened from Beranda now n
 - No Marizka recordings exist yet for `plan.purpose.*`, so those lines use the system voice until they are rendered with `Tools/generate_narration.py` (with `--language en` for English).
 
 Verification: XcodeGen and Debug and Release Simulator builds with IPHONEOS_DEPLOYMENT_TARGET=17.0. Pending on the M1 iPad: each unscripted intro speaks its purpose in both languages with Start disabled, then opens the session; scripted intros unchanged; Back and backgrounding during the intro stop or pause speech; Stop/Go during the intro; the debug button skips the narration.
+
+## Merging indicator for every exercise (2026-11-17)
+
+At the product owner's request, every exercise now uses the merging indicator introduced for thumb opposition (*Merging thumb-opposition guide*), in `TherapyPalette.guidanceOrange`: the tracked point is a circle that flows into its target circle as it arrives and is one circle while it counts as inside. The other finger exercises (single fingertip circles, whole-hand circle) are unchanged.
+
+- `TMTherapyMergingGuide` gained compatible options: per-circle diameters (`firstDiameter`; the shader takes two radii), `anchor: .second` (the target stays fixed and keeps its size, so its outline is still the acceptance boundary), a quiet `active: false` outline, centre glyphs, and a single-circle initializer. Thumb opposition keeps the midpoint anchor and is drawn as before.
+- Body exercises (`TMSessionTargetOverlay`): the tracked joint is a 44 pt circle that merges into the active bubble from two bubble radii away and is one with it while the joint is inside or a hold runs (so Balancing's larger exit radius still shows one circle). The other bubble is a quiet outline; calibration holds on the joint and the direction-only reach joint are single circles; the accepted hold plays `TMTherapyPopBurst` on the accepted bubble. Arrows, pose chains, the hold count and the farthest marker stay as they were; chain joints are small white dots instead of yellow discs.
+- Fold towel: a 68 pt hand circle (open or pinching glyph) merges into the current zone (its step glyph) between 0.24 and the 0.12 acceptance distance, using the activity's normalized distance, and eases with the existing display spring. Zones are drawn as circles as tall as the region, so on a wider image acceptance reaches slightly further sideways than the outline; the merge shows when the hand counts.
+
+Superseded: the breathing blue target with its halo, the dashed and thin inactive outlines, the yellow joint disc and white hold rings, the blue acceptance ring in body exercises; `TMTherapyGuideZone` ellipses and `TMTherapyHandCursor` in fold towel (both components removed).
+
+Verification: XcodeGen and Debug Simulator build with IPHONEOS_DEPLOYMENT_TARGET=17.0. Pending on the M1 iPad: arm raise, elbow bend, reach and each Balancing exercise merge exactly when the hold starts and part when the joint leaves, both orientations and mirrorings; calibration holds and reach direction markers; the pop on the accepted bubble; visibility at 1.5–2.5 m; Reduce Motion; fold towel grab, slide and release with the hand circle easing smoothly; thumb opposition unchanged; the overlay keeps 30 fps without stale-frame rejections.
+
+## Body exercises without camera overlay (2026-11-17)
+
+At the product owner's request, body exercises (arm raise, elbow bend, directional reach, cross midline, external and internal rotation, shoulder flexion, sit to stand) no longer draw anything over the camera preview. Removed: `TMSessionTargetOverlay` with its bubbles, merging joint circle, curved arrows and calibration cue, hold rings, hold count, farthest marker and guidance skeleton, and the ambient live skeleton (`LivePose`, `livePose` on both session view models) shown before guidance. This supersedes the body part of *Merging indicator for every exercise* and the calm-camera-guidance rules; finger exercises and fold towel keep their overlays.
+
+- Counting, acceptance and calibration are unchanged. `TargetGuide` and `BalanceOverlay` are still produced by `MovementActivity` and the Balancing engines; their display-only fields can be pruned later.
+- Patients now rely on the demonstration, the caption, the counters and narration. Spoken or written lines that mention the bubble or circle are listed for UX writing, not changed.
+
+Verification: XcodeGen and Debug Simulator build with IPHONEOS_DEPLOYMENT_TARGET=17.0. Pending on the M1 iPad: each body exercise shows only the camera from intro to summary, still calibrates, counts repetitions and holds, and narrates as before; finger and fold-towel overlays unchanged.
+
+## Calmer fold-towel indicator (2026-11-17)
+
+The product owner found the fold-towel indicator busy and jumpy, with its circle cut off by a rectangle.
+
+- **Clipping (shared fix).** `TMTherapyMergingGuide`'s smooth union grows the shape by up to a quarter of the bridge width where circles overlap; with coincident circles (merged, single-circle form, quiet zone) it was about 25% larger than its radius and spilled out of the shader's padded rectangle. The bridge now narrows to nothing as the centres meet and the padding includes its growth, so merged and single circles keep their exact size and match the progress arc. Thumb opposition's merged circle is therefore slightly smaller than before (1.12 × instead of about 1.4 × the fingertip circle) and now matches its arc.
+- **Calmer towel.** Only the current zone is drawn (the other zone is gone). The hand is a plain 48 pt circle with no glyph that always sits on the hand (new `anchor: .fixed`; the hand is no longer pulled into the zone and does not spring back when the step changes), and joins the zone with a 0.25 s ease without bounce (`mergeAnimation`) only while within the 0.12 acceptance distance. Without a hand the point rests inside the zone, so tracking blinks no longer swap views.
+
+Supersedes the fold-towel part of *Merging indicator for every exercise* (68 pt glyphed hand, merge from 0.24, quiet second zone).
+
+Verification: XcodeGen and Debug Simulator build with IPHONEOS_DEPLOYMENT_TARGET=17.0. Pending on the M1 iPad: fold towel grab, slide and release without jumps at step changes or tracking loss, no square clipping; thumb opposition's merged circle unclipped and matching its arc.
+
+## Body target bubble restored (2026-11-17)
+
+Removing the whole body overlay (*Body exercises without camera overlay*) also removed the target bubbles, which the product owner wants kept. `TMSessionBubbleOverlay` (DesignSystem/Controls) brings back only the bubble indicator from *Merging indicator for every exercise*: the 44 pt joint circle merging into the active bubble, the quiet other bubble, the calibration-hold and lone-joint circles, the hold arc and the acceptance pop. The skeleton, live skeleton, arrows, calibration cue, hold-seconds badge and farthest marker stay removed. `TherapySessionView` and `BalanceSessionView` map `TargetGuide` and `BalanceOverlay` to it as before.
+
+Verification: XcodeGen and Debug Simulator build with IPHONEOS_DEPLOYMENT_TARGET=17.0. Pending on the M1 iPad: arm raise, elbow bend, reach and each Balancing exercise show the bubble, merge at hold start, fill the arc and pop on acceptance, in both orientations; no skeleton or arrows.
+
+## Body guidance arrows restored (2026-11-17)
+
+At the product owner's request the guidance arrows removed with `TMSessionTargetOverlay` are back, unchanged in look and behaviour: the curved arrow from the joint to the active bubble, the calibration cue (arm raise, elbow bend and Balancing before a target exists) and the directional-reach arrow. The drawing moved verbatim into `TMSessionGuideArrows` (DesignSystem/Controls/SessionGuideArrows.swift), which `TMSessionBubbleOverlay` draws under the orange circles. The skeleton, hold-seconds badge and farthest marker stay removed.
+
+Verification: XcodeGen and Debug Simulator build with IPHONEOS_DEPLOYMENT_TARGET=17.0. Pending on the M1 iPad: the arrow leads to the bubble, fades on arrival and hides during a hold; the calibration cue in arm raise, elbow bend and Balancing; the reach arrow at the image edge; Reduce Motion.

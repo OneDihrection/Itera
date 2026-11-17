@@ -15,7 +15,6 @@ protocol TherapySessionViewModelProtocol: AnyObject, Observable {
     var sessionLanguage: AppLanguage { get }
     var sessionLocale: Locale { get }
     var snapshot: SessionSnapshot { get }
-    var livePose: LivePose.Skeleton? { get }
     var towelDisplay: TowelSnapshot? { get }
     var towelInterpolates: Bool { get }
     var cameraDenied: Bool { get }
@@ -65,9 +64,6 @@ final class TherapySessionViewModel: TherapySessionViewModelProtocol {
     private(set) var towelInterpolates = false
     @ObservationIgnored private var towelSmoother = TowelPresentationSmoother()
     private(set) var personVisible = false
-    /// The tracked skeleton from the first camera frame, shown until the activity draws its guide.
-    private(set) var livePose: LivePose.Skeleton?
-    @ObservationIgnored private var livePoseTracker = LivePose()
     private(set) var cameraDenied = false
     private(set) var failure: String?
     private(set) var saveFailure: String?
@@ -177,17 +173,6 @@ final class TherapySessionViewModel: TherapySessionViewModelProtocol {
                 self.personVisible = visible
             }
 
-            // The tracker sees every frame so its smoother stays warm, but the skeleton is published
-            // only while it is drawn, before the activity shows its own guide.
-            // Mirrors the camera view, which prefers the guide only during the activity stage.
-            let skeleton = self.livePoseTracker.skeleton(for: frame)
-            let guideShown = self.snapshot.stage == .activity && self.snapshot.presentation?.guide != nil
-            if !guideShown {
-                self.livePose = skeleton
-            } else if self.livePose != nil {
-                self.livePose = nil
-            }
-
             var observation = frame
             observation.workspaceMirrored = true
             self.send(.observation(observation))
@@ -201,12 +186,6 @@ final class TherapySessionViewModel: TherapySessionViewModelProtocol {
         trackingService.availability.receive(on: DispatchQueue.main).sink { [weak self] availability in
             guard let self else { return }
 
-            switch availability {
-            case .ready:
-                break
-            case .waiting, .discontinuity:
-                self.clearLivePose()
-            }
             self.send(.availability(availability))
         }.store(in: &subscriptions)
         audioService.events.sink { [weak self] event in self?.receive(event) }.store(in: &subscriptions)
@@ -324,7 +303,6 @@ final class TherapySessionViewModel: TherapySessionViewModelProtocol {
         send(.availability(.discontinuity))
         voiceReady = false
         trackingService.stop()
-        clearLivePose()
         audioService.stop()
     }
 
@@ -558,11 +536,6 @@ final class TherapySessionViewModel: TherapySessionViewModelProtocol {
         }
     }
 
-    private func clearLivePose() {
-        livePose = nil
-        livePoseTracker.reset()
-    }
-
     private func cleanup(preserveClosing: Bool = false) {
         guard live else {
             return
@@ -571,7 +544,6 @@ final class TherapySessionViewModel: TherapySessionViewModelProtocol {
         trackingService.clips.setEnabled(false)
         trackingService.clips.releaseFrames()
         trackingService.stop()
-        clearLivePose()
         trackingService.requireHand(false)
         if preserveClosing { audioService.stopListening() } else { audioService.stop() }
         timer?.cancel()
