@@ -7,7 +7,7 @@
 
 import SwiftUI
 
-/// Draws the tracked hand, its guide circles and one hold readout over the camera preview.
+/// Draws the guide circles on the tracked fingertips over the camera preview.
 ///
 /// Sizes follow the hand's size on screen, so a hand farther from the camera gets smaller
 /// circles. Text never sits on the hand: circles show only their progress ring, and the
@@ -39,6 +39,14 @@ struct TMFingerLandmarkOverlay: View {
     /// Palm length assumed when the wrist or middle knuckle is not visible.
     private static let fallbackPalm: CGFloat = 150
 
+    // MARK: - Thumb opposition merge
+
+    /// Thumb and target circles start to flow together at this fingertip gap, in palm lengths…
+    private static let mergeStartRatio: CGFloat = 0.75
+    /// …and are one circle at this gap: the 0.45-palm distance up to which scoring keeps a
+    /// contact, so a credited touch always shows one circle without forcing it.
+    private static let mergeEndRatio: CGFloat = 0.45
+
     var body: some View {
         GeometryReader { geometry in
             let scale = min(geometry.size.width / evidence.width, geometry.size.height / evidence.height)
@@ -48,7 +56,7 @@ struct TMFingerLandmarkOverlay: View {
             let palm = palmLength(width: width, height: height, origin: origin)
 
             Canvas { context, _ in
-                drawSkeleton(in: &context, palm: palm, width: width, height: height, origin: origin, viewport: geometry.size)
+                drawLandmarks(in: &context, palm: palm, width: width, height: height, origin: origin, viewport: geometry.size)
             }
 
             circles(palm: palm, width: width, height: height, origin: origin, viewport: geometry.size)
@@ -59,7 +67,12 @@ struct TMFingerLandmarkOverlay: View {
 
     // MARK: - Drawing
 
-    private func drawSkeleton(
+    /// Draws the short connector from a fingertip to its circle when the circle was pushed
+    /// inside the preview edge.
+    ///
+    /// No skeleton lines or joint dots are drawn: the patient follows the fingertip circles,
+    /// and the rest cluttered the hand without guiding it.
+    private func drawLandmarks(
         in context: inout GraphicsContext,
         palm: CGFloat,
         width: Double,
@@ -67,25 +80,14 @@ struct TMFingerLandmarkOverlay: View {
         origin: CGPoint,
         viewport: CGSize
     ) {
-        // Lines and joint dots thin out a little for a smaller, farther hand.
+        // Connectors thin out a little for a smaller, farther hand.
         let lineWidth = min(4, max(2, palm * 0.025))
-        let dotRadius = min(5, max(3, palm * 0.03))
-
-        for base in [1, 5, 9, 13, 17] {
-            let chain = [0, base, base + 1, base + 2, base + 3]
-            for pair in zip(chain, chain.dropFirst()) {
-                guard evidence.points[pair.0].confidence >= Self.drawnConfidence,
-                      evidence.points[pair.1].confidence >= Self.drawnConfidence else { continue }
-                var path = Path()
-                path.move(to: point(pair.0, width: width, height: height, origin: origin))
-                path.addLine(to: point(pair.1, width: width, height: height, origin: origin))
-                context.stroke(path, with: .color(.white.opacity(0.8)), lineWidth: lineWidth)
-            }
-        }
 
         if !usesWholeHandCircle {
             for (index, joint) in [4, 8, 12, 16, 20].enumerated()
-            where showsBubble(index + 1) && evidence.points[joint].confidence >= Self.drawnConfidence {
+            where showsBubble(index + 1)
+                && !mergesWithThumb(index + 1)
+                && evidence.points[joint].confidence >= Self.drawnConfidence {
                 let anchor = point(joint, width: width, height: height, origin: origin)
                 let center = fingertipCircleCenter(
                     index + 1, joint: joint, palm: palm,
@@ -95,15 +97,9 @@ struct TMFingerLandmarkOverlay: View {
                     var line = Path()
                     line.move(to: anchor)
                     line.addLine(to: center)
-                    context.stroke(line, with: .color(TherapyPalette.guidanceBlue), lineWidth: max(2, lineWidth - 1))
+                    context.stroke(line, with: .color(TherapyPalette.guidanceOrange), lineWidth: max(2, lineWidth - 1))
                 }
             }
-        }
-
-        for index in evidence.points.indices where evidence.points[index].confidence >= Self.drawnConfidence {
-            let p = point(index, width: width, height: height, origin: origin)
-            let dot = CGRect(x: p.x - dotRadius, y: p.y - dotRadius, width: dotRadius * 2, height: dotRadius * 2)
-            context.fill(Path(ellipseIn: dot), with: .color(TherapyPalette.guidanceYellow))
         }
     }
 
@@ -116,13 +112,32 @@ struct TMFingerLandmarkOverlay: View {
                     active: guiding,
                     completionID: completionID, onCompletionPresented: onCompletionPresented,
                     showsTimer: showsTimer,
-                    diameter: circle.diameter, outlineOnly: true
+                    diameter: circle.diameter, outlineOnly: true,
+                    tint: TherapyPalette.guidanceOrange,
+                    popsOnCompletion: true
                 )
                 .position(circle.center)
             }
         } else {
+            if let pair = oppositionPair(palm: palm, width: width, height: height, origin: origin, viewport: viewport) {
+                TMTherapyMergingGuide(
+                    first: pair.thumb,
+                    second: pair.target,
+                    diameter: fingertipDiameter(active: true, palm: palm),
+                    merge: pair.merge,
+                    progress: progress,
+                    active: true,
+                    showsTimer: showsTimer,
+                    completionID: completionID,
+                    onCompletionPresented: onCompletionPresented,
+                    popsOnCompletion: true
+                )
+            }
+
             ForEach(Array([4, 8, 12, 16, 20].enumerated()), id: \.offset) { index, joint in
-                if showsBubble(index + 1) && evidence.points[joint].confidence >= Self.drawnConfidence {
+                if showsBubble(index + 1)
+                    && !mergesWithThumb(index + 1)
+                    && evidence.points[joint].confidence >= Self.drawnConfidence {
                     TMTherapyGuideBubble(
                         // No finger numbers: the instruction names the finger to move.
                         progress: progress,
@@ -130,7 +145,9 @@ struct TMFingerLandmarkOverlay: View {
                         completionID: isActive(index + 1) ? completionID : nil,
                         onCompletionPresented: onCompletionPresented,
                         showsTimer: showsTimer && isActive(index + 1),
-                        diameter: fingertipDiameter(active: isActive(index + 1), palm: palm)
+                        diameter: fingertipDiameter(active: isActive(index + 1), palm: palm),
+                        tint: TherapyPalette.guidanceOrange,
+                        popsOnCompletion: true
                     )
                     .position(fingertipCircleCenter(
                         index + 1, joint: joint, palm: palm,
@@ -222,6 +239,69 @@ struct TMFingerLandmarkOverlay: View {
             x: min(viewport.width - horizontalInset, max(horizontalInset, anchor.x)),
             y: min(viewport.height - verticalInset, max(verticalInset, anchor.y))
         )
+    }
+
+    /// While thumb opposition is guided, the thumb and target circles are drawn together by
+    /// `TMTherapyMergingGuide` instead of as two separate bubbles.
+    private var mergesThumbAndTarget: Bool {
+        exercise == .opposition && guiding
+    }
+
+    private func mergesWithThumb(_ number: Int) -> Bool {
+        mergesThumbAndTarget && (number == 1 || number == finger + 2)
+    }
+
+    /// The thumb and target circle centres and how far they have merged (0 apart, 1 one circle).
+    ///
+    /// Merging follows only the on-screen fingertip gap relative to the palm, so the circles are
+    /// one exactly while the tips touch and return to their own fingers as soon as they part.
+    /// Hold progress is not used: the open-hand holds (start position, returning) also report
+    /// progress while the fingers are apart.
+    private func oppositionPair(
+        palm: CGFloat,
+        width: Double,
+        height: Double,
+        origin: CGPoint,
+        viewport: CGSize
+    ) -> (thumb: CGPoint, target: CGPoint, merge: Double)? {
+        let targetJoint = 4 + 4 * (finger + 1)
+
+        guard mergesThumbAndTarget,
+              (8...20).contains(targetJoint),
+              evidence.points[4].confidence >= Self.drawnConfidence,
+              evidence.points[targetJoint].confidence >= Self.drawnConfidence else {
+            return nil
+        }
+
+        let thumbTip = point(4, width: width, height: height, origin: origin)
+        let targetTip = point(targetJoint, width: width, height: height, origin: origin)
+        let gap = hypot(thumbTip.x - targetTip.x, thumbTip.y - targetTip.y)
+
+        let merge = Self.mergeAmount(gap: gap, palm: palm)
+
+        let thumb = fingertipCircleCenter(
+            1, joint: 4, palm: palm,
+            width: width, height: height, origin: origin, viewport: viewport
+        )
+        let target = fingertipCircleCenter(
+            finger + 2, joint: targetJoint, palm: palm,
+            width: width, height: height, origin: origin, viewport: viewport
+        )
+
+        return (thumb, target, merge)
+    }
+
+    /// Smoothstep from 0 at `mergeStartRatio` palms apart to 1 at `mergeEndRatio`.
+    private static func mergeAmount(gap: CGFloat, palm: CGFloat) -> Double {
+        let start = palm * mergeStartRatio
+        let end = palm * mergeEndRatio
+
+        guard start > end else {
+            return gap <= end ? 1 : 0
+        }
+
+        let t = Double(min(1, max(0, (start - gap) / (start - end))))
+        return t * t * (3 - 2 * t)
     }
 
     private func showsBubble(_ number: Int) -> Bool {

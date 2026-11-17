@@ -12,7 +12,8 @@ import Speech
 // Service vocabulary is independent of exercise progression.
 enum GuidanceSound {
     case countdown
-    case holdCompleted
+    /// A soft bubble pop when a finger hold's circle completes.
+    case holdPopped
     case setCompleted
     /// The live demonstration moved to a new step.
     case demoChanged
@@ -224,7 +225,7 @@ final class GuidanceAudioService: NSObject, AVSpeechSynthesizerDelegate {
         let name: String
         switch cue {
         case .countdown: name = "countdown"
-        case .holdCompleted: name = "target-reached"
+        case .holdPopped: name = "hold-pop"
         case .setCompleted: name = "set-complete"
         case .demoChanged: name = DemoChangeSound.resourceName
         }

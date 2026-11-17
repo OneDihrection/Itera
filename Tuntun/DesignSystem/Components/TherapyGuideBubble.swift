@@ -15,12 +15,20 @@ struct TMTherapyGuideBubble: View {
     var showsTimer = false
     var diameter: CGFloat? = nil
     var outlineOnly = false
+    /// Colour of the fill tint and progress arc. Finger guidance uses `guidanceOrange`.
+    var tint: Color = TherapyPalette.guidanceBlue
+    /// False draws only the progress arc, for a caller that draws the circle itself
+    /// (`TMTherapyMergingGuide`): no fill and a clear track.
+    var drawsBackground = true
+    /// Plays `TMTherapyPopBurst` once each time a completed hold becomes visible.
+    var popsOnCompletion = false
     @Environment(\.scenePhase) private var scenePhase
+    @State private var bursts = 0
 
     var body: some View {
         ZStack {
-            if !outlineOnly {
-                Circle().fill(active ? TherapyPalette.guidanceBlue.opacity(0.15) : TherapyPalette.surface.opacity(0.9))
+            if !outlineOnly && drawsBackground {
+                Circle().fill(active ? tint.opacity(0.15) : TherapyPalette.surface.opacity(0.9))
             }
             if active || outlineOnly {
                 TMTherapyProgressRing(
@@ -28,9 +36,19 @@ struct TMTherapyGuideBubble: View {
                     lineWidth: ringWidth,
                     animatesProgress: progress < 1,
                     animationDuration: 0.2,
-                    tint: TherapyPalette.guidanceBlue,
-                    track: .white.opacity(0.85)
+                    tint: tint,
+                    track: drawsBackground ? .white.opacity(0.85) : .clear
                 )
+            }
+            if popsOnCompletion {
+                TMTherapyPopBurst(trigger: bursts, diameter: diameter ?? (active ? 108 : 72), tint: tint)
+            }
+        }
+        .onChange(of: visibleCompletionID) { _, id in
+            // The same visible-completion signal acknowledges the hold, so the pop and the
+            // exercise's progression always agree.
+            if popsOnCompletion, id != nil {
+                bursts += 1
             }
         }
         .frame(width: diameter ?? (active ? 108 : 72), height: diameter ?? (active ? 108 : 72))

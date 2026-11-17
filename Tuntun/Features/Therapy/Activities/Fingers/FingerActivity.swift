@@ -102,6 +102,10 @@ struct FingerActivity {
     /// changes are detector noise or a half movement, so their hold timer never runs.
     private static let minimumTargetChange = 0.15
     /// Thumb-to-fingertip distance, as a fraction of palm length, that counts as touching.
+    /// In thumb opposition an open-hand hold ("Posisi awal", "Buka kembali tangannya") runs
+    /// only while the thumb tip is at least this many palm lengths from the fingertip, well
+    /// beyond `contactExit`, so a pinched hand cannot be captured as the open start.
+    private static let openMinimum = 0.60
     /// A hold starts only at `contactEntry` and survives up to `contactExit`.
     private static let contactEntry = 0.35
     private static let contactExit = 0.45
@@ -477,6 +481,11 @@ struct FingerActivity {
             leaveZone(at: time)
             return
         }
+
+        if phase == .baseline, !opensHand(value) {
+            leaveZone(at: time)
+            return
+        }
         guard stable(value, time: time, tolerance: 0.10, duration: holdDuration) else {
             return
         }
@@ -497,6 +506,17 @@ struct FingerActivity {
         }
 
         return -value <= (holding ? Self.contactExit : Self.contactEntry)
+    }
+
+    /// Opposition's start pose is an open hand, so the thumb must be clearly away from the
+    /// fingertip. Other exercises capture whatever start the patient shows.
+    /// The opposition metric is the negative thumb-to-fingertip distance over palm length.
+    private func opensHand(_ value: Double) -> Bool {
+        guard kind == .opposition else {
+            return true
+        }
+
+        return -value >= Self.openMinimum
     }
 
     mutating func holdCompletionPresented(_ id: UUID) {

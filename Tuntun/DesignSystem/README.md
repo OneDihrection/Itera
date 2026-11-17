@@ -44,6 +44,12 @@ TMTherapyIconButton in Components/TherapyControls.swift provides a large icon ac
 
 `TMTherapyGuideBubble` accepts a completion identity and presentation callback. It reports a completed, visible cue after a cancellable 250 ms settle period, only while active in the foreground. This is presentation acknowledgment, not exercise-time credit. The activity retains its full/zero snapshot until the session receives that matching acknowledgment. Final progress renders without animation lag; partial ring updates interpolate independently of the acceptance clock.
 
+`TMTherapyGuideBubble` accepts a `tint` (default `guidanceBlue`; finger guidance passes `guidanceOrange`) and `drawsBackground: false`, which draws only the progress arc for a caller that draws the circle itself.
+
+`TMTherapyPopBurst` (Components/TherapyPopBurst.swift) plays a half-second "bubble pops" burst each time its integer `trigger` changes: a ring in the tint swells slightly and fades while eight droplets fly past it and shrink. Reduce Motion keeps only a brief fading ring. `TMTherapyGuideBubble(popsOnCompletion: true)` and `TMTherapyMergingGuide(popsOnCompletion: true)` fire it when a completed hold becomes visible, the same signal that acknowledges the hold.
+
+`TMTherapyMergingGuide` (Components/TherapyMergingGuide.swift, shader `mergingGuide` in Components/MergingGuide.metal) draws two guide circles that flow into one as a supplied `merge` value goes from 0 to 1: a smooth-union shape forms a rounded bridge, the centres slide to their midpoint, and a single circle about 12% larger remains, so only one indicator shows. A white outline over an outer dark underlay keeps contrast on video, and the soft fill and the progress arc use the tint (orange by default). The arc is a `TMTherapyGuideBubble` laid on the shader outline, so completion acknowledgment is unchanged. The caller computes `merge` from its own geometry; changes ease with a 0.35 s spring, applied at once under Reduce Motion. It owns no tracking or timing.
+
 `TMTherapyMetric` supports compact label spacing for horizontal session headers, retaining its large numeric value and combined accessibility label.
 
 
