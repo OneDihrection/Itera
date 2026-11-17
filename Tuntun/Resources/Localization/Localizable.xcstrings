@@ -3971,6 +3971,23 @@
         }
       }
     },
+    "debug.startExercise" : {
+      "comment" : "Debug builds only: skips the plan intro narration and opens the exercise at once.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Start without narration"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mulai tanpa narasi"
+          }
+        }
+      }
+    },
     "demo.extensionSequence" : {
       "extractionState" : "stale",
       "localizations" : {

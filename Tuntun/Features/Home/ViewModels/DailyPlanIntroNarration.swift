@@ -16,6 +16,8 @@ import Observation
 final class DailyPlanIntroNarration {
     private(set) var running = false
     private(set) var paused = false
+    /// Every line was read. A later Start then opens the session instead of replaying the intro.
+    private(set) var finished = false
     @ObservationIgnored private var subscription: AnyCancellable?
     @ObservationIgnored private var audioService: SessionAudioService?
     @ObservationIgnored private var requestID: UUID?
@@ -68,6 +70,7 @@ final class DailyPlanIntroNarration {
         self.completion = completion
         running = true
         paused = false
+        finished = false
         lineIndex = 0
         audioService.prepareRestNarration()
         subscription = audioService.events.sink { [weak self] event in
@@ -127,6 +130,7 @@ final class DailyPlanIntroNarration {
         }
         guard lineKeys.indices.contains(lineIndex) else {
             running = false
+            finished = true
             requestID = nil
             subscription = nil
             let completion = completion

@@ -143,7 +143,7 @@ intro → readiness → calibration (camera visible, instruction cards over it) 
       → practice → set done / rest → next set or side → summary → (plan) long rest → next intro
 ```
 
-- **Readiness.** Beranda's Mulai Latihan or a card opens the item's intro. The intro may narrate before readiness; Start (or the automatic start after a scripted intro or a long rest) validates permissions and listening through `TherapyReadinessViewModel` before any capture. Session entry validates readiness again. Home never listens while idle.
+- **Readiness.** Beranda's Mulai Latihan or a card opens the item's intro, which narrates first: the scripted brief for Indonesian arm raise and thumb opposition, otherwise the exercise's purpose (`plan.purpose.<item>`). Start stays disabled while it plays and the session opens automatically when it ends; a later Start no longer replays it. The after-rest intro of an unscripted exercise shows its countdown instead of narrating. Start (or that automatic start, or the one after a long rest) validates permissions and listening through `TherapyReadinessViewModel` before any capture (log: *Narrated plan intros*). Session entry validates readiness again. Home never listens while idle.
 - **One preview.** One camera preview stays mounted through every stage of an activity; the layout depends on activity kind, never stage. Capture stops at summary or exit.
 - **Guidance gates.** Opening and demonstration cards advance only after identified narration completes or fails and measured reading completes (VoiceOver needs explicit acknowledgment). Replayed or interrupted guidance gets a new identity; stale callbacks never advance. Arm raise, elbow bend and reach use a five-second preparation before calibration; countdowns are three seconds and start after their cue is spoken. Fold towel has no calibration or preparation.
 - **Suspension.** Pause and Stop are available by touch at every stage; "stop" by voice pauses. Resume is explicit. A normal pause keeps calibration and completed work and clears pending holds and incomplete cycles. Backgrounding pauses, stops capture and listening and cancels narration; foregrounding never resumes automatically. Audio interruptions and lost command recognition pause and block resume until listening is validated.
@@ -194,7 +194,7 @@ Older and superseded values (3 s captures, 75%/85%/90% targets, 68–120 pt clam
 
 ## 9. Debug-only tools
 
-Compiled only under `#if DEBUG`: "Finish exercise" (records remaining sets as completed, deliberately inventing credit), the Beranda plan editor (`DebugPlanLayout`), `-TuntunScreen` galleries and audio comparison flags. Release builds contain none of them.
+Compiled only under `#if DEBUG`: "Finish exercise" (records remaining sets as completed, deliberately inventing credit), "Start without narration" on the plan intro, the Beranda plan editor (`DebugPlanLayout`), `-TuntunScreen` galleries and audio comparison flags. Release builds contain none of them.
 
 ## 10. Decisions
 

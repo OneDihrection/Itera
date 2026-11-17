@@ -1314,3 +1314,14 @@ At the product owner's request, body demonstrations now mirror the patient. Ever
 - Reach's held pose (`demoReachPose`) is anatomical (outward, across, up) and unaffected.
 
 Verification: XcodeGen and Debug Simulator build with IPHONEOS_DEPLOYMENT_TARGET=17.0. Pending on the M1 iPad: for each body exercise and both sides, the demonstrated arm moves on the same side of the screen as the patient's arm in the preview; Balancing with both arms flips at the switch; reach's held pose matches the cue direction.
+
+## Narrated plan intros (2026-11-17)
+
+At the product owner's request, every daily-plan intro opened from Beranda now narrates before the session, not only the Indonesian arm-raise and thumb-opposition scripts. Unscripted exercises read their purpose line (`plan.purpose.<item>`, the focus text on the page) through `SessionAudioService.speak(id:key:)`. Mulai Latihan stays disabled while the intro plays (it reads "Lanjutkan" while paused) and the session opens automatically when it ends, as scripted intros already did.
+
+- `DailyPlanIntroNarration.finished` records a complete reading, so Start after a failed readiness check (for example a missing permission) opens the session instead of replaying the intro. This also applies to the scripted intros.
+- The after-rest intro of an unscripted exercise keeps its ten-second countdown and does not narrate, so speech never races it.
+- Debug builds add "Start without narration" (`debug.startExercise`) at the intro's top trailing corner. It stops the narration and starts at once, still validating readiness.
+- No Marizka recordings exist yet for `plan.purpose.*`, so those lines use the system voice until they are rendered with `Tools/generate_narration.py` (with `--language en` for English).
+
+Verification: XcodeGen and Debug and Release Simulator builds with IPHONEOS_DEPLOYMENT_TARGET=17.0. Pending on the M1 iPad: each unscripted intro speaks its purpose in both languages with Start disabled, then opens the session; scripted intros unchanged; Back and backgrounding during the intro stop or pause speech; Stop/Go during the intro; the debug button skips the narration.

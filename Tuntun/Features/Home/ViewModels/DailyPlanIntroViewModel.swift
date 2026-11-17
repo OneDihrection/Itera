@@ -36,10 +36,16 @@ protocol DailyPlanIntroViewModelProtocol: AnyObject, Observable {
     func pauseNarration()
     func start()
     func back()
+
+    #if DEBUG
+    /// Skips the intro narration and opens the session at once.
+    func startWithoutNarration()
+    #endif
 }
 
 /// The page before each daily-plan exercise. Start validates readiness once, as an explicit
-/// start requires, then opens the session; scripted items read their introduction first.
+/// start requires, then opens the session. Every intro opened from Beranda reads its
+/// introduction first (the scripted brief, or the exercise's purpose) and then starts on its own.
 @MainActor
 @Observable
 final class DailyPlanIntroViewModel: DailyPlanIntroViewModelProtocol {
@@ -96,7 +102,7 @@ final class DailyPlanIntroViewModel: DailyPlanIntroViewModelProtocol {
         narration.paused ? "session.resume" : "exercise.start"
     }
 
-    /// Mulai Latihan waits until the scripted intro has been read in full, so the patient hears
+    /// Mulai Latihan waits until the intro has been read in full, so the patient hears
     /// every instruction before the session opens. While the intro is paused the same button
     /// reads "Lanjutkan" and stays enabled to resume it.
     var startDisabled: Bool {
@@ -144,7 +150,7 @@ final class DailyPlanIntroViewModel: DailyPlanIntroViewModelProtocol {
     func appear() {
         readiness.refresh()
 
-        if usesScript {
+        if narrates {
             start()
         }
     }
@@ -169,14 +175,14 @@ final class DailyPlanIntroViewModel: DailyPlanIntroViewModelProtocol {
 
         starting = true
         Task {
-            if usesScript {
+            if narrates, !narration.finished {
                 await narration.start(
                     readiness: readiness,
                     plan: plan,
                     audioService: audioService,
                     itemID: itemID,
                     automatic: automatic,
-                    lines: scriptIntroduction
+                    lines: introductionLines
                 )
             } else {
                 await plan.startCurrent(readiness: readiness)
@@ -185,6 +191,27 @@ final class DailyPlanIntroViewModel: DailyPlanIntroViewModelProtocol {
             starting = false
         }
     }
+
+    #if DEBUG
+    func startWithoutNarration() {
+        narration.stop()
+
+        guard !starting else {
+            return
+        }
+
+        starting = true
+        Task {
+            if automatic {
+                plan.launchAfterRest()
+            } else {
+                await plan.startCurrent(readiness: readiness)
+            }
+
+            starting = false
+        }
+    }
+    #endif
 
     func back() {
         narration.stop()
@@ -197,6 +224,20 @@ final class DailyPlanIntroViewModel: DailyPlanIntroViewModelProtocol {
     }
 
     // MARK: - Helpers
+
+    /// The after-rest intro of an unscripted exercise shows the plan's countdown instead, so
+    /// speech never races it.
+    private var narrates: Bool {
+        usesScript || presetCountdown == nil
+    }
+
+    private var introductionLines: [String] {
+        guard usesScript else {
+            return ["plan.purpose." + itemID]
+        }
+
+        return scriptIntroduction
+    }
 
     private var usesArmRaiseScript: Bool {
         plan.usesArmRaiseScript(itemID: itemID)

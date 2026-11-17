@@ -20,6 +20,9 @@ struct TMDailyPlanIntroView<ViewModel: DailyPlanIntroViewModelProtocol>: View {
     var body: some View {
         if let row = viewModel.row {
             intro(row)
+                .overlay(alignment: .topTrailing) {
+                    debugStartButton
+                }
                 .navigationBarBackButtonHidden(true)
                 .toolbar(.hidden, for: .navigationBar)
                 .toolbar(.hidden, for: .tabBar)
@@ -61,6 +64,20 @@ struct TMDailyPlanIntroView<ViewModel: DailyPlanIntroViewModelProtocol>: View {
     }
 
     // MARK: - Content
+
+    /// Debug builds only: skips the intro narration and opens the session at once.
+    @ViewBuilder
+    private var debugStartButton: some View {
+        #if DEBUG
+        if viewModel.countdownSeconds == nil {
+            TMDebugActionButton(title: "debug.startExercise", symbol: "forward.end.fill") {
+                viewModel.startWithoutNarration()
+            }
+            .padding(.top, 24)
+            .padding(.trailing, 48)
+        }
+        #endif
+    }
 
     /// Each exercise's own instruction video or animation.
     @ViewBuilder
@@ -153,6 +170,7 @@ private final class MockDailyPlanIntroViewModel: DailyPlanIntroViewModelProtocol
     func pauseNarration() {}
     func start() {}
     func back() {}
+    func startWithoutNarration() {}
 }
 
 /// The page renders only with a plan row, so this preview checks that the screen builds
