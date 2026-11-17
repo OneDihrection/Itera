@@ -17,7 +17,7 @@ Tuntun membantu pasien dan pendamping menjalani latihan gerak dengan kamera iPad
 ### Data yang digunakan dan disimpan
 
 - **Kamera:** Tuntun memproses gambar untuk mengikuti gerakan dan menghitung pengulangan. Tayangan kamera langsung tidak diunggah ke layanan milik pengelola. Jika mode Video dipilih, aplikasi menyimpan cuplikan singkat dari pengulangan tertentu di perangkat.
-- **Mikrofon dan pengenalan ucapan:** Jika kontrol suara diaktifkan, Tuntun memproses perintah melalui pengenalan ucapan pada perangkat. Aplikasi tidak menyimpan rekaman suara atau transkrip dan tidak mengirimkannya ke layanan milik pengelola.
+- **Mikrofon dan pengenalan ucapan:** Untuk memulai latihan, Tuntun memerlukan izin mikrofon dan pengenalan ucapan, serta ketersediaan pengenalan perintah pada perangkat. Aplikasi memproses perintah suara pada perangkat, tidak menyimpan rekaman suara atau transkrip, dan tidak mengirimkannya ke layanan milik pengelola.
 - **Rencana dan hasil latihan:** Aplikasi menyimpan pengaturan latihan, tanggal sesi, jumlah pengulangan atau waktu latihan yang teramati, jawaban tentang rasa latihan, laporan, dan riwayat kegiatan di perangkat. Nama pasien bersifat opsional dan disimpan di perangkat untuk sapaan.
 - **Tayangan ulang:** Mode awal adalah Video dengan upaya menyamarkan wajah dan latar. Pendamping dapat memilih Kerangka saja, Tanpa rekaman, penyamaran wajah atau latar saja, maupun video Tanpa samaran. Cuplikan video dapat memperlihatkan pasien, orang lain, pakaian, atau ruangan. Penyamaran otomatis tidak menjamin identitas tersembunyi; pada latihan tangan, wajah yang tidak terdeteksi dapat tetap terlihat. Mintalah persetujuan pasien dan perhatikan orang lain yang masuk ke area kamera sebelum memilih perekaman.
 
@@ -33,7 +33,7 @@ Data yang disimpan di iPad dapat termasuk dalam cadangan sistem perangkat, sesua
 
 ### Izin dan pilihan Anda
 
-Anda dapat mengubah izin kamera, mikrofon, dan pengenalan ucapan melalui Pengaturan iPad. Tanpa izin kamera, fitur yang mengikuti gerakan tidak dapat digunakan. Kontrol suara bersifat opsional. Pilihan perekaman dan penyamaran tersedia di pengaturan Tuntun dan berlaku untuk sesi berikutnya.
+Anda dapat mengubah izin kamera, mikrofon, dan pengenalan ucapan melalui Pengaturan iPad. Ketiganya diperlukan untuk memulai latihan. Pilihan perekaman dan penyamaran tersedia di pengaturan Tuntun dan berlaku untuk sesi berikutnya.
 
 ### Perubahan dan pertanyaan
 
@@ -52,7 +52,7 @@ Tuntun helps patients and caregivers follow movement practice using the iPad cam
 ### Information used and stored
 
 - **Camera:** Tuntun processes camera images to follow movement and count repetitions. The live camera feed is not uploaded to an operator-run service. If Video recording is selected, the app saves short clips of selected repetitions on the device.
-- **Microphone and speech recognition:** If voice controls are enabled, Tuntun processes commands using on-device speech recognition. The app does not save audio recordings or transcripts or send them to an operator-run service.
+- **Microphone and speech recognition:** Starting therapy requires microphone and speech-recognition permission and available on-device command recognition. The app processes voice commands on-device and does not save audio recordings or transcripts or send them to an operator-run service.
 - **Plans and practice results:** The app stores practice settings, session dates, observed repetitions or practice time, responses about how practice felt, reports, and activity history on the device. An optional patient name is stored on the device for greetings.
 - **Replays:** The default is Video with automated face and background obscuring. A caregiver can choose Skeleton only, Off, face or background obscuring alone, or unblurred video. Clips may show the patient, other people, clothing, or the room. Automated obscuring cannot guarantee anonymity; in hand exercises, a face that is not detected may remain visible. Obtain the patient's consent and consider anyone else in camera view before recording.
 
@@ -68,7 +68,7 @@ Information stored on the iPad may be included in normal device backups, dependi
 
 ### Permissions and choices
 
-You can change camera, microphone, and speech-recognition permissions in iPad Settings. Camera-based movement tracking is unavailable without camera access. Voice controls are optional. Recording and obscuring choices are available in Tuntun Settings and apply to later sessions.
+You can change camera, microphone, and speech-recognition permissions in iPad Settings. All three permissions are required to start therapy. Recording and obscuring choices are available in Tuntun Settings and apply to later sessions.
 
 ### Changes and questions
 
