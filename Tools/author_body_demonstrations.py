@@ -403,6 +403,27 @@ CAMERAS = {
 }
 
 
+# Seated exercises are framed from just below the hips to above the highest reach, so a
+# standing figure no longer suggests standing practice. Sit-to-stand keeps the full body.
+TORSO_CLIPS = {
+    "arm_raise_demonstration",
+    "elbow_bend_demonstration",
+    "directional_reach_demonstration",
+    "cross_midline_right_demonstration",
+    "shoulder_external_rotation_right_demonstration",
+    "shoulder_internal_rotation_right_demonstration",
+    "shoulder_flexion_right_demonstration",
+}
+
+# Camera-space units. The pelvis sits near y = 0.06 and the head top near 0.80; overhead reach
+# (directional reach, shoulder flexion) rises to about 1.22. Each clip is framed to its own
+# motion: the bottom edge stays at the waist, the top clears the highest point with headroom,
+# and the sides keep a margin, so the moving arm never touches the edge.
+TORSO_BOTTOM = 0.08
+TORSO_HEADROOM = 0.10
+TORSO_SIDE_MARGIN = 0.10
+
+
 def frame_camera(kind):
     """Square orthographic framing shared by every clip, with room for overhead reach."""
     camera = bpy.data.objects["Exercise camera"]
@@ -419,11 +440,58 @@ def frame_camera(kind):
     camera.data.shift_y = 0.07
 
 
+def motion_extent(camera, start, end, step=3, stride=7):
+    """The figure's left, right and top edges in camera space across the clip's motion."""
+    meshes = [obj for obj in bpy.data.objects if obj.type == "MESH" and obj.visible_get()]
+    to_camera = camera.matrix_world.inverted()
+    scene = bpy.context.scene
+    low, high, top = math.inf, -math.inf, -math.inf
+
+    for frame in range(int(start), int(end) + 1, step):
+        scene.frame_set(frame)
+        depsgraph = bpy.context.evaluated_depsgraph_get()
+
+        for obj in meshes:
+            evaluated = obj.evaluated_get(depsgraph)
+            mesh = evaluated.to_mesh()
+            matrix = to_camera @ evaluated.matrix_world
+
+            for index in range(0, len(mesh.vertices), stride):
+                point = matrix @ mesh.vertices[index].co
+                low = min(low, point.x)
+                high = max(high, point.x)
+                top = max(top, point.y)
+
+            evaluated.to_mesh_clear()
+
+    return low, high, top
+
+
+def frame_torso(start, end):
+    """Zooms the current camera from the waist to just above the clip's highest point.
+
+    The square frame takes whichever is larger, the height or the margined width, and keeps
+    the bottom edge at the waist; any spare height goes above the head.
+    """
+    camera = bpy.data.objects["Exercise camera"]
+    low, high, top = motion_extent(camera, start, end)
+
+    height = top + TORSO_HEADROOM - TORSO_BOTTOM
+    width = (high - low) + 2 * TORSO_SIDE_MARGIN
+    scale = max(height, width)
+
+    camera.data.ortho_scale = scale
+    camera.data.shift_x = ((low + high) / 2) / scale
+    camera.data.shift_y = (TORSO_BOTTOM + scale / 2) / scale
+
+
 def render_frames(clip_name, directory):
     """Authors the clip, then renders transparent 768 x 768 PNG frames at 24 FPS."""
     config = CLIPS[clip_name]
     action = author(clip_name)
     frame_camera(config.get("camera", "front"))
+    if clip_name in TORSO_CLIPS:
+        frame_torso(*action.frame_range)
 
     scene = bpy.context.scene
     render = scene.render
@@ -439,3 +507,49 @@ def render_frames(clip_name, directory):
     render.filepath = f"{directory}/frame_"
     bpy.ops.render.render(animation=True)
     return action.frame_range[0], action.frame_range[1]
+
+
+def export_clip(clip_name, ffmpeg="ffmpeg"):
+    """Renders one clip and encodes it into the app's animation folder.
+
+    Encoding follows Documentation/AnimationRenderingStandard.md: the transparent frames are
+    composited over the app's #F5F5F5 surface as a silent 24 FPS H.264 yuv420p MP4.
+    """
+    import pathlib
+    import subprocess
+    import tempfile
+
+    output = pathlib.Path(__file__).resolve().parents[1] / "Tuntun/Resources/Animations" / f"{clip_name}.mp4"
+
+    with tempfile.TemporaryDirectory(prefix=f"tuntun-{clip_name}-") as directory:
+        start, end = render_frames(clip_name, directory)
+        subprocess.run(
+            [
+                ffmpeg, "-hide_banner", "-loglevel", "error", "-y",
+                "-framerate", str(FPS), "-start_number", str(int(start)),
+                "-i", f"{directory}/frame_%04d.png",
+                "-f", "lavfi", "-i", f"color=c=0xF5F5F5:s=768x768:r={FPS}",
+                "-filter_complex", "[1:v][0:v]overlay=shortest=1:format=auto,format=yuv420p[v]",
+                "-map", "[v]", "-frames:v", str(int(end - start) + 1),
+                "-c:v", "libx264", "-crf", "18", "-movflags", "+faststart",
+                str(output),
+            ],
+            check=True,
+        )
+
+    return output
+
+
+if __name__ == "__main__" and bpy.app.background:
+    # blender -b ArtSource/BodyDemonstrationsReview/BodyDemonstrations_ConnectedMotion.blend \
+    #   -P Tools/author_body_demonstrations.py -- --ffmpeg /opt/homebrew/bin/ffmpeg [clip ...]
+    import argparse
+    import sys
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument("clips", nargs="*")
+    parser.add_argument("--ffmpeg", default="ffmpeg")
+    arguments = parser.parse_args(sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else [])
+
+    for name in arguments.clips or sorted(TORSO_CLIPS):
+        print("Exported", export_clip(name, arguments.ffmpeg))
