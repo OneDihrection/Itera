@@ -1280,7 +1280,7 @@ final class FingerSessionViewModel: FingerSessionViewModelProtocol {
         let repository = repository
         let clips = cameraService.clips
 
-        Task {
+        Task(priority: .utility) {
             do {
                 try await repository.saveKeyReps(keyReps, sessionID: sessionID)
             } catch {

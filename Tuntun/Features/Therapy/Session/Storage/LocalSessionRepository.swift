@@ -154,7 +154,10 @@ actor LocalSessionRepository: SessionRepository {
 
     /// Clips live in a per-session folder, one file per repetition, named
     /// `<execution id>-r<repetition>.mp4`. Each is written whole and moved into place.
-    func saveRepClips(_ clips: [Int: [RepClipFrame]], for keyReps: ActivityKeyReps, sessionID: UUID) async throws {
+    ///
+    /// Nonisolated so encoding, which takes seconds, never holds the actor: checkpoints and the
+    /// final summary are not queued behind it. It touches only its own new files.
+    nonisolated func saveRepClips(_ clips: [Int: [RepClipFrame]], for keyReps: ActivityKeyReps, sessionID: UUID) async throws {
         let folder = clipsDirectory(for: sessionID)
         try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
 
@@ -193,7 +196,7 @@ actor LocalSessionRepository: SessionRepository {
         return result
     }
 
-    private func clipsDirectory(for id: UUID) -> URL {
+    nonisolated private func clipsDirectory(for id: UUID) -> URL {
         directory.appendingPathComponent(id.uuidString + Self.clipsSuffix, isDirectory: true)
     }
 

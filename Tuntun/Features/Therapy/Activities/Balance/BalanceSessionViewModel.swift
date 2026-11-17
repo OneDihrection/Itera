@@ -996,26 +996,34 @@ final class BalanceSessionViewModel: BalanceSessionViewModelProtocol {
             try await repository.finalize(summary)
         case .keyReps(let sessionID, let keyReps):
             try await repository.saveKeyReps(keyReps, sessionID: sessionID)
-            await saveClips(for: keyReps, sessionID: sessionID)
+            saveClipsInBackground(for: keyReps, sessionID: sessionID)
         }
     }
 
     /// Clips, like replays, help review but are not history: a failure is only logged.
-    private func saveClips(for keyReps: ActivityKeyReps, sessionID: UUID) async {
+    ///
+    /// Encoding a long set takes seconds, so it runs beside the save queue instead of in it: the
+    /// summary is finalized without waiting for the clips.
+    private func saveClipsInBackground(for keyReps: ActivityKeyReps, sessionID: UUID) {
         guard let group = keyReps.clipGroup else {
             return
         }
 
-        let clips = await trackingService.clips.take(group: group)
+        let clipSource = trackingService.clips
+        let repository = repository
 
-        guard !clips.isEmpty else {
-            return
-        }
+        Task(priority: .utility) {
+            let clips = await clipSource.take(group: group)
 
-        do {
-            try await repository.saveRepClips(clips, for: keyReps, sessionID: sessionID)
-        } catch {
-            NSLog("Key repetition clip save failed: %@", String(describing: error))
+            guard !clips.isEmpty else {
+                return
+            }
+
+            do {
+                try await repository.saveRepClips(clips, for: keyReps, sessionID: sessionID)
+            } catch {
+                NSLog("Key repetition clip save failed: %@", String(describing: error))
+            }
         }
     }
 }

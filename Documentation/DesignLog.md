@@ -1263,3 +1263,15 @@ Run: `blender -b ArtSource/BodyDemonstrationsReview/BodyDemonstrations_Connected
 
 Verification: peak-pose previews of all seven clips checked for waist-up framing and unclipped reach; exported files checked for 768 × 768, 24 FPS and frame count; Debug Simulator build. Pending on the M1 iPad: the appearance in each demonstration container (aspect fill on non-square containers can trim the frame edges), left-arm reflection, and light/dark surfaces.
 
+
+## Clips never delay the final save (2026-11-17)
+
+At the product owner's request, the wait after an exercise was investigated. After the last repetition the summary showed "Menyimpan…" and the plan's 4 s `completionPreview` only started once saving ended. The cause was key-repetition clip encoding: `TherapySessionViewModel` and `BalanceSessionViewModel` saved in one serial queue in which the last set's `.saveKeyReps` awaited `RepClipWriter` (JPEG decode, Core Image render and HEVC encode of up to three clips of up to 60 s at 10 fps) before `.finalize` ran. In finger sessions the clip task ran separately, but on the `LocalFingerSessionRepository` actor, so `finalize` queued behind it.
+
+- The session view models now save the skeleton file in the queue and encode clips in a separate `.utility` task (`saveClipsInBackground`) that is not part of `saving`. The finger clip task runs at `.utility` too.
+- `saveRepClips` in `LocalSessionRepository` and `LocalFingerSessionRepository` is `nonisolated`: it writes only its own new files, so encoding no longer holds the actor and checkpoints and summaries are not queued behind it.
+- Clips may now appear in a replay a few seconds after the session ends. Deleting a session while its clips are still encoding makes the writer fail and log; no partial clip is left, since files are moved into place only when complete.
+
+The wait before an exercise was traced too, not yet changed: intro Start validates listening and then stops it with audio-session deactivation, the session repeats the voice startup, and camera capture starts only after it succeeds. Changing that awaits M1-iPad timings.
+
+Verification: XcodeGen and Debug Simulator build with IPHONEOS_DEPLOYMENT_TARGET=17.0. Pending on the M1 iPad: time from last repetition to the plan rest in a body, balance and finger session with video recording on; clips present in Progress replays afterwards; deleting a just-finished session.

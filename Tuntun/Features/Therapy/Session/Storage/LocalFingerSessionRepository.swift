@@ -154,7 +154,10 @@ actor LocalFingerSessionRepository: FingerSessionRepository {
 
     /// One file per repetition, named `<exercise>-s<set>-r<repetition>.mp4`, each written whole
     /// and moved into place.
-    func saveRepClips(_ clips: [Int: [RepClipFrame]], for keyReps: FingerKeyReps, sessionID: UUID) async throws {
+    ///
+    /// Nonisolated so encoding, which takes seconds, never holds the actor: checkpoints and the
+    /// final summary are not queued behind it. It touches only its own new files.
+    nonisolated func saveRepClips(_ clips: [Int: [RepClipFrame]], for keyReps: FingerKeyReps, sessionID: UUID) async throws {
         let directory = clipsDirectory(for: sessionID)
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
 
@@ -198,7 +201,7 @@ actor LocalFingerSessionRepository: FingerSessionRepository {
         folder.appendingPathComponent(id.uuidString + Self.keyRepsSuffix)
     }
 
-    private func clipsDirectory(for id: UUID) -> URL {
+    nonisolated private func clipsDirectory(for id: UUID) -> URL {
         folder.appendingPathComponent(id.uuidString + Self.clipsSuffix, isDirectory: true)
     }
 
