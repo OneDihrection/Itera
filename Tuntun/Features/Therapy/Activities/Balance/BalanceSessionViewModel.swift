@@ -20,6 +20,8 @@ protocol BalanceSessionViewModelProtocol: AnyObject, Observable {
     var paused: Bool { get }
     var demoRevision: Int { get }
     var calibrationMessage: String? { get }
+    /// True once calibration finishes: practice shows the demonstration's target pose still.
+    var demoHoldsPeak: Bool { get }
     var countdownOverlaySeconds: Int? { get }
     var setNumber: Int { get }
     var totalSets: Int { get }
@@ -81,6 +83,10 @@ final class BalanceSessionViewModel: BalanceSessionViewModelProtocol {
     @ObservationIgnored private var openingSpeechID: UUID?
     @ObservationIgnored private var openingSpeechDeadline: Double?
     @ObservationIgnored private var countdownDeadline: Double?
+
+    var demoHoldsPeak: Bool {
+        calibrationFinished
+    }
 
     var calibrationMessage: String? {
         if let openingCue, openingCue != .countdown {

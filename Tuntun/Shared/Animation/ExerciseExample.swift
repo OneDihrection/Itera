@@ -11,13 +11,20 @@ struct TMExerciseExample: View {
     let asset: ExerciseAnimationAsset
     let mirrored: Bool
     let mode: TherapyAnimationPlayback
+    /// The reach clip's pose to hold (see `ExerciseAnimationAsset.peakSeconds(reachPose:)`).
+    var reachPose = 0
     @Environment(\.accessibilityReduceMotion) private var reducedMotion
     @State private var failed = false
 
     var body: some View {
         ZStack {
             if !failed {
-                TMExerciseVideoView(resource: asset.demonstrationResource, mode: mode, reducedMotion: reducedMotion) { event in
+                TMExerciseVideoView(
+                    resource: asset.demonstrationResource,
+                    mode: mode,
+                    peakSeconds: asset.peakSeconds(reachPose: reachPose),
+                    reducedMotion: reducedMotion
+                ) { event in
                     handle(event)
                 }
                 .scaleEffect(x: mirrored ? -1 : 1, y: 1)

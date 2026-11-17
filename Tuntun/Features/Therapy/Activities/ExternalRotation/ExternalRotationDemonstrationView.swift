@@ -15,6 +15,8 @@ struct TMBalanceExerciseDemonstrationView: View {
     var arm: CrossingArm?
     /// The patient's arm choice; with both arms chosen, the demonstration follows the active arm.
     var selection: BalanceArmSelection?
+    /// Holds the target pose instead of looping, as during practice.
+    var holdsPeak = false
 
     /// The bundled recording for this exercise; every arm clip shows the right arm.
     private var movieResource: String {
@@ -30,6 +32,26 @@ struct TMBalanceExerciseDemonstrationView: View {
         case .sitToStand:
             return "sit_to_stand_demonstration"
         }
+    }
+
+    /// Seconds into the recording where the target pose is held, at the middle of its keyframed
+    /// hold in `Tools/author_body_demonstrations.py` (24 FPS, frame 1 at zero). Sit to stand
+    /// holds the standing pose. Update these when a clip is re-exported with different timing.
+    private var peakSeconds: Double {
+        let frame: Double
+
+        switch exercise {
+        case .crossMidline:
+            frame = 61
+        case .externalRotation, .internalRotation:
+            frame = 79
+        case .shoulderFlexion:
+            frame = 67
+        case .sitToStand:
+            frame = 121
+        }
+
+        return (frame - 1) / 24
     }
 
     private var accessibilityKey: LocalizedStringKey {
@@ -56,6 +78,7 @@ struct TMBalanceExerciseDemonstrationView: View {
             resource: resource,
             paused: paused,
             mirrored: (arm ?? selection?.initialArm) == .left,
+            holdsPeakAt: holdsPeak ? peakSeconds : nil,
             accessibilityKey: accessibilityKey
         )
     }

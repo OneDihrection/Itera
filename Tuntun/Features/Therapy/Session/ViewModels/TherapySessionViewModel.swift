@@ -26,6 +26,7 @@ protocol TherapySessionViewModelProtocol: AnyObject, Observable {
     var listening: Bool { get }
     var demoRevision: Int { get }
     var demoPlayback: TherapyAnimationPlayback { get }
+    var demoReachPose: Int { get }
     var demoTitleKey: String { get }
     var elapsedSeconds: Int { get }
     var entryFailure: Bool { get }
@@ -619,41 +620,64 @@ private actor PresentationFixtureRepository: SessionRepository {
 // MARK: - Demonstration step
 
 extension TherapySessionViewModel {
-    /// What the arm raise and elbow bend example shows: it loops on the demonstration card and
-    /// in practice, and holds the start or peak pose while that pose is being calibrated.
+    /// What the arm raise, elbow bend and reach example shows: it loops on the demonstration
+    /// card, holds the start or peak pose while that pose is being calibrated, and holds the peak
+    /// during practice so a looping clip does not distract from the exercise.
     var demoPlayback: TherapyAnimationPlayback {
         if snapshot.stage == .demonstration {
             return .looping
         }
 
-        guard case .movement(let movement) = snapshot.presentation else {
-            return .looping
-        }
-
-        switch movement.pose {
+        switch movementPose {
         case .start:
             return .staticStart
-        case .peak:
+        case .peak, .looping, nil:
             return .staticPeak
-        case .looping:
-            return .looping
         }
+    }
+
+    /// The reach clip's pose to hold: 0 outward, 1 across the body, 2 up.
+    ///
+    /// The clip shows the right arm and is mirrored for the left, so the screen's right is
+    /// outward for the right arm and across the body for the left.
+    var demoReachPose: Int {
+        guard case .reach(let reach) = snapshot.presentation else {
+            return 0
+        }
+
+        guard reach.direction < 2 else {
+            return 2
+        }
+
+        let towardRight = reach.direction == 0
+        let rightArm = snapshot.activity?.side != .left
+
+        return towardRight == rightArm ? 0 : 1
     }
 
     /// The demonstration column's title, naming the pose the example is holding.
     var demoTitleKey: String {
-        guard showsMovementExample else {
+        guard showsMovementExample, snapshot.stage != .demonstration else {
             return "session.followMovement"
         }
 
-        switch demoPlayback {
-        case .staticStart:
+        switch movementPose {
+        case .start:
             return "demo.step.start"
-        case .staticPeak:
+        case .peak:
             return "demo.step.peak"
-        case .looping:
+        case .looping, nil:
             return "session.followMovement"
         }
+    }
+
+    /// The movement activity's calibration step; `.looping` once practice begins.
+    private var movementPose: ExamplePose? {
+        guard case .movement(let movement) = snapshot.presentation else {
+            return nil
+        }
+
+        return movement.pose
     }
 
     /// Only arm raise and elbow bend change their example by step; reach and towel keep one.
@@ -669,9 +693,9 @@ extension TherapySessionViewModel {
     /// Highlights and chimes when the live screen shows an example step it has not shown yet.
     ///
     /// Every held start or peak pose pulses as soon as it is visible, even if it first appeared
-    /// behind a stage page, since that is when the patient must make a new movement. A looping
+    /// behind a stage page, since that is when the patient must make a new movement. The practice
     /// step pulses only as a change within the same activity and set (the return to start after
-    /// the peak); the first looping step of an activity or set is accepted silently. Nothing is
+    /// the peak); the first practice step of an activity or set is accepted silently. Nothing is
     /// shown while paused, waiting for the camera or behind a stage page, so a step reached then
     /// pulses once the live screen returns.
     fileprivate func updateDemoStep() {
@@ -691,7 +715,7 @@ extension TherapySessionViewModel {
         let step = DemoStep(
             activityID: activity.id,
             setNumber: snapshot.setNumber,
-            playback: demoPlayback
+            pose: movementPose
         )
 
         guard step != announcedDemoStep else {
@@ -704,7 +728,7 @@ extension TherapySessionViewModel {
         let sameRun = previous?.activityID == step.activityID
             && previous?.setNumber == step.setNumber
 
-        guard step.playback != .looping || sameRun else {
+        guard step.pose != .looping || sameRun else {
             return
         }
 
@@ -717,5 +741,5 @@ extension TherapySessionViewModel {
 fileprivate struct DemoStep: Equatable {
     let activityID: UUID
     let setNumber: Int
-    let playback: TherapyAnimationPlayback
+    let pose: ExamplePose?
 }

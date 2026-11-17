@@ -11,6 +11,8 @@ import SwiftUI
 struct TMExerciseVideoView: UIViewRepresentable {
     let resource: String
     let mode: TherapyAnimationPlayback
+    /// Where `staticPeak` (and Reduce Motion while looping) holds the clip.
+    let peakSeconds: Double
     let reducedMotion: Bool
     let onEvent: (ExerciseVideoEvent) -> Void
 
@@ -18,12 +20,26 @@ struct TMExerciseVideoView: UIViewRepresentable {
 
     func makeUIView(context: Context) -> TMPlayerView {
         let view = TMPlayerView()
-        context.coordinator.configure(view: view, resource: resource, mode: mode, reducedMotion: reducedMotion, onEvent: onEvent)
+        context.coordinator.configure(
+            view: view,
+            resource: resource,
+            mode: mode,
+            peakSeconds: peakSeconds,
+            reducedMotion: reducedMotion,
+            onEvent: onEvent
+        )
         return view
     }
 
     func updateUIView(_ view: TMPlayerView, context: Context) {
-        context.coordinator.configure(view: view, resource: resource, mode: mode, reducedMotion: reducedMotion, onEvent: onEvent)
+        context.coordinator.configure(
+            view: view,
+            resource: resource,
+            mode: mode,
+            peakSeconds: peakSeconds,
+            reducedMotion: reducedMotion,
+            onEvent: onEvent
+        )
     }
 
     static func dismantleUIView(_ view: TMPlayerView, coordinator: Coordinator) {
@@ -39,6 +55,7 @@ struct TMExerciseVideoView: UIViewRepresentable {
         private var player: AVQueuePlayer?
         private var looper: AVPlayerLooper?
         private var currentMode: TherapyAnimationPlayback?
+        private var currentPeakSeconds: Double?
         private var currentReducedMotion: Bool?
         private var currentResource: String?
 
@@ -46,6 +63,7 @@ struct TMExerciseVideoView: UIViewRepresentable {
             view: TMPlayerView,
             resource: String,
             mode: TherapyAnimationPlayback,
+            peakSeconds: Double,
             reducedMotion: Bool,
             onEvent: @escaping (ExerciseVideoEvent) -> Void
         ) {
@@ -65,16 +83,23 @@ struct TMExerciseVideoView: UIViewRepresentable {
                 onEvent(.ready)
             }
 
-            guard currentMode != mode || currentReducedMotion != reducedMotion else { return }
+            guard currentMode != mode
+                || currentPeakSeconds != peakSeconds
+                || currentReducedMotion != reducedMotion
+            else {
+                return
+            }
+
             currentMode = mode
+            currentPeakSeconds = peakSeconds
             currentReducedMotion = reducedMotion
+
             if reducedMotion || mode != .looping {
                 player?.pause()
-                let duration = player?.currentItem?.duration ?? .zero
-                let time = mode == .staticStart ? CMTime.zero : CMTimeMultiplyByFloat64(duration, multiplier: 0.5)
-                if time.isValid && time.isNumeric {
-                    player?.seek(to: time, toleranceBefore: .zero, toleranceAfter: .zero)
-                }
+                let time = mode == .staticStart
+                    ? CMTime.zero
+                    : CMTime(seconds: peakSeconds, preferredTimescale: 600)
+                player?.seek(to: time, toleranceBefore: .zero, toleranceAfter: .zero)
             } else {
                 player?.play()
             }
@@ -88,6 +113,7 @@ struct TMExerciseVideoView: UIViewRepresentable {
             player = nil
             currentResource = nil
             currentMode = nil
+            currentPeakSeconds = nil
             currentReducedMotion = nil
         }
     }

@@ -651,7 +651,8 @@ struct TMTherapySessionView<ViewModel: TherapySessionViewModelProtocol>: View {
             TMExerciseExample(
                 asset: activity.kind == .armRaise ? .armRaise : activity.kind == .elbowBend ? .elbowBend : .directionalReach,
                 mirrored: activity.side == .left,
-                mode: model.demoPlayback
+                mode: model.demoPlayback,
+                reachPose: model.demoReachPose
             )
                 .id(activity.id)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)

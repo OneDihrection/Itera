@@ -1293,3 +1293,14 @@ At the product owner's request, Pause → End was traced in body, Balancing and 
 Deleting a session in the moment between its summary save and its skeleton save could leave an orphan `*.reps.json`; the window is the skeleton write itself.
 
 Verification: XcodeGen and Debug Simulator build with IPHONEOS_DEPLOYMENT_TARGET=17.0. Pending on the M1 iPad, with video recording on, for arm raise, a Balancing exercise and a finger exercise: time from End to an enabled summary button or the plan moving on; an Instruments Hangs pass on the main thread; replays and clips present in Progress; narration not muted in the next session; no orphan replay after deleting a just-stopped session.
+
+## Still demonstration during practice (2026-11-17)
+
+At the product owner's request, the rendered body demonstrations no longer loop during practice: a moving clip beside the camera distracted from the exercise. Once practice begins the live screen holds the clip's target pose; the intro and demonstration card still loop. Scope is the body MP4s (arm raise, elbow bend, directional reach, cross midline, external and internal rotation, shoulder flexion, sit to stand). Finger and forearm examples already play one half-cycle per repetition and stop; fold towel keeps its drawn loop.
+
+- Arm raise and elbow bend keep their held start and peak poses during calibration; `TherapySessionViewModel.demoPlayback` now returns `.staticPeak` in practice too. The step highlight, chime and column title follow the movement pose as before, so practice is still titled "Ikuti gerakan ini" and its first step is accepted silently.
+- Directional reach holds the pose of the current direction (`demoReachPose`: outward, across or up, accounting for the left-arm reflection) through the whole live screen.
+- Balancing holds the peak once calibration finishes (`BalanceSessionViewModel.demoHoldsPeak`); its calibration keeps the loop, which shows how far to move. `TMShoulderRotationMovieView` takes `holdsPeakAt`.
+- `staticPeak` previously sought to 50% of the clip, which is wrong for reach (three poses) and sit to stand (seated at 50%). Peak times are now the middle of each keyframed hold in `Tools/author_body_demonstrations.py`, `(frame − 1) / 24`: arm raise and elbow bend 55, reach 40 / 100 / 166, cross midline 61, rotations 79, shoulder flexion 67, sit to stand 121 (standing). They live in `ExerciseAnimationAsset.peakSeconds(reachPose:)` and `TMBalanceExerciseDemonstrationView.peakSeconds` and must change with a re-export.
+
+Verification: XcodeGen and Debug Simulator build with IPHONEOS_DEPLOYMENT_TARGET=17.0. Pending on the M1 iPad: each body exercise's practice shows the intended still pose (left arm mirrored), the intro still loops, reach changes pose with each direction, pause and resume keep the still, and calibration poses for arm raise and elbow bend are unchanged.

@@ -8,4 +8,6 @@ The body-exercise demonstrations are the connected-joint renders of the light-br
 
 Since 2026-11-17 the seven seated-exercise clips (arm raise, elbow bend, directional reach, cross midline, external and internal rotation, shoulder flexion) are framed from the waist up by `frame_torso` in the same tool, so the standing rig does not suggest standing practice; `sit_to_stand_demonstration.mp4` keeps the full body. Re-export with `export_clip` (see the tool's run comment).
 
+During practice the app holds each body clip on its target pose instead of looping. The held times are the middle of each keyframed hold in the authoring tool (`ExerciseAnimationAsset.peakSeconds(reachPose:)` and `TMBalanceExerciseDemonstrationView.peakSeconds`); a re-export that changes timing must update them.
+
 Physical-device verification of the new MP4s remains pending.
