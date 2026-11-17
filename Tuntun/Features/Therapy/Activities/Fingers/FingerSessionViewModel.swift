@@ -569,7 +569,8 @@ final class FingerSessionViewModel: FingerSessionViewModelProtocol {
                 let previousCompletion = activity.holdCompletionID
                 engine.observe(hand, now: now)
                 if previousCompletion == nil, activity.holdCompletionID != nil {
-                    guidanceAudioService.playCue(.holdCompleted)
+                    // The pop matches the circle's burst animation.
+                    guidanceAudioService.playCue(.holdPopped)
                 }
             }
             record(hand)

@@ -83,6 +83,8 @@ enum TherapyPalette {
     /// Fixed guidance colors for rings and landmarks over live video.
     static let guidanceBlue = Color(red: 0.16, green: 0.65, blue: 0.98)
     static let guidanceYellow = Color(red: 1.0, green: 0.72, blue: 0.0)
+    /// Finger-exercise rings and connectors: the plan's bright orange, readable on live video.
+    static let guidanceOrange = Color(red: 0.96, green: 0.44, blue: 0.09)
     /// Dark edge drawn under every guidance shape so it keeps contrast on light and dark video.
     static let calmUnderlay = Color.black.opacity(0.5)
     /// Challenge card fill and its bold green ink (custom pair, contrast above 7:1).
