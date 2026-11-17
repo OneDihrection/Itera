@@ -487,7 +487,7 @@ final class GuidanceAudioService: NSObject, AVSpeechSynthesizerDelegate {
         music.stop()
         buttonPlayer?.stop()
         audioSessionActive = false
-        NarrationAudioSession.deactivate()
+        NarrationAudioSession.deactivateInBackground()
     }
 
     nonisolated func speechSynthesizer(_ synthesizer: AVSpeechSynthesizer, didFinish utterance: AVSpeechUtterance) {

@@ -146,7 +146,6 @@ final class BalanceSessionViewModel: BalanceSessionViewModelProtocol {
     private enum PendingSave {
         case checkpoint(SessionCheckpoint)
         case finalize(SessionSummary)
-        case keyReps(sessionID: UUID, ActivityKeyReps)
     }
 
     init(
@@ -908,7 +907,7 @@ final class BalanceSessionViewModel: BalanceSessionViewModelProtocol {
         if replayRecording.savesSkeletons,
            let keyReps = recorder.keyReps(executionID: executionID, setNumber: setNumber)
         {
-            queue(.keyReps(sessionID: log.id, keyReps))
+            saveReplayInBackground(for: keyReps, sessionID: log.id)
         }
 
         queue(.checkpoint(log.checkpoint))
@@ -975,12 +974,8 @@ final class BalanceSessionViewModel: BalanceSessionViewModelProtocol {
                 do {
                     try await perform(save)
                 } catch {
-                    if case .keyReps = save {
-                        NSLog("Key repetition save failed: %@", error.localizedDescription)
-                    } else {
-                        historySaveFailed = true
-                        return
-                    }
+                    historySaveFailed = true
+                    return
                 }
 
                 pendingSaves.removeFirst()
@@ -994,25 +989,29 @@ final class BalanceSessionViewModel: BalanceSessionViewModelProtocol {
             try await repository.checkpoint(checkpoint)
         case .finalize(let summary):
             try await repository.finalize(summary)
-        case .keyReps(let sessionID, let keyReps):
-            try await repository.saveKeyReps(keyReps, sessionID: sessionID)
-            saveClipsInBackground(for: keyReps, sessionID: sessionID)
         }
     }
 
-    /// Clips, like replays, help review but are not history: a failure is only logged.
+    /// Replays help review but are not history: a failed save is only logged.
     ///
-    /// Encoding a long set takes seconds, so it runs beside the save queue instead of in it: the
-    /// summary is finalized without waiting for the clips.
-    private func saveClipsInBackground(for keyReps: ActivityKeyReps, sessionID: UUID) {
-        guard let group = keyReps.clipGroup else {
-            return
-        }
-
+    /// Rewriting the skeleton file and encoding a long set's clips take time, so both run beside
+    /// the save queue instead of in it: the summary is finalized without waiting for them. Each
+    /// `saveKeyReps` is one actor call, so sets saved together never interleave.
+    private func saveReplayInBackground(for keyReps: ActivityKeyReps, sessionID: UUID) {
         let clipSource = trackingService.clips
         let repository = repository
 
         Task(priority: .utility) {
+            do {
+                try await repository.saveKeyReps(keyReps, sessionID: sessionID)
+            } catch {
+                NSLog("Key repetition save failed: %@", error.localizedDescription)
+            }
+
+            guard let group = keyReps.clipGroup else {
+                return
+            }
+
             let clips = await clipSource.take(group: group)
 
             guard !clips.isEmpty else {

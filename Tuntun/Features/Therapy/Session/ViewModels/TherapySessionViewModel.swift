@@ -492,15 +492,7 @@ final class TherapySessionViewModel: TherapySessionViewModelProtocol {
                             break
                         }
 
-                        // Replays help review but are not session history: a failed save is
-                        // logged and must not pause therapy or block later saves.
-                        do {
-                            try await repository.saveKeyReps(keyReps, sessionID: sessionID)
-                        } catch {
-                            NSLog("Key repetition save failed: %@", error.localizedDescription)
-                        }
-
-                        saveClipsInBackground(for: keyReps, sessionID: sessionID)
+                        saveReplayInBackground(for: keyReps, sessionID: sessionID)
                     default: break
                     }
                     pendingSaves.removeFirst()
@@ -529,19 +521,28 @@ final class TherapySessionViewModel: TherapySessionViewModelProtocol {
         trackingService.clips.setEnabled(recording)
     }
 
-    /// Clips, like replays, help review but are not history: a failure is only logged.
+    /// Replays help review but are not session history: a failed save is only logged and never
+    /// pauses therapy or blocks later saves.
     ///
-    /// Encoding a long set takes seconds, so it runs beside the save queue instead of in it: the
-    /// summary is finalized, and the plan moves on, without waiting for the clips.
-    private func saveClipsInBackground(for keyReps: ActivityKeyReps, sessionID: UUID) {
-        guard let group = keyReps.clipGroup else {
-            return
-        }
-
+    /// Rewriting the skeleton file and encoding a long set's clips take time, so both run beside
+    /// the save queue instead of in it: the summary is finalized, and the plan moves on, without
+    /// waiting for them. Each `saveKeyReps` is one actor call, so sets saved together never
+    /// interleave.
+    private func saveReplayInBackground(for keyReps: ActivityKeyReps, sessionID: UUID) {
         let clipSource = trackingService.clips
         let repository = repository
 
         Task(priority: .utility) {
+            do {
+                try await repository.saveKeyReps(keyReps, sessionID: sessionID)
+            } catch {
+                NSLog("Key repetition save failed: %@", error.localizedDescription)
+            }
+
+            guard let group = keyReps.clipGroup else {
+                return
+            }
+
             let clips = await clipSource.take(group: group)
 
             guard !clips.isEmpty else {

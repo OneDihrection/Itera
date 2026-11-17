@@ -87,13 +87,20 @@ enum NarrationAudioSession {
         deactivateSession()
     }
 
-    /// Deactivates the shared session unconditionally, for an owner that is stopping all audio.
-    static func deactivate() {
-        lock.lock()
-        defer { lock.unlock() }
+    /// Deactivates the shared session off the main thread, for an owner that is stopping all audio.
+    ///
+    /// `setActive(false)` blocks until the system has stopped audio I/O, which stalled the UI when
+    /// a session ended. The token is taken now, so a session that starts before the deactivation
+    /// runs keeps its audio.
+    static func deactivateInBackground() {
+        let token = activationToken
 
-        deactivateSession()
+        deactivationQueue.async {
+            deactivate(ifUnchangedSince: token)
+        }
     }
+
+    private static let deactivationQueue = DispatchQueue(label: "Tuntun.audioDeactivation", qos: .utility)
 
     // MARK: - Route
 

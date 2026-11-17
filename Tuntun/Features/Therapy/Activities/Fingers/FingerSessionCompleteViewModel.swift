@@ -85,11 +85,12 @@ final class FingerSessionCompleteViewModel: FingerSessionCompleteViewModelProtoc
     func save() async {
         await fingerSessionService.session?.saveFinalSummary()
 
+        // Leaving waits only for the summary itself, not for the history list to reload.
+        savingFinished = true
+
         if fingerSessionService.session?.finalSummarySaved == true {
             await home.refresh()
         }
-
-        savingFinished = true
     }
 
     func close() {
