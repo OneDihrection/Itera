@@ -75,7 +75,6 @@ struct TMTherapyProgressStat: View {
     let label: Text
     let value: Int
     let total: Int
-    var muted = false
     var textScale: CGFloat = 1
 
     var body: some View {
@@ -86,7 +85,7 @@ struct TMTherapyProgressStat: View {
             HStack(alignment: .firstTextBaseline, spacing: 8) {
                 Text(value, format: .number)
                     .typography(size: 56 * textScale, weight: .bold, relativeTo: .largeTitle)
-                    .foregroundStyle(muted ? TherapyPalette.muted : TherapyPalette.brand)
+                    .foregroundStyle(TherapyPalette.brand)
                 Text(verbatim: "/ \(total)")
                     .typography(size: 48 * textScale, weight: .regular, relativeTo: .largeTitle)
                     .foregroundStyle(TherapyPalette.muted)
@@ -337,6 +336,8 @@ struct TMTherapyExerciseLiveLayout<Camera: View, Demo: View, Accessories: View>:
     let pauseTitle: LocalizedStringKey
     let endTitle: LocalizedStringKey
     var pauseDisabled = false
+    /// Hides the repetition and set counters while the activity calibrates; their space stays
+    /// reserved so the camera does not move.
     var calibrating = false
     var demoWidthFraction: CGFloat = 0.9
     /// Changes whenever the demonstration moves to a new step, which highlights the panel.
@@ -388,7 +389,7 @@ struct TMTherapyExerciseLiveLayout<Camera: View, Demo: View, Accessories: View>:
                 .frame(maxHeight: .infinity)
 
                 HStack(alignment: .center, spacing: columnSpacing) {
-                    stats(scale: scale)
+                    statsSlot(scale: scale)
                         .frame(width: cameraWidth)
                     controls(scale: scale)
                         .frame(width: sideWidth)
@@ -468,6 +469,16 @@ struct TMTherapyExerciseLiveLayout<Camera: View, Demo: View, Accessories: View>:
         }
     }
 
+    /// No repetitions are counted during calibration, so the counters are left out until practice.
+    @ViewBuilder
+    private func statsSlot(scale: CGFloat) -> some View {
+        if calibrating {
+            Color.clear
+        } else {
+            stats(scale: scale)
+        }
+    }
+
     private func stats(scale: CGFloat) -> some View {
         ViewThatFits(in: .horizontal) {
             TMTherapyStatRow {
@@ -495,7 +506,6 @@ struct TMTherapyExerciseLiveLayout<Camera: View, Demo: View, Accessories: View>:
             label: Text("exercise.repetitionsUnit"),
             value: repetitions.done,
             total: repetitions.goal,
-            muted: calibrating,
             textScale: (cuePlacement.usesVideo ? 1.2 : 1) * scale
         )
     }
@@ -505,7 +515,6 @@ struct TMTherapyExerciseLiveLayout<Camera: View, Demo: View, Accessories: View>:
             label: Text("exercise.setsUnit"),
             value: sets.number,
             total: sets.total,
-            muted: calibrating,
             textScale: (cuePlacement.usesVideo ? 1.2 : 1) * scale
         )
     }

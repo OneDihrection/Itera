@@ -1275,3 +1275,9 @@ At the product owner's request, the wait after an exercise was investigated. Aft
 The wait before an exercise was traced too, not yet changed: intro Start validates listening and then stops it with audio-session deactivation, the session repeats the voice startup, and camera capture starts only after it succeeds. Changing that awaits M1-iPad timings.
 
 Verification: XcodeGen and Debug Simulator build with IPHONEOS_DEPLOYMENT_TARGET=17.0. Pending on the M1 iPad: time from last repetition to the plan rest in a body, balance and finger session with video recording on; clips present in Progress replays afterwards; deleting a just-finished session.
+
+## Counters hidden during calibration (2026-11-17)
+
+At the product owner's request, the repetition and set counters are no longer shown while an activity calibrates; no repetitions are counted then, so "Repetisi 0 / 8" and "Set 1 / 3" only distracted. This supersedes "with muted counters" in *Calibration guidance and practice countdown*. `TMTherapyExerciseLiveLayout` leaves the counters' slot empty while `calibrating` and keeps its size, so the camera and buttons do not move. Light guided sessions (`isCalibrationLayout`), Balancing (`calibrationMessage`) and finger sessions (`isCalibrating`) already pass `calibrating`, so all exercises follow. `TMTherapyProgressStat` lost its unused `muted` option.
+
+Verification: XcodeGen and Debug Simulator build with IPHONEOS_DEPLOYMENT_TARGET=17.0. Pending on the M1 iPad: counters absent through calibration (including recalibration and the completion cue) and present in practice, for arm raise, elbow bend, reach, a Balancing exercise and a finger exercise; no camera shift when they appear.
