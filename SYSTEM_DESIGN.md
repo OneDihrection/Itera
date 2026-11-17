@@ -160,6 +160,7 @@ Common body rules:
 - Every non-finger body exercise draws bubbles, hold ring, joint dot and guidance arrow with `TMSessionTargetOverlay`. Bubbles are a fixed 100 pt across (`sharedBubbleDiameter`); acceptance uses the drawn radius. Calibration cues are a curved arrow fixed to the body, not the hand.
 - Holds are credited only between consecutive fresh in-zone samples (`InterruptibleHold`, `StableHold`); interrupted time is never credited. Hold seconds are shown, not spoken (except in the Indonesian scripts, section 7).
 - On iPad every exercise uses the front camera: body exercises prefer ultra-wide, hand exercises wide-angle.
+- Body demonstrations for the seated exercises (arm raise, elbow bend, directional reach, cross midline, external and internal rotation, shoulder flexion) are framed from the waist up, so the standing rig does not suggest standing practice. Sit to stand keeps the full body. Framing and export live in `Tools/author_body_demonstrations.py` (log: *Torso-framed demonstrations*).
 
 | Exercise | Current rules |
 | --- | --- |
