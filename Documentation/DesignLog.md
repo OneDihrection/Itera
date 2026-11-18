@@ -1432,3 +1432,18 @@ Phase 3 of the session flow redesign. Adds **ADR-010 — Single session flow mod
 - **Countdown resume stays per path.** The guided countdown restarts after a resume; the finger countdown continues where it stopped.
 
 Verification: transcript harness against the pre-refactor baseline, 30 scenarios. The only differences are skip-while-paused, which now stays paused until Resume and then speaks the skipped feedback, and the harness's own notes in the new blocker scenario (voice blocked while running pauses; Resume while blocked does nothing; Resume after clearing proceeds; identical state to the old view-model behaviour). XcodeGen and Debug Simulator build with IPHONEOS_DEPLOYMENT_TARGET=17.0. Pending on the M1 iPad: background and foreground in every stage; an incoming call; revoking the microphone mid-session; disabling on-device recognition; a failed save then Retry and Continue; Skip from the pause dialog (the dialog stays until Resume).
+
+## Stages carry their data (2026-11-18)
+
+Phase 4 of the session flow redesign, completing its core. Extends ADR-010: the guided session's stage is one value, `SessionStage` (Therapy/Session/Models), and each stage carries its own data.
+
+- **Cases.** `.preparing`, `.opening` (step: calibration intro, scripted position or start, a card, or "try the movement"; its `advanceAt`), `.practice`, `.feedback` (`enteredAt`, `advanceAt`, whether the next set recalibrates), `.rest` (a timed deadline or scripted breathing, and whether the next set recalibrates), and `.summary`.
+- **What it replaces.** The hand-synced `SessionProgress.Stage`, the engine's multipurpose `deadline`, `cardIndex`, `feedbackEnteredAt` and `calibrationInvalidatedBetweenSets`. Scripted breathing moved from the snapshot into the rest stage; the snapshot mirrors it.
+- **Single transition point.** `enter(_:)` is the only place the stage changes, and `SessionSnapshot.stage` mirrors it. Leaving a stage drops its deadlines. The spoken cue's gate is not part of the stage: the next announcement replaces it.
+- **One recording path.** Skip, completion and the caregiver's activity commands record through `record(_:)`, which enters feedback only when a result was actually added. Stop shares `recordResult(_:)` and then finalizes. `SessionProgress.record` no longer takes the (always current) execution identity and reports whether it recorded.
+- **One replay path.** Resume and camera recovery use `resumeAfterSuspension()` and `replayStageCue(timed:)`. The two keep their existing differences: which stages replay, and whether the cue is timed.
+- **Left for Phase 5:** `awaitingCountdownGuidance` and `calibrationCompletionPending` (the countdown and calibration-cue handshake), and the `"calibration.complete"` string check. `guidancePlan` and `positioningPending` remain as guidance settings.
+
+No behaviour changed. The four bugs this phase addressed were unreachable or latent: the stale deadline after a skip was always cleared by the feedback's timed cue.
+
+Verification: transcript harness against the pre-refactor baseline, 33 scenarios. New scenarios cover a skip while a card or demonstration deadline is pending, and a stop in the same turn as the repetition that completes the set (one outcome, one summary). The only differences remain Phase 3's skip-while-paused fix and harness notes. XcodeGen and Debug and Release Simulator builds with IPHONEOS_DEPLOYMENT_TARGET=17.0. Pending on the M1 iPad: a full two-set arm raise (generic and Indonesian script) with Pause in every stage; elbow bend and directional reach openings; fold towel; a camera change during rest followed by recalibration; Debug "Finish exercise" mid-plan.

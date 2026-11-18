@@ -13,7 +13,7 @@ import Foundation
 ///
 /// Used by the Indonesian arm-raise script (`SessionEngine`) and thumb-opposition script
 /// (`FingerSessionViewModel`). The timed rest keeps its stateless rhythm, `RestBreath`.
-struct BreathingRest {
+struct BreathingRest: Equatable {
     private(set) var step: Int
     private(set) var elapsed = 0.0
     private var lastTick: Double?

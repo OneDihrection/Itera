@@ -33,6 +33,7 @@ Fixes bug 8 for the guided path.
 
 ## Changes
 
+- Remove `awaitingCountdownGuidance` and `calibrationCompletionPending` from `SessionEngine` (left by Phase 4); `.practice` gains their replacements (`countdown: Countdown?`, `calibrationCuePending`).
 - Add `SessionFlow/Countdown.swift` (moved here from Phase 1): `OnResume { restart, resume }`, `start`, `seconds`, `isFinished`, `takeAnnouncement` and `suspend`.
 
 - `TherapyActivity.swift`:

@@ -81,7 +81,7 @@ The Foundation-only rule also applies to logic files in flat activity folders. K
 
 | Component | Owns |
 | --- | --- |
-| `SessionEngine` (Therapy/Session/Models) | Guided progression, deadlines, suspension reasons, activity selection, set ordering, results. `handle(event) -> transition` with snapshot and requested effects |
+| `SessionEngine` (Therapy/Session/Models) | Guided progression, deadlines, suspension reasons, activity selection, set ordering, results. `handle(event) -> transition` with snapshot and requested effects. One `SessionStage` (each stage carries its own deadlines and flags), one `Suspension`, one `GuidanceGate` per spoken cue (ADR-010); `SessionProgress` keeps only ordering and results |
 | Activities (`TherapyActivity`) | Their own calibration, geometry, evidence acceptance, milestones and counting (ADR-006) |
 | Session view models | Service coordination, effects, presentation mapping |
 | `BodyTrackingService`, `HandCameraService` | Capture, orientation, inference, subject selection, freshness, clip frames |
@@ -92,7 +92,7 @@ The Foundation-only rule also applies to logic files in flat activity folders. K
 | `PermissionService` (`PermissionServiceProtocol`) | Camera, microphone and speech authorization; explicit, serialized, coalesced requests; refreshed on foreground; launch never prompts |
 | Repositories | Routines, finger routines, sessions, finger sessions, daily-plan progress |
 
-The finger session (`FingerSessionViewModel`, `FingerSessionEngine`) and Balancing (`BalanceSessionViewModel` with `CrossMidlineBalanceEngine`, `ArmMovementEngine`, `SitToStandBalanceEngine`) still run their own progression. Consolidating them onto shared flow types is proposed in [Documentation/SessionFlowRedesign](Documentation/SessionFlowRedesign/README.md) (core: Phases 0–4, which make the guided engine a single-owner state machine; Phases 5–9 optional); until a phase lands, the current behaviour described here is authoritative (log: *Session flow redesign revised*).
+The finger session (`FingerSessionViewModel`, `FingerSessionEngine`) and Balancing (`BalanceSessionViewModel` with `CrossMidlineBalanceEngine`, `ArmMovementEngine`, `SitToStandBalanceEngine`) still run their own progression. They share `BreathingRest` and `GuidanceGate` (Therapy/Shared/SessionFlow) with the guided engine. The redesign's core (Phases 0–4, which made the guided engine a single-owner state machine) is complete; moving them fully onto the shared flow types is optional (Phases 5–9 in [Documentation/SessionFlowRedesign](Documentation/SessionFlowRedesign/README.md)), and until such a phase lands, the current behaviour described here is authoritative (log: *Stages carry their data*).
 
 ### Threading and reactivity
 
