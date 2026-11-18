@@ -56,7 +56,7 @@ enum NarrationAudioSession {
         enforceSpeakerIfNeeded(session)
 
         #if DEBUG
-        NSLog("Audio session configured category=%@", session.category.rawValue)
+        LogManager.shared.info("Audio session configured category=\(session.category.rawValue)", category: .audio)
         #endif
     }
 
@@ -79,14 +79,14 @@ enum NarrationAudioSession {
 
         guard activationRequests == token else {
             #if DEBUG
-            NSLog("Audio session deactivation skipped: reactivated since it was requested")
+            LogManager.shared.info("Audio session deactivation skipped: reactivated since it was requested", category: .audio)
             #endif
             return
         }
 
         #if DEBUG
         // Temporary: diagnosing stop/go recognition on device.
-        NSLog("Audio session deactivated (token %ld)", token)
+        LogManager.shared.info("Audio session deactivated (token \(token))", category: .audio)
         #endif
 
         deactivateSession()
@@ -177,10 +177,10 @@ enum NarrationAudioSession {
             try session.overrideOutputAudioPort(.speaker)
 
             #if DEBUG
-            NSLog("Audio output moved from receiver to speaker")
+            LogManager.shared.info("Audio output moved from receiver to speaker", category: .audio)
             #endif
         } catch {
-            NSLog("Audio speaker override failed: %@", error.localizedDescription)
+            LogManager.shared.error("Audio speaker override failed", error: error, category: .audio)
         }
     }
 

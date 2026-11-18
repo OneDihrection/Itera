@@ -421,7 +421,7 @@ struct SessionEngine {
         // them to tell a slow pipeline apart from a body the detector cannot see.
         if captureReady, frame.generation == generation, now - frame.timestamp > 0.3, now - lastStaleLog >= 3 {
             lastStaleLog = now
-            NSLog("Session frame rejected as stale age=%.3f", now - frame.timestamp)
+            LogManager.shared.warning("Session frame rejected as stale age=\(String(format: "%.3f", now - frame.timestamp))", category: .session)
         }
 
         guard captureReady, frame.generation == generation,

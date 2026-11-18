@@ -8,7 +8,6 @@
 import AVFoundation
 import Combine
 import Speech
-import OSLog
 
 // Audio events are scoped by utterance identity; recognition callbacks have their own generation.
 enum AudioEvent {
@@ -46,7 +45,6 @@ protocol SessionAudioServiceProtocol: AnyObject {
 @MainActor
 final class SessionAudioService: NSObject, SessionAudioServiceProtocol, AVSpeechSynthesizerDelegate, SFSpeechRecognizerDelegate {
     let events = PassthroughSubject<AudioEvent, Never>()
-    private let logger = Logger(subsystem: Bundle.main.bundleIdentifier ?? "Tuntun", category: "SessionAudio")
     private var routeObserver: NSObjectProtocol?
     private let synthesizer = AVSpeechSynthesizer()
     private let music = ExerciseMusicPlayer()
@@ -569,7 +567,7 @@ final class SessionAudioService: NSObject, SessionAudioServiceProtocol, AVSpeech
 
         #if DEBUG
         // Temporary: diagnosing stop/go recognition on device.
-        logger.notice("Voice startListening result=\(String(describing: result), privacy: .public)")
+        LogManager.shared.notice("Voice startListening result=\(String(describing: result))", category: .voice)
         #endif
 
         return result
@@ -632,7 +630,7 @@ final class SessionAudioService: NSObject, SessionAudioServiceProtocol, AVSpeech
                 if let result, !self.consumed {
                     #if DEBUG
                     // Temporary: diagnosing stop/go recognition on device.
-                    self.logger.notice("Voice transcript=\(result.bestTranscription.formattedString, privacy: .public) final=\(result.isFinal) match=\(String(describing: self.vocabulary.command(in: result.bestTranscription.formattedString)), privacy: .public)")
+                    LogManager.shared.notice("Voice transcript=\(result.bestTranscription.formattedString) final=\(result.isFinal) match=\(String(describing: self.vocabulary.command(in: result.bestTranscription.formattedString)))", category: .voice)
                     #endif
 
                     // Exact short utterances avoid substring triggers from app narration.
@@ -651,7 +649,7 @@ final class SessionAudioService: NSObject, SessionAudioServiceProtocol, AVSpeech
                         #if DEBUG
                         // Temporary: diagnosing stop/go recognition on device.
                         let nsError = error as NSError
-                        self.logger.notice("Voice recognition error domain=\(nsError.domain, privacy: .public) code=\(nsError.code) \(nsError.localizedDescription, privacy: .public); listening stops")
+                        LogManager.shared.error("Voice recognition failed; listening stops", error: nsError, category: .voice)
                         #endif
 
                         self.stopListening()
@@ -682,13 +680,13 @@ final class SessionAudioService: NSObject, SessionAudioServiceProtocol, AVSpeech
     private func logAudioConfiguration(_ context: String) {
         let session = AVAudioSession.sharedInstance()
         let outputs = session.currentRoute.outputs.map { $0.portType.rawValue }.joined(separator: ",")
-        logger.notice("Audio \(context, privacy: .public): category=\(session.category.rawValue, privacy: .public) mode=\(session.mode.rawValue, privacy: .public) outputs=\(outputs, privacy: .public) systemVolume=\(session.outputVolume)")
+        LogManager.shared.notice("Audio \(context): category=\(session.category.rawValue) mode=\(session.mode.rawValue) outputs=\(outputs) systemVolume=\(session.outputVolume)", category: .audio)
     }
 
     func stopListening() {
         #if DEBUG
         // Temporary: diagnosing stop/go recognition on device.
-        logger.notice("Voice listening stopped (wasActive=\(self.listeningActive)) from \(Thread.callStackSymbols.dropFirst().prefix(3).joined(separator: " | "), privacy: .public)")
+        LogManager.shared.notice("Voice listening stopped (wasActive=\(self.listeningActive)) from \(Thread.callStackSymbols.dropFirst().prefix(3).joined(separator: " | "))", category: .voice)
         #endif
 
         inputWorker.replaceRequest(nil)

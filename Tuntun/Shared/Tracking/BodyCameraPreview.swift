@@ -92,7 +92,7 @@ struct TMBodyCameraPreview: UIViewRepresentable {
                 return
             }
 
-            NSLog("Body preview rendering=%@ attached=%@", ready.description, (window != nil).description)
+            LogManager.shared.info("Body preview rendering=\(ready) attached=\(window != nil)", category: .tracking)
             onReady?(ready)
         }
 

@@ -985,7 +985,7 @@ final class BalanceSessionViewModel: BalanceSessionViewModelProtocol {
             do {
                 try await repository.saveKeyReps(keyReps, sessionID: sessionID)
             } catch {
-                NSLog("Key repetition save failed: %@", error.localizedDescription)
+                LogManager.shared.error("Key repetition save failed", error: error, category: .session)
             }
 
             guard let group = keyReps.clipGroup else {
@@ -1001,7 +1001,7 @@ final class BalanceSessionViewModel: BalanceSessionViewModelProtocol {
             do {
                 try await repository.saveRepClips(clips, for: keyReps, sessionID: sessionID)
             } catch {
-                NSLog("Key repetition clip save failed: %@", String(describing: error))
+                LogManager.shared.error("Key repetition clip save failed", error: error, category: .session)
             }
         }
     }

@@ -360,7 +360,7 @@ final class RepClipFrameSource: @unchecked Sendable {
         }
 
         lastFailureLog = time
-        NSLog("%@", message)
+        LogManager.shared.warning(message, category: .tracking)
     }
 
     // MARK: - Image operations

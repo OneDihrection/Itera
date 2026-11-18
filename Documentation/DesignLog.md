@@ -1494,3 +1494,15 @@ Settings said nothing about voice control after its routine toggle was removed, 
 Sessions are unchanged; they still validate permissions and listening at start. The camera is left to that check.
 
 Verification: XcodeGen and a Debug Simulator build with IPHONEOS_DEPLOYMENT_TARGET=17.0. Pending: in the Simulator and on the M1 iPad, after resetting privacy, the toggle starts off with Enable permissions and turns on after granting both prompts; switching it off snaps back; a denied permission shows Open Settings and the row updates after returning; both languages and large text.
+
+## Shared log manager (2026-11-18)
+
+Logging was inconsistent. About 30 `NSLog` calls in Tracking, Audio, Storage and Session sat beside two private OSLog `Logger`s in `SessionAudioService` and `GuidanceAudioService`. None of them said where a line came from. `Shared/Logging/LogManager.swift` is now the app's one logging entry point:
+- **One logger per area.** `LogCategory` has the cases `app`, `audio`, `voice`, `tracking`, `session` and `storage`. Each becomes an OSLog category under the bundle-identifier subsystem, so Console and `log stream` can filter by area.
+- **Formatted lines.** Each line reads `2026-11-18T14:03:22.123+07:00 🔴 ERROR [storage] [bg] LocalSessionRepository.swift:78 summaries() › message`: a local ISO 8601 timestamp with milliseconds, a severity glyph and fixed-width level, the category, main or background thread, and the caller's file, line and function. `LogLevel` maps `debug`, `info`, `notice`, `warning`, `error` and `fault` onto `OSLogType`. `error(_:error:category:)` appends the error's domain, code and description.
+- **Cost.** Messages are autoclosures. `debug` lines are dropped before formatting in Release, so per-frame call sites cost nothing there. The existing throttled stale-frame logs keep their throttles and log at `warning`. Messages stay `.public`, as before: they hold diagnostics, never patient data.
+- **Reached directly.** `LogManager.shared` is the documented exception to injecting dependencies and to having no global dependencies. It holds only immutable values (a fixed table of `Logger`s and a value-type date style) and must work from Foundation-only engines and any thread. Injecting it through every initializer would add noise and provide no substitution boundary.
+
+Every previous `NSLog` and private `Logger` call now goes through it. Their wording is unchanged apart from the appended error details.
+
+Verification: XcodeGen and a Debug Simulator build with IPHONEOS_DEPLOYMENT_TARGET=17.0, plus a grep showing that no `NSLog(` or `Logger(` remains outside `LogManager.swift`. Pending: the formatted lines and category filtering in the Xcode console and on the M1 iPad, and an unchanged two-minute arm-raise preview cadence with stale-frame logs.

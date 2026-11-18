@@ -364,7 +364,7 @@ struct ArmMovementEngine: BalanceMovementEngine {
             return "\(name)=" + (landmark.map { String(format: "%.2f", $0.confidence) } ?? "none")
         }.joined(separator: " ")
 
-        NSLog("Arm tracking lost: people=%d %@", frame.personCount, detail)
+        LogManager.shared.warning("Arm tracking lost: people=\(frame.personCount) \(detail)", category: .tracking)
     }
 
     /// Elbow and wrist, accepted at low confidence and slightly beyond the picture's edge, where

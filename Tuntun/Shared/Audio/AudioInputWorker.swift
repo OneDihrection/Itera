@@ -82,10 +82,10 @@ final class AudioInputWorker: @unchecked Sendable {
             )
             voiceProcessingConfigured = true
             #if DEBUG
-            NSLog("Voice processing enabled for listening")
+            LogManager.shared.info("Voice processing enabled for listening", category: .audio)
             #endif
         } catch {
-            NSLog("Voice processing unavailable: %@", error.localizedDescription)
+            LogManager.shared.error("Voice processing unavailable", error: error, category: .audio)
         }
     }
 

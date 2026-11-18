@@ -96,7 +96,7 @@ final class BodyTrackingService: NSObject, AVCaptureVideoDataOutputSampleBufferD
             center.addObserver(
                 forName: AVCaptureSession.wasInterruptedNotification, object: session, queue: nil
             ) { [weak self] notification in
-                NSLog("Body capture interrupted reason=%@", String(describing: notification.userInfo?[AVCaptureSessionInterruptionReasonKey]))
+                LogManager.shared.warning("Body capture interrupted reason=\(String(describing: notification.userInfo?[AVCaptureSessionInterruptionReasonKey]))", category: .tracking)
                 guard let self else {
                     return
                 }
@@ -130,7 +130,7 @@ final class BodyTrackingService: NSObject, AVCaptureVideoDataOutputSampleBufferD
                     return
                 }
                 let error = notification.userInfo?[AVCaptureSessionErrorKey] as? NSError
-                NSLog("Body capture runtime error domain=%@ code=%ld", error?.domain ?? "unknown", error?.code ?? 0)
+                LogManager.shared.error("Body capture runtime error domain=\(error?.domain ?? "unknown") code=\(error?.code ?? 0)", category: .tracking)
                 self.queue.async {
                     self.cancelFrameWatchdog()
                     self.invalidateGeneration()
@@ -180,10 +180,10 @@ final class BodyTrackingService: NSObject, AVCaptureVideoDataOutputSampleBufferD
             self.timestampOffset =
                 ProcessInfo.processInfo.systemUptime
                 - CMTimeGetSeconds(CMClockGetTime(CMClockGetHostTimeClock()))
-            NSLog("Body capture start requested")
+            LogManager.shared.info("Body capture start requested", category: .tracking)
             self.session.startRunning()
             self.captureStartedAt = ProcessInfo.processInfo.systemUptime
-            NSLog("Body capture running=%@ generation=%@", self.session.isRunning.description, self.generation.uuidString)
+            LogManager.shared.info("Body capture running=\(self.session.isRunning) generation=\(self.generation.uuidString)", category: .tracking)
             guard self.session.isRunning else {
                 throw TrackingError.cameraUnavailable
             }
@@ -263,7 +263,7 @@ final class BodyTrackingService: NSObject, AVCaptureVideoDataOutputSampleBufferD
             throw TrackingError.cameraUnavailable
         }
         let input = try AVCaptureDeviceInput(device: camera)
-        NSLog("Body capture selected device=%@ type=%@ position=%ld", camera.localizedName, camera.deviceType.rawValue, camera.position.rawValue)
+        LogManager.shared.info("Body capture selected device=\(camera.localizedName) type=\(camera.deviceType.rawValue) position=\(camera.position.rawValue)", category: .tracking)
         let output = AVCaptureVideoDataOutput()
         output.alwaysDiscardsLateVideoFrames = true
         output.setSampleBufferDelegate(self, queue: queue)
@@ -302,7 +302,7 @@ final class BodyTrackingService: NSObject, AVCaptureVideoDataOutputSampleBufferD
             camera.unlockForConfiguration()
         }
         configured = true
-        NSLog("Body capture configuration complete")
+        LogManager.shared.info("Body capture configuration complete", category: .tracking)
     }
 
     func captureOutput(
@@ -326,7 +326,7 @@ final class BodyTrackingService: NSObject, AVCaptureVideoDataOutputSampleBufferD
         }
         if awaitingFirstFrame {
             awaitingFirstFrame = false
-            NSLog("Body capture first frame delay=%.3f seconds generation=%@", ProcessInfo.processInfo.systemUptime - captureStartedAt, generation.uuidString)
+            LogManager.shared.info("Body capture first frame delay=\(String(format: "%.3f", ProcessInfo.processInfo.systemUptime - captureStartedAt)) seconds generation=\(generation.uuidString)", category: .tracking)
             watchdogRestarts = 0
             availability.send(.ready(generation))
         }
@@ -425,7 +425,7 @@ final class BodyTrackingService: NSObject, AVCaptureVideoDataOutputSampleBufferD
         } catch {
             if time - lastInferenceFailure >= 5 {
                 lastInferenceFailure = time
-                NSLog("Body inference failed: %@", error.localizedDescription)
+                LogManager.shared.error("Body inference failed", error: error, category: .tracking)
             }
             // Missing evidence clears holds without taking down healthy video.
             deliver(TrackingObservation(
@@ -452,7 +452,7 @@ final class BodyTrackingService: NSObject, AVCaptureVideoDataOutputSampleBufferD
 
                 if ProcessInfo.processInfo.systemUptime - self.lastStaleLog >= 3 {
                     self.lastStaleLog = ProcessInfo.processInfo.systemUptime
-                    NSLog("Body frame dropped as stale age=%.3f", age)
+                    LogManager.shared.warning("Body frame dropped as stale age=\(String(format: "%.3f", age))", category: .tracking)
                 }
                 return
             }
@@ -574,7 +574,7 @@ final class BodyTrackingService: NSObject, AVCaptureVideoDataOutputSampleBufferD
             self.invalidateGeneration()
             self.session.stopRunning()
             self.restoreCenterStage()
-            NSLog("Body capture frame timeout firstFrame=%@ generation=%@", firstFrame.description, expectedGeneration.uuidString)
+            LogManager.shared.warning("Body capture frame timeout firstFrame=\(firstFrame) generation=\(expectedGeneration.uuidString)", category: .tracking)
             self.availability.send(.discontinuity)
             self.failures.send(firstFrame ? "Camera did not deliver a startup frame." : "Camera frames stopped arriving.")
             self.restartOnceAfterFailure()

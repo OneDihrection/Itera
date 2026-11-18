@@ -217,7 +217,7 @@ actor LocalFingerSessionRepository: FingerSessionRepository {
         do {
             return try read(url)
         } catch {
-            NSLog("Finger session file unreadable, skipped: %@ (%@)", url.lastPathComponent, String(describing: error))
+            LogManager.shared.error("Finger session file unreadable, skipped: \(url.lastPathComponent)", error: error, category: .storage)
             return nil
         }
     }

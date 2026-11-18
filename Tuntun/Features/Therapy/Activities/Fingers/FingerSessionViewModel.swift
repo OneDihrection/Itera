@@ -1283,7 +1283,7 @@ final class FingerSessionViewModel: FingerSessionViewModelProtocol {
             do {
                 try await repository.saveKeyReps(keyReps, sessionID: sessionID)
             } catch {
-                NSLog("Finger key repetition save failed: %@", String(describing: error))
+                LogManager.shared.error("Finger key repetition save failed", error: error, category: .session)
                 return
             }
 
@@ -1296,7 +1296,7 @@ final class FingerSessionViewModel: FingerSessionViewModelProtocol {
             do {
                 try await repository.saveRepClips(frames, for: keyReps, sessionID: sessionID)
             } catch {
-                NSLog("Finger key repetition clip save failed: %@", String(describing: error))
+                LogManager.shared.error("Finger key repetition clip save failed", error: error, category: .session)
             }
         }
     }

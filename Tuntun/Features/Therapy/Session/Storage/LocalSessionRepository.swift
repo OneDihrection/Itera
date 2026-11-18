@@ -75,7 +75,7 @@ actor LocalSessionRepository: SessionRepository {
                 summaries.append(record.value)
             } catch {
                 unreadableCount += 1
-                NSLog("Session history skipped %@: %@", url.lastPathComponent, String(describing: error))
+                LogManager.shared.error("Session history skipped \(url.lastPathComponent)", error: error, category: .storage)
             }
         }
 

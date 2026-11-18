@@ -78,8 +78,8 @@ struct BodyInferenceTiming {
         }
 
         let ages = age.sorted()
-        NSLog(
-            "Body inference timing ms pad p50=%.1f p95=%.1f vision p50=%.1f p95=%.1f age p50=%.1f p95=%.1f max=%.1f frames=%d padded=%d dropped=%d",
+        let summary = String(
+            format: "Body inference timing ms pad p50=%.1f p95=%.1f vision p50=%.1f p95=%.1f age p50=%.1f p95=%.1f max=%.1f frames=%d padded=%d dropped=%d",
             Self.percentile(pad.sorted(), 0.5),
             Self.percentile(pad.sorted(), 0.95),
             Self.percentile(vision.sorted(), 0.5),
@@ -91,6 +91,7 @@ struct BodyInferenceTiming {
             paddedFrames,
             dropped
         )
+        LogManager.shared.info(summary, category: .tracking)
 
         self.lastLog = now
         frames = 0

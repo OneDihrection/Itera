@@ -40,7 +40,7 @@ Tuntun/
   MyApp.swift
   App/            AppComponent (composition root), RootBuilder, RootView + TabRouter, DebugScreenLauncher
   DesignSystem/   reusable controls and styling (read its README first)
-  Shared/         app-wide infrastructure: Tracking, Audio, Animation, Storage, Permissions, Localization, Accessibility
+  Shared/         app-wide infrastructure: Tracking, Audio, Animation, Storage, Permissions, Localization, Accessibility, Logging
   Features/
     Routine/      exercise catalog (TherapyKind, FingerExercise, BalanceExercise) and saved programs/settings
     Home/         Beranda, today's plan, its intro/rest pages and settings
@@ -65,7 +65,7 @@ Inside a feature, files are grouped by kind. Create a kind folder only when it h
 | `Views/` | Layout, bindings, accessibility, forwarding actions | No counting, timers, inference, file or audio work |
 | `Navigation/` | The feature's `…Builder` with its `…Dependency` protocol, and its router with routes | See section 4 |
 
-The Foundation-only rule also applies to logic files in flat activity folders. Keep distinct responsibilities in dedicated files without mechanically splitting tiny related types.
+The Foundation-only rule also applies to logic files in flat activity folders; they may still log through `LogManager`. Keep distinct responsibilities in dedicated files without mechanically splitting tiny related types.
 
 ### Dependency direction
 
@@ -91,6 +91,7 @@ The Foundation-only rule also applies to logic files in flat activity folders. K
 | `HistoryRecoveryService` (`HistoryRecoveryServiceProtocol`, History/Services) | Finalizes a session interrupted by termination, once per launch, before therapy starts |
 | `PermissionService` (`PermissionServiceProtocol`) | Camera, microphone and speech authorization; explicit, serialized, coalesced requests; refreshed on foreground; launch never prompts |
 | Repositories | Routines, finger routines, sessions, finger sessions, daily-plan progress |
+| `LogManager` (Shared/Logging) | Every diagnostic log line, through OSLog with one `Logger` per `LogCategory`. Lines read `timestamp glyph LEVEL [category] [thread] File.swift:line function › message`. No `NSLog` or private `Logger` elsewhere (log: *Shared log manager*) |
 
 The finger session (`FingerSessionViewModel`, `FingerSessionEngine`) and Balancing (`BalanceSessionViewModel` with `CrossMidlineBalanceEngine`, `ArmMovementEngine`, `SitToStandBalanceEngine`) still run their own progression. They share `BreathingRest` and `GuidanceGate` (Therapy/Shared/SessionFlow) with the guided engine. The redesign's core (Phases 0–4, which made the guided engine a single-owner state machine) is complete; moving them fully onto the shared flow types is optional (Phases 5–9 in [Documentation/SessionFlowRedesign](Documentation/SessionFlowRedesign/README.md)), and until such a phase lands, the current behaviour described here is authoritative (log: *Stages carry their data*).
 
@@ -114,7 +115,7 @@ The finger session (`FingerSessionViewModel`, `FingerSessionEngine`) and Balanci
 
 ## Navigation, typography, and code conventions
 
-Use KISS and YAGNI: clear names, straightforward control flow, guard clauses, focused helpers, and no speculative frameworks or extension points. Use protocols at real substitution boundaries; avoid service locators, global mutable dependencies, generic base view models, a universal event bus and one protocol per helper.
+Use KISS and YAGNI: clear names, straightforward control flow, guard clauses, focused helpers, and no speculative frameworks or extension points. Use protocols at real substitution boundaries; avoid service locators, global mutable dependencies, generic base view models, a universal event bus and one protocol per helper. The one shared instance is `LogManager.shared`: it holds only immutable values and is reached directly, not injected (log: *Shared log manager*).
 
 Each feature owns its navigation through its router. The screen that owns a stack declares its `NavigationStack(path:)`, `.navigationDestination`, sheets and covers from state on its screen view model, and that view model exposes that state by forwarding it to the feature's `…Router`, which owns it. Every other page and view model on that stack receives the router through its initializer as a `…RouterProtocol`, and destinations are built only by the feature's builder. Never read a router from the environment; cross-tab navigation goes through `TabRouterProtocol`. Native SwiftUI layout remains allowed.
 

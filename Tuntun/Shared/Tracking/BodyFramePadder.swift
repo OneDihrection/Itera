@@ -148,6 +148,6 @@ final class BodyFramePadder {
         }
 
         reportedUnsupportedFormat = format
-        NSLog("Body frame padding skipped for pixel format %u", format)
+        LogManager.shared.warning("Body frame padding skipped for pixel format \(format)", category: .tracking)
     }
 }
