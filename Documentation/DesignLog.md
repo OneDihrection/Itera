@@ -1407,3 +1407,15 @@ Phase 1 of the session flow redesign. The scripted short rest between sets exist
 `RestBreath` (the timed rest's 6 s / 3 s rhythm) stays as it is: it is a pure function of elapsed time. The proposed `Countdown` type moved to Phase 5, the first phase that uses it.
 
 Verification: transcript harness (26 guided-session scenarios plus breathing timelines, including both rest openings and a suspend) identical to the Phase 0 baseline; XcodeGen and Debug Simulator build with IPHONEOS_DEPLOYMENT_TARGET=17.0. Pending on the M1 iPad: the scripted rest between arm-raise sets and between opposition sets.
+
+## One guidance gate per cue (2026-11-18)
+
+Phase 2 of the session flow redesign. A spoken cue's identity, narration and reading state and its watchdog are now one value, `GuidanceGate` (`Therapy/Shared/SessionFlow/`), instead of loose fields in three places:
+
+- `SessionEngine`: `guidance`, `narrationComplete`, `readingComplete`, `speechTimeout` and `guidanceStartedAt` became `gate`.
+- `FingerSessionViewModel`: `speechID` and `speechDeadline` became `speechGate`.
+- `BalanceSessionViewModel`: `openingSpeechID` and `openingSpeechDeadline` became `openingGate`.
+
+Stale and duplicate completions are ignored as before, and the watchdog values are unchanged: 45 s for scripted cues and feedback, the opening plan's watchdog or 20 s in the guided session, `max(15, characters × 0.25)` in finger sessions, 8 s for Balancing openings. The scripted follow-up cue (`pendingScriptMovement`) stays separate until Phase 6.
+
+Verification: transcript harness, now built against a baseline worktree of the pre-refactor commit, identical across 29 scenarios. Three new scenarios replay every earlier completion and reading callback mid-session (generic and Indonesian-scripted). XcodeGen and Debug Simulator build with IPHONEOS_DEPLOYMENT_TARGET=17.0. The finger and Balancing changes are checked by build and review only, since their view models cannot run in the harness. Pending on the M1 iPad: Stop during narration then Go, with the next cue playing once, in a guided, a finger and a Balancing session; the finger watchdog after a narration failure; the Balancing opening advancing after each cue.

@@ -76,8 +76,8 @@ final class BalanceSessionViewModel: BalanceSessionViewModelProtocol {
     private var openingCue: OpeningCue? = .intro
     private var calibrationFinished = false
     private(set) var practiceCountdown: Int?
-    @ObservationIgnored private var openingSpeechID: UUID?
-    @ObservationIgnored private var openingSpeechDeadline: Double?
+    /// The opening cue being spoken; practice waits for it or its 8 s watchdog.
+    @ObservationIgnored private var openingGate: GuidanceGate?
     @ObservationIgnored private var countdownDeadline: Double?
 
     var demoHoldsPeak: Bool {
@@ -551,7 +551,7 @@ final class BalanceSessionViewModel: BalanceSessionViewModelProtocol {
         case .interrupted:
             pause()
         case .completed(let id, _):
-            if id == openingSpeechID {
+            if openingGate?.id == id {
                 completeOpeningCue()
             }
         case .cancelled, .feedbackUnavailable, .command:
@@ -566,15 +566,14 @@ final class BalanceSessionViewModel: BalanceSessionViewModelProtocol {
         }
 
         if let openingCue {
-            if let deadline = openingSpeechDeadline, timestamp >= deadline {
+            if let openingGate, openingGate.expired(at: timestamp) {
                 interruptOpening()
                 audioService.cancelSpeech()
                 completeOpeningCue()
-            } else if openingSpeechID == nil {
-                let id = UUID()
-                openingSpeechID = id
-                openingSpeechDeadline = timestamp + 8
-                audioService.speak(id: id, key: openingCue.rawValue)
+            } else if openingGate == nil {
+                let gate = GuidanceGate(startedAt: timestamp, watchdog: 8)
+                openingGate = gate
+                audioService.speak(id: gate.id, key: openingCue.rawValue)
             }
             return false
         }
@@ -647,8 +646,7 @@ final class BalanceSessionViewModel: BalanceSessionViewModelProtocol {
             return
         }
 
-        openingSpeechID = nil
-        openingSpeechDeadline = nil
+        openingGate = nil
         switch openingCue {
         case .intro:
             openingCue = .tryMovement
@@ -665,8 +663,7 @@ final class BalanceSessionViewModel: BalanceSessionViewModelProtocol {
     }
 
     private func interruptOpening() {
-        openingSpeechID = nil
-        openingSpeechDeadline = nil
+        openingGate = nil
         countdownDeadline = nil
     }
 

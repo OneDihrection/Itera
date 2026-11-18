@@ -81,11 +81,9 @@ struct SessionEngine {
     private var aspect: Double?
     private var previewReady = false
     private var captureReady = false
-    private var guidance: UUID?
-    private var narrationComplete = false
-    private var readingComplete = false
+    /// The cue being spoken: its identity, narration and reading state, and watchdog.
+    private var gate: GuidanceGate?
     private var deadline: Double?
-    private var speechTimeout: Double?
     private var waitingSince: Double?
     private var suspensionSince: Double?
     private var pausedSince: Double?
@@ -97,7 +95,6 @@ struct SessionEngine {
     private var positioningPending = true
     private var feedbackEnteredAt = 0.0
     private var pendingPrefix: SessionAudioCue?
-    private var guidanceStartedAt = 0.0
     /// Limits live towel speech to the first cue and a stuck reminder.
     private var towelSpeech = TowelSpeechPolicy()
     private var awaitingCountdownGuidance = false
@@ -157,10 +154,9 @@ struct SessionEngine {
         case .observation(let frame): observation(frame)
         case .guidanceCompleted(let id, let available): completeGuidance(id, available: available)
         case .readingChanged(let id, let complete):
-            guard canProgress, snapshot.guidanceID == id else {
+            guard canProgress, gate?.reading(id, done: complete) == true else {
                 return transition
             }
-            readingComplete = complete
             scheduleGuidanceAdvance()
         case .tick:
             updateReadiness()
@@ -179,7 +175,7 @@ struct SessionEngine {
             }
             announcedCountdown = seconds
         }
-        snapshot.guidanceID = guidance
+        snapshot.guidanceID = gate?.id
         snapshot.countdownRunning = countdownClockRunning
         snapshot.activity = progress.currentActivity
         snapshot.index = progress.index
@@ -245,7 +241,7 @@ struct SessionEngine {
 
     /// Spoken seconds follow fresh, accepted hold progress. They never run from a wall timer.
     private mutating func speakScriptHoldCount(_ movement: MovementSnapshot) {
-        guard narrationComplete, movement.progress > 0, movement.progress < 1 else {
+        guard gate?.narrated == true, movement.progress > 0, movement.progress < 1 else {
             lastScriptHoldCount = ""
             return
         }
@@ -300,7 +296,7 @@ struct SessionEngine {
         snapshot.stage = .preparing
         snapshot.instruction = "session.cameraWait"
         deadline = nil
-        guidance = nil
+        gate = nil
     }
 
     private mutating func beginNextSet() {
@@ -312,7 +308,7 @@ struct SessionEngine {
             snapshot.presentation = activity?.presentation
             snapshot.stage = .preparing
             deadline = nil
-            guidance = nil
+            gate = nil
             updateReadiness()
             return
         }
@@ -454,8 +450,7 @@ struct SessionEngine {
                 beginSuspension()
                 _ = activity?.handle(.suspend)
                 effects.append(.cancelSpeech)
-                guidance = nil
-                speechTimeout = nil
+                gate = nil
             }
             snapshot.cameraWaiting = true
             return
@@ -528,15 +523,15 @@ struct SessionEngine {
                 }
             }
         }
-        if let timeout = speechTimeout, now >= timeout, let guidance {
+        if let gate, gate.expired(at: now) {
             effects.append(.cancelSpeech)
-            completeGuidance(guidance, available: false)
+            completeGuidance(gate.id, available: false)
         }
         if let deadline, now >= deadline {
             self.deadline = nil
             switch snapshot.stage {
             case .instruction, .demonstration:
-                if readingComplete {
+                if gate?.read == true {
                     advanceCard()
                 } else {
                     self.deadline = deadline
@@ -630,11 +625,12 @@ struct SessionEngine {
             effects.append(.cancelSpeech)
         }
         let id = UUID()
-        guidance = id
-        narrationComplete = false
-        guidanceStartedAt = now
-        readingComplete = snapshot.stage != .instruction && snapshot.stage != .demonstration
-        speechTimeout = now + (snapshot.usesArmRaiseScript || snapshot.stage == .feedback ? 45 : (timed ? (guidancePlan?.watchdog ?? 20) : 20))
+        gate = GuidanceGate(
+            id: id,
+            startedAt: now,
+            watchdog: watchdogSeconds(timed: timed),
+            read: snapshot.stage != .instruction && snapshot.stage != .demonstration
+        )
         if timed || snapshot.stage == .preparationWait { deadline = nil }
         snapshot.instruction = key
         if let prefix = pendingPrefix {
@@ -643,6 +639,20 @@ struct SessionEngine {
         } else {
             effects.append(.speak(id, key))
         }
+    }
+
+    /// How long a cue may stay unfinished before it counts as spoken: scripted lines and feedback
+    /// get 45 s, opening cards their plan's watchdog, everything else 20 s.
+    private func watchdogSeconds(timed: Bool) -> Double {
+        if snapshot.usesArmRaiseScript || snapshot.stage == .feedback {
+            return 45
+        }
+
+        guard timed else {
+            return 20
+        }
+
+        return guidancePlan?.watchdog ?? 20
     }
 
     private mutating func announcePracticeCountdown() {
@@ -657,11 +667,9 @@ struct SessionEngine {
     }
 
     private mutating func completeGuidance(_ id: UUID, available: Bool = true) {
-        guard canProgress, guidance == id, !narrationComplete else {
+        guard canProgress, gate?.complete(id) == true else {
             return
         }
-        narrationComplete = true
-        speechTimeout = nil
         if snapshot.usesArmRaiseScript {
             if snapshot.stage == .rest, snapshot.guidedSetBreathing != nil {
                 snapshot.guidedSetBreathing?.guidanceCompleted()
@@ -708,12 +716,12 @@ struct SessionEngine {
         }
         scheduleGuidanceAdvance()
         if !available, snapshot.stage == .instruction, guidancePlan?.quietDelay == 1 {
-            deadline = max(guidanceStartedAt + (guidancePlan?.watchdog ?? 20), now + 12)
+            deadline = max((gate?.startedAt ?? now) + (guidancePlan?.watchdog ?? 20), now + 12)
         }
     }
 
     private mutating func scheduleGuidanceAdvance() {
-        guard canProgress, narrationComplete, deadline == nil else {
+        guard canProgress, gate?.narrated == true, deadline == nil else {
             return
         }
         switch snapshot.stage {
@@ -748,8 +756,7 @@ struct SessionEngine {
             showCard()
             return
         }
-        guidance = nil
-        speechTimeout = nil
+        gate = nil
         switch plan.destination {
         case .capture:
             snapshot.stage = .preparationWait
@@ -939,8 +946,7 @@ struct SessionEngine {
         }
 
         effects.append(.cancelSpeech)
-        guidance = nil
-        speechTimeout = nil
+        gate = nil
         deadline = nil
         snapshot.restBreath = nil
         snapshot.assistanceKey = nil
@@ -1001,8 +1007,7 @@ struct SessionEngine {
         beginSuspension()
         _ = activity?.handle(.suspend)
         effects.append(.cancelSpeech)
-        guidance = nil
-        speechTimeout = nil
+        gate = nil
         announcedCountdown = nil
     }
 
@@ -1037,9 +1042,8 @@ struct SessionEngine {
         snapshot.presentation = activity?.presentation
         snapshot.stage = .preparing
         snapshot.instruction = "session.cameraWait"
-        guidance = nil
+        gate = nil
         deadline = nil
-        speechTimeout = nil
         effects.append(.cancelSpeech)
     }
 }

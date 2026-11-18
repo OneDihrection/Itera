@@ -162,8 +162,8 @@ final class FingerSessionViewModel: FingerSessionViewModelProtocol {
 
     var isCalibrating: Bool { calibrationMessage != nil }
 
-    @ObservationIgnored private var speechID: UUID?
-    @ObservationIgnored private var speechDeadline: Double?
+    /// The progression cue being spoken. Recovery speech never takes a gate.
+    @ObservationIgnored private var speechGate: GuidanceGate?
     @ObservationIgnored private var previousInstruction = ""
     @ObservationIgnored private var lastRecoverySpoken: String?
     @ObservationIgnored private var previousProgress = -1
@@ -442,18 +442,16 @@ final class FingerSessionViewModel: FingerSessionViewModelProtocol {
             }
             switch event {
             case .completed(let id):
-                guard id == self.speechID else {
+                guard self.speechGate?.id == id else {
                     return
                 }
-                self.speechID = nil
-                self.speechDeadline = nil
+                self.speechGate = nil
                 self.completeNarration()
             case .narrationUnavailable(let id):
-                guard id == self.speechID else {
+                guard self.speechGate?.id == id else {
                     return
                 }
-                self.speechID = nil
-                self.speechDeadline = nil
+                self.speechGate = nil
                 self.errorKey = "audio.unavailable"
                 self.completeNarration()
             case .command(let command):
@@ -613,9 +611,8 @@ final class FingerSessionViewModel: FingerSessionViewModelProtocol {
         }
         let now = ProcessInfo.processInfo.systemUptime
         sessionElapsedSeconds = durationClock.elapsed(at: now)
-        if let deadline = speechDeadline, now >= deadline, !paused {
-            speechDeadline = nil
-            speechID = nil
+        if let speechGate, speechGate.expired(at: now), !paused {
+            self.speechGate = nil
             guidanceAudioService.cancelSpeech()
             completeNarration()
             errorKey = "audio.unavailable"
@@ -632,9 +629,8 @@ final class FingerSessionViewModel: FingerSessionViewModelProtocol {
         if frameReady {
             hasPresentedCamera = true
         }
-        if !frameReady, speechID != nil {
-            speechID = nil
-            speechDeadline = nil
+        if !frameReady, speechGate != nil {
+            speechGate = nil
             spokenFlowKey = nil
             guidanceAudioService.cancelSpeech()
             previousInstruction = ""
@@ -676,7 +672,7 @@ final class FingerSessionViewModel: FingerSessionViewModelProtocol {
 
     private func updateHoldCount() {
         guard usesOppositionScript, !paused, trackingReady,
-              speechID == nil, activity.isHolding, activity.holdCompletionID == nil,
+              speechGate == nil, activity.isHolding, activity.holdCompletionID == nil,
               activity.holdElapsed > 0,
               [.baseline, .target, .active].contains(activity.phase) else {
             lastHoldCount = ""
@@ -743,7 +739,7 @@ final class FingerSessionViewModel: FingerSessionViewModelProtocol {
             lastRecoverySpoken = nil
             return
         }
-        guard speechID == nil, key != lastRecoverySpoken else {
+        guard speechGate == nil, key != lastRecoverySpoken else {
             return
         }
         lastRecoverySpoken = key
@@ -850,8 +846,12 @@ final class FingerSessionViewModel: FingerSessionViewModelProtocol {
         }.joined(separator: ". ")
         spokenFlowKey = key
         engine.guidanceStarted()
-        speechDeadline = ProcessInfo.processInfo.systemUptime + max(15, Double(text.count) * 0.25)
-        speechID = guidanceAudioService.speak(text, lines: lines)
+        let startedAt = ProcessInfo.processInfo.systemUptime
+        speechGate = GuidanceGate(
+            id: guidanceAudioService.speak(text, lines: lines),
+            startedAt: startedAt,
+            watchdog: max(15, Double(text.count) * 0.25)
+        )
     }
 
     /// The String Catalog keys behind `narrate()`'s text, in the same order, so a bundled
@@ -926,8 +926,7 @@ final class FingerSessionViewModel: FingerSessionViewModelProtocol {
         let now = ProcessInfo.processInfo.systemUptime
         durationClock.pause(at: now)
         sessionElapsedSeconds = durationClock.elapsed(at: now)
-        speechID = nil
-        speechDeadline = nil
+        speechGate = nil
         guidanceAudioService.cancelSpeech()
         guidanceAudioService.pauseAmbient()
     }
