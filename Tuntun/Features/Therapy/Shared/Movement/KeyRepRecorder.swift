@@ -72,8 +72,12 @@ struct KeyRepRecorder {
 
     /// Records a guided-session frame, reading counted practice and the count from `presentation`.
     @discardableResult
-    mutating func observe(_ frame: TrackingObservation, presentation: ActivityPresentation) -> KeyRepClipRequest? {
-        observe(frame, counted: isCountedPractice(presentation), count: presentation.count)
+    mutating func observe(
+        _ frame: TrackingObservation,
+        presentation: ActivityPresentation,
+        side: TherapySide? = nil
+    ) -> KeyRepClipRequest? {
+        observe(frame, counted: isCountedPractice(presentation), count: presentation.count, side: side)
     }
 
     /// Records `frame` while `counted`, closing a repetition whenever `count` increases. Anything

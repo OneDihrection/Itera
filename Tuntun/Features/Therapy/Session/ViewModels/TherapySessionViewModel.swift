@@ -210,7 +210,9 @@ final class TherapySessionViewModel: TherapySessionViewModelProtocol {
             return
         }
 
-        trackingService.requireHand(true, side: HandSide(rawValue: activity.side.rawValue))
+        // An alternating towel session follows the hand whose turn it is.
+        let side = snapshot.activeSide ?? activity.side
+        trackingService.requireHand(true, side: HandSide(rawValue: side.rawValue))
     }
 
     private var allPermissionsGranted: Bool {
@@ -384,7 +386,7 @@ final class TherapySessionViewModel: TherapySessionViewModelProtocol {
         }
         let transition = engine.handle(event, at: ProcessInfo.processInfo.systemUptime)
         let previousKind = snapshot.activity?.kind
-        let previousSide = snapshot.activity?.side
+        let previousSide = snapshot.activeSide
         let wasPaused = snapshot.paused
         snapshot = transition.snapshot
         updateClock()
@@ -409,7 +411,7 @@ final class TherapySessionViewModel: TherapySessionViewModelProtocol {
             towelSmoother.reset()
             towelDisplay = raw
         }
-        if previousKind != snapshot.activity?.kind || previousSide != snapshot.activity?.side {
+        if previousKind != snapshot.activity?.kind || previousSide != snapshot.activeSide {
             updateHandRequirement()
         }
         for effect in transition.effects {
@@ -419,7 +421,8 @@ final class TherapySessionViewModel: TherapySessionViewModelProtocol {
                     ?? NarrationText.resolve(key, bundle: sessionLanguage.resourceBundle, locale: sessionLocale)
                 if key == "session.guidance", let activity = snapshot.activity {
                     let kindKey = activity.kind.titleKey
-                    let sideKey = activity.side == .left ? "session.left" : "session.right"
+                    let side = snapshot.activeSide ?? activity.side
+                    let sideKey = side == .left ? "session.left" : "session.right"
                     let kindText = String(localized: String.LocalizationValue(kindKey), bundle: sessionLanguage.resourceBundle, locale: sessionLocale)
                     let sideText = String(localized: String.LocalizationValue(sideKey), bundle: sessionLanguage.resourceBundle, locale: sessionLocale)
                     // Spoken short: the exercise and side only; the screen keeps the full sentence.
@@ -628,7 +631,7 @@ extension TherapySessionViewModel {
         }
 
         let towardRight = reach.direction == 0
-        let rightArm = snapshot.activity?.side != .left
+        let rightArm = (snapshot.activeSide ?? snapshot.activity?.side) != .left
 
         return towardRight == rightArm ? 0 : 1
     }

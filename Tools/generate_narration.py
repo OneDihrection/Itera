@@ -98,6 +98,8 @@ BODY_KEYS = (
     "sts.holdSeated", "sts.holdStanding", "sts.leanFirst", "sts.leanForward", "sts.sitDown",
     "sts.slowDown", "sts.standUp", "sts.trackingLost", "sts.trial",
     "towel.approach", "towel.fold", "towel.recover", "towel.release", "towel.trackingLost",
+    # An alternating bilateral exercise names the arm that takes over (SessionEngine.sideCueKey).
+    "session.switchArm.left", "session.switchArm.right",
     # Sit-to-stand in BalanceSessionViewModel speaks the engine's instruction key.
     "sitToStand.tracking",
     # Rotation exercises narrate each calibration step (speakCalibrationGuidanceIfNeeded).

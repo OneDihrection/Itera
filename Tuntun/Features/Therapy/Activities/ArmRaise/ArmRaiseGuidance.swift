@@ -27,8 +27,9 @@ enum ArmRaiseGuidance {
         return [prefix + "intro.focus", prefix + "intro.goals"]
     }
 
+    /// The briefs name one arm, so an arm raise whose sides take turns keeps the general guidance.
     static func applies(to activity: SessionActivity) -> Bool {
-        activity.kind == .armRaise
+        activity.kind == .armRaise && !activity.alternatesSides
     }
 
     /// Praise after `repetition`, or nil when no recording says it ("Satu repetisi selesai"

@@ -116,7 +116,8 @@ extension TMTherapySessionView {
         var name = lightString(kindKeyName(activity.kind))
 
         if activity.hasSide {
-            name += " · " + lightString(activity.side == .left ? "session.left" : "session.right")
+            let side = model.snapshot.activeSide ?? activity.side
+            name += " · " + lightString(side == .left ? "session.left" : "session.right")
         }
 
         return name

@@ -17637,6 +17637,38 @@
         }
       }
     },
+    "session.switchArm.left" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Now your left arm."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sekarang lengan kiri."
+          }
+        }
+      }
+    },
+    "session.switchArm.right" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Now your right arm."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sekarang lengan kanan."
+          }
+        }
+      }
+    },
     "session.targetLabel" : {
       "extractionState" : "manual",
       "localizations" : {

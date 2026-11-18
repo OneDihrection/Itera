@@ -21,6 +21,8 @@ enum ActivityFact: Equatable {
     case towelGrabbed
     /// The activity's cue changed to this instruction key.
     case cueChanged(String)
+    /// A bilateral activity handed over to this side (`AlternatingSidesActivity`).
+    case sideChanged(TherapySide)
 
     /// The facts between an activity's presentation before and after one event. Activities call
     /// this once per event; it compares a few fields and allocates nothing when nothing changed.
@@ -79,6 +81,16 @@ extension Array where Element == ActivityFact {
             }
             return false
         }
+    }
+
+    /// The side a bilateral activity handed over to, if it changed.
+    var changedSide: TherapySide? {
+        for fact in self {
+            if case .sideChanged(let side) = fact {
+                return side
+            }
+        }
+        return nil
     }
 
     func entered(_ phase: MovementPhase, from previous: MovementPhase? = nil) -> Bool {

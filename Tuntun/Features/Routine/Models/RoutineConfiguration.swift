@@ -52,21 +52,36 @@ struct RoutineExercise: Identifiable, Codable, Equatable {
 
     /// Repetition goals are per side for arm movements; sit-to-stand has no side and uses `leftGoal`
     /// as its one repetition goal so previously saved routines still decode.
+    ///
+    /// Both sides make one activity whose sides take turns after every repetition, as Balancing
+    /// does; its goal counts the repetitions of both sides together.
     var activities: [SessionActivity] {
-        let selected: [TherapySide]
         switch sides {
-        case .left: selected = [.left]
-        case .right: selected = [.right]
-        case .both: selected = firstSide == .left ? [.left, .right] : [.right, .left]
+        case .left:
+            return [activity(side: .left, goal: goal(for: .left))]
+        case .right:
+            return [activity(side: .right, goal: goal(for: .right))]
+        case .both:
+            return [activity(side: firstSide, goal: goal(for: firstSide), alternatesSides: true)]
         }
-        return selected.map { side in
-            SessionActivity(
-                kind: kind, side: side,
-                goal: kind == .armRaise || kind == .elbowBend || kind == .foldTowel
-                    ? (side == .left ? leftGoal : rightGoal) : rounds,
-                sets: sets
-            )
+    }
+
+    private func goal(for side: TherapySide) -> Int {
+        guard kind == .armRaise || kind == .elbowBend || kind == .foldTowel else {
+            return rounds
         }
+
+        return side == .left ? leftGoal : rightGoal
+    }
+
+    private func activity(side: TherapySide, goal: Int, alternatesSides: Bool = false) -> SessionActivity {
+        SessionActivity(
+            kind: kind,
+            side: side,
+            goal: goal,
+            sets: sets,
+            alternatesSides: alternatesSides
+        )
     }
 }
 

@@ -39,6 +39,9 @@ struct SessionSnapshot {
     var instruction = "session.cameraWait"
     var presentation: ActivityPresentation?
     var activity: SessionActivity?
+    /// The side exercising now. It follows the turns of an activity that alternates sides and is
+    /// the configured side otherwise.
+    var activeSide: TherapySide?
     var activityCount = 0
     var index = 0
     var setNumber = 1
@@ -107,6 +110,9 @@ struct SessionEngine {
     private var guidancePlan: SessionGuidance?
     private var positioningPending = true
     private var pendingPrefix: SessionAudioCue?
+    /// The side cue of an alternating arm exercise is being spoken; the new side's instruction
+    /// follows it.
+    private var instructionFollowsSideCue = false
     /// Limits live towel speech to the first cue and a stuck reminder.
     private var towelSpeech = TowelSpeechPolicy()
     /// The current set still owes "calibration complete" before its countdown cue.
@@ -319,25 +325,42 @@ struct SessionEngine {
         pendingScriptMovement = nil
         lastScriptHoldCount = ""
         recorder = KeyRepRecorder(activity: configuration)
-        switch configuration.kind {
-        case .foldTowel: activity = FoldTowelActivity(configuration: configuration)
-        case .armRaise:
-            activity = ArmRaiseActivity(configuration: configuration, scriptedGuidance: snapshot.usesArmRaiseScript)
-        case .elbowBend: activity = ElbowBendActivity(configuration: configuration)
-        case .directionalReach: activity = DirectionalReachActivity(configuration: configuration)
-        case .sitToStand, .crossMidline, .externalRotation, .internalRotation, .shoulderFlexion:
-            // Balancing exercises run on their own screens. Sit-to-stand stays only so routines
-            // saved before Trunk Control moved there still decode; nothing offers it any more.
-            activity = nil
+        let scripted = snapshot.usesArmRaiseScript
+
+        if configuration.alternatesSides {
+            activity = AlternatingSidesActivity(configuration: configuration) { side in
+                Self.makeActivity(side, scriptedGuidance: scripted)
+            }
+        } else {
+            activity = Self.makeActivity(configuration, scriptedGuidance: scripted)
         }
+
         if let viewport { forward(.viewport(viewport)) }
         evidenceBoundary = now
         snapshot.activity = configuration
+        snapshot.activeSide = configuration.side
         snapshot.presentation = activity?.presentation
         enter(.preparing)
         snapshot.guidedSetBreathing = nil
         snapshot.instruction = "session.cameraWait"
         gate = nil
+    }
+
+    private static func makeActivity(_ configuration: SessionActivity, scriptedGuidance: Bool) -> (any TherapyActivity)? {
+        switch configuration.kind {
+        case .foldTowel:
+            return FoldTowelActivity(configuration: configuration)
+        case .armRaise:
+            return ArmRaiseActivity(configuration: configuration, scriptedGuidance: scriptedGuidance)
+        case .elbowBend:
+            return ElbowBendActivity(configuration: configuration)
+        case .directionalReach:
+            return DirectionalReachActivity(configuration: configuration)
+        case .sitToStand, .crossMidline, .externalRotation, .internalRotation, .shoulderFlexion:
+            // Balancing exercises run on their own screens. Sit-to-stand stays only so routines
+            // saved before Trunk Control moved there still decode; nothing offers it any more.
+            return nil
+        }
     }
 
     /// Sends an event to the current activity and notes the facts the engine reacts to at the end
@@ -374,6 +397,11 @@ struct SessionEngine {
         }
         snapshot.presentation = presentation
         snapshot.instruction = presentation.instruction
+        // Alternating practice names the side that starts.
+        if progress.currentActivity?.alternatesSides == true, let side = snapshot.activeSide {
+            announce(sideCueKey(side), timed: false)
+            return
+        }
         if snapshot.usesArmRaiseScript, case .movement(let movement) = presentation {
             announce(
                 ArmRaiseGuidance.movementKey(movement, set: progress.setNumber, goal: scriptGoal, side: snapshot.armRaiseScriptSide),
@@ -386,12 +414,45 @@ struct SessionEngine {
         if facts.requestsCountdown {
             countdownRequestedThisTurn = true
         }
+
+        if let side = facts.changedSide {
+            snapshot.activeSide = side
+        }
+    }
+
+    /// The side that took over has not captured its positions yet.
+    private static func awaitsCalibration(_ presentation: ActivityPresentation) -> Bool {
+        switch presentation {
+        case .movement(let value):
+            return value.phase == .startCapture
+        case .reach(let value):
+            return value.phase == .setup
+        case .towel, .timed:
+            return false
+        }
+    }
+
+    /// Introduces the next side's calibration as readiness does the first side's: the intro, then
+    /// that side's opening and demonstration cards, then capture. "Calibration complete" stays
+    /// owed until the countdown after the last side.
+    private mutating func beginSideCalibration() {
+        enter(.opening(.init(step: .calibrationIntro)))
+        snapshot.seconds = 0
+        announce("calibration.intro", timed: false)
+    }
+
+    /// The cue naming the side that takes over in an alternating activity.
+    private func sideCueKey(_ side: TherapySide) -> String {
+        progress.currentActivity?.kind == .foldTowel
+            ? "recovery." + side.rawValue
+            : "session.switchArm." + side.rawValue
     }
 
     /// The only place the stage changes. The cue being spoken is left alone: it belongs to the
     /// narration, and the next `announce` replaces it.
     private mutating func enter(_ next: SessionStage) {
         calibrationCueSpeaking = false
+        instructionFollowsSideCue = false
         stage = next
         snapshot.stage = next.presentation
     }
@@ -454,7 +515,8 @@ struct SessionEngine {
         let facts = result.facts
         snapshot.presentation = result.presentation
         snapshot.instruction = result.presentation.instruction
-        if let clip = recorder?.observe(frame, presentation: result.presentation) {
+        let movingSide = progress.currentActivity?.alternatesSides == true ? snapshot.activeSide : nil
+        if let clip = recorder?.observe(frame, presentation: result.presentation, side: movingSide) {
             effects.append(.keepRepClip(clip))
         }
         if result.status == .finished {
@@ -462,6 +524,19 @@ struct SessionEngine {
             if case .towel = result.presentation {
                 effects.append(.audio(UUID(), .towelCompleted))
             }
+            return
+        }
+        // The other side takes over: name it. A handover into the set's countdown is left to the
+        // countdown cue, and the demonstration already shows the side.
+        if let side = facts.changedSide, !facts.requestsCountdown {
+            // A side still to calibrate gets the whole calibration intro the first side had.
+            if Self.awaitsCalibration(result.presentation) {
+                beginSideCalibration()
+                return
+            }
+            announce(sideCueKey(side), timed: false)
+            // The towel limits its live speech; arm exercises then say what the new side does.
+            instructionFollowsSideCue = progress.currentActivity?.kind != .foldTowel
             return
         }
         if case .towel = result.presentation {
@@ -562,7 +637,11 @@ struct SessionEngine {
             endSuspension()
             forward(.resume)
             if let configuration = progress.currentActivity {
-                let plan = SessionGuidance.opening(configuration, includePositioning: positioningPending)
+                let plan = SessionGuidance.opening(
+                    configuration,
+                    side: snapshot.activeSide,
+                    includePositioning: positioningPending
+                )
                 if snapshot.usesArmRaiseScript {
                     calibrationCompletionPending = true
                     enter(.opening(.init(step: .scriptedPosition)))
@@ -723,6 +802,8 @@ struct SessionEngine {
             && progress.currentActivity?.kind == .foldTowel
             && snapshot.presentation?.countdownLength == nil
         calibrationCueSpeaking = false
+        // A newer cue replaces the side cue, and with it the instruction owed after it.
+        instructionFollowsSideCue = false
         if timed || liveTowel || snapshot.usesArmRaiseScript {
             effects.append(.cancelSpeech)
         }
@@ -798,12 +879,19 @@ struct SessionEngine {
         }
         if snapshot.stage == .preparationWait, case .opening(let opening) = stage {
             if opening.step == .calibrationIntro, let configuration = progress.currentActivity {
-                beginCards(.opening(configuration, includePositioning: positioningPending))
+                beginCards(.opening(configuration, side: snapshot.activeSide, includePositioning: positioningPending))
                 return
             }
             stage.advanceAt = now
         }
         if snapshot.stage == .activity {
+            if instructionFollowsSideCue {
+                instructionFollowsSideCue = false
+                if let instruction = activity?.presentation.instruction {
+                    announce(instruction, timed: false)
+                    return
+                }
+            }
             // A live towel cue may finish late, fail, or never finish. None changes mechanics.
             if case .towel(let towel) = snapshot.presentation, towel.phase == .practice {
                 return

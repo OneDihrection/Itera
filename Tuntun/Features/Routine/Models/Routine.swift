@@ -88,7 +88,8 @@ struct SessionActivity: Identifiable, Codable, Hashable {
     let side: TherapySide
     let goal: Int
     var sets: Int = 1
-    /// Both arms took turns (Balancing exercises set to "both"); `side` is the arm that started.
+    /// Both sides take turns after every repetition (any bilateral exercise set to "both");
+    /// `side` is the side that starts and `goal` counts both sides together.
     var alternatesSides = false
 
     enum CodingKeys: String, CodingKey { case id, kind, side, goal, sets, alternatesSides }

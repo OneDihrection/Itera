@@ -286,7 +286,7 @@ struct TMTherapySessionView<ViewModel: TherapySessionViewModelProtocol>: View {
                 HStack(spacing: 16) {
                     Text(kindKey(activity.kind))
                     if activity.hasSide {
-                        Text(LocalizedStringKey("side." + activity.side.rawValue))
+                        Text(LocalizedStringKey("side." + (model.snapshot.activeSide ?? activity.side).rawValue))
                     }
                 }
                 .typography(.title2)
@@ -433,7 +433,7 @@ struct TMTherapySessionView<ViewModel: TherapySessionViewModelProtocol>: View {
                     HStack(spacing: 8) {
                         Text(kindKey(activity.kind))
                         if activity.hasSide {
-                            Text(activity.side == .left ? "session.left" : "session.right")
+                            Text((model.snapshot.activeSide ?? activity.side) == .left ? "session.left" : "session.right")
                         }
                     }
                     .typography(.title2)
@@ -646,7 +646,7 @@ struct TMTherapySessionView<ViewModel: TherapySessionViewModelProtocol>: View {
         if let activity = model.snapshot.activity, activity.kind == .armRaise || activity.kind == .elbowBend || activity.kind == .directionalReach {
             TMExerciseExample(
                 asset: activity.kind == .armRaise ? .armRaise : activity.kind == .elbowBend ? .elbowBend : .directionalReach,
-                mirrored: activity.side == .right,
+                mirrored: (model.snapshot.activeSide ?? activity.side) == .right,
                 mode: model.demoPlayback,
                 reachPose: model.demoReachPose
             )
@@ -878,7 +878,9 @@ struct TMTherapySessionView<ViewModel: TherapySessionViewModelProtocol>: View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
                 Text(kindKey(result.activity.kind))
-                if result.activity.hasSide {
+                if result.activity.alternatesSides {
+                    Text("history.bothSides")
+                } else if result.activity.hasSide {
                     Text(result.activity.side == .left ? "session.left" : "session.right")
                 }
                 Spacer()
