@@ -1387,3 +1387,15 @@ Verification: XcodeGen and Debug Simulator build with IPHONEOS_DEPLOYMENT_TARGET
 `Shared/Storage` held two identical helpers, `AtomicFileStorage` (an instance per repository) and `AtomicJSONFiles` (static). `AtomicFileStorage` was removed; `LocalRoutineRepository` and `LocalSessionRepository` now call `AtomicJSONFiles` like the other repositories. Both used default `JSONEncoder`/`JSONDecoder`, created the parent folder and wrote with `.atomic`, so files on disk are unchanged and need no migration.
 
 Verification: XcodeGen and Debug Simulator build with IPHONEOS_DEPLOYMENT_TARGET=17.0.
+
+## Session flow redesign revised (2026-11-18)
+
+At the product owner's request, the proposal in *Session flow redesign (proposed)* was reviewed against the current source and revised. It is still proposed; nothing is implemented. See [Documentation/SessionFlowRedesign/README.md](SessionFlowRedesign/README.md).
+
+- **Core and optional phases.** Phases 0–4 are the core milestone. When Phase 4 lands, the guided `SessionEngine` is a single-owner state machine: `SessionStage` cases carry their own data, there is one `Suspension`, one `GuidanceGate` per stage and one `record`, and `SessionProgress` no longer owns a stage. The redesign may stop there. Phases 5–9 (activity facts, guidance policy, finger, Balancing, daily plan) are independent follow-ups, each listing the phases it requires.
+- **Countdown resume settled.** The guided countdown restarts after a resume and the finger countdown continues; ADR-010 records this when Phase 3 lands. It is no longer an open risk.
+- **Bug 2 may land early.** Skip during a pause or camera wait may be fixed on its own before Phase 3, so that skip records the outcome and never lifts a suspension.
+- **Composition wording aligned** with *Simplified architecture* and *Routers own navigation state*: builders, `…Dependency` protocols and routers replace the stale `AppDependencies` references. Phase 9 now uses the existing `DailyPlanNextViewModel` (built by `HomeBuilder`) instead of a new `LongRestViewModel`, routes through `DailyPlanRouterProtocol`, and adds `sessionEnded` to `DailyPlanSessionReporting`.
+- Line references and file sizes in the proposal were refreshed against the current source.
+
+Verification: documentation only; no code or runtime behaviour changed.

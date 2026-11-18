@@ -2,7 +2,7 @@
 
 # Phase 2: GuidanceGate
 
-Status: Not started. Back to the [overview](README.md).
+Status: Not started. Track: core, requires Phase 1. Back to the [overview](README.md).
 
 ## Goal
 
@@ -13,9 +13,9 @@ Use one value type for narration identity, narration completion, reading complet
 | Path | State | Watchdog |
 |---|---|---|
 | Guided | `SessionEngine` vars `guidance`, `narrationComplete`, `readingComplete`, `speechTimeout`, `guidanceStartedAt`, `pendingScriptMovement` (≈ lines 72-110); `announce` at 625-646; `completeGuidance` at 659-713 | 20 s, or the plan watchdog; 45 s for scripted and feedback |
-| Finger | `FingerSessionViewModel` `speechID`, `speechDeadline`, `spokenFlowKey` (`narrate` ≈ 788, `completeNarration` 739-756) | `max(15, characters × 0.25)` |
-| Balance | `openingSpeechID`/deadline (`BalanceSessionViewModel.swift` ≈ 526); 11 other `audio.speak(id: UUID(), …)` calls whose identities are never matched | 8 s |
-| Long rest | `@State narrationID` in `DailyPlanNextView` (≈ 103-107) | 12 s |
+| Finger | `FingerSessionViewModel` `speechID`, `speechDeadline`, `spokenFlowKey` (`completeNarration` ≈ 803, `narrate` ≈ 822) | `max(15, characters × 0.25)` |
+| Balance | `openingSpeechID`/deadline (`BalanceSessionViewModel.swift` ≈ 554-575); 11 other `audio.speak(id: UUID(), …)` calls whose identities are never matched | 8 s |
+| Long rest | `@State narrationID` in `DailyPlanNextView` (≈ 31, 97, 328) | 12 s |
 
 ## Changes
 

@@ -2,7 +2,7 @@
 
 # Phase 4: Stages carry their data
 
-Status: Not started. Back to the [overview](README.md).
+Status: Not started. Track: core, requires Phase 3; this phase completes the core milestone. Back to the [overview](README.md).
 
 ## Goal
 
@@ -55,6 +55,19 @@ Fixes bugs 1, 3, 4 and 5 from the [overview](README.md#known-bugs-confirmed-in-s
 - Split `SessionEngine.swift` by responsibility into `SessionEngine.swift` (events, readiness, suspension), `SessionEngine+Opening.swift`, `SessionEngine+Practice.swift` and `SessionEngine+Rest.swift`. It stays the same type, with private helpers moved to `fileprivate` extensions only where the split needs it.
 - `SessionSnapshot.stage` becomes `stage.legacy`. Views are not edited in this phase.
 
+## Core milestone
+
+This phase completes the core redesign. Once it merges, the guided engine is a proper state machine, and the redesign can stop here. Before merging, check that all of the following are true:
+
+- `SessionProgress.Stage` is gone. `SessionProgress` keeps only the index, set, execution, results and summary.
+- No `deadline`, `feedbackEnteredAt`, `cardIndex`, `guidancePlan`, `positioningPending`, `calibrationCompletionPending`, `awaitingCountdownGuidance` or `calibrationInvalidatedBetweenSets` field remains in `SessionEngine`.
+- `stage` is assigned only inside the per-stage transition functions (opening, practice, feedback, rest), and in `select`/`recalibrate` resets.
+- Suspension exists only as the engine's `Suspension` (Phase 3), and narration identity only as each stage's `GuidanceGate` (Phase 2).
+- Skip, stop, completion and debug finish all go through one `record(_:)`.
+- Resume and camera recovery replay the cue through one `replayStageCue()`.
+
+What the core leaves in place, to be handled by the optional phases: presentation diffing and instruction strings as state (Phase 5), the arm-raise script branches (Phase 6), and the finger, balance and daily-plan machines (Phases 7–9).
+
 ## Verification
 
 - Build. Transcripts must match, except for these intended differences:
@@ -66,4 +79,5 @@ Fixes bugs 1, 3, 4 and 5 from the [overview](README.md#known-bugs-confirmed-in-s
 
 ## SYSTEM_DESIGN.md
 
-Extend ADR-010 with the stage data model, and note in §15 that `SessionProgress` no longer owns a stage.
+- Extend ADR-010 with the stage data model, and note in §15 that `SessionProgress` no longer owns a stage.
+- In §3, update the `SessionEngine` row of Responsibilities so it names `SessionStage`, `Suspension` and `GuidanceGate`. Update the paragraph on the finger and Balancing machines to say that the redesign's core is complete and that Phases 5–9 remain optional.

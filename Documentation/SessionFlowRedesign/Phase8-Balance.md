@@ -2,7 +2,9 @@
 
 # Phase 8: Balance on SessionEngine
 
-Status: Not started. Back to the [overview](README.md).
+Status: Not started. Track: optional, requires Phase 6. Back to the [overview](README.md).
+
+Optional. Until this phase lands, Balancing runs as SYSTEM_DESIGN §3 and §6 describe, and those descriptions stay authoritative.
 
 ## Goal
 
@@ -10,16 +12,16 @@ Run balance sessions on `SessionEngine` through an activity adapter. Afterwards,
 
 ## Current state
 
-- `BalanceSessionViewModel.swift` (≈ 997 lines) owns:
-  - `OpeningCue` (≈ 30);
+- `BalanceSessionViewModel.swift` (≈ 1028 lines) owns:
+  - `OpeningCue` (≈ 69);
   - `practiceCountdown` and `countdownDeadline`;
   - `setNumber` and `setResults`;
-  - the rest `Task` loop that sleeps 1 s at a time (≈ 285-312);
+  - the rest `Task` loop that sleeps 1 s at a time (`runRest` ≈ 323-344, started ≈ 316);
   - `paused` and camera waiting;
-  - `advanceOpeningIfReady` (≈ 535-572), `updateCalibrationTransition` (≈ 591-619) and `completeOpeningCue` (≈ 621-642);
+  - `advanceOpeningIfReady` (≈ 563-603), `updateCalibrationTransition` (≈ 614-643) and `completeOpeningCue` (≈ 644-666);
   - 11 `isSitToStand` branches;
-  - `background()`, which sets `paused` directly (≈ 461).
-- `BalanceMovementEngine` (`Balance/BalanceMetrics.swift:116`) has `consume(_:scoringEnabled:)`, `invalidateCalibration()`, `restart()` and `nextSet()`. Its implementations are `CrossMidlineBalanceEngine`, `ArmMovementEngine` and `SitToStandBalanceEngine`.
+  - `background()`, which sets `paused` directly (≈ 490-491).
+- `BalanceMovementEngine` (`Balance/BalanceMetrics.swift:41`) has `consume(_:scoringEnabled:)`, `invalidateCalibration()`, `restart()` and `nextSet()`. Its implementations are `CrossMidlineBalanceEngine`, `ArmMovementEngine` and `SitToStandBalanceEngine`.
 - Balance already uses `TrackingObservation`, `SessionRepository`, `SessionCheckpoint` and `SessionSummary`. `TherapyKind` already has the balance cases, which `SessionEngine.selectActivity` currently maps to `nil`.
 
 ## Changes

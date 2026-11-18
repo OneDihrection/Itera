@@ -2,7 +2,7 @@
 
 # Phase 1: Shared breathing rest and Countdown
 
-Status: Not started. Back to the [overview](README.md).
+Status: Not started. Track: core, requires Phase 0. Back to the [overview](README.md).
 
 ## Goal
 
@@ -48,8 +48,8 @@ Replace the duplicated breathing machines with one `BreathingRest`, and add the 
 - Add `SessionFlow/Countdown.swift` with `OnResume { restart, resume }`, `start`, `seconds`, `isFinished`, `takeAnnouncement` and `suspend`. Nothing uses it yet.
 - Switch these callers to `BreathingRest`:
   - `SessionEngine`: the `guidedSetBreathing` and `restBreath` snapshot fields, and the tick at `SessionEngine.swift:567-603`.
-  - `FingerSessionViewModel.scriptedRest` (created around lines 586 and 707).
-  - The balance `restBreath` (`BalanceSessionViewModel.swift:66`).
+  - `FingerSessionViewModel.scriptedRest` (created around lines 650 and 771).
+  - The balance `restBreath` (`BalanceSessionViewModel.swift:109`, filled by `runRest` ≈ 323).
 - Delete `GuidedSetBreathing`, `OppositionRest` and `RestBreath`.
 
 ## Verification

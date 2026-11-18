@@ -2,7 +2,7 @@
 
 # Phase 5: Activity facts and engine-owned countdown
 
-Status: Not started. Back to the [overview](README.md).
+Status: Not started. Track: optional, requires Phase 4. Back to the [overview](README.md).
 
 ## Goal
 
@@ -29,7 +29,7 @@ Fixes bug 8 for the guided path.
 - String checks:
   - `isCalibrationCompletionCue` (`SessionEngine.swift:202-204`, 671, 687, 699)
   - `TherapyLightSession.swift:83-84`
-  - `TherapySessionView.swift:244-245`
+  - `TherapySessionView.swift:235-236`
 
 ## Changes
 

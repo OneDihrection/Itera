@@ -2,7 +2,7 @@
 
 # Phase 3: Suspension
 
-Status: Not started. Back to the [overview](README.md).
+Status: Not started. Track: core, requires Phase 2. Back to the [overview](README.md).
 
 ## Goal
 
@@ -16,7 +16,7 @@ Fixes bugs 2 and 6 from the [overview](README.md#known-bugs-confirmed-in-source-
 - `SessionProgress.pause(at:)`/`resume(at:)` and `pausedAt` also rebase the rest deadline.
 - Each activity keeps its own `suspended` flag.
 - `record` resumes progress even while the camera is waiting (`SessionEngine.swift:790-796`).
-- `TherapySessionViewModel` refuses resume unless `voiceReady`, `listening`, audio and saves are OK (≈ 240-258). It pauses on its own at startup (≈ 171), after a save failure (≈ 469), when going to the background (≈ 281), and from `blockReadiness`.
+- `TherapySessionViewModel` refuses resume unless `voiceReady`, `listening`, audio and saves are OK (≈ 261-266). It pauses on its own at startup (≈ 192), after a save failure (≈ 481), when going to the background (≈ 297-302), and from `blockReadiness`.
 
 ## Changes
 
@@ -76,4 +76,5 @@ Add **ADR-010 — Single session flow model**, accepted on the merge date:
 - The engine owns a single `Suspension`.
 - View models report blockers as events; they do not decide whether resume is allowed.
 - Stages carry their own data (completed in Phase 4).
+- Countdown resume stays different per path: the guided countdown restarts (`Countdown.OnResume.restart`), the finger countdown continues (`.resume`). This is settled behaviour, not an open question.
 - It refines §5 and §15 and supersedes nothing.

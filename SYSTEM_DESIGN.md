@@ -92,7 +92,7 @@ The Foundation-only rule also applies to logic files in flat activity folders. K
 | `PermissionService` (`PermissionServiceProtocol`) | Camera, microphone and speech authorization; explicit, serialized, coalesced requests; refreshed on foreground; launch never prompts |
 | Repositories | Routines, finger routines, sessions, finger sessions, daily-plan progress |
 
-The finger session (`FingerSessionViewModel`, `FingerSessionEngine`) and Balancing (`BalanceSessionViewModel` with `CrossMidlineBalanceEngine`, `ArmMovementEngine`, `SitToStandBalanceEngine`) still run their own progression. Consolidating them onto shared flow types is proposed in [Documentation/SessionFlowRedesign](Documentation/SessionFlowRedesign/README.md); until a phase lands, the current behaviour described here is authoritative.
+The finger session (`FingerSessionViewModel`, `FingerSessionEngine`) and Balancing (`BalanceSessionViewModel` with `CrossMidlineBalanceEngine`, `ArmMovementEngine`, `SitToStandBalanceEngine`) still run their own progression. Consolidating them onto shared flow types is proposed in [Documentation/SessionFlowRedesign](Documentation/SessionFlowRedesign/README.md) (core: Phases 0–4, which make the guided engine a single-owner state machine; Phases 5–9 optional); until a phase lands, the current behaviour described here is authoritative (log: *Session flow redesign revised*).
 
 ### Threading and reactivity
 

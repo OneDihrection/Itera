@@ -2,7 +2,7 @@
 
 # Phase 9: Daily plan flow and long rest
 
-Status: Not started. Back to the [overview](README.md).
+Status: Not started. Track: optional, requires Phase 4. Back to the [overview](README.md).
 
 ## Goal
 
@@ -10,15 +10,15 @@ Make the daily-plan flow an explicit enum, and move the long-rest machine out of
 
 ## Current state
 
-- `DailyPlanViewModel` (≈ 52-59) tracks its flow in six loose variables: `isRunning`, `restingBeforeNext`, `currentIndex`, `pendingArmRaiseSide`, `oppositionRestSide` and `armRaiseRestSide`. `finish` (≈ 505-535) has special handling for the arm-raise sides.
+- `DailyPlanViewModel` (≈ 52-58) tracks its flow in six loose variables: `isRunning`, `restingBeforeNext`, `currentIndex`, `pendingArmRaiseSide`, `oppositionRestSide` and `armRaiseRestSide`. `finish` (≈ 507) has special handling for the arm-raise sides.
 - `DailyPlanNextView.swift`:
-  - an 11-stage `Stage` enum as `@State` (≈ 20-31);
-  - `runTransition()`, which polls every 80 ms (≈ 118-192);
-  - `nextStage` (≈ 194-214);
-  - a 12 s narration fallback (≈ 198);
-  - `plan.launchAfterRest` (≈ 154).
-- The 4 s completion auto-advance appears in three views: `BalanceSessionView.swift:77-82`, `FingerSessionCompleteView.swift:53-64` and `TherapySessionView.swift:154`.
-- Views call `plan.markOppositionRest` (`FingerSessionView.swift:41`) and `plan.markArmRaiseRest` (`TherapySessionView.swift:123`).
+  - an 11-stage `Stage` enum as `@State` (≈ 22-31);
+  - `runTransition()`, which polls every 80 ms (≈ 111-185);
+  - `nextStage` (≈ 187-210);
+  - a 12 s narration fallback (≈ 191);
+  - `viewModel.launchAfterRest()` (≈ 147).
+- The 4 s completion auto-advance appears in three views: `BalanceSessionView.swift:81`, `FingerSessionCompleteView.swift:58` and `TherapySessionView.swift:145`.
+- Views call `plan.markOppositionRest` (`FingerSessionView.swift:46`) and `plan.markArmRaiseRest` (`TherapySessionView.swift:114`), both on `DailyPlanSessionReporting`.
 
 ## Changes
 
@@ -40,15 +40,19 @@ Make the daily-plan flow an explicit enum, and move the long-rest machine out of
   }
   ```
 
-  - Sessions report `sessionEnded(_:)`, built from `policy.longRestScript`.
+  - Sessions report `sessionEnded(_:)` through `DailyPlanSessionReporting`, which gains this method in place of `markOppositionRest` and `markArmRaiseRest`. The report's `longRestScript` comes from `policy.longRestScript` once Phase 6 has landed; before that, it comes from the session's script side, as the two `mark…Rest` calls do today.
   - Views report `sessionReadyToLeave()` once saving finishes, and `scenePhase(_:)`.
-  - The plan view model owns the single 4 s preview.
+  - The plan view model owns the single 4 s preview (`DailyPlanTiming.completionPreview`).
 - Add `Features/Home/Models/LongRest.swift`, an enum that runs `.breathing(BreathingRest.long(...))`, then `.countdown(Countdown(total: 10))` or `.handOff` for scripted next items. It reproduces:
   - the "N napas lagi" lead line;
   - `inhaleLast`;
   - the silent scripted hold;
   - the 2 s minimum and 12 s maximum for narrated stages.
-- Add `LongRestViewModel` (`@MainActor @Observable`), built by `AppDependencies.makeLongRest…`. It ticks every 80 ms through a Combine `Timer` publisher, subscribes to audio events, and handles pause and the scene phase. `DailyPlanNextView` only renders it.
+- Move the long rest into the existing `DailyPlanNextViewModel`. `HomeBuilder` already builds it with the plan and `SessionAudioService`; a separate `LongRestViewModel` is not needed.
+  - It owns a `LongRest` value. It ticks every 80 ms through a Combine `Timer` publisher, subscribes to audio events, and handles pause and the scene phase.
+  - Anything new it needs comes through its explicit `init`, which `HomeBuilder` fills from `HomeDependency`.
+  - Leaving the rest and opening the next intro go through `DailyPlanViewModel`/`HomeRouter` (`PlanCover.route`), which the page receives as `DailyPlanRouterProtocol`. The view no longer keeps its own `@State`.
+  - `DailyPlanNextView` only renders the model, and keeps its generic `DailyPlanNextViewModelProtocol` so the preview mock still works.
 - Remove the three 4 s `Task.sleep` copies, `markOppositionRest`, `markArmRaiseRest` and `LongRestBreath`.
 
 ## Verification
