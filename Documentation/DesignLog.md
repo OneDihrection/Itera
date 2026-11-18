@@ -1381,3 +1381,9 @@ At the product owner's request, router wiring was simplified. Routers were closu
 Deliberate difference from the iOS Conference Indonesia 2026 sample (stage 7), whose `UserRouter.push` is wired in `UserViewModel.init`: Tuntun's sheets and plan cover multiplied those hooks. Supersedes the "wires the router's hooks" rule and the hook-lifetime reason for lazy screen models in *Components, builders and feature routers*; the models stay lazy so a rebuilt root keeps their other state.
 
 Verification: XcodeGen and Debug Simulator build with IPHONEOS_DEPLOYMENT_TARGET=17.0 succeeded. Pending in the Simulator and on the M1 iPad: Beranda settings sheet, plan intro push and back, plan cover staying mounted across session, summary, rest and next intro, "Selesai untuk hari ini" returning to Beranda's root, Progress row push and back, closing-page jump to Progress without a click and tab-bar taps with one, and navigation after a language change.
+
+## One atomic JSON helper (2026-11-18)
+
+`Shared/Storage` held two identical helpers, `AtomicFileStorage` (an instance per repository) and `AtomicJSONFiles` (static). `AtomicFileStorage` was removed; `LocalRoutineRepository` and `LocalSessionRepository` now call `AtomicJSONFiles` like the other repositories. Both used default `JSONEncoder`/`JSONDecoder`, created the parent folder and wrote with `.atomic`, so files on disk are unchanged and need no migration.
+
+Verification: XcodeGen and Debug Simulator build with IPHONEOS_DEPLOYMENT_TARGET=17.0.

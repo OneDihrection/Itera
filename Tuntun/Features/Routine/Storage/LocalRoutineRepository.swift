@@ -12,7 +12,6 @@ actor LocalRoutineRepository: RoutineRepository {
         let version: Int
         let routine: RoutineConfiguration
     }
-    private let storage = AtomicFileStorage()
     private let url: URL
 
     init(url: URL) {
@@ -23,7 +22,7 @@ actor LocalRoutineRepository: RoutineRepository {
         guard FileManager.default.fileExists(atPath: url.path) else {
             return nil
         }
-        let record = try storage.read(Record.self, from: url)
+        let record = try AtomicJSONFiles.read(Record.self, from: url)
         guard record.version == 1 else {
             throw CocoaError(.coderReadCorrupt)
         }

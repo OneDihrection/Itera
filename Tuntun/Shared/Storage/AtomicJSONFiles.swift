@@ -7,6 +7,8 @@
 
 import Foundation
 
+/// Atomic JSON file mechanics shared by every repository. Callers own their schema, versioning
+/// and recovery.
 enum AtomicJSONFiles {
     static func read<Value: Decodable>(_ type: Value.Type, from url: URL) throws -> Value {
         try JSONDecoder().decode(type, from: Data(contentsOf: url))

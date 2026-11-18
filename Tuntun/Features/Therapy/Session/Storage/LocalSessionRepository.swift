@@ -13,7 +13,6 @@ actor LocalSessionRepository: SessionRepository {
         let version: Int
         let value: Value
     }
-    private let storage = AtomicFileStorage()
     private let directory: URL
     private var activeURL: URL { directory.appendingPathComponent("active.json") }
     private static let keyRepsSuffix = ".reps.json"
@@ -27,7 +26,7 @@ actor LocalSessionRepository: SessionRepository {
         guard FileManager.default.fileExists(atPath: activeURL.path) else {
             return
         }
-        let record = try storage.read(Record<SessionCheckpoint>.self, from: activeURL)
+        let record = try AtomicJSONFiles.read(Record<SessionCheckpoint>.self, from: activeURL)
         guard record.version == 1 else { throw StorageError.unsupportedVersion }
         let checkpoint = record.value
         var results = checkpoint.results
@@ -67,7 +66,7 @@ actor LocalSessionRepository: SessionRepository {
 
         for url in urls {
             do {
-                let record = try storage.read(Record<SessionSummary>.self, from: url)
+                let record = try AtomicJSONFiles.read(Record<SessionSummary>.self, from: url)
 
                 guard record.version == 1 else {
                     throw StorageError.unsupportedVersion
@@ -105,16 +104,16 @@ actor LocalSessionRepository: SessionRepository {
     }
 
     func checkpoint(_ value: SessionCheckpoint) throws {
-        try write(Record(version: 1, value: value), to: activeURL)
+        try AtomicJSONFiles.write(Record(version: 1, value: value), to: activeURL)
     }
 
     func finalize(_ value: SessionSummary) throws {
         let url = directory.appendingPathComponent(value.id.uuidString + ".json")
         if !FileManager.default.fileExists(atPath: url.path) {
-            try write(Record(version: 1, value: value), to: url)
+            try AtomicJSONFiles.write(Record(version: 1, value: value), to: url)
         }
         if FileManager.default.fileExists(atPath: activeURL.path) {
-            let record = try storage.read(Record<SessionCheckpoint>.self, from: activeURL)
+            let record = try AtomicJSONFiles.read(Record<SessionCheckpoint>.self, from: activeURL)
             guard record.version == 1 else { throw StorageError.unsupportedVersion }
             if record.value.id == value.id { try FileManager.default.removeItem(at: activeURL) }
         }
@@ -127,7 +126,7 @@ actor LocalSessionRepository: SessionRepository {
     func saveKeyReps(_ value: ActivityKeyReps, sessionID: UUID) throws {
         var record = try readKeyReps(sessionID: sessionID) ?? KeyRepRecord(sessionID: sessionID)
         record.upsert(value)
-        try write(record, to: keyRepsURL(for: sessionID))
+        try AtomicJSONFiles.write(record, to: keyRepsURL(for: sessionID))
     }
 
     func keyReps(sessionID: UUID) throws -> [ActivityKeyReps] {
@@ -141,7 +140,7 @@ actor LocalSessionRepository: SessionRepository {
             return nil
         }
 
-        let record = try storage.read(KeyRepRecord.self, from: url)
+        let record = try AtomicJSONFiles.read(KeyRepRecord.self, from: url)
 
         guard record.version == KeyRepRecord.currentVersion, record.sessionID == sessionID else {
             throw StorageError.unsupportedVersion
@@ -202,10 +201,6 @@ actor LocalSessionRepository: SessionRepository {
 
     private func keyRepsURL(for id: UUID) -> URL {
         directory.appendingPathComponent(id.uuidString + Self.keyRepsSuffix)
-    }
-
-    private func write<T: Encodable>(_ value: T, to url: URL) throws {
-        try storage.write(value, to: url)
     }
 
     private enum StorageError: Error { case unsupportedVersion }
