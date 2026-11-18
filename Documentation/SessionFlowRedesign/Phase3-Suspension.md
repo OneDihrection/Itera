@@ -2,7 +2,7 @@
 
 # Phase 3: Suspension
 
-Status: Not started. Track: core, requires Phase 2. Back to the [overview](README.md).
+Status: Done 2026-11-18 (as amended below). Track: core, requires Phase 2. Back to the [overview](README.md).
 
 ## Goal
 
@@ -17,6 +17,26 @@ Fixes bugs 2 and 6 from the [overview](README.md#known-bugs-confirmed-in-source-
 - Each activity keeps its own `suspended` flag.
 - `record` resumes progress even while the camera is waiting (`SessionEngine.swift:790-796`).
 - `TherapySessionViewModel` refuses resume unless `voiceReady`, `listening`, audio and saves are OK (≈ 261-266). It pauses on its own at startup (≈ 192), after a save failure (≈ 481), when going to the background (≈ 297-302), and from `blockReadiness`.
+
+## As implemented (2026-11-18)
+
+`Suspension` (`Therapy/Shared/SessionFlow/Suspension.swift`) separates **reasons** from **blockers**:
+
+- Reasons (`pause`, `cameraWait`) freeze the session. Backgrounding and audio interruptions are pauses, because nothing behaves differently for them.
+- Blockers (`voiceUnavailable`, `storageFailure`) only refuse Resume. A newly reported blocker pauses, as `blockReadiness` and a save failure did before.
+
+The frozen interval stays open until the engine calls `end()`. This reproduces today's timing exactly, including the startup Resume that arrives while `cameraWaiting` is still initially true.
+
+What changed in code:
+
+- The engine handles `.blocked(_:_:)`.
+- `TherapySessionViewModel.command(.resume)` calls `reportBlockers()` instead of refusing Resume itself.
+- `blockReadiness`, `background()` and a failed save report blockers instead of sending `pause`.
+- `SessionProgress` lost `pausedAt`, `pause` and `resume`. The engine shifts the rest deadline through `shiftRest(suspendedAt:resumedAt:)`.
+
+Not done: `requiresVoice` (Balancing is not on the engine until Phase 8) and the `.lifecycle` event (backgrounding is a voice blocker plus the existing discontinuity). Views still read the view model's voice and save flags.
+
+The original plan follows for reference.
 
 ## Changes
 

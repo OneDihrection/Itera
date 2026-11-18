@@ -16,6 +16,8 @@ enum SessionEvent {
     case guidanceCompleted(UUID, Bool = true)
     case readingChanged(UUID, Bool)
     case viewport(TherapyViewport)
+    /// A condition that refuses Resume became active or cleared. A newly active one pauses.
+    case blocked(Suspension.Blocker, Bool)
 }
 
 enum SessionEffect {
@@ -84,9 +86,8 @@ struct SessionEngine {
     /// The cue being spoken: its identity, narration and reading state, and watchdog.
     private var gate: GuidanceGate?
     private var deadline: Double?
-    private var waitingSince: Double?
-    private var suspensionSince: Double?
-    private var pausedSince: Double?
+    /// Pause and camera-wait reasons, resume blockers, and the open frozen interval.
+    private var suspension = Suspension()
     private var viewport: TherapyViewport?
     private var began = false
     private var evidenceBoundary = 0.0
@@ -151,6 +152,11 @@ struct SessionEngine {
                 recalibrate()
                 pause()
             }
+        case .blocked(let blocker, let active):
+            if suspension.setBlocker(blocker, active) {
+                snapshot.assistanceKey = nil
+                pause()
+            }
         case .observation(let frame): observation(frame)
         case .guidanceCompleted(let id, let available): completeGuidance(id, available: available)
         case .readingChanged(let id, let complete):
@@ -181,7 +187,7 @@ struct SessionEngine {
         snapshot.index = progress.index
         snapshot.setNumber = progress.setNumber
         snapshot.activityCount = progress.routine.activities.count
-        snapshot.paused = pausedSince != nil
+        snapshot.paused = suspension.isPaused
         snapshot.results = progress.results
         snapshot.summary = progress.summary
         if let summary = progress.summary, snapshot.stage != .summary {
@@ -262,7 +268,7 @@ struct SessionEngine {
             id: progress.id, routine: progress.routine, startedAt: progress.startedAt,
             results: progress.results)
     }
-    private var canProgress: Bool { pausedSince == nil && !snapshot.cameraWaiting }
+    private var canProgress: Bool { !suspension.isPaused && !snapshot.cameraWaiting }
 
     private mutating func selectActivity() {
         calibrationInvalidatedBetweenSets = false
@@ -444,20 +450,12 @@ struct SessionEngine {
             && previewReady
             && (lastTimestamp.map({ now - $0 <= Self.cameraWaitGrace }) ?? false)
         if !ready {
-            if waitingSince == nil {
-                waitingSince = now
-                recorder?.discardCurrentRep()
-                beginSuspension()
-                _ = activity?.handle(.suspend)
-                effects.append(.cancelSpeech)
-                gate = nil
-            }
+            _ = suspend(.cameraWait)
             snapshot.cameraWaiting = true
             return
         }
-        if waitingSince != nil {
-            waitingSince = nil
-            if pausedSince == nil {
+        if suspension.remove(.cameraWait) {
+            if !suspension.isPaused {
                 endSuspension()
                 _ = activity?.handle(.resume)
                 snapshot.presentation = activity?.presentation
@@ -474,7 +472,7 @@ struct SessionEngine {
             }
         }
         snapshot.cameraWaiting = false
-        if snapshot.stage == .preparing, pausedSince == nil {
+        if snapshot.stage == .preparing, !suspension.isPaused {
             endSuspension()
             _ = activity?.handle(.resume)
             if let configuration = progress.currentActivity {
@@ -794,13 +792,8 @@ struct SessionEngine {
         guard progress.stage == .activity else {
             return
         }
-        if pausedSince != nil {
-            pausedSince = nil
-            endSuspension()
-            _ = activity?.handle(.resume)
-        } else {
-            progress.resume(at: now)
-        }
+        // Recording never lifts a suspension: a skip while paused or waiting for the camera stays
+        // suspended, and its feedback cue plays after Resume.
         pendingScriptMovement = nil
         let presentation = activity?.presentation
         let reach: ReachSnapshot?
@@ -859,10 +852,10 @@ struct SessionEngine {
             snapshot.assistanceKey = nil
             pause()
         case .resume:
-            guard pausedSince != nil else {
+            guard suspension.isPaused, suspension.canResume else {
                 return
             }
-            pausedSince = nil
+            _ = suspension.remove(.pause)
             if !snapshot.cameraWaiting {
                 endSuspension()
                 _ = activity?.handle(.resume)
@@ -880,7 +873,6 @@ struct SessionEngine {
             snapshot.assistanceKey = nil
         case .stop:
             if progress.stage == .activity {
-                progress.resume(at: now)
                 let reach: ReachSnapshot?
                 if case .reach(let value) = activity?.presentation {
                     reach = value
@@ -901,7 +893,7 @@ struct SessionEngine {
         case .timedPractice:
             guard let configuration = progress.currentActivity,
                 configuration.kind == .armRaise || configuration.kind == .elbowBend,
-                progress.stage == .activity, pausedSince != nil else { return }
+                progress.stage == .activity, suspension.isPaused else { return }
             activity = TimedPracticeActivity(configuration: configuration, duration: progress.routine.practiceSeconds)
             snapshot.presentation = activity?.presentation
             snapshot.stage = .activity
@@ -940,8 +932,7 @@ struct SessionEngine {
     /// Records the current activity's remaining sets as completed at their goal. The summary block
     /// in `handle` finalizes after the last activity; otherwise an elapsed rest starts the next one.
     private mutating func finishActivityForDebug() {
-        if pausedSince != nil {
-            pausedSince = nil
+        if suspension.remove(.pause) {
             endSuspension()
         }
 
@@ -999,32 +990,39 @@ struct SessionEngine {
     }
 
     private mutating func pause() {
-        guard pausedSince == nil else {
+        guard suspend(.pause) else {
             return
         }
-        pausedSince = now
-        recorder?.discardCurrentRep()
-        beginSuspension()
-        _ = activity?.handle(.suspend)
-        effects.append(.cancelSpeech)
-        gate = nil
         announcedCountdown = nil
     }
 
-    private mutating func beginSuspension() {
+    /// Adds a suspension reason and, when it is new, freezes everything that would otherwise run
+    /// on: the current repetition, scripted breathing, the activity, and the cue being spoken.
+    /// Returns false when the reason was already present.
+    private mutating func suspend(_ reason: Suspension.Reason) -> Bool {
+        guard suspension.insert(reason, at: now) else {
+            return false
+        }
+        recorder?.discardCurrentRep()
         snapshot.guidedSetBreathing?.suspend()
         pendingScriptMovement = nil
-        if suspensionSince == nil { suspensionSince = now }
-        progress.pause(at: now)
+        _ = activity?.handle(.suspend)
+        effects.append(.cancelSpeech)
+        gate = nil
+        return true
     }
 
+    /// Closes the frozen interval and moves every deadline later by its length, so no stage loses
+    /// time to a pause or camera wait. Evidence from before this moment is ignored.
     private mutating func endSuspension() {
         evidenceBoundary = now
-        if let since = suspensionSince, let deadline {
+        guard let since = suspension.end() else {
+            return
+        }
+        if let deadline {
             self.deadline = deadline + now - since
         }
-        suspensionSince = nil
-        progress.resume(at: now)
+        progress.shiftRest(suspendedAt: since, resumedAt: now)
     }
 
     private mutating func recalibrate() {

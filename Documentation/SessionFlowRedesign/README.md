@@ -157,7 +157,7 @@ Each phase is one pull request. It must build on its own and match the golden tr
 | 0 | Core | — | [Phase0-Baseline.md](Phase0-Baseline.md) | Temporary harness and golden transcripts | — |
 | 1 | Core | 0 | [Phase1-BreathingCountdown.md](Phase1-BreathingCountdown.md) | One `BreathingRest` (`Countdown` moved to Phase 5). **Done.** | 7 (part) |
 | 2 | Core | 1 | [Phase2-GuidanceGate.md](Phase2-GuidanceGate.md) | One narration/reading gate on every path. **Done.** | 7 (stale callbacks) |
-| 3 | Core | 2 | [Phase3-Suspension.md](Phase3-Suspension.md) | One suspension model owned by the engine; ADR-010 | 2, 6 |
+| 3 | Core | 2 | [Phase3-Suspension.md](Phase3-Suspension.md) | One suspension model owned by the engine; ADR-010. **Done.** | 2, 6 |
 | 4 | Core | 3 | [Phase4-StagePayloads.md](Phase4-StagePayloads.md) | `SessionStage` carries its own data; split the engine. **Core milestone.** | 1, 3, 4, 5 |
 | 5 | Optional | 4 | [Phase5-ActivityFacts.md](Phase5-ActivityFacts.md) | Activities emit facts; the engine owns the countdown | 8 (guided) |
 | 6 | Optional | 5 | [Phase6-GuidancePolicy.md](Phase6-GuidancePolicy.md) | Scripts move behind `GuidancePolicy` | — |

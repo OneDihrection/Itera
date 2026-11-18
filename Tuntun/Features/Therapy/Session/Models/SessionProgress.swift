@@ -24,7 +24,6 @@ struct SessionProgress {
     private(set) var executionID = UUID()
     private(set) var stage: Stage = .activity
     private(set) var results: [SessionActivityResult] = []
-    private(set) var pausedAt: Double?
     private(set) var summary: SessionSummary?
 
     var currentActivity: SessionActivity? {
@@ -40,24 +39,13 @@ struct SessionProgress {
         self.startedAt = startedAt
     }
 
-    mutating func pause(at time: Double) {
-        guard time.isFinite, pausedAt == nil, stage != .summary else {
+    /// Moves a running rest's deadline later by a suspension, which the session engine owns.
+    mutating func shiftRest(suspendedAt: Double, resumedAt time: Double) {
+        guard time.isFinite, time >= suspendedAt, case .rest(let deadline) = stage else {
             return
         }
 
-        pausedAt = time
-    }
-
-    mutating func resume(at time: Double) {
-        guard time.isFinite, let suspendedAt = pausedAt, time >= suspendedAt else {
-            return
-        }
-
-        if case .rest(let deadline) = stage {
-            stage = .rest(deadline: deadline + time - suspendedAt)
-        }
-
-        pausedAt = nil
+        stage = .rest(deadline: deadline + time - suspendedAt)
     }
 
     mutating func retryExecution() {
@@ -74,8 +62,7 @@ struct SessionProgress {
         practiceSeconds: Double = 0,
         repMetrics: [RepMetrics]? = nil
     ) {
-        guard pausedAt == nil,
-            stage == .activity,
+        guard stage == .activity,
             execution == executionID,
             let activity = currentActivity,
             !results.contains(where: { $0.executionID == execution })
@@ -100,7 +87,7 @@ struct SessionProgress {
     }
 
     mutating func finishFeedback(request: UUID, at time: Double, date: Date) {
-        guard time.isFinite, pausedAt == nil, stage == .feedback(request) else {
+        guard time.isFinite, stage == .feedback(request) else {
             return
         }
 
@@ -114,7 +101,6 @@ struct SessionProgress {
 
     mutating func tick(at time: Double) {
         guard time.isFinite,
-            pausedAt == nil,
             case .rest(let deadline) = stage,
             time >= deadline
         else {
@@ -133,7 +119,7 @@ struct SessionProgress {
 
     /// Completes a narrated rest whose clock is owned by the session's breathing sequence.
     mutating func finishNarratedRest(at time: Double) {
-        guard pausedAt == nil, case .rest = stage else {
+        guard case .rest = stage else {
             return
         }
         stage = .rest(deadline: time)
@@ -157,8 +143,6 @@ struct SessionProgress {
         guard time.isFinite, let activity = currentActivity else {
             return
         }
-
-        pausedAt = nil
 
         // In feedback or rest the current set is already recorded; continue from the next one.
         let currentSetRecorded = results.contains { $0.executionID == executionID }
@@ -204,6 +188,5 @@ struct SessionProgress {
             results: results
         )
         stage = .summary
-        pausedAt = nil
     }
 }

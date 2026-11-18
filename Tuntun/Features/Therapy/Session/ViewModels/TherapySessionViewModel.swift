@@ -253,29 +253,34 @@ final class TherapySessionViewModel: TherapySessionViewModelProtocol {
         voiceReady = false
         listening = false
         cameraDenied = permissionService?.status(for: .camera) != .authorized
-        command(.pause)
+        send(.blocked(.voiceUnavailable, true))
         trackingService.stop()
         audioService.stop()
     }
 
     func command(_ command: SessionCommand) {
         switch command {
-        case .pause, .stop:
+        case .pause, .stop, .resume:
             break
         default:
             guard voiceReady, allPermissionsGranted else { return }
         }
-        if case .resume = command {
-            permissionService?.refresh()
-            guard allPermissionsGranted, voiceReady, listening,
-                audioService.capability() == .ready,
-                saveFailure == nil || allowUnreliableHistory
-            else {
-                return
-            }
-        }
         guard started else { return }
+        if case .resume = command {
+            reportBlockers()
+        }
         send(.command(command))
+    }
+
+    /// Reports what currently refuses Resume. The engine decides whether a Resume goes ahead.
+    private func reportBlockers() {
+        permissionService?.refresh()
+        let voiceAvailable = allPermissionsGranted
+            && voiceReady
+            && listening
+            && audioService.capability() == .ready
+        send(.blocked(.voiceUnavailable, !voiceAvailable))
+        send(.blocked(.storageFailure, saveFailure != nil && !allowUnreliableHistory))
     }
 
     func readingChanged(_ id: UUID, complete: Bool) {
@@ -299,7 +304,8 @@ final class TherapySessionViewModel: TherapySessionViewModelProtocol {
         guard live else {
             return
         }
-        command(.pause)
+        // Voice stops in the background; Resume stays refused until listening is validated again.
+        send(.blocked(.voiceUnavailable, true))
         send(.availability(.discontinuity))
         voiceReady = false
         trackingService.stop()
@@ -478,7 +484,7 @@ final class TherapySessionViewModel: TherapySessionViewModelProtocol {
                 }
             } catch {
                 saveFailure = error.localizedDescription
-                if live { command(.pause) }
+                if live { send(.blocked(.storageFailure, true)) }
             }
             saving = false
         }
