@@ -20188,6 +20188,23 @@
         }
       }
     },
+    "speak.towel.demo" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pinch your thumb and index finger together on the glowing circle, slide to the next circle, then open your hand.\nYou can begin after the countdown, even while guidance speaks."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Satukan ibu jari dan jari telunjuk (jepit) di lingkaran yang bersinar, geser ke lingkaran berikutnya, lalu buka tangan.\nMulai setelah hitungan mundur, meskipun panduan masih berbicara."
+          }
+        }
+      }
+    },
     "stage.calibration" : {
       "localizations" : {
         "en" : {
@@ -21358,13 +21375,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Pinch your thumb and index finger together on the glowing circle, slide to the next circle, then open your hand.\nYou can begin after the countdown, even while guidance speaks."
+            "value" : "Pinch on the glowing circle, slide, then open your hand."
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Satukan ibu jari dan jari telunjuk (jepit) di lingkaran yang bersinar, geser ke lingkaran berikutnya, lalu buka tangan.\nMulai setelah hitungan mundur, meskipun panduan masih berbicara."
+            "value" : "Jepit di lingkaran yang bersinar, geser, lalu buka tangan."
           }
         }
       }

@@ -109,8 +109,8 @@ BODY_KEYS = (
     "calibration.intro", "calibration.try", "calibration.complete", "calibration.countdown",
     # Breathing guidance spoken during Balancing rests (SessionDurationClock breath phases).
     "rest.breath.inhale", "rest.breath.exhale",
-    # The fold-towel demonstration card (SessionGuidance).
-    "towel.demo",
+    # The fold-towel opening and demonstration cards (SessionGuidance).
+    "towel.opening.left", "towel.opening.right", "towel.demo",
     # Balancing speaks the engine's reach instruction when its practice countdown ends.
     "balance.reachRight", "balance.reachLeft",
     "rotation.rotateRight", "rotation.rotateLeft",

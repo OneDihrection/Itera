@@ -18,7 +18,7 @@ extension TMTherapySessionView {
     /// Heading, the camera with its cue bubble, the demonstration, counters, Pause and End.
     var lightLayout: some View {
         TMTherapyExerciseLiveLayout(
-            heading: isCalibrationLayout
+            heading: showsCalibrationHeading
                 ? TMTherapyExerciseHeading(
                     eyebrow: plan.currentNumber.map { Text("plan.exerciseNumber \($0)") },
                     title: Text(LocalizedStringKey(model.snapshot.usesArmRaiseScript
@@ -63,20 +63,26 @@ extension TMTherapySessionView {
         #endif
     }
 
-    private var usesCalibrationOpening: Bool {
+    /// Every light activity shows its opening and demonstration cards over the live camera.
+    private var usesCameraOpening: Bool {
         switch model.snapshot.activity?.kind {
-        case .armRaise, .elbowBend, .directionalReach: return true
+        case .armRaise, .elbowBend, .directionalReach, .foldTowel: return true
         default: return false
         }
     }
 
+    /// Fold towel has no calibration, so its opening keeps the exercise heading.
+    private var showsCalibrationHeading: Bool {
+        isCalibrationLayout && model.snapshot.activity?.kind != .foldTowel
+    }
+
     private var showsCalibrationCard: Bool {
-        usesCalibrationOpening
+        usesCameraOpening
             && (model.snapshot.stage == .instruction || model.snapshot.stage == .demonstration)
     }
 
     var isCalibrationLayout: Bool {
-        if showsCalibrationCard || (usesCalibrationOpening && model.snapshot.stage == .preparing) {
+        if showsCalibrationCard || (usesCameraOpening && model.snapshot.stage == .preparing) {
             return true
         }
         if model.snapshot.stage == .preparationWait || model.snapshot.speaksCalibrationComplete {
