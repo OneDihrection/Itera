@@ -19,13 +19,14 @@ protocol TabRouterProtocol: AnyObject {
     func showProgress()
 }
 
-/// The root view model wires `select` to its selected tab.
+/// Owns the selected tab; the root view model forwards it to the tab bar.
 @MainActor
+@Observable
 final class TabRouter: TabRouterProtocol {
-    var select: ((AppTab) -> Void)?
+    var selectedTab: AppTab = .home
 
     func showProgress() {
-        select?(.reports)
+        selectedTab = .reports
     }
 }
 
@@ -38,21 +39,20 @@ protocol RootViewModelProtocol: AnyObject, Observable {
 @MainActor
 @Observable
 final class RootViewModel: RootViewModelProtocol {
+    @ObservationIgnored private let router: TabRouter
     @ObservationIgnored private let playButtonClick: () -> Void
 
-    private var currentTab: AppTab = .home
-
-    /// Set by the tab bar, so a change is a tap; the router changes `currentTab` silently.
+    /// Set by the tab bar, so a change is a tap; the router changes its own selection silently.
     var selectedTab: AppTab {
         get {
-            currentTab
+            router.selectedTab
         }
         set {
-            guard newValue != currentTab else {
+            guard newValue != router.selectedTab else {
                 return
             }
 
-            currentTab = newValue
+            router.selectedTab = newValue
             playButtonClick()
         }
     }
@@ -61,11 +61,8 @@ final class RootViewModel: RootViewModelProtocol {
         router: TabRouter,
         playButtonClick: @escaping () -> Void
     ) {
+        self.router = router
         self.playButtonClick = playButtonClick
-
-        router.select = { [weak self] tab in
-            self?.currentTab = tab
-        }
     }
 }
 

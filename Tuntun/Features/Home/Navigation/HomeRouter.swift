@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import Observation
 
 // MARK: - Routes
 
@@ -78,55 +79,58 @@ protocol SessionRouterProtocol: AnyObject {
 
 // MARK: - Router
 
-/// Beranda's router: its settings sheet, the plan intro pushed on its stack, and the
-/// full-screen cover the plan's sessions, rest and next intro share. Beranda's screen model owns
-/// that state and wires these hooks; the settings page, the plan and the session pages each
-/// receive this router through their initializers as their own narrow protocol.
+/// Beranda's router: owns its stack path, its settings sheet and the full-screen cover the
+/// plan's sessions, rest and next intro share. Beranda's screen model forwards this state to its
+/// view; the settings page, the plan and the session pages each receive this router through their
+/// initializers as their own narrow protocol.
 @MainActor
+@Observable
 final class HomeRouter: HomeRouterProtocol, DailyPlanRouterProtocol, SessionRouterProtocol {
-    var presentSheet: ((HomeSheet) -> Void)?
-    var dismissPresentedSheet: (() -> Void)?
-    var pushIntro: ((String) -> Void)?
-    var returnHome: (() -> Void)?
-    var presentPlanCover: ((PlanCoverRoute) -> Void)?
-    var replacePlanCover: ((PlanCoverRoute) -> Void)?
-    var dismissPlanCover: (() -> Void)?
-    var coverPresented: (() -> Bool)?
+    var path: [HomeRoute] = []
+    var sheet: HomeSheet?
+    var cover: PlanCover?
 
     var isCoverPresented: Bool {
-        coverPresented?() ?? false
+        cover != nil
     }
 
     func openPracticePreferences() {
-        presentSheet?(.practicePreferences)
+        sheet = .practicePreferences
     }
 
     func dismissSheet() {
-        dismissPresentedSheet?()
+        sheet = nil
     }
 
     func showIntro(itemID: String) {
-        pushIntro?(itemID)
+        path.append(.planIntro(itemID))
     }
 
     func presentCover(_ route: PlanCoverRoute) {
-        presentPlanCover?(route)
+        cover = PlanCover(route: route)
     }
 
+    /// Keeps the cover's identity so it stays mounted and only its page changes.
     func replaceCover(with route: PlanCoverRoute) {
-        replacePlanCover?(route)
+        guard cover != nil else {
+            cover = PlanCover(route: route)
+            return
+        }
+
+        cover?.route = route
     }
 
     func endRun() {
-        dismissPlanCover?()
-        returnHome?()
+        cover = nil
+        sheet = nil
+        path.removeAll()
     }
 
     func showFingerSessionComplete() {
-        replacePlanCover?(.fingerSessionComplete)
+        replaceCover(with: .fingerSessionComplete)
     }
 
     func closeSession() {
-        dismissPlanCover?()
+        cover = nil
     }
 }

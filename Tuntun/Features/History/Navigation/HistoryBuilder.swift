@@ -34,8 +34,8 @@ final class HistoryBuilder: HistoryContentBuildable {
     /// One router for the tab's single stack.
     private let router = HistoryRouter()
 
-    /// Created once: it wires the router's hooks to its path, so a rebuilt root must not
-    /// replace it.
+    /// Created once, so a rebuilt root keeps its loaded history. The stack path lives in the
+    /// router.
     private lazy var reportsViewModel = ReportsViewModel(
         home: dependency.fingers,
         armReports: TaskReportsViewModel(repository: dependency.sessions),

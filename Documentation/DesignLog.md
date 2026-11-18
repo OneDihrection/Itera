@@ -1369,3 +1369,15 @@ Verification: XcodeGen and Debug Simulator build with IPHONEOS_DEPLOYMENT_TARGET
 At the product owner's request the guidance arrows removed with `TMSessionTargetOverlay` are back, unchanged in look and behaviour: the curved arrow from the joint to the active bubble, the calibration cue (arm raise, elbow bend and Balancing before a target exists) and the directional-reach arrow. The drawing moved verbatim into `TMSessionGuideArrows` (DesignSystem/Controls/SessionGuideArrows.swift), which `TMSessionBubbleOverlay` draws under the orange circles. The skeleton, hold-seconds badge and farthest marker stay removed.
 
 Verification: XcodeGen and Debug Simulator build with IPHONEOS_DEPLOYMENT_TARGET=17.0. Pending on the M1 iPad: the arrow leads to the bubble, fades on arrival and hides during a hold; the calibration cue in arm raise, elbow bend and Balancing; the reach arrow at the image edge; Reduce Motion.
+
+## Routers own navigation state (2026-11-18)
+
+At the product owner's request, router wiring was simplified. Routers were closure-hook objects (`HomeRouter` had eight optional closures, `HistoryRouter` three, `TabRouter` one) that the stack-owning view model assigned with `[weak self]` in its initializer, so each new route needed a closure, a method and a wiring line, and a view model rebuilt without rewiring left navigation silently doing nothing.
+
+- `HomeRouter`, `HistoryRouter` and `TabRouter` are now `@Observable` and own the state: `path`, `sheet` and `cover` (with the cover-identity-preserving `replaceCover(with:)` moved from `HomeScreenViewModel`), the Progress `path`, and `selectedTab`. Their methods mutate it directly.
+- `HomeScreenViewModel`, `ReportsViewModel` and `RootViewModel` forward those properties to their router with computed get/set, so screens, view-model protocols, mocks and previews are unchanged. `RootViewModel` still plays the click only for tab-bar changes; `showProgress()` changes the router's selection silently.
+- Router protocols (`HomeRouterProtocol`, `DailyPlanRouterProtocol`, `SessionRouterProtocol`, `HistoryRouterProtocol`, `TabRouterProtocol`) are unchanged.
+
+Deliberate difference from the iOS Conference Indonesia 2026 sample (stage 7), whose `UserRouter.push` is wired in `UserViewModel.init`: Tuntun's sheets and plan cover multiplied those hooks. Supersedes the "wires the router's hooks" rule and the hook-lifetime reason for lazy screen models in *Components, builders and feature routers*; the models stay lazy so a rebuilt root keeps their other state.
+
+Verification: XcodeGen and Debug Simulator build with IPHONEOS_DEPLOYMENT_TARGET=17.0 succeeded. Pending in the Simulator and on the M1 iPad: Beranda settings sheet, plan intro push and back, plan cover staying mounted across session, summary, rest and next intro, "Selesai untuk hari ini" returning to Beranda's root, Progress row push and back, closing-page jump to Progress without a click and tab-bar taps with one, and navigation after a language change.

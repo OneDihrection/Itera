@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import Observation
 
 /// A page pushed onto the Progress tab's stack.
 enum HistoryRoute: Hashable {
@@ -22,27 +23,30 @@ protocol HistoryRouterProtocol: AnyObject {
     func popToRoot()
 }
 
-/// Navigation for the Progress tab. The reports list owns the stack and wires these hooks to its
-/// path; every page on that stack receives this router.
+/// Navigation for the Progress tab. It owns the tab's stack path; the reports list binds its
+/// `NavigationStack` to it, and every page on that stack receives this router.
 @MainActor
+@Observable
 final class HistoryRouter: HistoryRouterProtocol {
-    var push: ((HistoryRoute) -> Void)?
-    var popLast: (() -> Void)?
-    var reset: (() -> Void)?
+    var path: [HistoryRoute] = []
 
     func showFingerReport(id: UUID) {
-        push?(.fingerReport(id))
+        path.append(.fingerReport(id))
     }
 
     func showSessionReport(id: UUID) {
-        push?(.sessionReport(id))
+        path.append(.sessionReport(id))
     }
 
     func pop() {
-        popLast?()
+        guard !path.isEmpty else {
+            return
+        }
+
+        path.removeLast()
     }
 
     func popToRoot() {
-        reset?()
+        path.removeAll()
     }
 }

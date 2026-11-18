@@ -66,8 +66,8 @@ protocol PracticePreferencesContentBuildable {
 final class HomeBuilder: HomeContentBuildable, PracticePreferencesContentBuildable {
     private let dependency: any HomeDependency
 
-    /// Created once: it wires the router's hooks to its stack, sheet and cover, so a rebuilt
-    /// root must not replace it.
+    /// Created once, so a rebuilt root keeps the same screen model. The stack, sheet and cover
+    /// live in `HomeRouter`.
     private lazy var homeViewModel = HomeScreenViewModel(
         fingers: dependency.fingers,
         armRoutine: dependency.armRoutine,

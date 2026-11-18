@@ -22,12 +22,11 @@ protocol ReportsViewModelProtocol: AnyObject, Observable {
     func deleteHistory() async -> Bool
 }
 
-/// The Progress tab: owns its navigation stack and joins finger and arm history. Rows navigate
-/// through their own view models.
+/// The Progress tab: exposes its router's navigation stack and joins finger and arm history.
+/// Rows navigate through their own view models.
 @MainActor
 @Observable
 final class ReportsViewModel: ReportsViewModelProtocol {
-    var path: [HistoryRoute] = []
     private(set) var deletingHistory = false
 
     @ObservationIgnored private let home: FingerHomeViewModel
@@ -42,19 +41,15 @@ final class ReportsViewModel: ReportsViewModelProtocol {
         self.home = home
         self.router = router
         self.armReports = armReports
+    }
 
-        router.push = { [weak self] route in
-            self?.path.append(route)
+    /// The stack path lives in the router, so pushes from rows and pages land on this stack.
+    var path: [HistoryRoute] {
+        get {
+            router.path
         }
-        router.popLast = { [weak self] in
-            guard let self, !path.isEmpty else {
-                return
-            }
-
-            path.removeLast()
-        }
-        router.reset = { [weak self] in
-            self?.path.removeAll()
+        set {
+            router.path = newValue
         }
     }
 

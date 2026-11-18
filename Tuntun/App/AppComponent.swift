@@ -43,7 +43,7 @@ final class AppComponent: HistoryDependency, HomeDependency, TherapySessionDepen
 
     /// Beranda's sheet, plan intro and full-screen cover; shared by the plan and its sessions.
     let homeRouter = HomeRouter()
-    /// Concrete because `RootViewModel` wires it; features receive `tabRouter`.
+    /// Concrete because `RootViewModel` forwards its selection; features receive `tabRouter`.
     private let tabs = TabRouter()
 
     init(permissionService: PermissionService) {
@@ -129,8 +129,8 @@ final class AppComponent: HistoryDependency, HomeDependency, TherapySessionDepen
 
     // MARK: - Root
 
-    /// Created once: it wires the tab router to its selection, so a rebuilt root must not
-    /// replace it.
+    /// Created once, so a rebuilt root keeps the same model. The selected tab lives in the tab
+    /// router.
     lazy var rootViewModel = RootViewModel(
         router: tabs,
         playButtonClick: { [unowned self] in

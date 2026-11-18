@@ -53,7 +53,7 @@ Run Context7 requests outside the default sandbox. If DNS or network errors occu
 
 ## Navigation, typography, and code conventions
 
-Each feature owns its navigation through its router. The screen that owns a stack declares its `NavigationStack(path:)`, `.navigationDestination`, sheets and covers from state on its screen view model, and that view model wires the feature's `…Router` hooks (closures such as `push`) to that state. Every other page and view model on that stack receives the router through its initializer as a `…RouterProtocol`, and destinations are built only by the feature's builder. Never read a router from the environment; cross-tab navigation goes through `TabRouterProtocol`. Native SwiftUI layout remains allowed.
+Each feature owns its navigation through its router. The screen that owns a stack declares its `NavigationStack(path:)`, `.navigationDestination`, sheets and covers from state on its screen view model, and that view model exposes that state by forwarding it to the feature's `…Router`, which owns it. Every other page and view model on that stack receives the router through its initializer as a `…RouterProtocol`, and destinations are built only by the feature's builder. Never read a router from the environment; cross-tab navigation goes through `TabRouterProtocol`. Native SwiftUI layout remains allowed.
 
 Use .typography(...) or inherit the root body style for app-authored text. Font names and direct font styling belong only in DesignSystem/Typography.
 

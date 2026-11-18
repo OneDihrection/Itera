@@ -25,15 +25,11 @@ protocol HomeViewModelProtocol: AnyObject, Observable {
     func begin(from itemID: String?)
 }
 
-/// Beranda: owns its navigation stack, its sheet and the full-screen cover that runs today's
-/// plan, and wires `HomeRouter` to them.
+/// Beranda: exposes `HomeRouter`'s navigation stack, sheet and the full-screen cover that runs
+/// today's plan.
 @MainActor
 @Observable
 final class HomeScreenViewModel: HomeViewModelProtocol {
-    var path: [HomeRoute] = []
-    var sheet: HomeSheet?
-    var cover: PlanCover?
-
     private let fingers: FingerHomeViewModel
     private let plan: DailyPlanViewModel
     @ObservationIgnored private let armRoutine: RoutineViewModel
@@ -52,9 +48,40 @@ final class HomeScreenViewModel: HomeViewModelProtocol {
         self.taskRoutine = taskRoutine
         self.plan = plan
         self.router = router
-
-        wire(router)
     }
+
+    // MARK: - Navigation state
+
+    // Owned by the router, so the plan and session pages change it through their protocols.
+
+    var path: [HomeRoute] {
+        get {
+            router.path
+        }
+        set {
+            router.path = newValue
+        }
+    }
+
+    var sheet: HomeSheet? {
+        get {
+            router.sheet
+        }
+        set {
+            router.sheet = newValue
+        }
+    }
+
+    var cover: PlanCover? {
+        get {
+            router.cover
+        }
+        set {
+            router.cover = newValue
+        }
+    }
+
+    // MARK: - Plan
 
     var rows: [DailyPlanRow] {
         plan.rows()
@@ -85,45 +112,5 @@ final class HomeScreenViewModel: HomeViewModelProtocol {
 
     func begin(from itemID: String?) {
         plan.begin(from: itemID)
-    }
-
-    // MARK: - Router hooks
-
-    private func wire(_ router: HomeRouter) {
-        router.presentSheet = { [weak self] sheet in
-            self?.sheet = sheet
-        }
-        router.dismissPresentedSheet = { [weak self] in
-            self?.sheet = nil
-        }
-        router.pushIntro = { [weak self] itemID in
-            self?.path.append(.planIntro(itemID))
-        }
-        router.returnHome = { [weak self] in
-            self?.sheet = nil
-            self?.path.removeAll()
-        }
-        router.presentPlanCover = { [weak self] route in
-            self?.cover = PlanCover(route: route)
-        }
-        router.replacePlanCover = { [weak self] route in
-            self?.replaceCover(with: route)
-        }
-        router.dismissPlanCover = { [weak self] in
-            self?.cover = nil
-        }
-        router.coverPresented = { [weak self] in
-            self?.cover != nil
-        }
-    }
-
-    /// Keeps the cover's identity so it stays mounted and only its page changes.
-    private func replaceCover(with route: PlanCoverRoute) {
-        guard cover != nil else {
-            cover = PlanCover(route: route)
-            return
-        }
-
-        cover?.route = route
     }
 }
