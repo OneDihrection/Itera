@@ -1447,3 +1447,27 @@ Phase 4 of the session flow redesign, completing its core. Extends ADR-010: the 
 No behaviour changed. The four bugs this phase addressed were unreachable or latent: the stale deadline after a skip was always cleared by the feedback's timed cue.
 
 Verification: transcript harness against the pre-refactor baseline, 33 scenarios. New scenarios cover a skip while a card or demonstration deadline is pending, and a stop in the same turn as the repetition that completes the set (one outcome, one summary). The only differences remain Phase 3's skip-while-paused fix and harness notes. XcodeGen and Debug and Release Simulator builds with IPHONEOS_DEPLOYMENT_TARGET=17.0. Pending on the M1 iPad: a full two-set arm raise (generic and Indonesian script) with Pause in every stage; elbow bend and directional reach openings; fold towel; a camera change during rest followed by recalibration; Debug "Finish exercise" mid-plan.
+
+## Activity facts and one countdown (2026-11-18)
+
+Phase 5 of the session flow redesign, at the product owner's request, accepting countdown timing differences. Extends ADR-010.
+
+- **Activities report facts.** Each guided activity reports what an event changed as `ActivityFact`s: countdown requested, movement phase change, repetition credited, target reached, towel fold or grab, cue change. `SessionEngine` reacts to those facts. It no longer compares the activity's old and new presentation, and no longer checks `"calibration.complete"`; the views read `snapshot.countdown` and `snapshot.speaksCalibrationComplete` instead. The arm-raise script's cue-key comparison remains until Phase 6.
+- **The engine owns the countdown.** Before, each activity ran its own: arm raise and elbow bend from ticks and frames, directional reach from a deadline it set before the cue, fold towel from ticks, timed practice from frames only. Now the practice stage holds one `Countdown`:
+  - its cue is spoken ("calibration complete" first when the set still owes it), and the countdown starts when the cue ends;
+  - each second is announced once, on the exact second;
+  - it ends on the first event at or after its end, and the engine sends `.countdownFinished` to the activity;
+  - a pause or camera wait stops it, and it restarts from its full length after its cue is spoken again.
+  Durations are unchanged: 3 s, or 5 s before a later scripted arm-raise set.
+
+Timing and narration differences, confirmed in the transcript harness:
+- Seconds are announced, and the countdown ends, exactly on the second, from any event. Before, this happened on the next tick or frame, up to 50 ms later. Later events in a session shift by the same few milliseconds.
+- Directional reach shows 3 while its cue is spoken. Before, a deadline it set before the cue was already counting down.
+- Timed practice can end its countdown on a tick, not only on a frame.
+- When a countdown ends, practice starts the same way every time. The screen shows the practice cue at once instead of "session.countdown" for one more frame. The arm-raise script always speaks its first movement line. The generic "move to target" line is no longer spoken: before, it played only when a frame rather than a tick happened to end the countdown.
+- The Indonesian script no longer speaks hold seconds over the countdown digits. Before, the countdown's progress ring was misread as a hold.
+- A skip during calibration no longer makes the next set open with "calibration complete".
+- During a pause in a countdown, the digit shows the full length, because the countdown restarts after Resume.
+- The movement countdown's progress ring value is gone; the full-screen countdown shows only the digit.
+
+Verification: transcript harness against the core-complete commit (016fd83), 37 scenarios. New scenarios cover a pause in each countdown, reach rehearsal into its countdown, fold towel into practice, and a timed-practice later set. The facts commit was identical to the baseline. The countdown commit differs only in the classes listed above, checked scenario by scenario with timestamps and narration identities set aside. XcodeGen and Debug and Release Simulator builds with IPHONEOS_DEPLOYMENT_TARGET=17.0. Pending on the M1 iPad: the countdown cue and digits for arm raise (generic, and scripted set 2 at 5 s), elbow bend, directional reach, fold towel and timed practice; Pause and camera loss during each countdown; the script's first movement line after the countdown, with practice continuing; a two-minute arm-raise practice with unchanged preview cadence and stale-frame logs, since facts must add no per-frame work.

@@ -2,7 +2,7 @@
 
 # Session flow redesign
 
-Status: **core implemented 2026-11-18** (Phases 0–4); Phases 5–9 are optional follow-ups, not started. This folder is the plan for unifying the app's session state machines. Each phase has its own file with its scope and how to verify it. Read [SYSTEM_DESIGN.md](../../SYSTEM_DESIGN.md) in full before starting any phase (AGENTS.md). If this plan and SYSTEM_DESIGN.md disagree, SYSTEM_DESIGN.md wins until a phase updates it.
+Status: **core implemented 2026-11-18** (Phases 0–4), and Phase 5. Phases 6–9 are optional follow-ups, not started. This folder is the plan for unifying the app's session state machines. Each phase has its own file with its scope and how to verify it. Read [SYSTEM_DESIGN.md](../../SYSTEM_DESIGN.md) in full before starting any phase (AGENTS.md). If this plan and SYSTEM_DESIGN.md disagree, SYSTEM_DESIGN.md wins until a phase updates it.
 
 Decisions taken when planning:
 
@@ -159,7 +159,7 @@ Each phase is one pull request. It must build on its own and match the golden tr
 | 2 | Core | 1 | [Phase2-GuidanceGate.md](Phase2-GuidanceGate.md) | One narration/reading gate on every path. **Done.** | 7 (stale callbacks) |
 | 3 | Core | 2 | [Phase3-Suspension.md](Phase3-Suspension.md) | One suspension model owned by the engine; ADR-010. **Done.** | 2, 6 |
 | 4 | Core | 3 | [Phase4-StagePayloads.md](Phase4-StagePayloads.md) | `SessionStage` carries its own data. **Core milestone. Done.** | 1, 3, 4, 5 |
-| 5 | Optional | 4 | [Phase5-ActivityFacts.md](Phase5-ActivityFacts.md) | Activities emit facts; the engine owns the countdown | 8 (guided) |
+| 5 | Optional | 4 | [Phase5-ActivityFacts.md](Phase5-ActivityFacts.md) | Activities emit facts; the engine owns the countdown. **Done.** | 7 (countdowns), 8 (guided) |
 | 6 | Optional | 5 | [Phase6-GuidancePolicy.md](Phase6-GuidancePolicy.md) | Scripts move behind `GuidancePolicy` | — |
 | 7 | Optional | 6 | [Phase7-Finger.md](Phase7-Finger.md) | Finger engine and view model on the shared types | 8 (finger) |
 | 8 | Optional | 6 | [Phase8-Balance.md](Phase8-Balance.md) | Balance runs on `SessionEngine` | — |
