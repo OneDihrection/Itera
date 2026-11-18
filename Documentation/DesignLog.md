@@ -1471,3 +1471,26 @@ Timing and narration differences, confirmed in the transcript harness:
 - The movement countdown's progress ring value is gone; the full-screen countdown shows only the digit.
 
 Verification: transcript harness against the core-complete commit (016fd83), 37 scenarios. New scenarios cover a pause in each countdown, reach rehearsal into its countdown, fold towel into practice, and a timed-practice later set. The facts commit was identical to the baseline. The countdown commit differs only in the classes listed above, checked scenario by scenario with timestamps and narration identities set aside. XcodeGen and Debug and Release Simulator builds with IPHONEOS_DEPLOYMENT_TARGET=17.0. Pending on the M1 iPad: the countdown cue and digits for arm raise (generic, and scripted set 2 at 5 s), elbow bend, directional reach, fold towel and timed practice; Pause and camera loss during each countdown; the script's first movement line after the countdown, with practice continuing; a two-minute arm-raise practice with unchanged preview cadence and stale-frame logs, since facts must add no per-frame work.
+
+## Finger sessions always listen (2026-11-18)
+
+"stop" and "go" did nothing in finger and forearm sessions. `FingerSessionViewModel` enabled recognition only when the saved `FingerRoutine.voiceControl` was true. That value defaults to `false`, and its only setter, the `plan.voice` toggle in `FingerRoutineSettingsView`, was removed with the unreachable routine screens in *0b196ab* (2026-11-15). Any installation without a saved `true` therefore never started `GuidanceAudioService` recognition. The plan's readiness check still passed, because it validates `SessionAudioService`, not the finger service. This contradicted section 1 (command recognition is mandatory, with no touch-only bypass).
+
+Finger sessions now always enable voice at start and after a camera retry. Backgrounding and audio interruptions always require voice to be acknowledged again. `voiceControl` stays in `FingerRoutine`, the routine file and finger session records, so stored data decodes unchanged, but it no longer gates anything.
+
+Verification: XcodeGen and a Debug Simulator build with IPHONEOS_DEPLOYMENT_TARGET=17.0. Diagnosed from a device log that showed the readiness check's listening but no finger-session transcripts. Pending on the M1 iPad: "stop" pauses and "go" resumes in thumb opposition and a forearm session, during narration and in silence; listening returns after background and foreground and after an audio interruption.
+
+## Voice control in Settings (2026-11-18)
+
+Settings said nothing about voice control after its routine toggle was removed, though every session now listens (*Finger sessions always listen*). A Voice control section now follows Language in `TMPracticePreferencesView`:
+- **The toggle mirrors permission.** It is on when microphone and speech recognition are both authorized, and switching it off does nothing.
+- **A fallback appears when access is missing.** Switching it on, or tapping the button below it, runs that fallback:
+  - never asked: Enable permissions requests the microphone, then speech recognition, through `PermissionService`;
+  - denied: Open Settings, with the matching `home.microphoneDenied` or `home.speechDenied` message;
+  - restricted: only the `home.restricted` message.
+- **When granted,** the footer explains that it is always on, with "stop" and "go".
+- **It stays current.** `PracticePreferencesViewModel` reads the observable permission statuses and refreshes them on appear and when the app becomes active, so returning from the system Settings updates the row.
+
+Sessions are unchanged; they still validate permissions and listening at start. The camera is left to that check.
+
+Verification: XcodeGen and a Debug Simulator build with IPHONEOS_DEPLOYMENT_TARGET=17.0. Pending: in the Simulator and on the M1 iPad, after resetting privacy, the toggle starts off with Enable permissions and turns on after granting both prompts; switching it off snaps back; a denied permission shows Open Settings and the row updates after returning; both languages and large text.

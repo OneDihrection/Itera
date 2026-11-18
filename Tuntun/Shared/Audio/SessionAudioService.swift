@@ -565,6 +565,17 @@ final class SessionAudioService: NSObject, SessionAudioServiceProtocol, AVSpeech
     }
 
     private func activateListening(generation: UUID) async -> VoiceStartupResult {
+        let result = await activateListeningUnlogged(generation: generation)
+
+        #if DEBUG
+        // Temporary: diagnosing stop/go recognition on device.
+        logger.notice("Voice startListening result=\(String(describing: result), privacy: .public)")
+        #endif
+
+        return result
+    }
+
+    private func activateListeningUnlogged(generation: UUID) async -> VoiceStartupResult {
         guard recognitionGeneration == generation, !Task.isCancelled else { return .unavailable }
         defer {
             if recognitionGeneration == generation || listeningActive { starting = nil }
@@ -619,6 +630,11 @@ final class SessionAudioService: NSObject, SessionAudioServiceProtocol, AVSpeech
                     return
                 }
                 if let result, !self.consumed {
+                    #if DEBUG
+                    // Temporary: diagnosing stop/go recognition on device.
+                    self.logger.notice("Voice transcript=\(result.bestTranscription.formattedString, privacy: .public) final=\(result.isFinal) match=\(String(describing: self.vocabulary.command(in: result.bestTranscription.formattedString)), privacy: .public)")
+                    #endif
+
                     // Exact short utterances avoid substring triggers from app narration.
                     if let command = self.vocabulary.command(in: result.bestTranscription.formattedString) {
                         self.consumed = true
@@ -631,7 +647,13 @@ final class SessionAudioService: NSObject, SessionAudioServiceProtocol, AVSpeech
                     }
                 }
                 if result?.isFinal == true || error != nil {
-                    if error != nil {
+                    if let error {
+                        #if DEBUG
+                        // Temporary: diagnosing stop/go recognition on device.
+                        let nsError = error as NSError
+                        self.logger.notice("Voice recognition error domain=\(nsError.domain, privacy: .public) code=\(nsError.code) \(nsError.localizedDescription, privacy: .public); listening stops")
+                        #endif
+
                         self.stopListening()
                         self.events.send(.voiceUnavailable)
                     } else {
@@ -664,6 +686,11 @@ final class SessionAudioService: NSObject, SessionAudioServiceProtocol, AVSpeech
     }
 
     func stopListening() {
+        #if DEBUG
+        // Temporary: diagnosing stop/go recognition on device.
+        logger.notice("Voice listening stopped (wasActive=\(self.listeningActive)) from \(Thread.callStackSymbols.dropFirst().prefix(3).joined(separator: " | "), privacy: .public)")
+        #endif
+
         inputWorker.replaceRequest(nil)
         recognitionGeneration = UUID()
         recognizer?.delegate = nil

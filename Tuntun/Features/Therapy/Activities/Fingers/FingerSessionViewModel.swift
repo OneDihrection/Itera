@@ -404,9 +404,8 @@ final class FingerSessionViewModel: FingerSessionViewModelProtocol {
         } catch {
             errorKey = "audio.unavailable"
         }
-        if routine.voiceControl {
-            await setVoice(true)
-        }
+        // Voice commands are mandatory in every session; the saved `voiceControl` no longer gates them.
+        await setVoice(true)
         guard !hasFinished else {
             return
         }
@@ -462,7 +461,7 @@ final class FingerSessionViewModel: FingerSessionViewModelProtocol {
                 self.errorKey = "voice.unavailable"
                 self.pause()
             case .interrupted:
-                self.voiceNeedsAcknowledgment = self.voiceEnabled || self.routine.voiceControl
+                self.voiceNeedsAcknowledgment = true
                 self.voiceEnabled = false
                 self.errorKey = "recovery.interrupted"
                 self.pause()
@@ -964,7 +963,7 @@ final class FingerSessionViewModel: FingerSessionViewModelProtocol {
         } catch {
             errorKey = "audio.unavailable"
         }
-        if (routine.voiceControl || voiceNeedsAcknowledgment) && !voiceEnabled {
+        if !voiceEnabled {
             await setVoice(true)
         }
         cameraService.start()
@@ -1091,7 +1090,7 @@ final class FingerSessionViewModel: FingerSessionViewModelProtocol {
         guard hasStarted, !hasFinished else {
             return
         }
-        voiceNeedsAcknowledgment = voiceEnabled || routine.voiceControl
+        voiceNeedsAcknowledgment = true
         trackingRecoveryPaused = true
         waitingForCamera = true
         pause()

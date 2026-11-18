@@ -60,6 +60,8 @@ struct FingerRoutine: Equatable {
     var sets = 2
     var repetitions = 5
     var restSeconds = 20
+    /// Legacy saved setting, kept so stored routines and history decode unchanged. Finger sessions
+    /// always listen for "stop" and "go"; this value no longer gates recognition.
     var voiceControl = false
     var ambientSound = false
     /// Runs just this exercise of the category, as a daily-plan item does; `nil` runs them all.

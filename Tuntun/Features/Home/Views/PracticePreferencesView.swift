@@ -15,6 +15,7 @@ struct TMPracticePreferencesView<
     @State private var viewModel: ViewModel
     private let builder: Builder
     @Environment(\.buttonFeedback) private var buttonFeedback
+    @Environment(\.scenePhase) private var scenePhase
     /// The nested Debug plan editor sheet.
     @State private var editingPlan = false
     @AppStorage(PracticePreferences.calmMode) private var calmMode = false
@@ -66,6 +67,7 @@ struct TMPracticePreferencesView<
             } header: {
                 Text("language.title").typography(.headline)
             }
+            voiceSection
             Section {
                 TextField("settings.patientName", text: $patientName)
                     .textContentType(.name)
@@ -117,6 +119,15 @@ struct TMPracticePreferencesView<
             }
         }
         .presentationDetents([.large])
+        .onAppear { viewModel.refreshPermissions() }
+        // Returning from the system Settings updates the voice row.
+        .onChange(of: scenePhase) { _, phase in
+            guard phase == .active else {
+                return
+            }
+
+            viewModel.refreshPermissions()
+        }
         .onDisappear { Task { await viewModel.save() } }
         #if DEBUG
         .sheet(isPresented: $editingPlan) {
@@ -139,6 +150,53 @@ struct TMPracticePreferencesView<
         }
     }
     #endif
+
+    // MARK: - Voice control
+
+    /// Voice control cannot be switched off: the toggle shows whether permissions allow it, and
+    /// switching it on while access is missing asks for access or opens the system Settings.
+    private var voiceSection: some View {
+        Section {
+            Toggle("plan.voice", isOn: voiceBinding)
+                .frame(minHeight: 64)
+
+            if let actionKey = viewModel.voiceFallback?.actionKey {
+                Button(LocalizedStringKey(actionKey)) {
+                    Task {
+                        await viewModel.resolveVoiceAccess()
+                    }
+                }
+                .frame(minHeight: 64)
+            }
+        } header: {
+            Text("plan.voice").typography(.headline)
+        } footer: {
+            voiceFooter
+        }
+    }
+
+    private var voiceBinding: Binding<Bool> {
+        Binding {
+            viewModel.voiceEnabled
+        } set: { enabled in
+            guard enabled, !viewModel.voiceEnabled else {
+                return
+            }
+
+            Task {
+                await viewModel.resolveVoiceAccess()
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var voiceFooter: some View {
+        if let fallback = viewModel.voiceFallback {
+            visibilityWarning(LocalizedStringKey(fallback.messageKey))
+        } else {
+            Text("settings.voiceHelp").typography(.body)
+        }
+    }
 
     // MARK: - Recording
 
@@ -206,9 +264,13 @@ private final class MockPracticePreferencesViewModel: PracticePreferencesViewMod
     var repetitions = 5
     var restSeconds = 20
     let errorKey: String? = nil
+    let voiceEnabled = false
+    let voiceFallback: VoicePermissionFallback? = .openSettings(messageKey: "home.microphoneDenied")
 
     func done() async {}
     func save() async {}
+    func refreshPermissions() {}
+    func resolveVoiceAccess() async {}
 }
 
 @MainActor

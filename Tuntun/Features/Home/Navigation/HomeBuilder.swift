@@ -116,7 +116,8 @@ final class HomeBuilder: HomeContentBuildable, PracticePreferencesContentBuildab
         let viewModel: some PracticePreferencesViewModelProtocol = PracticePreferencesViewModel(
             home: dependency.fingers,
             plan: dependency.dailyPlan,
-            router: dependency.homeRouter
+            router: dependency.homeRouter,
+            permissionService: dependency.permissionService
         )
 
         TMPracticePreferencesView(viewModel: viewModel, builder: self)

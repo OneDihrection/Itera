@@ -84,6 +84,11 @@ enum NarrationAudioSession {
             return
         }
 
+        #if DEBUG
+        // Temporary: diagnosing stop/go recognition on device.
+        NSLog("Audio session deactivated (token %ld)", token)
+        #endif
+
         deactivateSession()
     }
 

@@ -18104,6 +18104,38 @@
         }
       }
     },
+    "settings.voiceHelp" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Always on during exercises. Say \"stop\" to pause and \"go\" to resume. Uses microphone and speech recognition access."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Selalu aktif selama latihan. Ucapkan \"stop\" untuk menjeda dan \"go\" untuk melanjutkan. Menggunakan akses mikrofon dan pengenalan ucapan."
+          }
+        }
+      }
+    },
+    "settings.voiceNeedsAccess" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Exercises can't start until microphone and speech recognition access are allowed."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Latihan belum bisa dimulai sampai akses mikrofon dan pengenalan ucapan diizinkan."
+          }
+        }
+      }
+    },
     "shoulderFlexion.animationAccessibility" : {
       "localizations" : {
         "en" : {

@@ -7,6 +7,7 @@
 
 import AVFoundation
 import Combine
+import OSLog
 import Speech
 
 // Service vocabulary is independent of exercise progression.
@@ -31,6 +32,7 @@ enum GuidanceAudioEvent {
 final class GuidanceAudioService: NSObject, AVSpeechSynthesizerDelegate {
     let events = PassthroughSubject<GuidanceAudioEvent, Never>()
     private let synthesizer = AVSpeechSynthesizer()
+    private let logger = Logger(subsystem: Bundle.main.bundleIdentifier ?? "Tuntun", category: "GuidanceAudio")
     private let engine = AVAudioEngine()
     private var recognizer: SFSpeechRecognizer?
     private var recognition: SFSpeechRecognitionTask?
@@ -390,6 +392,18 @@ final class GuidanceAudioService: NSObject, AVSpeechSynthesizerDelegate {
                 // An exact partial command can interrupt speech without waiting for finalization.
                 // Rotating the request identity discards its later partial/final revisions.
                 let command = result.flatMap { self.vocabulary.command(in: $0.bestTranscription.formattedString) }
+
+                #if DEBUG
+                // Temporary: diagnosing stop/go recognition on device.
+                if let result {
+                    self.logger.notice("Voice transcript=\(result.bestTranscription.formattedString, privacy: .public) final=\(result.isFinal) match=\(String(describing: command), privacy: .public)")
+                }
+                if let error {
+                    let nsError = error as NSError
+                    self.logger.notice("Voice recognition error domain=\(nsError.domain, privacy: .public) code=\(nsError.code) \(nsError.localizedDescription, privacy: .public)")
+                }
+                #endif
+
                 if let command {
                     if result?.isFinal == true || command == .pause {
                         self.consumeCommand(command, requestID: id)
@@ -456,6 +470,11 @@ final class GuidanceAudioService: NSObject, AVSpeechSynthesizerDelegate {
     }
 
     private func voiceFailed() {
+        #if DEBUG
+        // Temporary: diagnosing stop/go recognition on device.
+        logger.notice("Voice failed; listening stops")
+        #endif
+
         disableVoice()
         events.send(.voiceUnavailable)
     }
