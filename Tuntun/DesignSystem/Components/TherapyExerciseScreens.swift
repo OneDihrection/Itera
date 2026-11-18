@@ -120,26 +120,22 @@ struct TMTherapyStatDivider: View {
 
 // MARK: - Instruction bubble
 
-/// A floating cue bubble or a caption attached to the video.
+/// A floating cue bubble over the camera.
 struct TMTherapyInstructionBubble: View {
     static let baseFontSize: CGFloat = 24
 
     let text: Text
-    var singleLine = false
-    var attached = false
 
     var body: some View {
         text
             .typography(size: Self.baseFontSize, weight: .medium, relativeTo: .title3)
-            .lineLimit(singleLine ? 1 : nil)
-            .minimumScaleFactor(singleLine ? 0.7 : 1)
-            .foregroundStyle(attached ? Color.white : Color.black)
+            .foregroundStyle(Color.black)
             .multilineTextAlignment(.center)
             .padding(.horizontal, 28)
             .padding(.vertical, 16)
             .frame(maxWidth: .infinity)
-            .background(attached ? Color.black : Color.white, in: RoundedRectangle(cornerRadius: attached ? 0 : 18))
-            .shadow(color: .black.opacity(attached ? 0 : 0.12), radius: 8, y: 2)
+            .background(Color.white, in: RoundedRectangle(cornerRadius: 18))
+            .shadow(color: .black.opacity(0.12), radius: 8, y: 2)
             .accessibilityAddTraits(.updatesFrequently)
     }
 }
@@ -423,18 +419,9 @@ struct TMTherapyExerciseLiveLayout<Camera: View, Demo: View, Accessories: View>:
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .clipShape(RoundedRectangle(cornerRadius: 28))
             .overlay(alignment: .bottom) {
-                if let cue {
-                    switch cuePlacement {
-                    case .floating:
-                        TMTherapyInstructionBubble(text: cue).padding(24)
-                    case .video(let bounds):
-                        if let bounds {
-                            TMTherapyVideoFooter(bounds: bounds) {
-                                TMTherapyInstructionBubble(text: cue, singleLine: true, attached: true)
-                            }
-                            .allowsHitTesting(false)
-                        }
-                    }
+                // The video-attached layout carries no caption; narration speaks the cue.
+                if let cue, !cuePlacement.usesVideo {
+                    TMTherapyInstructionBubble(text: cue).padding(24)
                 }
             }
     }

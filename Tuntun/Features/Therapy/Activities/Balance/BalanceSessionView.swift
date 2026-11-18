@@ -137,7 +137,6 @@ struct TMBalanceSessionView<ViewModel: BalanceSessionViewModelProtocol>: View {
             heading: model.calibrationMessage == nil
                 ? heading
                 : TMTherapyExerciseHeading(eyebrow: eyebrow, title: Text("stage.calibration")),
-            cue: practiceCue,
             cuePlacement: .video(videoBounds),
             demoTitle: "session.followMovement",
             repetitions: (model.snapshot.metrics.completedTouches, model.snapshot.goal),
@@ -162,34 +161,6 @@ struct TMBalanceSessionView<ViewModel: BalanceSessionViewModelProtocol>: View {
             )
         } accessories: {
             EmptyView()
-        }
-    }
-
-    private var practiceCue: Text {
-        if let message = model.calibrationMessage, message != "calibration.try" {
-            return Text(LocalizedStringKey(message))
-        }
-        return Text(LocalizedStringKey(cueKey))
-    }
-
-    /// The one cue line under the camera: a compensation warning first, then a rotation's
-    /// calibration pose, otherwise the engine's own instruction.
-    private var cueKey: String {
-        if model.snapshot.compensation.isCompensating {
-            return "balance.compensationWarning"
-        }
-
-        guard model.exercise.isRotation, model.exercise != .shoulderFlexion else {
-            return model.snapshot.instructionKey
-        }
-
-        switch model.snapshot.phase {
-        case .findingBody, .calibrating:
-            return model.exercise.key("calibration.startHint")
-        case .calibratingRange:
-            return model.exercise.key("calibration.endHint")
-        default:
-            return model.snapshot.instructionKey
         }
     }
 

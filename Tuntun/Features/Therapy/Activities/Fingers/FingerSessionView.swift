@@ -58,7 +58,6 @@ struct TMFingerSessionView<Service: FingerSessionServiceProtocol>: View {
     private func session(_ model: Service.Session) -> some View {
         TMTherapyExerciseLiveLayout(
             heading: heading(model),
-            cue: cue(model),
             cuePlacement: .video(videoBounds),
             demoTitle: LocalizedStringKey(model.demoTitleKey),
             repetitions: (model.activity.repetitions, model.routine.repetitions),
@@ -143,34 +142,6 @@ struct TMFingerSessionView<Service: FingerSessionServiceProtocol>: View {
         )
     }
 
-    /// Show one cue at a time, with the active finger inline when it is relevant.
-    private func cue(_ model: Service.Session) -> Text? {
-        if let key = model.scriptedCueKey {
-            return Text(LocalizedStringKey(key))
-        }
-
-        if let message = model.calibrationMessage, message != "calibration.try" {
-            return Text(LocalizedStringKey(message))
-        }
-
-        if isTracking(model), !model.trackingReady {
-            return Text(LocalizedStringKey(liveCue(model) ?? model.instructionKey))
-        }
-
-        let key = model.recoveryGuidanceKey ?? model.calibrationMessage ?? liveCue(model) ?? model.instructionKey
-        let instruction = Text(LocalizedStringKey(key))
-
-        guard model.activity.kind.isSequential, isTracking(model), model.recoveryGuidanceKey == nil else {
-            return instruction
-        }
-
-        return instruction + Text(verbatim: " · ") + Text(LocalizedStringKey(model.fingerKey))
-    }
-
-    private func isTracking(_ model: Service.Session) -> Bool {
-        [.baseline, .target, .range, .active].contains(model.activity.phase)
-    }
-
     // MARK: - Full-screen pages
 
     /// Set completion and rest cover the live layout without removing the camera.
@@ -239,15 +210,6 @@ struct TMFingerSessionView<Service: FingerSessionServiceProtocol>: View {
                 }
                 .padding(22)
             }
-    }
-
-    /// Recovery guidance takes priority; otherwise the live hold/position feedback.
-    private func liveCue(_ model: Service.Session) -> String? {
-        guard isTracking(model) else {
-            return nil
-        }
-
-        return model.recoveryGuidanceKey ?? model.liveFeedbackKey
     }
 
     private func cameraPreview(_ model: Service.Session) -> some View {

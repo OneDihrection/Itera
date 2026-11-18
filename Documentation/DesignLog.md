@@ -1525,3 +1525,12 @@ The whole-hand circle in full fist, hook fist and forearm rotation did not look 
 - **Steady geometry.** The circle is centred on the middle knuckle and is 2.3 palm lengths (wrist to middle knuckle) across, unstepped, at least 100 pt, at most 75% of the shorter preview side and kept on screen as before. Both anchors are already filtered by `HandOverlaySmoother` and barely change while the fingers bend. The bounding box remains only as a fallback when the wrist or middle knuckle is not visible.
 
 Verification: XcodeGen and a Debug Simulator build with IPHONEOS_DEPLOYMENT_TARGET=17.0. Pending on the M1 iPad: in full fist, hook fist and forearm rotation the circle stays still through opening, closing and turning and encloses the open hand with a spread thumb; it stays inside the preview near the edges; the arc, pop and acknowledgment at hold completion; Reduce Motion; the overlay keeps 30 fps.
+
+## No instruction caption on the camera (2026-11-18)
+
+The Finger, Balancing and light guided sessions showed a one-line instruction caption, white text on black, along the bottom edge of the camera video during practice. It is removed.
+- **Views.** The three sessions no longer pass a `cue` to `TMTherapyExerciseLiveLayout`; they keep `cuePlacement: .video(...)`, which still sets the attached layout's counters, controls and demo-title offset. The cue builders that fed the caption are removed (`FingerSessionView.cue`/`liveCue`/`isTracking`, `BalanceSessionView.practiceCue`/`cueKey`, the light session's `lightCue`), with `FingerSessionViewModel.scriptedCueKey`, `liveFeedbackKey` and the write-only `cameraMessage`.
+- **Design system.** `TMTherapyExerciseLiveLayout` draws no caption for the video placement, and `TMTherapyInstructionBubble` lost its `singleLine` and `attached` options. `TMTherapyVideoFooter` stays for the light session's calibration card.
+- **Unchanged.** Narration, the guidance and demonstration cards, the calibration card, camera-wait and error notices, and the dark layout's footer.
+
+Verification: XcodeGen and a Debug Simulator build. Pending on the M1 iPad: no caption over the camera in a finger exercise, Balancing and an arm-raise light session, with counters, controls, the demo title and the calibration card unchanged.

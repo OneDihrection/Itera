@@ -25,7 +25,6 @@ extension TMTherapySessionView {
                         ? model.snapshot.armRaiseNarrationPrefix + "calibration.title" : "stage.calibration"))
                 )
                 : lightHeading,
-            cue: showsCalibrationCard ? nil : lightCue,
             cuePlacement: .video(videoBounds),
             demoTitle: LocalizedStringKey(model.demoTitleKey),
             repetitions: (model.snapshot.presentation?.count ?? 0, model.snapshot.activity?.goal ?? 0),
@@ -121,28 +120,6 @@ extension TMTherapySessionView {
         }
 
         return name
-    }
-
-    private var lightCue: Text {
-        if usesCalibrationOpening, model.snapshot.stage == .preparing {
-            return Text("calibration.intro")
-        }
-        if model.snapshot.instruction.hasPrefix("calibration.") {
-            return Text(LocalizedStringKey(model.snapshot.instruction))
-        }
-
-        let instruction = lightString(primaryMovementCue)
-            .split(whereSeparator: \.isNewline)
-            .joined(separator: " · ")
-        if case .timed(let practice) = model.snapshot.presentation {
-            let time = String(
-                format: lightString("session.practiceSeconds %lld %lld"),
-                Int(practice.seconds),
-                Int(practice.goal)
-            )
-            return Text(verbatim: "\(instruction) · \(time)")
-        }
-        return Text(verbatim: instruction)
     }
 
     /// The shared preview with camera-wait and failure notices at its top edge, clear of the cue.

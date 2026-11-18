@@ -36,7 +36,6 @@ protocol FingerSessionViewModelProtocol: AnyObject, Observable {
     var countdown: Int { get }
     var restBreath: RestBreath? { get }
     var scriptedRest: BreathingRest? { get }
-    var scriptedCueKey: String? { get }
     var usesOppositionScript: Bool { get }
     var upcoming: (exercise: FingerExercise, set: Int)? { get }
     var showsUpcomingPreview: Bool { get }
@@ -44,7 +43,6 @@ protocol FingerSessionViewModelProtocol: AnyObject, Observable {
     var showsGuideTimer: Bool { get }
     var guideEvidence: HandEvidence? { get }
     var instructionKey: String { get }
-    var liveFeedbackKey: String { get }
     var fingerKey: String { get }
     var exerciseTitle: String { get }
     var demoRevision: Int { get }
@@ -85,7 +83,6 @@ final class FingerSessionViewModel: FingerSessionViewModelProtocol {
     private(set) var trackingReady = false
     private(set) var previewAttached = false
     private(set) var waitingForCamera = true
-    private(set) var cameraMessage = "camera.position"
     private(set) var errorKey: String?
     private(set) var voiceEnabled = false
     private(set) var voiceNeedsAcknowledgment = false
@@ -128,14 +125,6 @@ final class FingerSessionViewModel: FingerSessionViewModelProtocol {
     var usesOppositionScript: Bool {
         sessionLanguage == .indonesian
             && OppositionGuidance.applies(to: activity.kind)
-    }
-
-    /// The catalog key of the last scripted sentence, shown as the on-screen cue.
-    var scriptedCueKey: String? {
-        guard usesOppositionScript else {
-            return nil
-        }
-        return scriptedNarrationLines.last { !$0.isNumber }?.key
     }
 
     private var scriptedNarrationLines: [NarrationLine] {
@@ -335,24 +324,6 @@ final class FingerSessionViewModel: FingerSessionViewModelProtocol {
     private func localized(_ key: String) -> String {
         String(localized: String.LocalizationValue(key), bundle: sessionLanguage.resourceBundle)
     }
-    var liveFeedbackKey: String {
-        guard trackingReady else {
-            return cameraMessage
-        }
-        if activity.phase == .baseline || activity.phase == .target {
-            return activity.progress > 0.05 ? "feedback.hold" : "feedback.comfortable"
-        }
-        if activity.phase == .range {
-            guard activity.rangeReady else {
-                return activity.holdElapsed > 0.05 ? "feedback.hold" : "feedback.comfortable"
-            }
-            return activity.rangeTooSmall ? "feedback.rangeTooSmall" : "feedback.rangeMeasuring"
-        }
-        if activity.phase == .active {
-            return activity.progress > 0.75 ? "feedback.almost" : "feedback.slow"
-        }
-        return instructionKey
-    }
 
     private func updateRewards() {
         guard !paused, !hasFinished else {
@@ -489,7 +460,6 @@ final class FingerSessionViewModel: FingerSessionViewModelProtocol {
             lastGuideEvidence = nil
             overlaySmoother.reset()
             sideStabilizer.reset()
-            cameraMessage = key
             errorKey = key
             trackingRecoveryPaused = true
             trackingRecovery.missing(.camera, at: ProcessInfo.processInfo.systemUptime)
@@ -525,11 +495,6 @@ final class FingerSessionViewModel: FingerSessionViewModelProtocol {
                   hand.metric(for: activity.kind, finger: activity.finger) != nil else {
                 trackingReady = false
                 // Keep the drawing filter warm across a brief miss; scoring is suspended immediately.
-                if let hand = detected {
-                    cameraMessage = hand.side == routine.side ? "camera.showFingers" : "camera.selectedHand"
-                } else {
-                    cameraMessage = "camera.position"
-                }
                 let problem: FingerTrackingProblem
                 if sample.issue == .multipleHands {
                     problem = .multipleHands
@@ -558,7 +523,6 @@ final class FingerSessionViewModel: FingerSessionViewModelProtocol {
             if !stable {
                 engine.suspendEvidence(at: now)
             }
-            cameraMessage = "camera.tracking"
             if errorKey?.hasPrefix("camera.") == true {
                 errorKey = nil
             }
@@ -620,7 +584,6 @@ final class FingerSessionViewModel: FingerSessionViewModelProtocol {
             trackingReady = false
             evidence = nil
             handleMissingHand(now: now)
-            cameraMessage = "camera.position"
         }
         // Demonstrations/countdown require a fresh frame, not a detected patient.
         let frameReady = previewAttached && now - lastFrame <= 0.3
