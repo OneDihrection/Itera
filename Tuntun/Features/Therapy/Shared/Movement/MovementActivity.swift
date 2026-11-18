@@ -27,7 +27,6 @@ struct MovementActivity: TherapyActivity {
     private var lastValid: Double?
     private var viewport: TherapyViewport?
     private var suspended = false
-    private var countdown: Double?
     private var returningBeforePractice = false
     private var cueHolding = false
     private var cueCandidate = false
@@ -89,16 +88,16 @@ struct MovementActivity: TherapyActivity {
     }
 
     mutating func handle(_ event: ActivityEvent) -> ActivityTransition {
+        let before = presentation
         let oldPhase = phase
         let oldCount = snapshot.count
         let hadStart = start != nil
         let hadTarget = target != nil
         let wasCountingDown = snapshot.countingDown
         switch event {
-        case .countdownReady(let time):
+        case .countdownFinished:
             if snapshot.countingDown {
-                countdown = time + countdownDuration
-                snapshot.seconds = Int(countdownDuration)
+                finishCountdown()
             }
         case .nextSet:
             setNumber += 1
@@ -108,7 +107,6 @@ struct MovementActivity: TherapyActivity {
             snapshot.countingDown = true
             snapshot.seconds = Int(countdownDuration)
             snapshot.instruction = "session.countdown"
-            countdown = nil
             returningBeforePractice = false
         case .guidanceCompleted:
             if scriptedGuidance {
@@ -129,13 +127,8 @@ struct MovementActivity: TherapyActivity {
             landmarkSmoother.reset()
             interrupt()
         case .resume:
+            // An interrupted countdown stays pending; the session restarts it after its cue.
             suspended = false
-
-            // An interrupted countdown stays pending; the session re-announces it and sends
-            // `countdownReady`, which starts a fresh three seconds.
-            if snapshot.countingDown {
-                countdown = nil
-            }
         case .recalibrate:
             if scriptedGuidance {
                 waitingForGuidance = true
@@ -145,7 +138,6 @@ struct MovementActivity: TherapyActivity {
             snapshot.countingDown = false
             snapshot.pose = .start
             snapshot.instruction = "session.holdStart"
-            countdown = nil
             returningBeforePractice = false
             interrupt()
         case .command(let command, _):
@@ -163,7 +155,6 @@ struct MovementActivity: TherapyActivity {
                 target = nil
                 snapshot.countingDown = false
                 returningBeforePractice = false
-                countdown = nil
                 snapshot.instruction = "session.holdTarget"
                 interrupt()
             case .retryStep:
@@ -176,8 +167,6 @@ struct MovementActivity: TherapyActivity {
                 break
             }
         case .tick(let time):
-            advanceCountdown(at: time)
-
             if let last, time - last > 0.15 {
                 dwell.interrupt(at: time, grace: Self.dwellTrackingGrace)
 
@@ -219,27 +208,15 @@ struct MovementActivity: TherapyActivity {
         let finished = snapshot.count >= configuration.goal
         return ActivityTransition(
             status: finished ? .finished : (suspended ? .suspended : .running),
-            presentation: presentation
+            presentation: presentation,
+            facts: ActivityFact.changes(from: before, to: presentation)
         )
     }
 
-    /// Runs the countdown from the clock as well as from frames, so a moment without a usable
-    /// frame cannot freeze it. Finishing it starts practice at the target.
-    private mutating func advanceCountdown(at time: Double) {
-        guard snapshot.countingDown, let deadline = countdown, deadline > 0 else {
-            return
-        }
-
-        snapshot.instruction = "session.countdown"
-        snapshot.seconds = max(0, Int(ceil(deadline - time)))
-        snapshot.progress = max(0, min(1, (deadline - time) / countdownDuration))
-
-        guard time >= deadline else {
-            return
-        }
-
-        countdown = nil
+    /// The session's countdown ended: practice starts at the target. The session owns the clock.
+    private mutating func finishCountdown() {
         snapshot.countingDown = false
+        snapshot.seconds = 0
         snapshot.progress = 0
         phase = 1
         snapshot.instruction = "session.moveTarget"
@@ -484,7 +461,6 @@ struct MovementActivity: TherapyActivity {
                 snapshot.instruction = "session.returnStart"
                 returningBeforePractice = true
                 snapshot.countingDown = false
-                countdown = nil
                 snapshot.pose = .looping
                 phase = 0
             }
@@ -493,15 +469,8 @@ struct MovementActivity: TherapyActivity {
             snapshot.guide = nil
             return
         }
-        if countdown == -1 { countdown = time + countdownDuration }
-        if countdown != nil {
-            advanceCountdown(at: time)
-
-            if snapshot.countingDown {
-                return
-            }
-        } else if snapshot.countingDown {
-            // Waiting for the session to start the countdown: nothing is scored yet.
+        if snapshot.countingDown {
+            // The session's countdown is running or waiting for its cue: nothing is scored yet.
             snapshot.guide = nil
             return
         }
@@ -534,9 +503,9 @@ struct MovementActivity: TherapyActivity {
         dwell.reset()
         if returningBeforePractice {
             returningBeforePractice = false
-            countdown = time + countdownDuration
             snapshot.countingDown = true
             snapshot.seconds = Int(countdownDuration)
+            snapshot.instruction = "session.countdown"
             snapshot.guide = nil
         } else if phase == 2 {
             snapshot.count += 1

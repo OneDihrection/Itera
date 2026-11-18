@@ -2,7 +2,7 @@
 
 # Phase 2: GuidanceGate
 
-Status: Not started. Back to the [overview](README.md).
+Status: Done 2026-11-18 (as amended below). Track: core, requires Phase 1. Back to the [overview](README.md).
 
 ## Goal
 
@@ -13,9 +13,19 @@ Use one value type for narration identity, narration completion, reading complet
 | Path | State | Watchdog |
 |---|---|---|
 | Guided | `SessionEngine` vars `guidance`, `narrationComplete`, `readingComplete`, `speechTimeout`, `guidanceStartedAt`, `pendingScriptMovement` (≈ lines 72-110); `announce` at 625-646; `completeGuidance` at 659-713 | 20 s, or the plan watchdog; 45 s for scripted and feedback |
-| Finger | `FingerSessionViewModel` `speechID`, `speechDeadline`, `spokenFlowKey` (`narrate` ≈ 788, `completeNarration` 739-756) | `max(15, characters × 0.25)` |
-| Balance | `openingSpeechID`/deadline (`BalanceSessionViewModel.swift` ≈ 526); 11 other `audio.speak(id: UUID(), …)` calls whose identities are never matched | 8 s |
-| Long rest | `@State narrationID` in `DailyPlanNextView` (≈ 103-107) | 12 s |
+| Finger | `FingerSessionViewModel` `speechID`, `speechDeadline`, `spokenFlowKey` (`completeNarration` ≈ 803, `narrate` ≈ 822) | `max(15, characters × 0.25)` |
+| Balance | `openingSpeechID`/deadline (`BalanceSessionViewModel.swift` ≈ 554-575); 11 other `audio.speak(id: UUID(), …)` calls whose identities are never matched | 8 s |
+| Long rest | `@State narrationID` in `DailyPlanNextView` (≈ 31, 97, 328) | 12 s |
+
+## As implemented (2026-11-18)
+
+`GuidanceGate` (`Therapy/Shared/SessionFlow/GuidanceGate.swift`) holds `id`, `startedAt`, `watchdogAt`, `narrated` and `read`, with `complete(_:)`, `reading(_:done:)` and `expired(at:)`. It is used by `SessionEngine` (`gate`), `FingerSessionViewModel` (`speechGate`) and `BalanceSessionViewModel` (`openingGate`). The long rest is left for Phase 9. Narrower than planned:
+
+- No `key` or `extendWatchdog`. Nothing reads them: each caller already knows its key, and the finger watchdog is computed from the text before the gate is created.
+- `rebase(by:)` arrives with Phase 3, which first needs it.
+- `pendingScriptMovement` stays an engine field instead of `gate.followUp`. A caregiver command during scripted praise replaces the gate but must keep the pending movement cue, as it does today. Phase 6 moves it behind the script policy.
+
+The original plan follows for reference.
 
 ## Changes
 

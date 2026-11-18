@@ -2,7 +2,7 @@
 
 # Phase 6: GuidancePolicy for guided activities
 
-Status: Not started. Back to the [overview](README.md).
+Status: Not started. Track: optional, requires Phase 5. Back to the [overview](README.md).
 
 ## Goal
 
@@ -11,8 +11,8 @@ Move the Indonesian arm-raise script out of the engine, `MovementActivity` and t
 ## Current state
 
 - `usesArmRaiseScript` branches in `SessionEngine.swift` at ≈ 195, 203, 207, 214, 229-259, 288, 383-412, 487-491, 512-519, 552-555, 567-579, 629, 637, 653, 665-685, 699, 767, 815-822 and 1011.
-- `TherapySessionViewModel.swift:71` decides the language: `scriptedArmRaise: AppLanguage.selected == .indonesian`.
-- `MovementActivity` has `scriptedGuidance` and `waitingForGuidance` (≈ 60-63, 114-118, 126, 140, 209-218, 264, 547-552). Script mode switches it to 3 s dwells and a 5 s next-set countdown.
+- `TherapySessionViewModel.swift:109` decides the language: `scriptedArmRaise: AppLanguage.selected == .indonesian`.
+- `MovementActivity` has `scriptedGuidance` and `waitingForGuidance` (≈ 12-13, 60-77, 114-141, 156, 204-212, 264, 547). Script mode switches it to 3 s dwells and a 5 s next-set countdown.
 - Views branch on `usesArmRaiseScript` and `armRaiseNarrationPrefix`.
 - `ArmRaiseGuidance.swift` and `Shared/ScriptedRepetitions.swift` hold the key tables.
 

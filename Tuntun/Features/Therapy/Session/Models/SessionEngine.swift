@@ -16,6 +16,8 @@ enum SessionEvent {
     case guidanceCompleted(UUID, Bool = true)
     case readingChanged(UUID, Bool)
     case viewport(TherapyViewport)
+    /// A condition that refuses Resume became active or cleared. A newly active one pauses.
+    case blocked(Suspension.Blocker, Bool)
 }
 
 enum SessionEffect {
@@ -42,7 +44,7 @@ struct SessionSnapshot {
     var setNumber = 1
     var seconds = 0
     var restBreath: RestBreath?
-    var guidedSetBreathing: GuidedSetBreathing?
+    var guidedSetBreathing: BreathingRest?
     var usesArmRaiseScript = false
     /// The recorded arm-raise set summary just spoken, or nil when the counts did not match
     /// its numbers and the general ending was used.
@@ -54,11 +56,20 @@ struct SessionSnapshot {
     /// Whether the shown countdown's clock is running. Preparation and the pre-practice countdown
     /// show their full value while the cue is still being spoken, before their deadline starts.
     var countdownRunning = false
+    /// The pre-practice countdown, which the session runs for every activity.
+    var countdown: PracticeCountdown?
+    /// True while "calibration complete" is the cue being spoken, before the countdown cue.
+    var speaksCalibrationComplete = false
     var assistanceKey: String?
     var cameraWaiting = true
     var summary: SessionSummary?
     /// Every set recorded so far, so set pages can show earlier sets before the summary exists.
     var results: [SessionActivityResult] = []
+}
+
+struct PracticeCountdown: Equatable {
+    let seconds: Int
+    let running: Bool
 }
 
 struct SessionTransition {
@@ -75,35 +86,33 @@ struct SessionEngine {
     private var activity: (any TherapyActivity)?
     private(set) var snapshot = SessionSnapshot()
     private var effects: [SessionEffect] = []
+    /// Set when an activity entered its countdown during the current event, so the countdown cue
+    /// is announced once at the end of the turn if nothing announced it sooner.
+    private var countdownRequestedThisTurn = false
     private var now = 0.0
     private var lastTimestamp: Double?
     private var generation: UUID?
     private var aspect: Double?
     private var previewReady = false
     private var captureReady = false
-    private var guidance: UUID?
-    private var narrationComplete = false
-    private var readingComplete = false
-    private var deadline: Double?
-    private var speechTimeout: Double?
-    private var waitingSince: Double?
-    private var suspensionSince: Double?
-    private var pausedSince: Double?
+    /// The cue being spoken: its identity, narration and reading state, and watchdog.
+    private var gate: GuidanceGate?
+    /// The single source of truth for where the session is; `snapshot.stage` mirrors it.
+    private var stage: SessionStage = .preparing
+    /// Pause and camera-wait reasons, resume blockers, and the open frozen interval.
+    private var suspension = Suspension()
     private var viewport: TherapyViewport?
     private var began = false
     private var evidenceBoundary = 0.0
     private var guidancePlan: SessionGuidance?
-    private var cardIndex = 0
     private var positioningPending = true
-    private var feedbackEnteredAt = 0.0
     private var pendingPrefix: SessionAudioCue?
-    private var guidanceStartedAt = 0.0
     /// Limits live towel speech to the first cue and a stuck reminder.
     private var towelSpeech = TowelSpeechPolicy()
-    private var awaitingCountdownGuidance = false
+    /// The current set still owes "calibration complete" before its countdown cue.
     private var calibrationCompletionPending = false
-    private var announcedCountdown: Int?
-    private var calibrationInvalidatedBetweenSets = false
+    /// The cue being spoken is "calibration complete"; its completion announces the countdown cue.
+    private var calibrationCueSpeaking = false
     /// Per-repetition metrics and key-repetition skeletons for the current set.
     private var recorder: KeyRepRecorder?
     /// When a stale-frame rejection was last logged, so the log stays at most one line every 3 s.
@@ -120,9 +129,11 @@ struct SessionEngine {
         selectActivity()
     }
 
+    // MARK: - Events
+
     mutating func handle(_ event: SessionEvent, at time: Double) -> SessionTransition {
-        let previousCountdown = snapshot.presentation?.countdownSeconds
         effects = []
+        countdownRequestedThisTurn = false
         guard time.isFinite else {
             return transition
         }
@@ -131,14 +142,14 @@ struct SessionEngine {
             began = true
             effects.append(.checkpoint(checkpoint))
         }
-        if snapshot.stage == .summary {
+        if stage == .summary {
             return transition
         }
         switch event {
         case .command(let command): commandReceived(command)
         case .viewport(let value):
             viewport = value
-            _ = activity?.handle(.viewport(value))
+            forward(.viewport(value))
         case .previewReady(let ready): previewReady = ready
         case .availability(let availability):
             switch availability {
@@ -154,42 +165,49 @@ struct SessionEngine {
                 recalibrate()
                 pause()
             }
+        case .blocked(let blocker, let active):
+            if suspension.setBlocker(blocker, active) {
+                snapshot.assistanceKey = nil
+                pause()
+            }
         case .observation(let frame): observation(frame)
         case .guidanceCompleted(let id, let available): completeGuidance(id, available: available)
         case .readingChanged(let id, let complete):
-            guard canProgress, snapshot.guidanceID == id else {
+            guard canProgress, gate?.reading(id, done: complete) == true else {
                 return transition
             }
-            readingComplete = complete
             scheduleGuidanceAdvance()
         case .tick:
             updateReadiness()
             tick()
         }
         if canProgress, snapshot.stage == .activity,
-           snapshot.presentation?.countdownSeconds != nil,
-           previousCountdown == nil, !awaitingCountdownGuidance {
+           snapshot.presentation?.countdownLength != nil,
+           countdownRequestedThisTurn, !awaitingCountdownCue {
             announcePracticeCountdown()
         }
-        if canProgress {
-            let seconds = snapshot.stage == .activity && !awaitingCountdownGuidance
-                ? snapshot.presentation?.countdownSeconds : nil
-            if let seconds, seconds > 0, seconds != announcedCountdown {
-                effects.append(.audio(UUID(), .countdown(seconds)))
-            }
-            announcedCountdown = seconds
+        // A due countdown ends on whichever event arrives first, so it never shows 0.
+        finishCountdownIfDue()
+        if canProgress, var countdown, let seconds = countdown.takeAnnouncement(at: now) {
+            self.countdown = countdown
+            effects.append(.audio(UUID(), .countdown(seconds)))
         }
-        snapshot.guidanceID = guidance
+        snapshot.guidanceID = gate?.id
         snapshot.countdownRunning = countdownClockRunning
+        snapshot.countdown = countdown.map {
+            PracticeCountdown(seconds: $0.seconds(at: now), running: $0.isRunning)
+        }
+        snapshot.speaksCalibrationComplete = calibrationCueSpeaking
         snapshot.activity = progress.currentActivity
         snapshot.index = progress.index
         snapshot.setNumber = progress.setNumber
         snapshot.activityCount = progress.routine.activities.count
-        snapshot.paused = pausedSince != nil
+        snapshot.paused = suspension.isPaused
         snapshot.results = progress.results
         snapshot.summary = progress.summary
-        if let summary = progress.summary, snapshot.stage != .summary {
-            snapshot.stage = .summary
+        snapshot.guidedSetBreathing = stage.breathing
+        if let summary = progress.summary, stage != .summary {
+            enter(.summary)
             effects.append(.cancelSpeech)
             effects.append(.finalize(summary))
             if !snapshot.usesArmRaiseScript || summary.stopped {
@@ -199,9 +217,7 @@ struct SessionEngine {
         return transition
     }
 
-    private var isCalibrationCompletionCue: Bool {
-        snapshot.instruction == "calibration.complete" || snapshot.instruction == snapshot.armRaiseNarrationPrefix + "calibration.complete"
-    }
+    // MARK: - Arm-raise script
 
     private var practiceCountdownKey: String {
         guard snapshot.usesArmRaiseScript else {
@@ -212,7 +228,7 @@ struct SessionEngine {
 
     private var currentScriptInstruction: String {
         if snapshot.usesArmRaiseScript, snapshot.stage == .activity,
-           !isCalibrationCompletionCue, case .movement(let movement) = activity?.presentation {
+           !calibrationCueSpeaking, case .movement(let movement) = activity?.presentation {
             return ArmRaiseGuidance.movementKey(movement, set: progress.setNumber, goal: scriptGoal, side: snapshot.armRaiseScriptSide)
         }
         return snapshot.instruction
@@ -245,7 +261,7 @@ struct SessionEngine {
 
     /// Spoken seconds follow fresh, accepted hold progress. They never run from a wall timer.
     private mutating func speakScriptHoldCount(_ movement: MovementSnapshot) {
-        guard narrationComplete, movement.progress > 0, movement.progress < 1 else {
+        guard gate?.narrated == true, movement.progress > 0, movement.progress < 1 else {
             lastScriptHoldCount = ""
             return
         }
@@ -258,6 +274,8 @@ struct SessionEngine {
         effects.append(.audio(UUID(), .holdSecond(seconds)))
     }
 
+    // MARK: - Stages
+
     private var transition: SessionTransition {
         SessionTransition(snapshot: snapshot, effects: effects)
     }
@@ -266,19 +284,38 @@ struct SessionEngine {
             id: progress.id, routine: progress.routine, startedAt: progress.startedAt,
             results: progress.results)
     }
-    private var canProgress: Bool { pausedSince == nil && !snapshot.cameraWaiting }
+    private var canProgress: Bool { !suspension.isPaused && !snapshot.cameraWaiting }
+
+    /// The practice stage's countdown; nil in every other stage.
+    private var countdown: Countdown? {
+        get {
+            guard case .practice(let practice) = stage else {
+                return nil
+            }
+            return practice.countdown
+        }
+        set {
+            guard case .practice(var practice) = stage else {
+                return
+            }
+            practice.countdown = newValue
+            stage = .practice(practice)
+        }
+    }
+
+    /// The activity waits through a countdown whose cue has not finished yet: frames and ticks
+    /// are held back from it until the countdown starts.
+    private var awaitingCountdownCue: Bool {
+        countdown.map { !$0.isRunning } ?? false
+    }
 
     private mutating func selectActivity() {
-        calibrationInvalidatedBetweenSets = false
         calibrationCompletionPending = false
-        awaitingCountdownGuidance = false
-        announcedCountdown = nil
         guard let configuration = progress.currentActivity else {
             return
         }
         snapshot.usesArmRaiseScript = scriptedArmRaise && ArmRaiseGuidance.applies(to: configuration)
         snapshot.armRaiseScriptSide = configuration.side
-        snapshot.guidedSetBreathing = nil
         pendingScriptMovement = nil
         lastScriptHoldCount = ""
         recorder = KeyRepRecorder(activity: configuration)
@@ -293,35 +330,90 @@ struct SessionEngine {
             // saved before Trunk Control moved there still decode; nothing offers it any more.
             activity = nil
         }
-        if let viewport { _ = activity?.handle(.viewport(viewport)) }
+        if let viewport { forward(.viewport(viewport)) }
         evidenceBoundary = now
         snapshot.activity = configuration
         snapshot.presentation = activity?.presentation
-        snapshot.stage = .preparing
+        enter(.preparing)
+        snapshot.guidedSetBreathing = nil
         snapshot.instruction = "session.cameraWait"
-        deadline = nil
-        guidance = nil
+        gate = nil
     }
 
-    private mutating func beginNextSet() {
-        _ = activity?.handle(.resume)
-        _ = activity?.handle(.nextSet)
-        if calibrationInvalidatedBetweenSets {
-            calibrationInvalidatedBetweenSets = false
-            _ = activity?.handle(.recalibrate)
+    /// Sends an event to the current activity and notes the facts the engine reacts to at the end
+    /// of the turn.
+    @discardableResult
+    private mutating func forward(_ event: ActivityEvent) -> ActivityTransition? {
+        guard let transition = activity?.handle(event) else {
+            return nil
+        }
+        noteFacts(transition.facts)
+        dropCountdownIfAbandoned(transition.presentation)
+        return transition
+    }
+
+    /// A caregiver command or recalibration can take the activity out of its countdown.
+    private mutating func dropCountdownIfAbandoned(_ presentation: ActivityPresentation) {
+        if presentation.countdownLength == nil, countdown != nil {
+            countdown = nil
+        }
+    }
+
+    /// Ends a running countdown that is due, on whichever event comes first, and starts practice
+    /// the same way for every activity: the practice cue is shown, and the arm-raise script speaks
+    /// its first movement line. Frames from before this moment are not scored.
+    private mutating func finishCountdownIfDue() {
+        guard canProgress, let countdown, countdown.isFinished(at: now) else {
+            return
+        }
+        self.countdown = nil
+        evidenceBoundary = now
+        forward(.countdownFinished(now))
+        guard let presentation = activity?.presentation else {
+            return
+        }
+        snapshot.presentation = presentation
+        snapshot.instruction = presentation.instruction
+        if snapshot.usesArmRaiseScript, case .movement(let movement) = presentation {
+            announce(
+                ArmRaiseGuidance.movementKey(movement, set: progress.setNumber, goal: scriptGoal, side: snapshot.armRaiseScriptSide),
+                timed: false
+            )
+        }
+    }
+
+    private mutating func noteFacts(_ facts: [ActivityFact]) {
+        if facts.requestsCountdown {
+            countdownRequestedThisTurn = true
+        }
+    }
+
+    /// The only place the stage changes. The cue being spoken is left alone: it belongs to the
+    /// narration, and the next `announce` replaces it.
+    private mutating func enter(_ next: SessionStage) {
+        calibrationCueSpeaking = false
+        stage = next
+        snapshot.stage = next.presentation
+    }
+
+    private mutating func beginNextSet(recalibrating: Bool) {
+        forward(.resume)
+        forward(.nextSet)
+        if recalibrating {
+            forward(.recalibrate)
             snapshot.presentation = activity?.presentation
-            snapshot.stage = .preparing
-            deadline = nil
-            guidance = nil
+            enter(.preparing)
+            gate = nil
             updateReadiness()
             return
         }
         snapshot.presentation = activity?.presentation
-        snapshot.stage = .activity
+        enter(.practice(.init()))
         evidenceBoundary = now
-        deadline = nil
         announcePracticeCountdown()
     }
+
+    // MARK: - Evidence and readiness
 
     private mutating func observation(_ frame: TrackingObservation) {
         // The tracking service delivers frames up to 0.8 s old, but scoring accepts only 0.3 s.
@@ -351,12 +443,15 @@ struct SessionEngine {
         guard canProgress, snapshot.stage == .activity, frame.timestamp >= evidenceBoundary else {
             return
         }
-        guard !awaitingCountdownGuidance else { return }
+        guard !awaitingCountdownCue else { return }
+        finishCountdownIfDue()
+        // Only the arm-raise script still compares cue keys across the event (Phase 6).
         let old = activity?.presentation
         let previousInstruction = snapshot.instruction
-        guard let result = activity?.handle(.observation(frame)) else {
+        guard let result = forward(.observation(frame)) else {
             return
         }
+        let facts = result.facts
         snapshot.presentation = result.presentation
         snapshot.instruction = result.presentation.instruction
         if let clip = recorder?.observe(frame, presentation: result.presentation) {
@@ -369,13 +464,13 @@ struct SessionEngine {
             }
             return
         }
-        if case .towel(let before) = old, case .towel(let after) = result.presentation {
+        if case .towel = result.presentation {
             // Live towel speech is limited by `towelSpeech` and runs from the tick, never from here.
-            if after.count != before.count {
+            if facts.creditsRepetition {
                 effects.append(.audio(UUID(), .towelCompleted))
-            } else if after.foldIndex != before.foldIndex {
+            } else if facts.contains(.towelFolded) {
                 effects.append(.audio(UUID(), .towelFold))
-            } else if after.grabID != before.grabID {
+            } else if facts.contains(.towelGrabbed) {
                 effects.append(.audio(UUID(), .towelGrab))
             }
             return
@@ -388,10 +483,10 @@ struct SessionEngine {
             }
             let key = ArmRaiseGuidance.movementKey(after, set: progress.setNumber, goal: scriptGoal, side: snapshot.armRaiseScriptSide)
             if after.phase == .countdown {
-                if old?.countdownSeconds == nil {
+                if facts.requestsCountdown {
                     announcePracticeCountdown()
                 }
-            } else if old?.count != after.count {
+            } else if facts.creditsRepetition {
                 if let praise = ArmRaiseGuidance.praiseKey(after: after.count, side: snapshot.armRaiseScriptSide) {
                     pendingScriptMovement = key
                     announce(praise, timed: false)
@@ -410,33 +505,29 @@ struct SessionEngine {
             speakScriptHoldCount(after)
             return
         }
-        if case .movement(let before) = old, case .movement(let after) = result.presentation,
-            before.phase != after.phase {
-            if after.phase == .targetCapture {
-                snapshot.stage = .preparationWait
+        if case .movement = result.presentation {
+            if facts.entered(.targetCapture) {
+                enter(.opening(.init(step: .tryMovement)))
                 snapshot.seconds = 0
-                deadline = nil
                 announce("calibration.try", timed: false)
                 return
             }
-            if after.phase == .returnToStart, before.phase == .targetCapture {
+            if facts.entered(.returnToStart, from: .targetCapture) {
                 pendingPrefix = .target
                 announce(result.presentation.instruction, timed: false)
                 return
             }
         }
-        if result.presentation.countdownSeconds != nil {
-            if old?.countdownSeconds == nil {
+        if result.presentation.countdownLength != nil {
+            if facts.requestsCountdown {
                 announcePracticeCountdown()
             }
-        } else if case .movement = result.presentation, old?.count != result.presentation.count {
+        } else if case .movement = result.presentation, facts.creditsRepetition {
             // Each accepted repetition is counted aloud.
             effects.append(.audio(UUID(), .count(result.presentation.count)))
-        } else if case .movement = result.presentation,
-            let previous = old?.guide, let next = result.presentation.guide,
-            previous.targetActive, !next.targetActive {
+        } else if case .movement = result.presentation, facts.contains(.targetReached) {
             effects.append(.audio(UUID(), .target))
-        } else if old?.instruction != result.presentation.instruction {
+        } else if facts.contains(.cueChanged(result.presentation.instruction)) {
             announce(result.presentation.instruction, timed: false)
         }
     }
@@ -448,50 +539,38 @@ struct SessionEngine {
             && previewReady
             && (lastTimestamp.map({ now - $0 <= Self.cameraWaitGrace }) ?? false)
         if !ready {
-            if waitingSince == nil {
-                waitingSince = now
-                recorder?.discardCurrentRep()
-                beginSuspension()
-                _ = activity?.handle(.suspend)
-                effects.append(.cancelSpeech)
-                guidance = nil
-                speechTimeout = nil
-            }
+            _ = suspend(.cameraWait)
             snapshot.cameraWaiting = true
             return
         }
-        if waitingSince != nil {
-            waitingSince = nil
-            if pausedSince == nil {
-                endSuspension()
-                _ = activity?.handle(.resume)
-                snapshot.presentation = activity?.presentation
-                awaitingCountdownGuidance = snapshot.presentation?.countdownSeconds != nil
+        if suspension.remove(.cameraWait) {
+            if !suspension.isPaused {
+                resumeAfterSuspension()
+                // Preparing replays nothing (its opening starts below), nor does a timed rest,
+                // whose breath cue follows its own clock.
                 if snapshot.stage == .instruction || snapshot.stage == .demonstration
                     || snapshot.stage == .feedback || snapshot.stage == .activity
                     || snapshot.stage == .preparationWait
-                    || (snapshot.stage == .rest && snapshot.guidedSetBreathing != nil)
+                    || stage.breathing != nil
                 {
-                    let key = awaitingCountdownGuidance && !isCalibrationCompletionCue
-                        ? practiceCountdownKey : currentScriptInstruction
-                    announce(key, timed: snapshot.stage != .activity)
+                    replayStageCue(timed: snapshot.stage != .activity)
                 }
             }
         }
         snapshot.cameraWaiting = false
-        if snapshot.stage == .preparing, pausedSince == nil {
+        if snapshot.stage == .preparing, !suspension.isPaused {
             endSuspension()
-            _ = activity?.handle(.resume)
+            forward(.resume)
             if let configuration = progress.currentActivity {
                 let plan = SessionGuidance.opening(configuration, includePositioning: positioningPending)
                 if snapshot.usesArmRaiseScript {
                     calibrationCompletionPending = true
-                    snapshot.stage = .preparationWait
+                    enter(.opening(.init(step: .scriptedPosition)))
                     snapshot.seconds = 0
                     announce(snapshot.armRaiseNarrationPrefix + "calibration.position", timed: false)
                 } else if plan.destination == .capture {
                     calibrationCompletionPending = true
-                    snapshot.stage = .preparationWait
+                    enter(.opening(.init(step: .calibrationIntro)))
                     snapshot.seconds = 0
                     announce("calibration.intro", timed: false)
                 } else {
@@ -501,13 +580,15 @@ struct SessionEngine {
         }
     }
 
+    // MARK: - Clock and deadlines
+
     private mutating func tick() {
         guard canProgress else {
             return
         }
-        if snapshot.stage == .activity && !awaitingCountdownGuidance {
-            let previous = snapshot.presentation
-            _ = activity?.handle(.tick(now))
+        if snapshot.stage == .activity && !awaitingCountdownCue {
+            finishCountdownIfDue()
+            forward(.tick(now))
             snapshot.presentation = activity?.presentation
             if snapshot.usesArmRaiseScript, pendingScriptMovement == nil,
                case .movement(let movement) = snapshot.presentation,
@@ -518,66 +599,52 @@ struct SessionEngine {
                 }
             }
             if case .towel(let after) = snapshot.presentation {
-                if case .towel(let before) = previous,
-                   before.phase == .countdown, after.phase == .practice {
-                    evidenceBoundary = now
-                }
                 // Live narration is replaceable feedback, never a practice advancement gate.
                 if towelSpeech.shouldSpeak(after, now: now) {
                     announce(after.instruction, timed: false)
                 }
             }
         }
-        if let timeout = speechTimeout, now >= timeout, let guidance {
+        if let gate, gate.expired(at: now) {
             effects.append(.cancelSpeech)
-            completeGuidance(guidance, available: false)
+            completeGuidance(gate.id, available: false)
         }
-        if let deadline, now >= deadline {
-            self.deadline = nil
-            switch snapshot.stage {
-            case .instruction, .demonstration:
-                if readingComplete {
-                    advanceCard()
-                } else {
-                    self.deadline = deadline
-                }
-            case .preparationWait:
-                enterActivity()
-            case .feedback:
-                if case .feedback(let request) = progress.stage {
-                    progress.finishFeedback(request: request, at: now, date: Date())
-                    if case .rest = progress.stage {
-                        snapshot.stage = .rest
-                        snapshot.instruction = "session.rest"
-                        if snapshot.usesArmRaiseScript, progress.hasNextSet {
-                            let breathing = GuidedSetBreathing(opensAfterFirstSet: progress.setNumber == 1)
-                            snapshot.guidedSetBreathing = breathing
-                            announce(snapshot.armRaiseNarrationPrefix + breathing.key, timed: false)
-                        } else if !progress.hasNextSet {
-                            announce("session.rest", timed: false)
-                        }
+        if let deadline = stage.advanceAt, now >= deadline {
+            stage.advanceAt = nil
+            switch stage {
+            case .opening(let opening):
+                if case .card = opening.step {
+                    if gate?.read == true {
+                        advanceCard()
+                    } else {
+                        stage.advanceAt = deadline
                     }
+                } else {
+                    enterActivity()
                 }
-            default: break
+            case .feedback(let feedback):
+                finishFeedback(feedback)
+            case .preparing, .practice, .rest, .summary:
+                break
             }
         }
-        if snapshot.stage == .preparationWait, let deadline {
+        if snapshot.stage == .preparationWait, let deadline = stage.advanceAt {
             snapshot.seconds = max(0, Int(ceil(deadline - now)))
         }
-        if snapshot.stage == .rest, var breathing = snapshot.guidedSetBreathing {
+        if case .rest(let rest) = stage, var breathing = rest.breathing {
             let step = breathing.step
             breathing.tick(now)
-            snapshot.guidedSetBreathing = breathing
+            stage.breathing = breathing
             if breathing.finished {
-                snapshot.guidedSetBreathing = nil
-                progress.finishNarratedRest(at: now)
-                beginNextSet()
+                stage.breathing = nil
+                _ = progress.advanceAfterRest()
+                beginNextSet(recalibrating: rest.recalibrateBeforeNext)
             } else if step != breathing.step {
                 announce(snapshot.armRaiseNarrationPrefix + breathing.key, timed: false)
             }
             return
         }
-        if case .rest(let deadline) = progress.stage {
+        if case .rest(let rest) = stage, let deadline = rest.deadline {
             let remaining = max(0, deadline - now)
             snapshot.seconds = Int(ceil(remaining))
             if progress.hasNextSet, remaining > 0 {
@@ -587,34 +654,61 @@ struct SessionEngine {
                 }
                 snapshot.restBreath = breath
             }
-            let previousIndex = progress.index
-            progress.tick(at: now)
-            if progress.stage == .activity {
-                if snapshot.restBreath != nil {
-                    snapshot.restBreath = nil
-                    effects.append(.cancelSpeech)
-                }
-                if progress.index == previousIndex {
-                    beginNextSet()
-                } else {
-                    selectActivity()
-                    updateReadiness()
-                }
+            guard now >= deadline else {
+                return
             }
-        } else if let deadline {
+            if snapshot.restBreath != nil {
+                snapshot.restBreath = nil
+                effects.append(.cancelSpeech)
+            }
+            switch progress.advanceAfterRest() {
+            case .set:
+                beginNextSet(recalibrating: rest.recalibrateBeforeNext)
+            case .activity:
+                selectActivity()
+                updateReadiness()
+            }
+        } else if let deadline = stage.advanceAt {
             snapshot.seconds = max(0, Int(ceil(deadline - now)))
         }
     }
 
-    /// Preparation starts its deadline when its narration ends, and an activity countdown starts
-    /// when `countdownReady` is sent (`awaitingCountdownGuidance` covers the wait, including after a
-    /// resume). Rest has no wait.
+    /// After the feedback cue: the session ends after the routine's last set; otherwise it rests,
+    /// with scripted breathing between the arm-raise script's sets and a timed rest elsewhere.
+    private mutating func finishFeedback(_ feedback: SessionStage.Feedback) {
+        guard !progress.finishIfLastSet(date: Date()) else {
+            return
+        }
+
+        let breathing: BreathingRest?
+        if snapshot.usesArmRaiseScript, progress.hasNextSet {
+            breathing = BreathingRest(opensAfterFirstSet: progress.setNumber == 1)
+        } else {
+            breathing = nil
+        }
+
+        enter(.rest(.init(
+            deadline: breathing == nil ? now + max(0, progress.routine.restSeconds) : nil,
+            breathing: breathing,
+            recalibrateBeforeNext: feedback.recalibrateBeforeNext
+        )))
+        snapshot.instruction = "session.rest"
+
+        if let breathing {
+            announce(snapshot.armRaiseNarrationPrefix + breathing.key, timed: false)
+        } else if !progress.hasNextSet {
+            announce("session.rest", timed: false)
+        }
+    }
+
+    /// Preparation starts its deadline when its narration ends, and the practice countdown when its
+    /// cue ends, including after a resume. Rest has no wait.
     private var countdownClockRunning: Bool {
         switch snapshot.stage {
         case .preparationWait:
-            return deadline != nil
+            return stage.advanceAt != nil
         case .activity:
-            return snapshot.presentation?.countdownSeconds != nil && !awaitingCountdownGuidance
+            return countdown?.isRunning ?? false
         case .rest:
             return true
         default:
@@ -622,20 +716,24 @@ struct SessionEngine {
         }
     }
 
+    // MARK: - Narration
+
     private mutating func announce(_ key: String, timed: Bool) {
         let liveTowel = snapshot.stage == .activity
             && progress.currentActivity?.kind == .foldTowel
-            && snapshot.presentation?.countdownSeconds == nil
+            && snapshot.presentation?.countdownLength == nil
+        calibrationCueSpeaking = false
         if timed || liveTowel || snapshot.usesArmRaiseScript {
             effects.append(.cancelSpeech)
         }
         let id = UUID()
-        guidance = id
-        narrationComplete = false
-        guidanceStartedAt = now
-        readingComplete = snapshot.stage != .instruction && snapshot.stage != .demonstration
-        speechTimeout = now + (snapshot.usesArmRaiseScript || snapshot.stage == .feedback ? 45 : (timed ? (guidancePlan?.watchdog ?? 20) : 20))
-        if timed || snapshot.stage == .preparationWait { deadline = nil }
+        gate = GuidanceGate(
+            id: id,
+            startedAt: now,
+            watchdog: watchdogSeconds(timed: timed),
+            read: snapshot.stage != .instruction && snapshot.stage != .demonstration
+        )
+        if timed || snapshot.stage == .preparationWait { stage.advanceAt = nil }
         snapshot.instruction = key
         if let prefix = pendingPrefix {
             pendingPrefix = nil
@@ -645,35 +743,50 @@ struct SessionEngine {
         }
     }
 
+    /// How long a cue may stay unfinished before it counts as spoken: scripted lines and feedback
+    /// get 45 s, opening cards their plan's watchdog, everything else 20 s.
+    private func watchdogSeconds(timed: Bool) -> Double {
+        if snapshot.usesArmRaiseScript || snapshot.stage == .feedback {
+            return 45
+        }
+
+        guard timed else {
+            return 20
+        }
+
+        return guidancePlan?.watchdog ?? 20
+    }
+
+    /// Sets up the activity's countdown, waiting for its cue, and speaks that cue: "calibration
+    /// complete" first when the set still owes it.
     private mutating func announcePracticeCountdown() {
-        awaitingCountdownGuidance = true
-        announcedCountdown = nil
+        countdown = activity?.presentation.countdownLength.map { Countdown(length: $0) }
         if calibrationCompletionPending {
             calibrationCompletionPending = false
             announce(snapshot.usesArmRaiseScript ? snapshot.armRaiseNarrationPrefix + "calibration.complete" : "calibration.complete", timed: false)
+            calibrationCueSpeaking = true
         } else {
             announce(practiceCountdownKey, timed: false)
         }
     }
 
     private mutating func completeGuidance(_ id: UUID, available: Bool = true) {
-        guard canProgress, guidance == id, !narrationComplete else {
+        guard canProgress, gate?.complete(id) == true else {
             return
         }
-        narrationComplete = true
-        speechTimeout = nil
         if snapshot.usesArmRaiseScript {
-            if snapshot.stage == .rest, snapshot.guidedSetBreathing != nil {
-                snapshot.guidedSetBreathing?.guidanceCompleted()
+            if stage.breathing != nil {
+                stage.breathing?.guidanceCompleted()
                 return
             }
-            if snapshot.stage == .preparationWait {
-                if snapshot.instruction == snapshot.armRaiseNarrationPrefix + "calibration.position" {
+            if snapshot.stage == .preparationWait, case .opening(let opening) = stage {
+                if opening.step == .scriptedPosition {
+                    enter(.opening(.init(step: .scriptedStart)))
                     announce(snapshot.armRaiseNarrationPrefix + "calibration.start", timed: false)
                 } else {
-                    snapshot.stage = .activity
+                    enter(.practice(.init()))
                     evidenceBoundary = now
-                    _ = activity?.handle(.guidanceCompleted(now))
+                    forward(.guidanceCompleted(now))
                 }
                 return
             }
@@ -683,78 +796,86 @@ struct SessionEngine {
                 return
             }
         }
-        if snapshot.stage == .preparationWait {
-            if snapshot.instruction == "calibration.intro", let configuration = progress.currentActivity {
+        if snapshot.stage == .preparationWait, case .opening(let opening) = stage {
+            if opening.step == .calibrationIntro, let configuration = progress.currentActivity {
                 beginCards(.opening(configuration, includePositioning: positioningPending))
                 return
             }
-            deadline = now
+            stage.advanceAt = now
         }
         if snapshot.stage == .activity {
             // A live towel cue may finish late, fail, or never finish. None changes mechanics.
             if case .towel(let towel) = snapshot.presentation, towel.phase == .practice {
                 return
             }
-            if awaitingCountdownGuidance {
-                if snapshot.instruction == "calibration.complete" || snapshot.instruction == snapshot.armRaiseNarrationPrefix + "calibration.complete" {
+            if awaitingCountdownCue {
+                if calibrationCueSpeaking {
                     announce(practiceCountdownKey, timed: false)
                     return
                 }
-                awaitingCountdownGuidance = false
-                _ = activity?.handle(.countdownReady(now))
-                snapshot.presentation = activity?.presentation
+                let startedAt = now
+                countdown?.start(at: startedAt)
             }
-            _ = activity?.handle(.guidanceCompleted(now))
+            forward(.guidanceCompleted(now))
         }
         scheduleGuidanceAdvance()
         if !available, snapshot.stage == .instruction, guidancePlan?.quietDelay == 1 {
-            deadline = max(guidanceStartedAt + (guidancePlan?.watchdog ?? 20), now + 12)
+            stage.advanceAt = max((gate?.startedAt ?? now) + (guidancePlan?.watchdog ?? 20), now + 12)
         }
     }
 
     private mutating func scheduleGuidanceAdvance() {
-        guard canProgress, narrationComplete, deadline == nil else {
+        guard canProgress, gate?.narrated == true, stage.advanceAt == nil else {
             return
         }
-        switch snapshot.stage {
-        case .instruction: deadline = now + (guidancePlan?.quietDelay ?? 3)
-        case .demonstration: deadline = now + 8
-        case .feedback: deadline = max(now, feedbackEnteredAt + 2)
-        default: break
+        switch stage {
+        case .opening(let opening):
+            guard case .card(_, let demonstration) = opening.step else {
+                return
+            }
+            stage.advanceAt = demonstration ? now + 8 : now + (guidancePlan?.quietDelay ?? 3)
+        case .feedback(let feedback):
+            stage.advanceAt = max(now, feedback.enteredAt + 2)
+        case .preparing, .practice, .rest, .summary:
+            break
         }
     }
+
+    // MARK: - Opening
 
     private mutating func beginCards(_ plan: SessionGuidance) {
         guidancePlan = plan
-        cardIndex = 0
-        showCard()
+        showCard(0)
     }
 
-    private mutating func showCard() {
-        guard let plan = guidancePlan, plan.cards.indices.contains(cardIndex) else { return }
-        let card = plan.cards[cardIndex]
-        snapshot.stage = card.demonstration ? .demonstration : .instruction
+    private mutating func showCard(_ index: Int) {
+        guard let plan = guidancePlan, plan.cards.indices.contains(index) else { return }
+        let card = plan.cards[index]
+        enter(.opening(.init(step: .card(index: index, demonstration: card.demonstration))))
         snapshot.presentation = activity?.presentation
         announce(card.key, timed: true)
     }
 
     private mutating func advanceCard() {
-        guard let plan = guidancePlan else { return }
-        cardIndex += 1
-        if positioningPending, cardIndex == 1 {
-            positioningPending = false
-        }
-        if cardIndex < plan.cards.count {
-            showCard()
+        guard let plan = guidancePlan,
+              case .opening(let opening) = stage,
+              case .card(let index, _) = opening.step
+        else {
             return
         }
-        guidance = nil
-        speechTimeout = nil
+        let next = index + 1
+        if positioningPending, next == 1 {
+            positioningPending = false
+        }
+        if next < plan.cards.count {
+            showCard(next)
+            return
+        }
+        gate = nil
         switch plan.destination {
         case .capture:
-            snapshot.stage = .preparationWait
+            enter(.opening(.init(step: .tryMovement)))
             snapshot.seconds = 0
-            deadline = nil
             announce("calibration.try", timed: false)
         case .activity, .returnToStart:
             enterActivity()
@@ -762,7 +883,7 @@ struct SessionEngine {
     }
 
     private mutating func enterActivity() {
-        snapshot.stage = .activity
+        enter(.practice(.init()))
         evidenceBoundary = now
         snapshot.instruction = snapshot.usesArmRaiseScript
             ? currentScriptInstruction
@@ -775,6 +896,8 @@ struct SessionEngine {
         announce(snapshot.instruction, timed: false)
     }
 
+    // MARK: - Recording
+
     private var practicedSeconds: Double {
         switch activity?.presentation {
         case .reach(let value): return value.practiceSeconds
@@ -783,30 +906,24 @@ struct SessionEngine {
         }
     }
 
+    /// Records the current set's outcome and moves to its feedback. Skip, completion and the
+    /// caregiver's activity commands come through here; Stop records through `recordResult` and
+    /// ends the session instead.
     private mutating func record(_ outcome: ActivityOutcome) {
-        guard progress.stage == .activity else {
+        guard stage.isRecordable else {
             return
         }
-        if pausedSince != nil {
-            pausedSince = nil
-            endSuspension()
-            _ = activity?.handle(.resume)
-        } else {
-            progress.resume(at: now)
-        }
+        // Recording never lifts a suspension: a skip while paused or waiting for the camera stays
+        // suspended, and its feedback cue plays after Resume.
         pendingScriptMovement = nil
+        // A cue owed to this set is not carried into the next one.
+        calibrationCompletionPending = false
         let presentation = activity?.presentation
-        let reach: ReachSnapshot?
-        if case .reach(let value) = presentation { reach = value } else { reach = nil }
-        progress.record(
-            execution: progress.executionID, outcome: outcome,
-            completedWork: presentation?.count ?? 0, reachOutcomes: reach?.outcomes ?? [],
-            skippedReachSteps: reach?.caregiverSkippedSteps,
-            practiceSeconds: practicedSeconds,
-            repMetrics: takeRecording(for: outcome))
+        guard recordResult(outcome) else {
+            return
+        }
         effects.append(.checkpoint(checkpoint))
-        snapshot.stage = .feedback
-        feedbackEnteredAt = now
+        enter(.feedback(.init(enteredAt: now)))
         var countsRepetitions = false
         switch presentation {
         case .movement, .towel: countsRepetitions = true
@@ -822,6 +939,26 @@ struct SessionEngine {
         }
         snapshot.assistanceKey = nil
         if canProgress { announce(snapshot.instruction, timed: true) }
+    }
+
+    /// Adds the current set's result with its evidence. Returns false when the set already has one.
+    private mutating func recordResult(_ outcome: ActivityOutcome) -> Bool {
+        let presentation = activity?.presentation
+        let reach: ReachSnapshot?
+        if case .reach(let value) = presentation {
+            reach = value
+        } else {
+            reach = nil
+        }
+
+        return progress.record(
+            outcome: outcome,
+            completedWork: presentation?.count ?? 0,
+            reachOutcomes: reach?.outcomes ?? [],
+            skippedReachSteps: reach?.caregiverSkippedSteps,
+            practiceSeconds: practicedSeconds,
+            repMetrics: takeRecording(for: outcome)
+        )
     }
 
     /// Emits the set's key repetitions for saving and returns its per-repetition metrics, then
@@ -846,58 +983,39 @@ struct SessionEngine {
         return recorder.metrics
     }
 
+    // MARK: - Commands
+
     private mutating func commandReceived(_ command: SessionCommand) {
         switch command {
         case .pause:
             snapshot.assistanceKey = nil
             pause()
         case .resume:
-            guard pausedSince != nil else {
+            guard suspension.isPaused, suspension.canResume else {
                 return
             }
-            pausedSince = nil
+            _ = suspension.remove(.pause)
             if !snapshot.cameraWaiting {
-                endSuspension()
-                _ = activity?.handle(.resume)
-                snapshot.presentation = activity?.presentation
-                awaitingCountdownGuidance = snapshot.presentation?.countdownSeconds != nil
+                resumeAfterSuspension()
             }
             if canProgress {
-                let key = awaitingCountdownGuidance && !isCalibrationCompletionCue
-                    ? practiceCountdownKey : currentScriptInstruction
-                announce(
-                    key,
+                replayStageCue(
                     timed: snapshot.stage == .instruction || snapshot.stage == .demonstration
                         || snapshot.stage == .feedback)
             }
             snapshot.assistanceKey = nil
         case .stop:
-            if progress.stage == .activity {
-                progress.resume(at: now)
-                let reach: ReachSnapshot?
-                if case .reach(let value) = activity?.presentation {
-                    reach = value
-                } else {
-                    reach = nil
-                }
-                progress.record(
-                    execution: progress.executionID,
-                    outcome: .interrupted,
-                    completedWork: activity?.presentation.count ?? 0,
-                    reachOutcomes: reach?.outcomes ?? [],
-                    skippedReachSteps: reach?.caregiverSkippedSteps,
-                    practiceSeconds: practicedSeconds,
-                    repMetrics: takeRecording(for: .interrupted)
-                )
+            if stage.isRecordable {
+                _ = recordResult(.interrupted)
             }
             progress.finalize(stopped: true, date: Date())
         case .timedPractice:
             guard let configuration = progress.currentActivity,
                 configuration.kind == .armRaise || configuration.kind == .elbowBend,
-                progress.stage == .activity, pausedSince != nil else { return }
+                stage.isRecordable, suspension.isPaused else { return }
             activity = TimedPracticeActivity(configuration: configuration, duration: progress.routine.practiceSeconds)
             snapshot.presentation = activity?.presentation
-            snapshot.stage = .activity
+            enter(.practice(.init()))
             snapshot.instruction = "session.timedPractice"
             evidenceBoundary = now
         case .skip:
@@ -933,19 +1051,17 @@ struct SessionEngine {
     /// Records the current activity's remaining sets as completed at their goal. The summary block
     /// in `handle` finalizes after the last activity; otherwise an elapsed rest starts the next one.
     private mutating func finishActivityForDebug() {
-        if pausedSince != nil {
-            pausedSince = nil
+        if suspension.remove(.pause) {
             endSuspension()
         }
 
         effects.append(.cancelSpeech)
-        guidance = nil
-        speechTimeout = nil
-        deadline = nil
+        gate = nil
+        stage.advanceAt = nil
         snapshot.restBreath = nil
         snapshot.assistanceKey = nil
 
-        progress.completeCurrentActivityForDebug(at: now, date: Date())
+        progress.completeCurrentActivityForDebug(date: Date())
 
         // Invented sets carry no metrics or key-repetition skeletons.
         recorder = nil
@@ -955,7 +1071,8 @@ struct SessionEngine {
             return
         }
 
-        snapshot.stage = .rest
+        // An elapsed rest moves the next tick straight on to the next activity.
+        enter(.rest(.init(deadline: now)))
         snapshot.instruction = "session.rest"
         snapshot.seconds = 0
     }
@@ -972,14 +1089,15 @@ struct SessionEngine {
     }
 
     private mutating func routeActivityCommand(_ command: ActivityCommand) {
-        guard progress.stage == .activity,
-            snapshot.stage == .activity,
+        guard case .practice = stage,
             var currentActivity = activity
         else {
             return
         }
         let transition = currentActivity.handle(.command(command, at: now))
         activity = currentActivity
+        noteFacts(transition.facts)
+        dropCountdownIfAbandoned(transition.presentation)
         snapshot.presentation = transition.presentation
         snapshot.instruction = transition.presentation.instruction
         snapshot.assistanceKey = nil
@@ -992,54 +1110,77 @@ struct SessionEngine {
         }
     }
 
+    // MARK: - Suspension and recalibration
+
     private mutating func pause() {
-        guard pausedSince == nil else {
-            return
+        _ = suspend(.pause)
+    }
+
+    /// Adds a suspension reason and, when it is new, freezes everything that would otherwise run
+    /// on: the current repetition, scripted breathing, the activity, and the cue being spoken.
+    /// Returns false when the reason was already present.
+    private mutating func suspend(_ reason: Suspension.Reason) -> Bool {
+        guard suspension.insert(reason, at: now) else {
+            return false
         }
-        pausedSince = now
         recorder?.discardCurrentRep()
-        beginSuspension()
-        _ = activity?.handle(.suspend)
-        effects.append(.cancelSpeech)
-        guidance = nil
-        speechTimeout = nil
-        announcedCountdown = nil
-    }
-
-    private mutating func beginSuspension() {
-        snapshot.guidedSetBreathing?.suspend()
+        stage.breathing?.suspend()
+        countdown?.stop()
         pendingScriptMovement = nil
-        if suspensionSince == nil { suspensionSince = now }
-        progress.pause(at: now)
+        forward(.suspend)
+        effects.append(.cancelSpeech)
+        gate = nil
+        return true
     }
 
+    /// Ends the suspension and lets the activity run again. A countdown that was interrupted waits
+    /// for its cue to be spoken again before it restarts.
+    private mutating func resumeAfterSuspension() {
+        endSuspension()
+        forward(.resume)
+        snapshot.presentation = activity?.presentation
+    }
+
+    /// Speaks the current stage's cue again with a new identity, after a pause or camera wait
+    /// cancelled it: the countdown cue when a countdown is pending, otherwise the current line.
+    private mutating func replayStageCue(timed: Bool) {
+        let speakingCalibration = calibrationCueSpeaking
+        let key: String
+        if speakingCalibration {
+            key = snapshot.instruction
+        } else if awaitingCountdownCue {
+            key = practiceCountdownKey
+        } else {
+            key = currentScriptInstruction
+        }
+        announce(key, timed: timed)
+        calibrationCueSpeaking = speakingCalibration
+    }
+
+    /// Closes the frozen interval and moves every deadline later by its length, so no stage loses
+    /// time to a pause or camera wait. Evidence from before this moment is ignored.
     private mutating func endSuspension() {
         evidenceBoundary = now
-        if let since = suspensionSince, let deadline {
-            self.deadline = deadline + now - since
+        guard let since = suspension.end() else {
+            return
         }
-        suspensionSince = nil
-        progress.resume(at: now)
+        stage.rebase(suspendedAt: since, resumedAt: now)
     }
 
     private mutating func recalibrate() {
-        guard progress.stage == .activity else {
+        guard stage.isRecordable else {
             // Cached targets must never survive a camera change while resting between sets.
-            calibrationInvalidatedBetweenSets = true
+            stage.requireRecalibrationBeforeNextSet()
             return
         }
-        awaitingCountdownGuidance = false
-        announcedCountdown = nil
         evidenceBoundary = now
         recorder?.discardCurrentRep()
         progress.retryExecution()
-        _ = activity?.handle(.recalibrate)
+        forward(.recalibrate)
         snapshot.presentation = activity?.presentation
-        snapshot.stage = .preparing
+        enter(.preparing)
         snapshot.instruction = "session.cameraWait"
-        guidance = nil
-        deadline = nil
-        speechTimeout = nil
+        gate = nil
         effects.append(.cancelSpeech)
     }
 }

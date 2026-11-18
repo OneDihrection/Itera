@@ -2,7 +2,9 @@
 
 # Phase 7: Finger flow on shared session types
 
-Status: Not started. Back to the [overview](README.md).
+Status: Not started. Track: optional, requires Phase 6. Back to the [overview](README.md).
+
+Optional. Until this phase lands, the finger session runs as SYSTEM_DESIGN §3 describes, and that description stays authoritative.
 
 ## Goal
 
@@ -22,15 +24,15 @@ Making the engine generic over these would be the framework that §3 and ADR-006
 - `FingerActivity.swift`:
   - `FingerPhase` has the cases `baseline, target, range, rangeResult, demonstration, countdown, active, feedback, rest, finished`.
   - Sub-states live in flags (≈ lines 26-72).
-  - One `remaining` value is the timer for feedback, countdown and rest (≈ 233-266).
-- `FingerSessionViewModel.swift` (≈ 1332 lines) contains:
-  - `tick()` (≈ 546-611) with the scripted rest and the countdown gate;
-  - `receive` (≈ 421-517);
-  - `updateGuidance`, `completeNarration` and `narrate` (≈ 696-791);
-  - `canResume` and `recoveryPanelKey` (≈ 822-844);
-  - `calibrationMessage`, a string that gates scoring (≈ 505);
+  - One `remaining` value is the timer for feedback, countdown and rest (≈ 229-256).
+- `FingerSessionViewModel.swift` (≈ 1396 lines) contains:
+  - `tick()` (≈ 610-676) with the scripted rest and the countdown gate;
+  - `receive` (≈ 484-588);
+  - `updateGuidance`, `completeNarration` and `narrate` (≈ 760-885);
+  - `recoveryPanelKey` and `canResume` (≈ 886-910);
+  - `calibrationMessage`, a string that gates scoring (≈ 152);
   - nine `previousInstruction = ""` resets;
-  - the 15 s "calibration needs help" timer (≈ 653-656).
+  - the 15 s "calibration needs help" timer (≈ 718).
 - Finger countdown resume continues from where it stopped; the guided countdown restarts. **Keep this difference.**
 
 ## 7a. Domain pull request

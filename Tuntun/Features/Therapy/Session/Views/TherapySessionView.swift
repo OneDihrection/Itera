@@ -203,7 +203,7 @@ struct TMTherapySessionView<ViewModel: TherapySessionViewModelProtocol>: View {
         return model.snapshot.stage == .instruction
             || model.snapshot.stage == .demonstration || model.snapshot.stage == .preparationWait || model.snapshot.stage == .rest
             || model.snapshot.stage == .feedback
-            || model.snapshot.presentation?.countdownSeconds != nil
+            || model.snapshot.presentation?.countdownLength != nil
     }
 
     @ViewBuilder
@@ -231,9 +231,8 @@ struct TMTherapySessionView<ViewModel: TherapySessionViewModelProtocol>: View {
                 }
             )
         } else if model.snapshot.stage == .activity,
-           let seconds = model.snapshot.presentation?.countdownSeconds,
-           model.snapshot.instruction != "calibration.complete",
-           model.snapshot.instruction != model.snapshot.armRaiseNarrationPrefix + "calibration.complete",
+           let seconds = model.snapshot.countdown?.seconds,
+           !model.snapshot.speaksCalibrationComplete,
            !model.cameraDenied, model.voiceReady, !model.snapshot.paused || usesLightLayout {
             TMPracticeCountdown(
                 seconds: seconds,

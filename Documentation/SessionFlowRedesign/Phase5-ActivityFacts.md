@@ -2,7 +2,7 @@
 
 # Phase 5: Activity facts and engine-owned countdown
 
-Status: Not started. Back to the [overview](README.md).
+Status: Done 2026-11-18 (as amended below). Track: optional, requires Phase 4. Back to the [overview](README.md).
 
 ## Goal
 
@@ -29,9 +29,23 @@ Fixes bug 8 for the guided path.
 - String checks:
   - `isCalibrationCompletionCue` (`SessionEngine.swift:202-204`, 671, 687, 699)
   - `TherapyLightSession.swift:83-84`
-  - `TherapySessionView.swift:244-245`
+  - `TherapySessionView.swift:235-236`
+
+## As implemented (2026-11-18)
+
+Two commits: facts first, with transcripts identical to the core, then the countdown, with the timing differences listed below.
+
+- **Facts.** `ActivityFact` (`Therapy/Shared/SessionFlow/ActivityFact.swift`) has `countdownRequested(seconds:)`, `movementPhaseChanged(from:to:)`, `repetitionCredited`, `targetReached`, `towelFolded`, `towelGrabbed` and `cueChanged`. Each activity reports facts once per event through `ActivityFact.changes(from:to:)`, comparing its own presentation before and after. The engine reacts only to facts. The arm-raise script's cue-key comparison stays until Phase 6.
+- **Countdown.** `Countdown` (`Therapy/Shared/SessionFlow/Countdown.swift`) lives in `SessionStage.Practice`. It has `length`, `start`, `seconds`, `isFinished`, `stop` and `takeAnnouncement`. No `OnResume` yet: only the finger path resumes a countdown (Phase 7). `ActivityEvent.countdownReady` became `.countdownFinished`. Activities keep a counting-down phase without a clock, and `ActivityPresentation.countdownSeconds` became `countdownLength`. The engine ends a due countdown on whichever event comes first. Practice then starts the same way for every activity: the practice cue shows, and the arm-raise script speaks its first movement line.
+- **Calibration cue.** `calibrationCompletionPending` stays an engine field but belongs to the current set: recording a result clears it. `calibrationCueSpeaking` replaces `isCalibrationCompletionCue`, and a replay keeps it. The snapshot gains `countdown: PracticeCountdown?` and `speaksCalibrationComplete`. `TherapySessionView` and `TherapyLightSession` read these values instead of comparing `"calibration.complete"`.
+- **Not done:** `.evidenceHeld`. The script's `waitingForGuidance` and `.guidanceCompleted` move with the script policy in Phase 6.
+
+The original plan follows for reference.
 
 ## Changes
+
+- Remove `awaitingCountdownGuidance` and `calibrationCompletionPending` from `SessionEngine` (left by Phase 4); `.practice` gains their replacements (`countdown: Countdown?`, `calibrationCuePending`).
+- Add `SessionFlow/Countdown.swift` (moved here from Phase 1): `OnResume { restart, resume }`, `start`, `seconds`, `isFinished`, `takeAnnouncement` and `suspend`.
 
 - `TherapyActivity.swift`:
   - `ActivityTransition` gains `facts: [ActivityFact]`.

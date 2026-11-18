@@ -62,6 +62,9 @@ enum SessionPresentationFixtures {
                 state.instruction = phase == .practice ? "session.moveTarget" : "session.holdStart"
                 value.presentation = .movement(state)
                 value.instruction = state.instruction
+                if phase == .countdown {
+                    value.countdown = PracticeCountdown(seconds: state.seconds, running: true)
+                }
                 fixtures.append(Fixture(id: "movement-\(phase)-\(progress)", snapshot: value))
             }
         }
@@ -92,6 +95,9 @@ enum SessionPresentationFixtures {
                 state.guide = target
                 value.presentation = .reach(state)
                 value.instruction = state.instruction
+                if phase == .countdown {
+                    value.countdown = PracticeCountdown(seconds: state.seconds, running: true)
+                }
                 fixtures.append(Fixture(id: "reach-\(directions[direction])-\(phase)", snapshot: value))
             }
         }

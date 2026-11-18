@@ -1387,3 +1387,87 @@ Verification: XcodeGen and Debug Simulator build with IPHONEOS_DEPLOYMENT_TARGET
 `Shared/Storage` held two identical helpers, `AtomicFileStorage` (an instance per repository) and `AtomicJSONFiles` (static). `AtomicFileStorage` was removed; `LocalRoutineRepository` and `LocalSessionRepository` now call `AtomicJSONFiles` like the other repositories. Both used default `JSONEncoder`/`JSONDecoder`, created the parent folder and wrote with `.atomic`, so files on disk are unchanged and need no migration.
 
 Verification: XcodeGen and Debug Simulator build with IPHONEOS_DEPLOYMENT_TARGET=17.0.
+
+## Session flow redesign revised (2026-11-18)
+
+At the product owner's request, the proposal in *Session flow redesign (proposed)* was reviewed against the current source and revised. It is still proposed; nothing is implemented. See [Documentation/SessionFlowRedesign/README.md](SessionFlowRedesign/README.md).
+
+- **Core and optional phases.** Phases 0–4 are the core milestone. When Phase 4 lands, the guided `SessionEngine` is a single-owner state machine: `SessionStage` cases carry their own data, there is one `Suspension`, one `GuidanceGate` per stage and one `record`, and `SessionProgress` no longer owns a stage. The redesign may stop there. Phases 5–9 (activity facts, guidance policy, finger, Balancing, daily plan) are independent follow-ups, each listing the phases it requires.
+- **Countdown resume settled.** The guided countdown restarts after a resume and the finger countdown continues; ADR-010 records this when Phase 3 lands. It is no longer an open risk.
+- **Bug 2 may land early.** Skip during a pause or camera wait may be fixed on its own before Phase 3, so that skip records the outcome and never lifts a suspension.
+- **Composition wording aligned** with *Simplified architecture* and *Routers own navigation state*: builders, `…Dependency` protocols and routers replace the stale `AppDependencies` references. Phase 9 now uses the existing `DailyPlanNextViewModel` (built by `HomeBuilder`) instead of a new `LongRestViewModel`, routes through `DailyPlanRouterProtocol`, and adds `sessionEnded` to `DailyPlanSessionReporting`.
+- Line references and file sizes in the proposal were refreshed against the current source.
+
+Verification: documentation only; no code or runtime behaviour changed.
+
+## Shared breathing rest (2026-11-18)
+
+Phase 1 of the session flow redesign. The scripted short rest between sets existed twice, as `GuidedSetBreathing` (Indonesian arm raise, in `SessionEngine`) and `OppositionRest` (thumb opposition, in `FingerSessionViewModel`). The two had the same steps, keys, minimums (inhale 6 s, hold 2 s, exhale 3 s), 0.2 s credit cap and intensity curve. They are now one `BreathingRest` in `Therapy/Shared/SessionFlow/`. `tick(_:ready:)` keeps the finger path's `ready` gate; the guided path passes the default `true`. Timings and narration are unchanged.
+
+`RestBreath` (the timed rest's 6 s / 3 s rhythm) stays as it is: it is a pure function of elapsed time. The proposed `Countdown` type moved to Phase 5, the first phase that uses it.
+
+Verification: transcript harness (26 guided-session scenarios plus breathing timelines, including both rest openings and a suspend) identical to the Phase 0 baseline; XcodeGen and Debug Simulator build with IPHONEOS_DEPLOYMENT_TARGET=17.0. Pending on the M1 iPad: the scripted rest between arm-raise sets and between opposition sets.
+
+## One guidance gate per cue (2026-11-18)
+
+Phase 2 of the session flow redesign. A spoken cue's identity, narration and reading state and its watchdog are now one value, `GuidanceGate` (`Therapy/Shared/SessionFlow/`), instead of loose fields in three places:
+
+- `SessionEngine`: `guidance`, `narrationComplete`, `readingComplete`, `speechTimeout` and `guidanceStartedAt` became `gate`.
+- `FingerSessionViewModel`: `speechID` and `speechDeadline` became `speechGate`.
+- `BalanceSessionViewModel`: `openingSpeechID` and `openingSpeechDeadline` became `openingGate`.
+
+Stale and duplicate completions are ignored as before, and the watchdog values are unchanged: 45 s for scripted cues and feedback, the opening plan's watchdog or 20 s in the guided session, `max(15, characters × 0.25)` in finger sessions, 8 s for Balancing openings. The scripted follow-up cue (`pendingScriptMovement`) stays separate until Phase 6.
+
+Verification: transcript harness, now built against a baseline worktree of the pre-refactor commit, identical across 29 scenarios. Three new scenarios replay every earlier completion and reading callback mid-session (generic and Indonesian-scripted). XcodeGen and Debug Simulator build with IPHONEOS_DEPLOYMENT_TARGET=17.0. The finger and Balancing changes are checked by build and review only, since their view models cannot run in the harness. Pending on the M1 iPad: Stop during narration then Go, with the next cue playing once, in a guided, a finger and a Balancing session; the finger watchdog after a narration failure; the Balancing opening advancing after each cue.
+
+## Engine-owned suspension (2026-11-18)
+
+Phase 3 of the session flow redesign. Adds **ADR-010 — Single session flow model**, accepted 2026-11-18. It refines §5 and supersedes nothing.
+
+- **One owner.** The guided `SessionEngine` owns suspension through one `Suspension` value. It replaces three engine fields (`pausedSince`, `waitingSince`, `suspensionSince`) and `SessionProgress.pausedAt`.
+- **Reasons and blockers.** Reasons freeze the session: `pause` (touch, "stop", Help, backgrounding, audio interruption) and `cameraWait`. Blockers only refuse Resume: `voiceUnavailable`, `storageFailure`. A newly reported blocker pauses.
+- **The view model reports, the engine decides.** `TherapySessionViewModel` no longer decides whether Resume is allowed. Before forwarding a Resume it reports the current blockers (permissions, listening, audio capability, an unacknowledged save failure), and the engine ignores the Resume while any blocker remains. It also no longer pauses on its own: backgrounding, lost voice and a failed save are reported as blockers.
+- **One frozen interval.** It opens with the first reason and closes when the engine resumes. Every deadline shifts by its length: the opening, preparation and feedback deadlines, and the rest deadline (`SessionProgress.shiftRest`).
+- **Skip and Stop never lift a pause** (fixes bug 2 of the redesign). Before, a skip during a pause silently resumed the session. Now the set is recorded, the session stays paused, and its "skipped" feedback plays after Resume.
+- **Countdown resume stays per path.** The guided countdown restarts after a resume; the finger countdown continues where it stopped.
+
+Verification: transcript harness against the pre-refactor baseline, 30 scenarios. The only differences are skip-while-paused, which now stays paused until Resume and then speaks the skipped feedback, and the harness's own notes in the new blocker scenario (voice blocked while running pauses; Resume while blocked does nothing; Resume after clearing proceeds; identical state to the old view-model behaviour). XcodeGen and Debug Simulator build with IPHONEOS_DEPLOYMENT_TARGET=17.0. Pending on the M1 iPad: background and foreground in every stage; an incoming call; revoking the microphone mid-session; disabling on-device recognition; a failed save then Retry and Continue; Skip from the pause dialog (the dialog stays until Resume).
+
+## Stages carry their data (2026-11-18)
+
+Phase 4 of the session flow redesign, completing its core. Extends ADR-010: the guided session's stage is one value, `SessionStage` (Therapy/Session/Models), and each stage carries its own data.
+
+- **Cases.** `.preparing`, `.opening` (step: calibration intro, scripted position or start, a card, or "try the movement"; its `advanceAt`), `.practice`, `.feedback` (`enteredAt`, `advanceAt`, whether the next set recalibrates), `.rest` (a timed deadline or scripted breathing, and whether the next set recalibrates), and `.summary`.
+- **What it replaces.** The hand-synced `SessionProgress.Stage`, the engine's multipurpose `deadline`, `cardIndex`, `feedbackEnteredAt` and `calibrationInvalidatedBetweenSets`. Scripted breathing moved from the snapshot into the rest stage; the snapshot mirrors it.
+- **Single transition point.** `enter(_:)` is the only place the stage changes, and `SessionSnapshot.stage` mirrors it. Leaving a stage drops its deadlines. The spoken cue's gate is not part of the stage: the next announcement replaces it.
+- **One recording path.** Skip, completion and the caregiver's activity commands record through `record(_:)`, which enters feedback only when a result was actually added. Stop shares `recordResult(_:)` and then finalizes. `SessionProgress.record` no longer takes the (always current) execution identity and reports whether it recorded.
+- **One replay path.** Resume and camera recovery use `resumeAfterSuspension()` and `replayStageCue(timed:)`. The two keep their existing differences: which stages replay, and whether the cue is timed.
+- **Left for Phase 5:** `awaitingCountdownGuidance` and `calibrationCompletionPending` (the countdown and calibration-cue handshake), and the `"calibration.complete"` string check. `guidancePlan` and `positioningPending` remain as guidance settings.
+
+No behaviour changed. The four bugs this phase addressed were unreachable or latent: the stale deadline after a skip was always cleared by the feedback's timed cue.
+
+Verification: transcript harness against the pre-refactor baseline, 33 scenarios. New scenarios cover a skip while a card or demonstration deadline is pending, and a stop in the same turn as the repetition that completes the set (one outcome, one summary). The only differences remain Phase 3's skip-while-paused fix and harness notes. XcodeGen and Debug and Release Simulator builds with IPHONEOS_DEPLOYMENT_TARGET=17.0. Pending on the M1 iPad: a full two-set arm raise (generic and Indonesian script) with Pause in every stage; elbow bend and directional reach openings; fold towel; a camera change during rest followed by recalibration; Debug "Finish exercise" mid-plan.
+
+## Activity facts and one countdown (2026-11-18)
+
+Phase 5 of the session flow redesign, at the product owner's request, accepting countdown timing differences. Extends ADR-010.
+
+- **Activities report facts.** Each guided activity reports what an event changed as `ActivityFact`s: countdown requested, movement phase change, repetition credited, target reached, towel fold or grab, cue change. `SessionEngine` reacts to those facts. It no longer compares the activity's old and new presentation, and no longer checks `"calibration.complete"`; the views read `snapshot.countdown` and `snapshot.speaksCalibrationComplete` instead. The arm-raise script's cue-key comparison remains until Phase 6.
+- **The engine owns the countdown.** Before, each activity ran its own: arm raise and elbow bend from ticks and frames, directional reach from a deadline it set before the cue, fold towel from ticks, timed practice from frames only. Now the practice stage holds one `Countdown`:
+  - its cue is spoken ("calibration complete" first when the set still owes it), and the countdown starts when the cue ends;
+  - each second is announced once, on the exact second;
+  - it ends on the first event at or after its end, and the engine sends `.countdownFinished` to the activity;
+  - a pause or camera wait stops it, and it restarts from its full length after its cue is spoken again.
+  Durations are unchanged: 3 s, or 5 s before a later scripted arm-raise set.
+
+Timing and narration differences, confirmed in the transcript harness:
+- Seconds are announced, and the countdown ends, exactly on the second, from any event. Before, this happened on the next tick or frame, up to 50 ms later. Later events in a session shift by the same few milliseconds.
+- Directional reach shows 3 while its cue is spoken. Before, a deadline it set before the cue was already counting down.
+- Timed practice can end its countdown on a tick, not only on a frame.
+- When a countdown ends, practice starts the same way every time. The screen shows the practice cue at once instead of "session.countdown" for one more frame. The arm-raise script always speaks its first movement line. The generic "move to target" line is no longer spoken: before, it played only when a frame rather than a tick happened to end the countdown.
+- The Indonesian script no longer speaks hold seconds over the countdown digits. Before, the countdown's progress ring was misread as a hold.
+- A skip during calibration no longer makes the next set open with "calibration complete".
+- During a pause in a countdown, the digit shows the full length, because the countdown restarts after Resume.
+- The movement countdown's progress ring value is gone; the full-screen countdown shows only the digit.
+
+Verification: transcript harness against the core-complete commit (016fd83), 37 scenarios. New scenarios cover a pause in each countdown, reach rehearsal into its countdown, fold towel into practice, and a timed-practice later set. The facts commit was identical to the baseline. The countdown commit differs only in the classes listed above, checked scenario by scenario with timestamps and narration identities set aside. XcodeGen and Debug and Release Simulator builds with IPHONEOS_DEPLOYMENT_TARGET=17.0. Pending on the M1 iPad: the countdown cue and digits for arm raise (generic, and scripted set 2 at 5 s), elbow bend, directional reach, fold towel and timed practice; Pause and camera loss during each countdown; the script's first movement line after the countdown, with practice continuing; a two-minute arm-raise practice with unchanged preview cadence and stale-frame logs, since facts must add no per-frame work.

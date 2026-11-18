@@ -2,7 +2,7 @@
 
 # Phase 0: Baseline transcripts
 
-Status: Not started. Back to the [overview](README.md).
+Status: Not started. Track: core. Back to the [overview](README.md).
 
 ## Goal
 

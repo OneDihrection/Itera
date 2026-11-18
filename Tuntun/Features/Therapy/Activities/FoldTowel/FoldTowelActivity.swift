@@ -15,7 +15,6 @@ struct FoldTowelActivity: TherapyActivity {
     private var suspended = false
     private var last: Double?
     private var generation: UUID?
-    private var countdownDeadline: Double?
     /// Last confirmed open or closed state, held through brief mid-curl frames.
     private var stableGrip: TowelFoldSequence.Grip?
     private var stableGripTime = 0.0
@@ -34,6 +33,7 @@ struct FoldTowelActivity: TherapyActivity {
     var presentation: ActivityPresentation { .towel(snapshot) }
 
     mutating func handle(_ event: ActivityEvent) -> ActivityTransition {
+        let before = presentation
         switch event {
         case .observation(let frame):
             if !suspended {
@@ -43,25 +43,17 @@ struct FoldTowelActivity: TherapyActivity {
             if !suspended, last.map({ time - $0 > 0.15 }) == true {
                 loseTracking(at: time)
             }
-            if !suspended, let deadline = countdownDeadline {
-                snapshot.seconds = max(0, Int(ceil(deadline - time)))
-                if time >= deadline {
-                    countdownDeadline = nil
-                    setPhase(.practice)
-                }
-            }
         case .guidanceCompleted:
             break
-        case .countdownReady(let time):
-            if snapshot.phase == .countdown, countdownDeadline == nil {
-                countdownDeadline = time + 3
+        case .countdownFinished:
+            if snapshot.phase == .countdown {
+                setPhase(.practice)
             }
         case .suspend:
             suspended = true
             cursorFilter.reset()
             sequence.suspend()
             loseTracking()
-            countdownDeadline = nil
         case .resume:
             suspended = false
             if snapshot.phase == .countdown {
@@ -95,7 +87,8 @@ struct FoldTowelActivity: TherapyActivity {
         syncSequence()
         return ActivityTransition(
             status: snapshot.count >= configuration.goal ? .finished : (suspended ? .suspended : .running),
-            presentation: presentation
+            presentation: presentation,
+            facts: ActivityFact.changes(from: before, to: presentation)
         )
     }
 
@@ -106,7 +99,6 @@ struct FoldTowelActivity: TherapyActivity {
         sequence.suspend()
         snapshot = TowelSnapshot()
         snapshot.count = count
-        countdownDeadline = nil
         loseTracking()
     }
 
