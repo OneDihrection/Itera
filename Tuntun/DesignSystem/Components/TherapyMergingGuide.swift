@@ -46,6 +46,9 @@ struct TMTherapyMergingGuide: View {
     var tint: Color = TherapyPalette.guidanceOrange
     /// Plays the pop burst on the arc when a hold completes.
     var popsOnCompletion = false
+    /// False drops the soft fill and keeps only the outline, for a circle drawn around
+    /// something that must stay visible, such as the whole hand.
+    var filled = true
     /// SF Symbols drawn at each circle's centre; the first fades out as the circles merge.
     var firstSymbol: String? = nil
     var secondSymbol: String? = nil
@@ -69,6 +72,7 @@ struct TMTherapyMergingGuide: View {
             onCompletionPresented: onCompletionPresented,
             tint: tint,
             popsOnCompletion: popsOnCompletion,
+            filled: filled,
             firstSymbol: firstSymbol,
             secondSymbol: secondSymbol
         )
@@ -87,7 +91,11 @@ extension TMTherapyMergingGuide {
         progress: Double = 0,
         active: Bool,
         showsTimer: Bool = false,
+        completionID: UUID? = nil,
+        onCompletionPresented: @escaping (UUID) -> Void = { _ in },
         tint: Color = TherapyPalette.guidanceOrange,
+        popsOnCompletion: Bool = false,
+        filled: Bool = true,
         symbol: String? = nil
     ) {
         self.init(
@@ -99,7 +107,11 @@ extension TMTherapyMergingGuide {
             progress: progress,
             active: active,
             showsTimer: showsTimer,
+            completionID: completionID,
+            onCompletionPresented: onCompletionPresented,
             tint: tint,
+            popsOnCompletion: popsOnCompletion,
+            filled: filled,
             secondSymbol: symbol
         )
     }
@@ -122,6 +134,7 @@ private struct MergingGuideLayer: View, Animatable {
     let onCompletionPresented: (UUID) -> Void
     let tint: Color
     let popsOnCompletion: Bool
+    let filled: Bool
     let firstSymbol: String?
     let secondSymbol: String?
 
@@ -315,7 +328,7 @@ private struct MergingGuideLayer: View, Animatable {
                     .float(Float(ringWidth)),
                     .color(tint),
                     // A quiet target keeps only a dimmer outline, so the current one stands out.
-                    .float(active ? 0.22 : 0),
+                    .float(active && filled ? 0.22 : 0),
                     .color(.white),
                     .float(active ? 0.85 : 0.5),
                     .color(.black),

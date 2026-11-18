@@ -38,6 +38,10 @@ struct TMFingerLandmarkOverlay: View {
     private static let sizeStep: CGFloat = 4
     /// Palm length assumed when the wrist or middle knuckle is not visible.
     private static let fallbackPalm: CGFloat = 150
+    /// Whole-hand circle diameter in palm lengths: an open hand reaches about one palm length
+    /// from the middle knuckle to the wrist and to the fingertips, plus room for a spread thumb.
+    private static let handCircleRatio: CGFloat = 2.3
+    private static let minimumHandCircle: CGFloat = 100
 
     // MARK: - Thumb opposition merge
 
@@ -106,17 +110,19 @@ struct TMFingerLandmarkOverlay: View {
     @ViewBuilder
     private func circles(palm: CGFloat, width: Double, height: Double, origin: CGPoint, viewport: CGSize) -> some View {
         if usesWholeHandCircle {
-            if let circle = handCircle(width: width, height: height, origin: origin, viewport: viewport) {
-                TMTherapyGuideBubble(
+            if let circle = handCircle(palm: palm, width: width, height: height, origin: origin, viewport: viewport) {
+                // No fill, so the hand inside the circle stays fully visible.
+                TMTherapyMergingGuide(
+                    center: circle.center,
+                    diameter: circle.diameter,
                     progress: progress,
                     active: guiding,
-                    completionID: completionID, onCompletionPresented: onCompletionPresented,
                     showsTimer: showsTimer,
-                    diameter: circle.diameter, outlineOnly: true,
-                    tint: TherapyPalette.guidanceOrange,
-                    popsOnCompletion: true
+                    completionID: completionID,
+                    onCompletionPresented: onCompletionPresented,
+                    popsOnCompletion: true,
+                    filled: false
                 )
-                .position(circle.center)
             }
         } else {
             if let pair = oppositionPair(palm: palm, width: width, height: height, origin: origin, viewport: viewport) {
@@ -164,10 +170,16 @@ struct TMFingerLandmarkOverlay: View {
         exercise == .fullFist || exercise == .hookFist || exercise == .forearmRotation
     }
 
+    /// The wrist and middle knuckle, which anchor the palm length and the whole-hand circle.
+    private var hasPalmAnchors: Bool {
+        evidence.points[0].confidence >= Self.drawnConfidence
+            && evidence.points[9].confidence >= Self.drawnConfidence
+    }
+
     /// On-screen distance from the wrist to the middle-finger knuckle: a steady size cue that
     /// barely changes while the fingers bend.
     private func palmLength(width: Double, height: Double, origin: CGPoint) -> CGFloat {
-        guard evidence.points[0].confidence >= Self.drawnConfidence, evidence.points[9].confidence >= Self.drawnConfidence else {
+        guard hasPalmAnchors else {
             return Self.fallbackPalm
         }
 
@@ -201,25 +213,60 @@ struct TMFingerLandmarkOverlay: View {
         }
     }
 
-    /// A padded circle around the hand, sized from the hand itself and kept fully on screen.
-    private func handCircle(width: Double, height: Double, origin: CGPoint, viewport: CGSize) -> (center: CGPoint, diameter: CGFloat)? {
+    /// A circle around the hand, kept fully on screen.
+    ///
+    /// It is centred on the middle knuckle and sized from the palm length, which barely change
+    /// while the fingers open and close, so the circle stays still through each repetition. The
+    /// joint bounding box shrinks with a closing fist and jumps as joints cross the confidence
+    /// threshold, so it is used only when the wrist or middle knuckle is not visible.
+    private func handCircle(
+        palm: CGFloat,
+        width: Double,
+        height: Double,
+        origin: CGPoint,
+        viewport: CGSize
+    ) -> (center: CGPoint, diameter: CGFloat)? {
+        // Keep the complete stroke inside the preview, including on smaller windows.
+        let available = min(viewport.width, viewport.height) - 40
+
+        guard available > 0,
+              let anchor = handCircleAnchor(palm: palm, width: width, height: height, origin: origin) else {
+            return nil
+        }
+
+        let diameter = min(available * 0.75, max(Self.minimumHandCircle, anchor.diameter))
+        let inset = diameter / 2 + 20
+        let center = CGPoint(
+            x: min(viewport.width - inset, max(inset, anchor.center.x)),
+            y: min(viewport.height - inset, max(inset, anchor.center.y))
+        )
+
+        return (center, diameter)
+    }
+
+    /// The unclamped circle: from the palm anchors when both are visible, otherwise from the
+    /// visible joints' bounding box.
+    private func handCircleAnchor(
+        palm: CGFloat,
+        width: Double,
+        height: Double,
+        origin: CGPoint
+    ) -> (center: CGPoint, diameter: CGFloat)? {
+        if hasPalmAnchors {
+            return (
+                point(9, width: width, height: height, origin: origin),
+                palm * Self.handCircleRatio
+            )
+        }
+
         guard let bounds = handBounds(width: width, height: height, origin: origin) else {
             return nil
         }
-        // Keep the complete stroke inside the preview, including on smaller windows.
-        let available = min(viewport.width, viewport.height) - 40
-        guard available > 0 else {
-            return nil
-        }
-        // Wide enough to enclose an open hand, never larger than before.
-        let span = hypot(bounds.width, bounds.height)
-        let diameter = Self.stepped(min(available * 0.75, max(100, span * 1.03)))
-        let inset = diameter / 2 + 20
-        let center = CGPoint(
-            x: min(viewport.width - inset, max(inset, bounds.midX)),
-            y: min(viewport.height - inset, max(inset, bounds.midY))
+
+        return (
+            CGPoint(x: bounds.midX, y: bounds.midY),
+            Self.stepped(hypot(bounds.width, bounds.height) * 1.03)
         )
-        return (center, diameter)
     }
 
     private func fingertipCircleCenter(
