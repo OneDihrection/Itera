@@ -33,6 +33,8 @@ Fixes bug 8 for the guided path.
 
 ## Changes
 
+- Add `SessionFlow/Countdown.swift` (moved here from Phase 1): `OnResume { restart, resume }`, `start`, `seconds`, `isFinished`, `takeAnnouncement` and `suspend`.
+
 - `TherapyActivity.swift`:
   - `ActivityTransition` gains `facts: [ActivityFact]`.
   - `ActivityEvent` gains `.countdownFinished(at:)` and `.evidenceHeld(Bool, at:)`, and drops `countdownReady` and `guidanceCompleted`.

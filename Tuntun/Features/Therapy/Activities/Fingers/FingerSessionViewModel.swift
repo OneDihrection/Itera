@@ -35,7 +35,7 @@ protocol FingerSessionViewModelProtocol: AnyObject, Observable {
     var isCalibrating: Bool { get }
     var countdown: Int { get }
     var restBreath: RestBreath? { get }
-    var scriptedRest: OppositionRest? { get }
+    var scriptedRest: BreathingRest? { get }
     var scriptedCueKey: String? { get }
     var usesOppositionScript: Bool { get }
     var upcoming: (exercise: FingerExercise, set: Int)? { get }
@@ -122,7 +122,7 @@ final class FingerSessionViewModel: FingerSessionViewModelProtocol {
     private var announcedCalibrationIndex: Int?
     private(set) var practiceCountdownReady = false
     @ObservationIgnored private var spokenFlowKey: String?
-    private(set) var scriptedRest: OppositionRest?
+    private(set) var scriptedRest: BreathingRest?
     @ObservationIgnored private var lastHoldCount = ""
 
     var usesOppositionScript: Bool {
@@ -647,7 +647,7 @@ final class FingerSessionViewModel: FingerSessionViewModelProtocol {
         if usesOppositionScript, activity.phase == .rest,
            activity.completedSets < routine.sets, activity.remaining > 0 {
             if scriptedRest == nil {
-                scriptedRest = OppositionRest(opensAfterFirstSet: activity.completedSets == 1)
+                scriptedRest = BreathingRest(opensAfterFirstSet: activity.completedSets == 1)
             }
             scriptedRest?.tick(now, ready: frameReady && !paused)
             if scriptedRest?.finished == true {
@@ -768,7 +768,7 @@ final class FingerSessionViewModel: FingerSessionViewModelProtocol {
 
         if usesOppositionScript, activity.phase == .rest,
            activity.completedSets < routine.sets, scriptedRest == nil {
-            scriptedRest = OppositionRest(opensAfterFirstSet: activity.completedSets == 1)
+            scriptedRest = BreathingRest(opensAfterFirstSet: activity.completedSets == 1)
         }
 
         let flow = calibrationMessage

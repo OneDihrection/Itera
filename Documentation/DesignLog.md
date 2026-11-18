@@ -1399,3 +1399,11 @@ At the product owner's request, the proposal in *Session flow redesign (proposed
 - Line references and file sizes in the proposal were refreshed against the current source.
 
 Verification: documentation only; no code or runtime behaviour changed.
+
+## Shared breathing rest (2026-11-18)
+
+Phase 1 of the session flow redesign. The scripted short rest between sets existed twice, as `GuidedSetBreathing` (Indonesian arm raise, in `SessionEngine`) and `OppositionRest` (thumb opposition, in `FingerSessionViewModel`). The two had the same steps, keys, minimums (inhale 6 s, hold 2 s, exhale 3 s), 0.2 s credit cap and intensity curve. They are now one `BreathingRest` in `Therapy/Shared/SessionFlow/`. `tick(_:ready:)` keeps the finger path's `ready` gate; the guided path passes the default `true`. Timings and narration are unchanged.
+
+`RestBreath` (the timed rest's 6 s / 3 s rhythm) stays as it is: it is a pure function of elapsed time. The proposed `Countdown` type moved to Phase 5, the first phase that uses it.
+
+Verification: transcript harness (26 guided-session scenarios plus breathing timelines, including both rest openings and a suspend) identical to the Phase 0 baseline; XcodeGen and Debug Simulator build with IPHONEOS_DEPLOYMENT_TARGET=17.0. Pending on the M1 iPad: the scripted rest between arm-raise sets and between opposition sets.

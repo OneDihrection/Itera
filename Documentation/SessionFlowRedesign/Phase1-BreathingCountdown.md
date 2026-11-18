@@ -2,7 +2,7 @@
 
 # Phase 1: Shared breathing rest and Countdown
 
-Status: Not started. Track: core, requires Phase 0. Back to the [overview](README.md).
+Status: Done 2026-11-18 (as amended below). Track: core, requires Phase 0. Back to the [overview](README.md).
 
 ## Goal
 
@@ -13,6 +13,15 @@ Replace the duplicated breathing machines with one `BreathingRest`, and add the 
 - `GuidedSetBreathing` (`Activities/ArmRaise/ArmRaiseGuidance.swift:83`) and `OppositionRest` (`Activities/Fingers/OppositionGuidance.swift:130`) contain the same logic. Each is an integer `step` machine: 0 is the opening, steps 1–9 are three breaths of inhale, hold and exhale with minimums of 6, 2 and 3 seconds, and 10 is the closing. Each also has a `narrationFinished` flag and caps elapsed time at 0.2 s per tick.
 - `RestBreath` (`Session/Models/SessionDurationClock.swift`) is a 6 s inhale and 3 s exhale cycle derived from the rest deadline.
 - `LongRestBreath` (same file) runs 3/2/5/2 s cycles. `DailyPlanNextView` uses it, and this phase leaves it in place until Phase 9.
+
+## As implemented (2026-11-18)
+
+Only the two identical stateful copies merged: `GuidedSetBreathing` and `OppositionRest` are now one `BreathingRest` (`Therapy/Shared/SessionFlow/BreathingRest.swift`, `tick(_:ready:)` with `ready` defaulting to true). Two parts of the plan below were left out on purpose:
+
+- `RestBreath` stays as the timed rhythm. It is a pure function of elapsed time, not a machine, and folding it into a phase list would only add a framework.
+- `Countdown` moved to Phase 5, the first phase that uses it. Adding it here would leave unused code in the core.
+
+The original plan follows for reference.
 
 ## Changes
 

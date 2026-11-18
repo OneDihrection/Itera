@@ -42,7 +42,7 @@ struct SessionSnapshot {
     var setNumber = 1
     var seconds = 0
     var restBreath: RestBreath?
-    var guidedSetBreathing: GuidedSetBreathing?
+    var guidedSetBreathing: BreathingRest?
     var usesArmRaiseScript = false
     /// The recorded arm-raise set summary just spoken, or nil when the counts did not match
     /// its numbers and the general ending was used.
@@ -550,7 +550,7 @@ struct SessionEngine {
                         snapshot.stage = .rest
                         snapshot.instruction = "session.rest"
                         if snapshot.usesArmRaiseScript, progress.hasNextSet {
-                            let breathing = GuidedSetBreathing(opensAfterFirstSet: progress.setNumber == 1)
+                            let breathing = BreathingRest(opensAfterFirstSet: progress.setNumber == 1)
                             snapshot.guidedSetBreathing = breathing
                             announce(snapshot.armRaiseNarrationPrefix + breathing.key, timed: false)
                         } else if !progress.hasNextSet {

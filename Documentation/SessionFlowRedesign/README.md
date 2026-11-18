@@ -53,8 +53,8 @@ New shared types go in `Tuntun/Features/Therapy/Shared/SessionFlow/`. They are c
 | `SessionStage`, where each stage carries its own data | `SessionSnapshot.Stage` + `SessionProgress.Stage`, `deadline`, `feedbackEnteredAt`, `cardIndex`, `guidancePlan`, `positioningPending`, `calibrationCompletionPending`, `awaitingCountdownGuidance`, `calibrationInvalidatedBetweenSets` |
 | `Suspension` (a set of reasons) | `pausedSince`, `waitingSince`, `suspensionSince`, `progress.pausedAt`, the view models' `canResume`, finger error/pause flags, balance `paused` |
 | `GuidanceGate` | `guidance`, `narrationComplete`, `readingComplete`, `speechTimeout`, `pendingScriptMovement`; finger `speechID`/`speechDeadline`/`spokenFlowKey`; balance `openingSpeechID`; long-rest `narrationID` |
-| `Countdown` | Four countdown implementations, `announcedCountdown`, `practiceCountdownReady`, Movement's `-1` sentinel |
-| `BreathingRest` + `BreathPhase` | `GuidedSetBreathing`, `OppositionRest`, `RestBreath`, `LongRestBreath` |
+| `Countdown` (added in Phase 5) | Four countdown implementations, `announcedCountdown`, `practiceCountdownReady`, Movement's `-1` sentinel |
+| `BreathingRest` | `GuidedSetBreathing`, `OppositionRest` (Phase 1). `RestBreath` stays as the timed rhythm; `LongRestBreath` until Phase 9 |
 | `ActivityFact` | The engine comparing presentations, and the `"calibration.complete"` string checks |
 | `GuidancePolicy` (`GenericGuidance`, `ArmRaiseScript`, `OppositionScript`) | `usesArmRaiseScript`/`usesOppositionScript` branches, `MovementActivity.scriptedGuidance`/`waitingForGuidance` |
 | `LongRest` | The `DailyPlanNextView` `@State` machine |
@@ -155,7 +155,7 @@ Each phase is one pull request. It must build on its own and match the golden tr
 | Phase | Track | Requires | File | Summary | Bugs fixed |
 |---|---|---|---|---|---|
 | 0 | Core | — | [Phase0-Baseline.md](Phase0-Baseline.md) | Temporary harness and golden transcripts | — |
-| 1 | Core | 0 | [Phase1-BreathingCountdown.md](Phase1-BreathingCountdown.md) | One `BreathingRest`; add `Countdown` | 7 (part) |
+| 1 | Core | 0 | [Phase1-BreathingCountdown.md](Phase1-BreathingCountdown.md) | One `BreathingRest` (`Countdown` moved to Phase 5). **Done.** | 7 (part) |
 | 2 | Core | 1 | [Phase2-GuidanceGate.md](Phase2-GuidanceGate.md) | One narration/reading gate on every path | 7 (stale callbacks) |
 | 3 | Core | 2 | [Phase3-Suspension.md](Phase3-Suspension.md) | One suspension model owned by the engine; ADR-010 | 2, 6 |
 | 4 | Core | 3 | [Phase4-StagePayloads.md](Phase4-StagePayloads.md) | `SessionStage` carries its own data; split the engine. **Core milestone.** | 1, 3, 4, 5 |
