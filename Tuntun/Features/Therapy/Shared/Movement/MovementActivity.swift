@@ -89,6 +89,7 @@ struct MovementActivity: TherapyActivity {
     }
 
     mutating func handle(_ event: ActivityEvent) -> ActivityTransition {
+        let before = presentation
         let oldPhase = phase
         let oldCount = snapshot.count
         let hadStart = start != nil
@@ -219,7 +220,8 @@ struct MovementActivity: TherapyActivity {
         let finished = snapshot.count >= configuration.goal
         return ActivityTransition(
             status: finished ? .finished : (suspended ? .suspended : .running),
-            presentation: presentation
+            presentation: presentation,
+            facts: ActivityFact.changes(from: before, to: presentation)
         )
     }
 

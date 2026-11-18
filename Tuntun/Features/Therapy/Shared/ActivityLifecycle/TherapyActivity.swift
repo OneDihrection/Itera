@@ -162,6 +162,8 @@ enum ActivityEvent {
 struct ActivityTransition {
     let status: ActivityStatus
     let presentation: ActivityPresentation
+    /// What this event changed, so the session reacts to it without comparing presentations.
+    var facts: [ActivityFact] = []
 }
 
 protocol TherapyActivity {

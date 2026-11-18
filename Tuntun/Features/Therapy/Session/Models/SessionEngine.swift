@@ -77,6 +77,9 @@ struct SessionEngine {
     private var activity: (any TherapyActivity)?
     private(set) var snapshot = SessionSnapshot()
     private var effects: [SessionEffect] = []
+    /// Set when an activity entered its countdown during the current event, so the countdown cue
+    /// is announced once at the end of the turn if nothing announced it sooner.
+    private var countdownRequestedThisTurn = false
     private var now = 0.0
     private var lastTimestamp: Double?
     private var generation: UUID?
@@ -119,8 +122,8 @@ struct SessionEngine {
     // MARK: - Events
 
     mutating func handle(_ event: SessionEvent, at time: Double) -> SessionTransition {
-        let previousCountdown = snapshot.presentation?.countdownSeconds
         effects = []
+        countdownRequestedThisTurn = false
         guard time.isFinite else {
             return transition
         }
@@ -136,7 +139,7 @@ struct SessionEngine {
         case .command(let command): commandReceived(command)
         case .viewport(let value):
             viewport = value
-            _ = activity?.handle(.viewport(value))
+            forward(.viewport(value))
         case .previewReady(let ready): previewReady = ready
         case .availability(let availability):
             switch availability {
@@ -170,7 +173,7 @@ struct SessionEngine {
         }
         if canProgress, snapshot.stage == .activity,
            snapshot.presentation?.countdownSeconds != nil,
-           previousCountdown == nil, !awaitingCountdownGuidance {
+           countdownRequestedThisTurn, !awaitingCountdownGuidance {
             announcePracticeCountdown()
         }
         if canProgress {
@@ -298,7 +301,7 @@ struct SessionEngine {
             // saved before Trunk Control moved there still decode; nothing offers it any more.
             activity = nil
         }
-        if let viewport { _ = activity?.handle(.viewport(viewport)) }
+        if let viewport { forward(.viewport(viewport)) }
         evidenceBoundary = now
         snapshot.activity = configuration
         snapshot.presentation = activity?.presentation
@@ -306,6 +309,23 @@ struct SessionEngine {
         snapshot.guidedSetBreathing = nil
         snapshot.instruction = "session.cameraWait"
         gate = nil
+    }
+
+    /// Sends an event to the current activity and notes the facts the engine reacts to at the end
+    /// of the turn.
+    @discardableResult
+    private mutating func forward(_ event: ActivityEvent) -> ActivityTransition? {
+        guard let transition = activity?.handle(event) else {
+            return nil
+        }
+        noteFacts(transition.facts)
+        return transition
+    }
+
+    private mutating func noteFacts(_ facts: [ActivityFact]) {
+        if facts.requestsCountdown {
+            countdownRequestedThisTurn = true
+        }
     }
 
     /// The only place the stage changes. The cue being spoken is left alone: it belongs to the
@@ -316,10 +336,10 @@ struct SessionEngine {
     }
 
     private mutating func beginNextSet(recalibrating: Bool) {
-        _ = activity?.handle(.resume)
-        _ = activity?.handle(.nextSet)
+        forward(.resume)
+        forward(.nextSet)
         if recalibrating {
-            _ = activity?.handle(.recalibrate)
+            forward(.recalibrate)
             snapshot.presentation = activity?.presentation
             enter(.preparing)
             gate = nil
@@ -363,11 +383,13 @@ struct SessionEngine {
             return
         }
         guard !awaitingCountdownGuidance else { return }
+        // Only the arm-raise script still compares cue keys across the event (Phase 6).
         let old = activity?.presentation
         let previousInstruction = snapshot.instruction
-        guard let result = activity?.handle(.observation(frame)) else {
+        guard let result = forward(.observation(frame)) else {
             return
         }
+        let facts = result.facts
         snapshot.presentation = result.presentation
         snapshot.instruction = result.presentation.instruction
         if let clip = recorder?.observe(frame, presentation: result.presentation) {
@@ -380,13 +402,13 @@ struct SessionEngine {
             }
             return
         }
-        if case .towel(let before) = old, case .towel(let after) = result.presentation {
+        if case .towel = result.presentation {
             // Live towel speech is limited by `towelSpeech` and runs from the tick, never from here.
-            if after.count != before.count {
+            if facts.creditsRepetition {
                 effects.append(.audio(UUID(), .towelCompleted))
-            } else if after.foldIndex != before.foldIndex {
+            } else if facts.contains(.towelFolded) {
                 effects.append(.audio(UUID(), .towelFold))
-            } else if after.grabID != before.grabID {
+            } else if facts.contains(.towelGrabbed) {
                 effects.append(.audio(UUID(), .towelGrab))
             }
             return
@@ -399,10 +421,10 @@ struct SessionEngine {
             }
             let key = ArmRaiseGuidance.movementKey(after, set: progress.setNumber, goal: scriptGoal, side: snapshot.armRaiseScriptSide)
             if after.phase == .countdown {
-                if old?.countdownSeconds == nil {
+                if facts.requestsCountdown {
                     announcePracticeCountdown()
                 }
-            } else if old?.count != after.count {
+            } else if facts.creditsRepetition {
                 if let praise = ArmRaiseGuidance.praiseKey(after: after.count, side: snapshot.armRaiseScriptSide) {
                     pendingScriptMovement = key
                     announce(praise, timed: false)
@@ -421,32 +443,29 @@ struct SessionEngine {
             speakScriptHoldCount(after)
             return
         }
-        if case .movement(let before) = old, case .movement(let after) = result.presentation,
-            before.phase != after.phase {
-            if after.phase == .targetCapture {
+        if case .movement = result.presentation {
+            if facts.entered(.targetCapture) {
                 enter(.opening(.init(step: .tryMovement)))
                 snapshot.seconds = 0
                 announce("calibration.try", timed: false)
                 return
             }
-            if after.phase == .returnToStart, before.phase == .targetCapture {
+            if facts.entered(.returnToStart, from: .targetCapture) {
                 pendingPrefix = .target
                 announce(result.presentation.instruction, timed: false)
                 return
             }
         }
         if result.presentation.countdownSeconds != nil {
-            if old?.countdownSeconds == nil {
+            if facts.requestsCountdown {
                 announcePracticeCountdown()
             }
-        } else if case .movement = result.presentation, old?.count != result.presentation.count {
+        } else if case .movement = result.presentation, facts.creditsRepetition {
             // Each accepted repetition is counted aloud.
             effects.append(.audio(UUID(), .count(result.presentation.count)))
-        } else if case .movement = result.presentation,
-            let previous = old?.guide, let next = result.presentation.guide,
-            previous.targetActive, !next.targetActive {
+        } else if case .movement = result.presentation, facts.contains(.targetReached) {
             effects.append(.audio(UUID(), .target))
-        } else if old?.instruction != result.presentation.instruction {
+        } else if facts.contains(.cueChanged(result.presentation.instruction)) {
             announce(result.presentation.instruction, timed: false)
         }
     }
@@ -479,7 +498,7 @@ struct SessionEngine {
         snapshot.cameraWaiting = false
         if snapshot.stage == .preparing, !suspension.isPaused {
             endSuspension()
-            _ = activity?.handle(.resume)
+            forward(.resume)
             if let configuration = progress.currentActivity {
                 let plan = SessionGuidance.opening(configuration, includePositioning: positioningPending)
                 if snapshot.usesArmRaiseScript {
@@ -506,8 +525,7 @@ struct SessionEngine {
             return
         }
         if snapshot.stage == .activity && !awaitingCountdownGuidance {
-            let previous = snapshot.presentation
-            _ = activity?.handle(.tick(now))
+            let tickFacts = forward(.tick(now))?.facts ?? []
             snapshot.presentation = activity?.presentation
             if snapshot.usesArmRaiseScript, pendingScriptMovement == nil,
                case .movement(let movement) = snapshot.presentation,
@@ -518,8 +536,7 @@ struct SessionEngine {
                 }
             }
             if case .towel(let after) = snapshot.presentation {
-                if case .towel(let before) = previous,
-                   before.phase == .countdown, after.phase == .practice {
+                if tickFacts.contains(.countdownEnded) {
                     evidenceBoundary = now
                 }
                 // Live narration is replaceable feedback, never a practice advancement gate.
@@ -707,7 +724,7 @@ struct SessionEngine {
                 } else {
                     enter(.practice)
                     evidenceBoundary = now
-                    _ = activity?.handle(.guidanceCompleted(now))
+                    forward(.guidanceCompleted(now))
                 }
                 return
             }
@@ -735,10 +752,10 @@ struct SessionEngine {
                     return
                 }
                 awaitingCountdownGuidance = false
-                _ = activity?.handle(.countdownReady(now))
+                forward(.countdownReady(now))
                 snapshot.presentation = activity?.presentation
             }
-            _ = activity?.handle(.guidanceCompleted(now))
+            forward(.guidanceCompleted(now))
         }
         scheduleGuidanceAdvance()
         if !available, snapshot.stage == .instruction, guidancePlan?.quietDelay == 1 {
@@ -1016,6 +1033,7 @@ struct SessionEngine {
         }
         let transition = currentActivity.handle(.command(command, at: now))
         activity = currentActivity
+        noteFacts(transition.facts)
         snapshot.presentation = transition.presentation
         snapshot.instruction = transition.presentation.instruction
         snapshot.assistanceKey = nil
@@ -1047,7 +1065,7 @@ struct SessionEngine {
         recorder?.discardCurrentRep()
         stage.breathing?.suspend()
         pendingScriptMovement = nil
-        _ = activity?.handle(.suspend)
+        forward(.suspend)
         effects.append(.cancelSpeech)
         gate = nil
         return true
@@ -1057,7 +1075,7 @@ struct SessionEngine {
     /// for its cue to be spoken again before it restarts.
     private mutating func resumeAfterSuspension() {
         endSuspension()
-        _ = activity?.handle(.resume)
+        forward(.resume)
         snapshot.presentation = activity?.presentation
         awaitingCountdownGuidance = snapshot.presentation?.countdownSeconds != nil
     }
@@ -1092,7 +1110,7 @@ struct SessionEngine {
         evidenceBoundary = now
         recorder?.discardCurrentRep()
         progress.retryExecution()
-        _ = activity?.handle(.recalibrate)
+        forward(.recalibrate)
         snapshot.presentation = activity?.presentation
         enter(.preparing)
         snapshot.instruction = "session.cameraWait"

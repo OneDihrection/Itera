@@ -34,6 +34,7 @@ struct FoldTowelActivity: TherapyActivity {
     var presentation: ActivityPresentation { .towel(snapshot) }
 
     mutating func handle(_ event: ActivityEvent) -> ActivityTransition {
+        let before = presentation
         switch event {
         case .observation(let frame):
             if !suspended {
@@ -95,7 +96,8 @@ struct FoldTowelActivity: TherapyActivity {
         syncSequence()
         return ActivityTransition(
             status: snapshot.count >= configuration.goal ? .finished : (suspended ? .suspended : .running),
-            presentation: presentation
+            presentation: presentation,
+            facts: ActivityFact.changes(from: before, to: presentation)
         )
     }
 

@@ -34,6 +34,7 @@ struct TimedPracticeActivity: TherapyActivity {
     }
 
     mutating func handle(_ event: ActivityEvent) -> ActivityTransition {
+        let before = presentation
         switch event {
         case .nextSet:
             elapsed = 0
@@ -86,7 +87,8 @@ struct TimedPracticeActivity: TherapyActivity {
         }
         return ActivityTransition(
             status: elapsed >= duration ? .finished : (suspended ? .suspended : .running),
-            presentation: presentation
+            presentation: presentation,
+            facts: ActivityFact.changes(from: before, to: presentation)
         )
     }
 }

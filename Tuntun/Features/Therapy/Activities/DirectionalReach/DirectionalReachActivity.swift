@@ -80,6 +80,7 @@ struct DirectionalReachActivity: TherapyActivity {
     }
 
     mutating func handle(_ event: ActivityEvent) -> ActivityTransition {
+        let before = presentation
         switch event {
         case .nextSet:
             snapshot = ReachSnapshot()
@@ -144,7 +145,8 @@ struct DirectionalReachActivity: TherapyActivity {
         }
         return ActivityTransition(
             status: phase == .finished ? .finished : (suspended ? .suspended : .running),
-            presentation: presentation)
+            presentation: presentation,
+            facts: ActivityFact.changes(from: before, to: presentation))
     }
 
     private var phaseIndex: Int {
