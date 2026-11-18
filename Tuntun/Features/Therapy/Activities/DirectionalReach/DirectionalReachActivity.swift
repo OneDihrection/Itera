@@ -40,7 +40,6 @@ struct DirectionalReachActivity: TherapyActivity {
     /// Longest tracking loss a dwell survives before it clears.
     private static let dwellTrackingGrace = 0.5
     private var last: Double?
-    private var deadline: Double?
     private var suspended = false
     private var viewport: TherapyViewport?
     private var restartingRound = false
@@ -91,12 +90,10 @@ struct DirectionalReachActivity: TherapyActivity {
             pendingOutcomes = []
             restartingRound = false
             awaitingGuidance = false
-            deadline = nil
             resetAttempt()
-        case .countdownReady(let time):
+        case .countdownFinished:
             if phase == .countdown {
-                deadline = time + 3
-                snapshot.seconds = 3
+                finishCountdown()
             }
         case .command(let command, let time):
             receive(command, at: time)
@@ -121,7 +118,6 @@ struct DirectionalReachActivity: TherapyActivity {
             if phase == .start {
                 awaitingGuidance = true
             }
-            if phase == .countdown { deadline = nil }
         case .recalibrate:
             landmarkSmoother.reset()
             phase = .start
@@ -139,7 +135,6 @@ struct DirectionalReachActivity: TherapyActivity {
             if let last, time - last > Self.trackingLossReset {
                 clearEvidence()
             }
-            if !suspended { advanceCountdown(at: time) }
         case .observation(let frame):
             if !suspended { consume(landmarkSmoother.consume(frame)) }
         }
@@ -247,7 +242,7 @@ struct DirectionalReachActivity: TherapyActivity {
         direction = 0
         snapshot.rehearsal = true
         snapshot.seconds = 3
-        deadline = time + 3
+        snapshot.instruction = "session.countdown"
         resetAttempt()
     }
 
@@ -261,7 +256,7 @@ struct DirectionalReachActivity: TherapyActivity {
                 snapshot.rehearsal = false
                 phase = .countdown
                 snapshot.seconds = 3
-                deadline = time + 3
+                snapshot.instruction = "session.countdown"
             } else {
                 pendingOutcomes.removeAll()
                 phase = .outward
@@ -504,13 +499,13 @@ struct DirectionalReachActivity: TherapyActivity {
                     direction = 0
                     snapshot.rehearsal = true
                     snapshot.seconds = 3
-                    deadline = time + 3
+                    snapshot.instruction = "session.countdown"
                 }
                 resetAttempt()
             }
         case .countdown:
-            if deadline == nil { deadline = time + 3 }
-            advanceCountdown(at: time)
+            // The session's countdown is running or waiting for its cue.
+            break
         case .outward:
             snapshot.instruction = directionKey
             elapsed += delta
@@ -650,20 +645,9 @@ struct DirectionalReachActivity: TherapyActivity {
         resetAttempt()
     }
 
-    /// Runs from the clock as well as from frames, so losing tracking never freezes the digit.
-    private mutating func advanceCountdown(at time: Double) {
-        guard phase == .countdown, let deadline else {
-            return
-        }
-
-        snapshot.instruction = "session.countdown"
-        snapshot.seconds = max(0, Int(ceil(deadline - time)))
-
-        guard time >= deadline else {
-            return
-        }
-
-        self.deadline = nil
+    /// The session's countdown ended: the round restarts from a return to start.
+    private mutating func finishCountdown() {
+        snapshot.seconds = 0
         phase = .returning
         restartingRound = true
         resetAttempt()

@@ -17,7 +17,7 @@ enum SessionStage: Equatable {
     /// Opening narration and cards, and the calibration cues around them.
     case opening(Opening)
     /// The activity is running: calibration holds, countdown and repetitions.
-    case practice
+    case practice(Practice)
     /// The set has a recorded outcome and its feedback cue is playing.
     case feedback(Feedback)
     case rest(Rest)
@@ -38,6 +38,11 @@ enum SessionStage: Equatable {
         var step: Step
         /// When a card's quiet delay or the preparation ends; nil until its narration completes.
         var advanceAt: Double?
+    }
+
+    struct Practice: Equatable {
+        /// The pre-practice countdown the activity is waiting through, if any.
+        var countdown: Countdown?
     }
 
     struct Feedback: Equatable {

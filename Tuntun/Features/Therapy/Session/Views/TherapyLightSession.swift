@@ -80,8 +80,7 @@ extension TMTherapySessionView {
         if showsCalibrationCard || (usesCalibrationOpening && model.snapshot.stage == .preparing) {
             return true
         }
-        if model.snapshot.stage == .preparationWait || model.snapshot.instruction == "calibration.complete"
-            || model.snapshot.instruction == model.snapshot.armRaiseNarrationPrefix + "calibration.complete" {
+        if model.snapshot.stage == .preparationWait || model.snapshot.speaksCalibrationComplete {
             return true
         }
 

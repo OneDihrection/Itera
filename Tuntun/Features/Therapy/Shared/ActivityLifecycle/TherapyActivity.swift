@@ -103,7 +103,9 @@ enum ActivityPresentation {
     case reach(ReachSnapshot)
     case timed(TimedPracticeSnapshot)
 
-    var countdownSeconds: Int? {
+    /// Seconds of the pre-practice countdown the activity is waiting through, or nil. The session
+    /// engine runs the countdown and sends `.countdownFinished` when it ends.
+    var countdownLength: Int? {
         switch self {
         case .towel(let value): return value.phase == .countdown ? value.seconds : nil
         case .movement(let value): return value.phase == .countdown ? value.seconds : nil
@@ -154,7 +156,7 @@ enum ActivityEvent {
     case recalibrate
     case nextSet
     case viewport(TherapyViewport)
-    case countdownReady(Double)
+    case countdownFinished(Double)
     case guidanceCompleted(Double)
     case command(ActivityCommand, at: Double)
 }

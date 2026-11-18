@@ -10,10 +10,8 @@ import Foundation
 /// Something an activity's last event changed, reported with its transition so the session
 /// engine reacts to what happened instead of comparing presentations itself.
 enum ActivityFact: Equatable {
-    /// The activity entered its pre-practice countdown, which waits for the session's cue.
+    /// The activity entered its pre-practice countdown, which the session runs after its cue.
     case countdownRequested(seconds: Int)
-    /// The countdown finished and practice began.
-    case countdownEnded
     /// A movement activity moved between calibration and practice phases.
     case movementPhaseChanged(from: MovementPhase, to: MovementPhase)
     case repetitionCredited(Int)
@@ -29,10 +27,8 @@ enum ActivityFact: Equatable {
     static func changes(from before: ActivityPresentation, to after: ActivityPresentation) -> [ActivityFact] {
         var facts: [ActivityFact] = []
 
-        if let seconds = after.countdownSeconds, before.countdownSeconds == nil {
+        if let seconds = after.countdownLength, before.countdownLength == nil {
             facts.append(.countdownRequested(seconds: seconds))
-        } else if before.countdownSeconds != nil, after.countdownSeconds == nil {
-            facts.append(.countdownEnded)
         }
 
         switch (before, after) {
