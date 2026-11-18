@@ -141,7 +141,7 @@ struct BalanceSnapshot: Equatable {
     var rotationDegrees = 0.0
     /// The patient's own calibrated target for the working arm, in degrees (rotations only).
     var targetAngle = 0
-    /// Live knee angle and forward trunk lean, in degrees (sit-to-stand only).
-    var kneeAngle = 0.0
+    /// Live hip angle and forward trunk lean, in degrees (sit-to-stand only).
+    var hipAngle = 0.0
     var trunkLean = 0.0
 }

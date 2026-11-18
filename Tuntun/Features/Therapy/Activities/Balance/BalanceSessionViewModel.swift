@@ -860,14 +860,14 @@ final class BalanceSessionViewModel: BalanceSessionViewModelProtocol {
         trackingService.clips.setEnabled(replayRecording.savesClips && counted)
     }
 
-    /// The engine's own estimate: forearm rotation or shoulder lift, or knee extension for
+    /// The engine's own estimate: forearm rotation or shoulder lift, or hip extension for
     /// sit-to-stand. Cross-midline has no single angle.
     private var recordedAngle: Double? {
         switch exercise {
         case .externalRotation, .internalRotation, .shoulderFlexion:
             return snapshot.rotationDegrees
         case .sitToStand:
-            return snapshot.kneeAngle > 0 ? snapshot.kneeAngle : nil
+            return snapshot.hipAngle > 0 ? snapshot.hipAngle : nil
         case .crossMidline:
             return nil
         }

@@ -84,7 +84,7 @@ struct SitToStandBalanceEngine: BalanceMovementEngine {
 
     private mutating func present(_ value: SitToStandSnapshot) {
         snapshot.metrics.completedTouches = value.count
-        snapshot.kneeAngle = value.kneeAngle
+        snapshot.hipAngle = value.hipAngle
         snapshot.trunkLean = value.trunkLean
         snapshot.instructionKey = value.trackingMessage ?? value.cue ?? value.instruction
 
@@ -129,7 +129,7 @@ struct SitToStandBalanceEngine: BalanceMovementEngine {
         snapshot.overlay = overlay(for: value, marker: marker)
     }
 
-    /// The tracked shoulder, hip, knee, and ankle, drawn as one chain beside the patient.
+    /// The tracked shoulder, hip, and knee, drawn as one chain beside the patient.
     /// - Parameter marker: `nil` for no countdown marker, `true` for the blue seated marker and
     ///   `false` for the orange standing one; the marker sits on the hip with the count beside it.
     private func overlay(for value: SitToStandSnapshot, marker: Bool?) -> BalanceOverlay? {
@@ -153,7 +153,7 @@ struct SitToStandBalanceEngine: BalanceMovementEngine {
             targetProgress: marker == nil ? 0 : snapshot.calibrationProgress,
             holdSecondsRemaining: marker == nil ? nil : snapshot.calibrationCountdown,
             compensationWarning: value.cue != nil,
-            armChain: [joints.shoulder, joints.hip, joints.knee, joints.ankle],
+            armChain: [joints.shoulder, joints.hip, joints.knee],
             isCalibrationHold: marker != nil
         )
     }

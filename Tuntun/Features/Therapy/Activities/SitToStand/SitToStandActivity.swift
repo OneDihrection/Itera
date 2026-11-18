@@ -10,12 +10,15 @@ import Foundation
 /// Sit-to-stand with a forward trunk lean, measured from body joints seen from the side.
 ///
 /// Forward lean and standing are sagittal-plane movements: from the front they only foreshorten
-/// the body, so the session asks the patient to sit sideways to the camera. The tracked chain is
-/// shoulder, hip, knee, and ankle on the side facing the camera. Three joint metrics follow the
-/// patient from sitting to standing, with no target circles:
+/// the body, so the session asks the patient to sit sideways to the camera. The camera frames the
+/// seated patient down to the knees, so the tracked chain is shoulder, hip, and knee on the side
+/// facing the camera; the ankle is never needed. Three joint metrics follow the patient from
+/// sitting to standing, with no target circles:
 ///
-/// - **Knee angle** at hip–knee–ankle, about 90° seated and close to 180° standing.
-/// - **Hip height** above the ankle, relative to leg length, which rises as the patient stands.
+/// - **Thigh elevation**, the knee-to-hip line above horizontal: near 0° seated, close to 90°
+///   standing. With the feet flat it follows knee extension, and it ignores trunk lean.
+/// - **Hip rise**, the hip's height in the frame relative to trunk length, compared with the
+///   seated pose. The camera stays still during a session; Recalibrate covers a moved camera.
 /// - **Trunk lean**, the angle of the hip-to-shoulder line from vertical, positive forward.
 ///
 /// Nothing asks for a precise pose. Calibration holds a comfortable seated pose, then watches the
@@ -50,7 +53,7 @@ struct SitToStandActivity {
 
     /// What the patient's own trial repetition has shown so far.
     private struct Trial {
-        var maxKneeGain = 0.0
+        var maxThighGain = 0.0
         var maxHeightGain = 0.0
         var peakLean = 0.0
         var bestPose: Pose?
@@ -61,15 +64,20 @@ struct SitToStandActivity {
 
     private struct Pose {
         let joints: SitToStandJoints
-        let knee: Double
-        let leg: Double
+        /// Thigh elevation above horizontal, in degrees.
+        let thigh: Double
+        /// Shoulder–hip–knee angle, recorded for clinicians but never used for counting.
+        let hipAngle: Double
+        /// Thigh-plus-trunk length that scales hold tolerances.
+        let scale: Double
+        /// Hip height in the frame in trunk lengths; only differences from the seated pose matter.
         let height: Double
         let lean: Double
     }
 
     private enum Limits {
         static let confidence: Float = 0.3
-        static let minimumLeg = 0.15
+        static let minimumThigh = 0.06
         static let minimumTrunk = 0.06
         static let seatedHold = 3.0
         /// How long the patient holds the standing pose during the trial.
@@ -77,10 +85,10 @@ struct SitToStandActivity {
         /// A pose this close to the best so far counts as the standing pose.
         static let standingPeakFraction = 0.85
         /// Only rules out a patient who is already standing; any comfortable seat is accepted.
-        static let seatedKnee = 45.0...145.0
+        static let seatedThigh = -30.0...40.0
         static let maximumSeatedLean = 45.0
         /// The smallest rise that separates a real stand from landmark noise during the trial.
-        static let minimumKneeGain = 25.0
+        static let minimumThighGain = 25.0
         static let minimumHeightGain = 0.15
         static let trialSeatedFraction = 0.25
         static let trialSettle = 0.5
@@ -205,15 +213,15 @@ struct SitToStandActivity {
     /// One side's joint chain with its mean landmark confidence, or nil if any joint is missing.
     private func chain(in frame: TrackingObservation, left: Bool) -> (joints: SitToStandJoints, score: Float)? {
         let names: [BodyJoint] = left
-            ? [.leftShoulder, .leftHip, .leftKnee, .leftAnkle]
-            : [.rightShoulder, .rightHip, .rightKnee, .rightAnkle]
+            ? [.leftShoulder, .leftHip, .leftKnee]
+            : [.rightShoulder, .rightHip, .rightKnee]
         let points = names.compactMap { frame.point($0, minimumConfidence: Limits.confidence) }
         guard points.count == names.count else {
             return nil
         }
         let score = names.reduce(Float(0)) { $0 + (frame.joints[$1]?.confidence ?? 0) } / Float(names.count)
         return (
-            SitToStandJoints(shoulder: points[0], hip: points[1], knee: points[2], ankle: points[3]),
+            SitToStandJoints(shoulder: points[0], hip: points[1], knee: points[2]),
             score
         )
     }
@@ -249,16 +257,17 @@ struct SitToStandActivity {
 
     private mutating func pose(in frame: TrackingObservation) -> Pose? {
         guard let joints = bestChain(in: frame),
-              let knee = angle(at: joints.knee, joints.hip, joints.ankle)
+              let hipAngle = angle(at: joints.hip, joints.shoulder, joints.knee)
         else {
             return nil
         }
-        let leg = (joints.hip - joints.knee).length + (joints.knee - joints.ankle).length
+        let thighVector = joints.hip - joints.knee
         let trunk = joints.shoulder - joints.hip
-        let height = (joints.hip.y - joints.ankle.y) / max(leg, 0.0001)
-        guard leg > Limits.minimumLeg, trunk.length > Limits.minimumTrunk, height > 0 else {
+        guard thighVector.length > Limits.minimumThigh, trunk.length > Limits.minimumTrunk else {
             return nil
         }
+        let thigh = atan2(thighVector.y, abs(thighVector.x)) * 180 / .pi
+        let height = joints.hip.y / trunk.length
         // Knees point the way the patient faces while seated, so latch that direction until the
         // seated pose is captured; standing makes the thigh too vertical to tell.
         let reach = joints.knee.x - joints.hip.x
@@ -266,17 +275,24 @@ struct SitToStandActivity {
             forward = reach > 0 ? 1 : -1
         }
         let lean = atan2(forward * trunk.x, trunk.y) * 180 / .pi
-        return Pose(joints: joints, knee: knee, leg: leg, height: height, lean: lean)
+        return Pose(
+            joints: joints,
+            thigh: thigh,
+            hipAngle: hipAngle,
+            scale: thighVector.length + trunk.length,
+            height: height,
+            lean: lean
+        )
     }
 
     /// Progress from the calibrated seated pose (0) to the calibrated standing pose (1), averaging
-    /// knee extension and hip rise so one noisy joint cannot decide it alone.
+    /// thigh elevation and hip rise so one noisy joint cannot decide it alone.
     private func rise(of pose: Pose, seated: Pose, standing: Pose) -> Double {
-        let kneeSpan = max(1, standing.knee - seated.knee)
+        let thighSpan = max(1, standing.thigh - seated.thigh)
         let heightSpan = max(0.01, standing.height - seated.height)
-        let knee = (pose.knee - seated.knee) / kneeSpan
+        let thigh = (pose.thigh - seated.thigh) / thighSpan
         let height = (pose.height - seated.height) / heightSpan
-        return min(1, max(0, (knee + height) / 2))
+        return min(1, max(0, (thigh + height) / 2))
     }
 
     // MARK: - Observation
@@ -316,7 +332,7 @@ struct SitToStandActivity {
         lastValid = time
         snapshot.aspect = frame.aspect
         snapshot.joints = current.joints
-        snapshot.kneeAngle = current.knee
+        snapshot.hipAngle = current.hipAngle
         snapshot.trunkLean = current.lean
         guard let seated else {
             captureSeated(current, time: time)
@@ -332,7 +348,7 @@ struct SitToStandActivity {
     // MARK: - Calibration
 
     private mutating func captureSeated(_ current: Pose, time: Double) {
-        let seatedHere = Limits.seatedKnee.contains(current.knee)
+        let seatedHere = Limits.seatedThigh.contains(current.thigh)
             && current.lean <= Limits.maximumSeatedLean
         guard seatedHere else {
             hold.clear()
@@ -341,7 +357,7 @@ struct SitToStandActivity {
         }
         hold.consume(
             current.joints.hip, time: time, duration: Limits.seatedHold,
-            tolerance: current.leg * 0.12
+            tolerance: current.scale * 0.12
         )
         publish(hold: Limits.seatedHold, instruction: "sts.holdSeated")
         guard hold.progress >= 1 else {
@@ -358,24 +374,24 @@ struct SitToStandActivity {
     /// rose. It finishes once they have stood and settled back into the seat.
     private mutating func observeTrial(_ current: Pose, seated: Pose, time: Double) {
         snapshot.progress = 0
-        let kneeGain = current.knee - seated.knee
+        let thighGain = current.thigh - seated.thigh
         let heightGain = current.height - seated.height
         if !trial.reachedStand, heightGain < 0.1 {
             trial.peakLean = max(trial.peakLean, current.lean)
         }
-        if kneeGain > trial.maxKneeGain || heightGain > trial.maxHeightGain {
-            let better = kneeGain / max(1, trial.maxKneeGain) + heightGain / max(0.01, trial.maxHeightGain)
+        if thighGain > trial.maxThighGain || heightGain > trial.maxHeightGain {
+            let better = thighGain / max(1, trial.maxThighGain) + heightGain / max(0.01, trial.maxHeightGain)
             let previous = trial.bestPose.map {
-                ($0.knee - seated.knee) / max(1, trial.maxKneeGain)
+                ($0.thigh - seated.thigh) / max(1, trial.maxThighGain)
                     + ($0.height - seated.height) / max(0.01, trial.maxHeightGain)
             } ?? 0
             if trial.bestPose == nil || better >= previous {
                 trial.bestPose = current
             }
         }
-        trial.maxKneeGain = max(trial.maxKneeGain, kneeGain)
+        trial.maxThighGain = max(trial.maxThighGain, thighGain)
         trial.maxHeightGain = max(trial.maxHeightGain, heightGain)
-        if trial.maxKneeGain >= Limits.minimumKneeGain, trial.maxHeightGain >= Limits.minimumHeightGain {
+        if trial.maxThighGain >= Limits.minimumThighGain, trial.maxHeightGain >= Limits.minimumHeightGain {
             trial.reachedStand = true
         }
         guard trial.reachedStand else {
@@ -384,10 +400,10 @@ struct SitToStandActivity {
             sustainedSince = nil
             return
         }
-        holdStandingPose(current, kneeGain: kneeGain, heightGain: heightGain, time: time)
-        let settledKnee = kneeGain <= max(10, trial.maxKneeGain * Limits.trialSeatedFraction)
+        holdStandingPose(current, thighGain: thighGain, heightGain: heightGain, time: time)
+        let settledThigh = thighGain <= max(10, trial.maxThighGain * Limits.trialSeatedFraction)
         let settledHeight = heightGain <= trial.maxHeightGain * Limits.trialSeatedFraction
-        guard sustainedFor(settledKnee && settledHeight, at: time, seconds: Limits.trialSettle),
+        guard sustainedFor(settledThigh && settledHeight, at: time, seconds: Limits.trialSettle),
               let best = trial.bestPose
         else {
             return
@@ -402,13 +418,13 @@ struct SitToStandActivity {
 
     /// Counts down while the patient stays still at the top of their stand, so the standing pose
     /// is as deliberate as the seated one. It is guidance: sitting early still finishes the trial.
-    private mutating func holdStandingPose(_ current: Pose, kneeGain: Double, heightGain: Double, time: Double) {
+    private mutating func holdStandingPose(_ current: Pose, thighGain: Double, heightGain: Double, time: Double) {
         guard !trial.standHeld else {
             snapshot.instruction = "sts.sitDown"
             return
         }
 
-        let nearPeak = kneeGain >= trial.maxKneeGain * Limits.standingPeakFraction
+        let nearPeak = thighGain >= trial.maxThighGain * Limits.standingPeakFraction
             && heightGain >= trial.maxHeightGain * Limits.standingPeakFraction
 
         guard nearPeak else {
@@ -419,7 +435,7 @@ struct SitToStandActivity {
 
         hold.consume(
             current.joints.hip, time: time, duration: Limits.standingHold,
-            tolerance: current.leg * 0.12
+            tolerance: current.scale * 0.12
         )
         publish(hold: Limits.standingHold, instruction: "sts.holdStanding")
 

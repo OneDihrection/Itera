@@ -110,9 +110,10 @@ final class SessionReportViewModel: SessionReportViewModelProtocol {
         return metrics.reduce(0) { $0 + $1.duration } / Double(metrics.count)
     }
 
-    /// Sit-to-stand measures the knee straightening; every other angle is the movement itself.
+    /// Sit-to-stand measures the hip straightening; every other angle is the movement itself.
+    /// Sessions saved before the ankle was dropped (2026-11-18) hold knee angles in the same range.
     func peakTitleKey(for result: SessionActivityResult) -> String {
-        result.activity.kind == .sitToStand ? "history.report.kneeExtension" : "history.report.highestPeak"
+        result.activity.kind == .sitToStand ? "history.report.hipExtension" : "history.report.highestPeak"
     }
 
     func highestPeak(for result: SessionActivityResult) -> Double? {

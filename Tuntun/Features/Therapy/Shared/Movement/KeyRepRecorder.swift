@@ -411,7 +411,7 @@ struct KeyRepRecorder {
         return activity
     }
 
-    /// Balancing engines estimate their own angle (rotation, knee extension); cross-midline has none.
+    /// Balancing engines estimate their own angle (rotation, hip extension); cross-midline has none.
     private var suppliesAngle: Bool {
         switch activity?.kind {
         case .externalRotation, .internalRotation, .shoulderFlexion, .sitToStand:

@@ -5318,19 +5318,19 @@
         }
       }
     },
-    "history.report.kneeExtension" : {
+    "history.report.hipExtension" : {
       "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Knee straightening"
+            "value" : "Hip straightening"
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Lutut lurus"
+            "value" : "Pinggul lurus"
           }
         }
       }
@@ -15255,13 +15255,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Sit sideways to the camera with your whole body in view. No precise pose is needed: you do one sit-to-stand your own way, and your repetitions follow how far you lean and rise. A repetition counts when you lean a little, stand, and sit back down without dropping."
+            "value" : "Sit sideways to the camera with your body in view from head to knees. No precise pose is needed: you do one sit-to-stand your own way, and your repetitions follow how far you lean and rise. A repetition counts when you lean a little, stand, and sit back down without dropping."
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Duduk menyamping ke kamera dengan seluruh tubuh terlihat. Tidak perlu pose yang presisi: Anda melakukan satu kali duduk ke berdiri dengan cara sendiri, dan repetisi mengikuti seberapa jauh Anda condong dan bangkit. Repetisi terhitung bila Anda condong sedikit, berdiri, dan duduk kembali tanpa menjatuhkan diri."
+            "value" : "Duduk menyamping ke kamera dengan tubuh terlihat dari kepala sampai lutut. Tidak perlu pose yang presisi: Anda melakukan satu kali duduk ke berdiri dengan cara sendiri, dan repetisi mengikuti seberapa jauh Anda condong dan bangkit. Repetisi terhitung bila Anda condong sedikit, berdiri, dan duduk kembali tanpa menjatuhkan diri."
           }
         }
       }
@@ -15454,13 +15454,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Sit sideways to the camera with your whole body in view, head to feet. Move at your own pace: lean forward a little, stand up, then sit back down without dropping. Use Recalibrate if you moved the chair or camera."
+            "value" : "Sit sideways to the camera with your body in view from head to knees. Move at your own pace: lean forward a little, stand up, then sit back down without dropping. Use Recalibrate if you moved the chair or camera."
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Duduk menyamping ke kamera dengan seluruh tubuh terlihat, dari kepala sampai kaki. Bergeraklah sesuai kemampuan: condong sedikit ke depan, berdiri, lalu duduk kembali tanpa menjatuhkan diri. Gunakan Kalibrasi ulang jika kursi atau kamera bergeser."
+            "value" : "Duduk menyamping ke kamera dengan tubuh terlihat dari kepala sampai lutut. Bergeraklah sesuai kemampuan: condong sedikit ke depan, berdiri, lalu duduk kembali tanpa menjatuhkan diri. Gunakan Kalibrasi ulang jika kursi atau kamera bergeser."
           }
         }
       }
@@ -18957,13 +18957,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Sit sideways to the camera with shoulder, hip, knee, and ankle in view."
+            "value" : "Sit sideways to the camera with shoulder, hip, and knee in view."
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Duduk menyamping ke kamera dengan bahu, pinggul, lutut, dan pergelangan kaki terlihat."
+            "value" : "Duduk menyamping ke kamera dengan bahu, pinggul, dan lutut terlihat."
           }
         }
       }
@@ -19076,13 +19076,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Sit sideways and keep shoulder, hip, knee, and ankle in view"
+            "value" : "Sit sideways and keep shoulder, hip, and knee in view"
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Duduk menyamping dan pastikan bahu, pinggul, lutut, dan pergelangan kaki terlihat"
+            "value" : "Duduk menyamping dan pastikan bahu, pinggul, dan lutut terlihat"
           }
         }
       }
@@ -20840,13 +20840,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Sit sideways to the camera\nShow your whole body from head to feet. Feet flat on the floor."
+            "value" : "Sit sideways to the camera\nShow your body from head to knees. Feet flat on the floor."
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Duduk menyamping ke kamera\nTampilkan seluruh tubuh dari kepala sampai kaki. Telapak kaki rata di lantai."
+            "value" : "Duduk menyamping ke kamera\nTampilkan tubuh dari kepala sampai lutut. Telapak kaki rata di lantai."
           }
         }
       }
@@ -20976,13 +20976,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Keep your shoulder, hip, knee, and ankle in view"
+            "value" : "Keep your shoulder, hip, and knee in view"
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Pastikan bahu, pinggul, lutut, dan pergelangan kaki terlihat"
+            "value" : "Pastikan bahu, pinggul, dan lutut terlihat"
           }
         }
       }
@@ -21646,13 +21646,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Sit sideways to the camera on a stable chair, about 2 to 3 meters away, so your whole body from head to feet is visible from the side. A side view lets the camera follow your shoulder, hip, knee, and ankle accurately."
+            "value" : "Sit sideways to the camera on a stable chair, about 2 to 3 meters away, so your body from head to knees is visible from the side. A side view lets the camera follow your shoulder, hip, and knee accurately."
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Duduk menyamping ke kamera di kursi yang stabil, sekitar 2 sampai 3 meter dari kamera, agar seluruh tubuh dari kepala sampai kaki terlihat dari samping. Tampak samping membuat kamera dapat mengikuti bahu, pinggul, lutut, dan pergelangan kaki dengan akurat."
+            "value" : "Duduk menyamping ke kamera di kursi yang stabil, sekitar 2 sampai 3 meter dari kamera, agar tubuh dari kepala sampai lutut terlihat dari samping. Tampak samping membuat kamera dapat mengikuti bahu, pinggul, dan lutut dengan akurat."
           }
         }
       }

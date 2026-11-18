@@ -16,12 +16,12 @@ enum SitToStandStage: Equatable {
     case seated, leaning, rising, standing, lowering
 }
 
-/// The tracked leg-and-trunk chain on the side facing the camera, in aspect-corrected image units.
+/// The tracked trunk-and-thigh chain on the side facing the camera, in aspect-corrected image
+/// units. The camera frames the seated patient down to the knees, so no ankle is tracked.
 struct SitToStandJoints: Equatable {
     var shoulder: TherapyPoint
     var hip: TherapyPoint
     var knee: TherapyPoint
-    var ankle: TherapyPoint
 }
 
 struct SitToStandSnapshot {
@@ -32,8 +32,8 @@ struct SitToStandSnapshot {
     var progress = 0.0
     var count = 0
     var seconds = 5
-    /// Knee angle in degrees: about 90 seated, close to 180 standing.
-    var kneeAngle = 0.0
+    /// Shoulder–hip–knee angle in degrees: about 90 seated upright, close to 180 standing.
+    var hipAngle = 0.0
     /// Forward trunk lean in degrees from vertical; positive leans toward the knees.
     var trunkLean = 0.0
     /// Calibrated progress from the seated pose (0) to the standing pose (1).
