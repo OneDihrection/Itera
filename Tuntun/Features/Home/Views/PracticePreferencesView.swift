@@ -30,6 +30,7 @@ struct TMPracticePreferencesView<ViewModel: PracticePreferencesViewModelProtocol
     var body: some View {
         Form {
             exercisesSection
+            restSection
             Section {
                 TMLanguageSelector(language: $language)
                     .frame(minHeight: 64)
@@ -98,7 +99,7 @@ struct TMPracticePreferencesView<ViewModel: PracticePreferencesViewModelProtocol
     // MARK: - Exercises
 
     /// The one place for exercise preferences, in the plan's order. Normally each exercise folds
-    /// its side, sets, repetitions and rest under its name; Arrange shows drag handles and
+    /// its side, sets and repetitions under its name; Arrange shows drag handles and
     /// show/hide switches instead. Every change is saved at once.
     private var exercisesSection: some View {
         Section {
@@ -223,14 +224,6 @@ struct TMPracticePreferencesView<ViewModel: PracticePreferencesViewModelProtocol
             range: DailyPlanOverrides.repetitionsRange,
             showsBackground: false
         )
-
-        TMTherapyNumberControl(
-            title: "plan.restSeconds",
-            value: restBinding(for: item),
-            range: DailyPlanOverrides.restRange,
-            step: 5,
-            showsBackground: false
-        )
     }
 
     private func sideKey(_ side: RoutineSides) -> LocalizedStringKey {
@@ -272,10 +265,45 @@ struct TMPracticePreferencesView<ViewModel: PracticePreferencesViewModelProtocol
         )
     }
 
-    private func restBinding(for item: DailyPlanItem) -> Binding<Int> {
+    // MARK: - Rest
+
+    /// One short rest between every set of every exercise and one long rest between exercises,
+    /// for the whole plan.
+    private var restSection: some View {
+        Section {
+            TMTherapyNumberControl(
+                title: "settings.shortRest",
+                value: shortRestBinding,
+                range: DailyPlanRest.shortRange,
+                step: 5,
+                showsBackground: false
+            )
+
+            TMTherapyNumberControl(
+                title: "settings.longRest",
+                value: longRestBinding,
+                range: DailyPlanRest.longBreathsRange,
+                showsBackground: false
+            )
+        } header: {
+            Text("settings.restTitle").typography(.headline)
+        } footer: {
+            Text("settings.restHelp \(viewModel.longRestBreaths * Int(LongRestBreath.cycleDuration))")
+                .typography(.body)
+        }
+    }
+
+    private var shortRestBinding: Binding<Int> {
         Binding(
-            get: { viewModel.restSeconds(for: item) },
-            set: { viewModel.setRestSeconds($0, for: item) }
+            get: { viewModel.shortRestSeconds },
+            set: { viewModel.setShortRestSeconds($0) }
+        )
+    }
+
+    private var longRestBinding: Binding<Int> {
+        Binding(
+            get: { viewModel.longRestBreaths },
+            set: { viewModel.setLongRestBreaths($0) }
         )
     }
 
@@ -392,7 +420,8 @@ private final class MockPracticePreferencesViewModel: PracticePreferencesViewMod
     private var sides: [String: RoutineSides] = [:]
     private var setCounts: [String: Int] = [:]
     private var repetitionCounts: [String: Int] = [:]
-    private var rests: [String: Int] = [:]
+    private(set) var shortRestSeconds = 15
+    private(set) var longRestBreaths = 6
     let voiceEnabled = false
     let voiceFallback: VoicePermissionFallback? = .openSettings(messageKey: "home.microphoneDenied")
 
@@ -448,12 +477,12 @@ private final class MockPracticePreferencesViewModel: PracticePreferencesViewMod
         repetitionCounts[item.id] = repetitions
     }
 
-    func restSeconds(for item: DailyPlanItem) -> Int {
-        rests[item.id] ?? 20
+    func setShortRestSeconds(_ seconds: Int) {
+        shortRestSeconds = seconds
     }
 
-    func setRestSeconds(_ seconds: Int, for item: DailyPlanItem) {
-        rests[item.id] = seconds
+    func setLongRestBreaths(_ breaths: Int) {
+        longRestBreaths = breaths
     }
 
     func done() {}

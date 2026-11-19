@@ -60,9 +60,13 @@ final class DailyPlanViewModel: DailyPlanSessionReporting {
     /// Sides chosen per exercise in Settings, by item id. Items without a choice use their
     /// program's saved side (`savedSide(of:)`).
     private(set) var sideChoices: [String: RoutineSides] = [:]
-    /// Sets, repetitions and rest chosen per exercise in Settings, by item id. A missing value
-    /// keeps the program's own.
+    /// Sets and repetitions chosen per exercise in Settings, by item id. A missing value keeps
+    /// the program's own.
     private(set) var overrides: [String: DailyPlanOverrides] = [:]
+    /// The rest between every set of every exercise, in seconds.
+    private(set) var shortRestSeconds: Int
+    /// Narrated breaths of the long rest between exercises and between sides.
+    private(set) var longRestBreaths: Int
 
     var usesScriptedLongRest: Bool {
         oppositionRestSide != nil || armRaiseRestSide != nil
@@ -106,6 +110,18 @@ final class DailyPlanViewModel: DailyPlanSessionReporting {
         self.taskRoutine = taskRoutine
         self.fingerSessionService = fingerSessionService
         self.router = router
+
+        let defaults = UserDefaults.standard
+        shortRestSeconds = DailyPlanOverrides.clamped(
+            defaults.object(forKey: PracticePreferences.shortRestSeconds) as? Int
+                ?? DailyPlanRest.defaultShortSeconds,
+            to: DailyPlanRest.shortRange
+        )
+        longRestBreaths = DailyPlanOverrides.clamped(
+            defaults.object(forKey: PracticePreferences.longRestBreaths) as? Int
+                ?? DailyPlanRest.defaultLongBreaths,
+            to: DailyPlanRest.longBreathsRange
+        )
 
         let layout = DailyPlanLayout.load(for: items)
         self.layout = layout
@@ -170,31 +186,18 @@ final class DailyPlanViewModel: DailyPlanSessionReporting {
         UserDefaults.standard.set(value, forKey: PracticePreferences.exerciseRepetitions(item.id))
     }
 
-    /// Rest before each later set: Settings' choice, otherwise the program's own.
-    func restSeconds(for item: DailyPlanItem) -> Int {
-        if let rest = overrides[item.id]?.restSeconds {
-            return rest
-        }
+    // MARK: - Rest
 
-        switch item.exercise {
-        case .finger(let exercise):
-            return homeModel(for: exercise.category).routine.restSeconds
-        case .therapy(let kind):
-            return kind.category.map { routineModel(for: $0).configuration.restSeconds }
-                ?? RoutineConfiguration().restSeconds
-        case .balance(let exercise):
-            return BalancePracticeSettings(exercise: exercise).restSeconds
-        }
+    /// Applies from the next session; a running session keeps the rest it started with.
+    func setShortRestSeconds(_ seconds: Int) {
+        shortRestSeconds = DailyPlanOverrides.clamped(seconds, to: DailyPlanRest.shortRange)
+        UserDefaults.standard.set(shortRestSeconds, forKey: PracticePreferences.shortRestSeconds)
     }
 
-    func setRestSeconds(_ seconds: Int, for item: DailyPlanItem) {
-        let value = DailyPlanOverrides.clamped(seconds, to: DailyPlanOverrides.restRange)
-        overrides[item.id, default: DailyPlanOverrides()].restSeconds = value
-        UserDefaults.standard.set(value, forKey: PracticePreferences.exerciseRest(item.id))
-    }
-
-    private func restSeconds(of exercise: DailyPlanItem.Exercise) -> Int {
-        restSeconds(for: DailyPlanItem(exercise: exercise))
+    /// Applies from the next long rest; a long rest in progress keeps its count.
+    func setLongRestBreaths(_ breaths: Int) {
+        longRestBreaths = DailyPlanOverrides.clamped(breaths, to: DailyPlanRest.longBreathsRange)
+        UserDefaults.standard.set(longRestBreaths, forKey: PracticePreferences.longRestBreaths)
     }
 
     /// Counts chosen in Settings, which replace the program's own (and, when they differ from the
@@ -210,8 +213,7 @@ final class DailyPlanViewModel: DailyPlanSessionReporting {
         for item in items {
             let value = DailyPlanOverrides(
                 sets: defaults.object(forKey: PracticePreferences.exerciseSets(item.id)) as? Int,
-                repetitions: defaults.object(forKey: PracticePreferences.exerciseRepetitions(item.id)) as? Int,
-                restSeconds: defaults.object(forKey: PracticePreferences.exerciseRest(item.id)) as? Int
+                repetitions: defaults.object(forKey: PracticePreferences.exerciseRepetitions(item.id)) as? Int
             )
 
             if value != DailyPlanOverrides() {
@@ -552,7 +554,7 @@ final class DailyPlanViewModel: DailyPlanSessionReporting {
             settings.repetitions = counts.repetitions ?? settings.repetitions
         }
 
-        settings.restSeconds = restSeconds(of: .balance(exercise))
+        settings.restSeconds = shortRestSeconds
 
         return settings
     }
@@ -747,7 +749,7 @@ final class DailyPlanViewModel: DailyPlanSessionReporting {
                 side: side,
                 sets: routine.sets,
                 repetitions: routine.repetitions,
-                restSeconds: restSeconds(of: .finger(exercise))
+                restSeconds: shortRestSeconds
             )
             route = .fingerSession
 
@@ -757,7 +759,7 @@ final class DailyPlanViewModel: DailyPlanSessionReporting {
                 ?? RoutineConfiguration()
             let routine = Routine(
                 activities: exercise.activities,
-                restSeconds: Double(restSeconds(of: .therapy(kind))),
+                restSeconds: Double(shortRestSeconds),
                 practiceSeconds: Double(configuration.practiceSeconds)
             )
             route = .therapySession(routine)

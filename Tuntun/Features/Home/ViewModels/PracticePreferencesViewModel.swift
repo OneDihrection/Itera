@@ -61,8 +61,13 @@ protocol PracticePreferencesViewModelProtocol: AnyObject, Observable {
     func counts(for item: DailyPlanItem) -> (sets: Int, repetitions: Int)
     func setSets(_ sets: Int, for item: DailyPlanItem)
     func setRepetitions(_ repetitions: Int, for item: DailyPlanItem)
-    func restSeconds(for item: DailyPlanItem) -> Int
-    func setRestSeconds(_ seconds: Int, for item: DailyPlanItem)
+
+    /// The rest between every set of every exercise, in seconds.
+    var shortRestSeconds: Int { get }
+    func setShortRestSeconds(_ seconds: Int)
+    /// Narrated breaths of the long rest between exercises and between sides.
+    var longRestBreaths: Int { get }
+    func setLongRestBreaths(_ breaths: Int)
 
     /// Voice control is always on; this mirrors whether microphone and speech access allow it.
     var voiceEnabled: Bool { get }
@@ -74,9 +79,9 @@ protocol PracticePreferencesViewModelProtocol: AnyObject, Observable {
     func resolveVoiceAccess() async
 }
 
-/// The settings sheet. Every exercise preference is per plan exercise and is saved as it
-/// changes: order, visibility, side, sets, repetitions and rest. A session in progress keeps the
-/// snapshot it started with.
+/// The settings sheet. Order, visibility, side, sets and repetitions are per plan exercise; the
+/// short and long rests are plan-wide. Every preference is saved as it changes. A session in
+/// progress keeps the snapshot it started with.
 @MainActor
 @Observable
 final class PracticePreferencesViewModel: PracticePreferencesViewModelProtocol {
@@ -159,12 +164,22 @@ final class PracticePreferencesViewModel: PracticePreferencesViewModelProtocol {
         plan.setRepetitions(repetitions, for: item)
     }
 
-    func restSeconds(for item: DailyPlanItem) -> Int {
-        plan.restSeconds(for: item)
+    // MARK: - Rest
+
+    var shortRestSeconds: Int {
+        plan.shortRestSeconds
     }
 
-    func setRestSeconds(_ seconds: Int, for item: DailyPlanItem) {
-        plan.setRestSeconds(seconds, for: item)
+    func setShortRestSeconds(_ seconds: Int) {
+        plan.setShortRestSeconds(seconds)
+    }
+
+    var longRestBreaths: Int {
+        plan.longRestBreaths
+    }
+
+    func setLongRestBreaths(_ breaths: Int) {
+        plan.setLongRestBreaths(breaths)
     }
 
     func done() {

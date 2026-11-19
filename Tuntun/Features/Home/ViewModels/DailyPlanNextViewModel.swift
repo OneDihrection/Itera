@@ -19,6 +19,8 @@ protocol DailyPlanNextViewModelProtocol: AnyObject, Observable {
     var usesScriptedLongRest: Bool { get }
     /// Key prefix of the recorded long-rest lines for the scripted side, if any.
     var longRestNarrationPrefix: String? { get }
+    /// Narrated breaths of the long rest, from Settings.
+    var longRestBreaths: Int { get }
     var audioEvents: AnyPublisher<AudioEvent, Never> { get }
 
     func prepareRestNarration()
@@ -70,6 +72,10 @@ final class DailyPlanNextViewModel: DailyPlanNextViewModelProtocol {
 
     var longRestNarrationPrefix: String? {
         plan.longRestNarrationPrefix
+    }
+
+    var longRestBreaths: Int {
+        plan.longRestBreaths
     }
 
     var audioEvents: AnyPublisher<AudioEvent, Never> {

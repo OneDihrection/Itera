@@ -133,7 +133,8 @@ final class FingerSessionViewModel: FingerSessionViewModelProtocol {
             return [NarrationLine(key: prefix + "calibration.position")]
         }
         if activity.phase == .rest, let scriptedRest {
-            return [NarrationLine(key: prefix + scriptedRest.key)]
+            // The quiet step speaks nothing.
+            return scriptedRest.key.map { [NarrationLine(key: prefix + $0)] } ?? []
         }
         return OppositionGuidance.movementLines(for: activity, side: routine.side)
     }
@@ -607,7 +608,10 @@ final class FingerSessionViewModel: FingerSessionViewModelProtocol {
         if usesOppositionScript, activity.phase == .rest,
            activity.completedSets < routine.sets, activity.remaining > 0 {
             if scriptedRest == nil {
-                scriptedRest = BreathingRest(opensAfterFirstSet: activity.completedSets == 1)
+                scriptedRest = BreathingRest(
+                    opensAfterFirstSet: activity.completedSets == 1,
+                    minimumSeconds: Double(routine.restSeconds)
+                )
             }
             scriptedRest?.tick(now, ready: frameReady && !paused)
             if scriptedRest?.finished == true {
@@ -728,7 +732,10 @@ final class FingerSessionViewModel: FingerSessionViewModelProtocol {
 
         if usesOppositionScript, activity.phase == .rest,
            activity.completedSets < routine.sets, scriptedRest == nil {
-            scriptedRest = BreathingRest(opensAfterFirstSet: activity.completedSets == 1)
+            scriptedRest = BreathingRest(
+                opensAfterFirstSet: activity.completedSets == 1,
+                minimumSeconds: Double(routine.restSeconds)
+            )
         }
 
         let flow = calibrationMessage
@@ -781,6 +788,11 @@ final class FingerSessionViewModel: FingerSessionViewModelProtocol {
 
     func narrate() {
         guard !paused, !hasFinished else {
+            return
+        }
+
+        // The scripted rest's quiet step lets the short rest run out without a cue.
+        if usesOppositionScript, activity.phase == .rest, let scriptedRest, scriptedRest.key == nil {
             return
         }
 

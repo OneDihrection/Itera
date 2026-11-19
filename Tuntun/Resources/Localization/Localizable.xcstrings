@@ -11069,22 +11069,6 @@
         }
       }
     },
-    "plan.restSeconds" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Rest (seconds)"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Istirahat (detik)"
-          }
-        }
-      }
-    },
     "plan.restShort" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -17779,6 +17763,22 @@
         }
       }
     },
+    "settings.longRest" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rest between exercises (breaths)"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Istirahat antar latihan (napas)"
+          }
+        }
+      }
+    },
     "settings.patientName" : {
       "localizations" : {
         "en" : {
@@ -18058,6 +18058,54 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Kembalikan urutan awal"
+          }
+        }
+      }
+    },
+    "settings.restHelp %lld" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The short rest follows every set of every exercise. The long rest between exercises is a guided breathing break of about %lld seconds."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Istirahat singkat dilakukan setelah setiap set di semua latihan. Istirahat panjang di antara latihan berupa panduan napas sekitar %lld detik."
+          }
+        }
+      }
+    },
+    "settings.restTitle" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rest"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Istirahat"
+          }
+        }
+      }
+    },
+    "settings.shortRest" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rest between sets (seconds)"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Istirahat antar set (detik)"
           }
         }
       }

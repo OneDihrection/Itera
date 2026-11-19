@@ -63,20 +63,29 @@ struct DailyPlanItem: Identifiable, Hashable {
     }
 }
 
-/// Sets, repetitions and rest chosen for one exercise in Settings; `nil` keeps the program's own.
+/// Sets and repetitions chosen for one exercise in Settings; `nil` keeps the program's own.
 struct DailyPlanOverrides: Equatable {
     static let setsRange = 1...5
     static let repetitionsRange = 1...20
-    /// Rest before each later set, in seconds; Settings steps by 5.
-    static let restRange = 5...120
 
     var sets: Int?
     var repetitions: Int?
-    var restSeconds: Int?
 
     static func clamped(_ value: Int, to range: ClosedRange<Int>) -> Int {
         min(range.upperBound, max(range.lowerBound, value))
     }
+}
+
+/// The plan-wide rests chosen in Settings: one short rest between every set of every exercise,
+/// and one long rest between exercises (and between the sides of a one-side-per-session item).
+enum DailyPlanRest {
+    /// Rest before each later set, in seconds; Settings steps by 5.
+    static let shortRange = 5...120
+    static let defaultShortSeconds = 15
+
+    /// Narrated long-rest breaths. Recorded "N napas lagi" clips exist only up to six.
+    static let longBreathsRange = 2...6
+    static let defaultLongBreaths = 6
 }
 
 enum DailyPlan {

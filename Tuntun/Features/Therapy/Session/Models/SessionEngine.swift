@@ -726,8 +726,8 @@ struct SessionEngine {
                 stage.breathing = nil
                 _ = progress.advanceAfterRest()
                 beginNextSet(recalibrating: rest.recalibrateBeforeNext)
-            } else if step != breathing.step {
-                announce(snapshot.armRaiseNarrationPrefix + breathing.key, timed: false)
+            } else if step != breathing.step, let key = breathing.key {
+                announce(snapshot.armRaiseNarrationPrefix + key, timed: false)
             }
             return
         }
@@ -769,7 +769,10 @@ struct SessionEngine {
 
         let breathing: BreathingRest?
         if snapshot.usesArmRaiseScript, progress.hasNextSet {
-            breathing = BreathingRest(opensAfterFirstSet: progress.setNumber == 1)
+            breathing = BreathingRest(
+                opensAfterFirstSet: progress.setNumber == 1,
+                minimumSeconds: progress.routine.restSeconds
+            )
         } else {
             breathing = nil
         }
@@ -781,8 +784,8 @@ struct SessionEngine {
         )))
         snapshot.instruction = "session.rest"
 
-        if let breathing {
-            announce(snapshot.armRaiseNarrationPrefix + breathing.key, timed: false)
+        if let key = breathing?.key {
+            announce(snapshot.armRaiseNarrationPrefix + key, timed: false)
         } else if !progress.hasNextSet {
             announce("session.rest", timed: false)
         }

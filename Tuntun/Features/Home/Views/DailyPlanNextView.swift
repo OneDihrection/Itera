@@ -31,6 +31,8 @@ struct TMDailyPlanNextView<
     @State private var narrationID: UUID?
     @State private var narrationFinished = false
     @State private var paused = false
+    /// The long rest's breath count, fixed when the page opens so a rest never changes length.
+    @State private var breathCount: Int
 
     private static var countdownDuration: Double { 10.0 }
 
@@ -47,12 +49,18 @@ struct TMDailyPlanNextView<
         return max(1, Int(ceil(Self.countdownDuration - countdownElapsed)))
     }
 
-    private func remainingBreaths(afterStarting breath: LongRestBreath) -> Int {
-        LongRestBreath.count - breath.number + 1
+    private func breath(at elapsed: Double) -> LongRestBreath {
+        LongRestBreath(elapsed: elapsed, count: breathCount)
+    }
+
+    /// The recorded instructions say "six breaths", so they are spoken only for six.
+    private var speaksInstructions: Bool {
+        breathCount == 6
     }
 
     init(viewModel: ViewModel, builder: Builder) {
         _viewModel = State(initialValue: viewModel)
+        _breathCount = State(initialValue: viewModel.longRestBreaths)
         self.builder = builder
     }
 
@@ -78,12 +86,12 @@ struct TMDailyPlanNextView<
                     .environment(\.colorScheme, .light)
                     .transition(.opacity)
             } else {
-                let breath = stage == .breathing ? LongRestBreath(elapsed: elapsed) : nil
+                let breath = stage == .breathing ? breath(at: elapsed) : nil
                 let cue = text(for: restLine(breath: breath))
                 TMTherapyLongRest(
                     cue: Text(verbatim: cue),
                     cueID: cue,
-                    counter: breath.map { Text("rest.long.remaining \(remainingBreaths(afterStarting: $0))") },
+                    counter: breath.map { Text("rest.long.remaining \($0.remaining)") },
                     intensity: breath?.intensity ?? 0.25,
                     paused: paused,
                     togglePause: { paused.toggle() },
@@ -135,7 +143,7 @@ struct TMDailyPlanNextView<
             let proposedElapsed = now - startedAt
             if stage == .breathing, viewModel.usesScriptedLongRest,
                !narrationFinished {
-                let boundary = LongRestBreath.narrationBoundary(at: elapsed)
+                let boundary = LongRestBreath.narrationBoundary(at: elapsed, count: breathCount)
                 elapsed = min(proposedElapsed, boundary.nextDown)
                 startedAt = now - elapsed
             } else {
@@ -155,7 +163,7 @@ struct TMDailyPlanNextView<
                     lastSpokenSecond = seconds
                 }
             } else {
-                let breath = stage == .breathing ? LongRestBreath(elapsed: elapsed) : nil
+                let breath = stage == .breathing ? breath(at: elapsed) : nil
                 let line = restLine(breath: breath)
                 let cue = text(for: line)
                 let cueID = breath.map { "\($0.number)-\($0.phase)-\(cue)" } ?? cue
@@ -186,17 +194,18 @@ struct TMDailyPlanNextView<
 
     private var nextStage: Stage? {
         if stage == .breathing {
-            return elapsed >= LongRestBreath.duration ? .closing : nil
+            return elapsed >= LongRestBreath.duration(count: breathCount) ? .closing : nil
         }
         guard (elapsed >= 2 && narrationFinished) || elapsed >= 12 else {
             return nil
         }
         switch stage {
         case .opening: return .restInvitation
-        case .restInvitation: return .instructions
+        case .restInvitation: return speaksInstructions ? .instructions : .posture
         case .instructions: return .posture
         case .posture:
-            return viewModel.usesScriptedLongRest ? .breathing : .firstBreathCount
+            // Without the "six breaths" line, the count is announced before the first breath.
+            return viewModel.usesScriptedLongRest && speaksInstructions ? .breathing : .firstBreathCount
         case .firstBreathCount: return .breathing
         case .closing: return .nextExercise
         case .nextExercise: return .exerciseName
@@ -233,7 +242,7 @@ struct TMDailyPlanNextView<
         case .posture:
             return NarrationLine(key: "rest.long.posture")
         case .firstBreathCount:
-            return NarrationLine(key: Self.remainingKey, argument: LongRestBreath.count)
+            return NarrationLine(key: Self.remainingKey, argument: breathCount)
         case .closing:
             return NarrationLine(key: "rest.long.closing")
         case .nextExercise:
@@ -255,33 +264,47 @@ struct TMDailyPlanNextView<
     private func breathingKey(for breath: LongRestBreath) -> String {
         switch breath.phase {
         case .inhale:
-            switch breath.number {
-            case 1:
-                return viewModel.usesScriptedLongRest ? "rest.long.inhale" : "rest.long.inhaleFirst"
-            case LongRestBreath.count:
-                let lastBreathStart = Double(LongRestBreath.count - 1) * LongRestBreath.cycleDuration
-                return elapsed - lastBreathStart < 1.4 ? "rest.long.inhaleLast" : "rest.long.inhale"
-            default:
-                return "rest.long.inhale"
-            }
+            return inhaleKey(for: breath)
         case .hold:
             // The approved long-rest script has no spoken hold between inhale and exhale.
             return viewModel.usesScriptedLongRest ? "" : "rest.long.hold"
         case .exhale:
-            switch breath.number {
-            case 1:
-                return viewModel.usesScriptedLongRest ? "rest.long.exhale" : "rest.long.exhaleSlow"
-            case 5:
-                return "rest.long.exhaleSlow"
-            case 3:
-                return "rest.long.exhaleShoulders"
-            case LongRestBreath.count:
-                return "rest.long.exhaleLast"
-            default:
-                return "rest.long.exhale"
-            }
+            return exhaleKey(for: breath)
         case .settle:
             return viewModel.usesScriptedLongRest ? "" : "rest.long.settle"
+        }
+    }
+
+    /// The last breath is checked first, so a shorter rest still ends on "Sekali lagi".
+    private func inhaleKey(for breath: LongRestBreath) -> String {
+        if breath.isLast, breath.number > 1 {
+            return breath.position < LongRestBreath.lastPrefaceSeconds
+                ? "rest.long.inhaleLast"
+                : "rest.long.inhale"
+        }
+
+        if breath.number == 1 {
+            return viewModel.usesScriptedLongRest ? "rest.long.inhale" : "rest.long.inhaleFirst"
+        }
+
+        return "rest.long.inhale"
+    }
+
+    /// The last breath is checked first, so a shorter rest still ends on its closing exhale.
+    private func exhaleKey(for breath: LongRestBreath) -> String {
+        if breath.isLast {
+            return "rest.long.exhaleLast"
+        }
+
+        switch breath.number {
+        case 1:
+            return viewModel.usesScriptedLongRest ? "rest.long.exhale" : "rest.long.exhaleSlow"
+        case 3:
+            return "rest.long.exhaleShoulders"
+        case 5:
+            return "rest.long.exhaleSlow"
+        default:
+            return "rest.long.exhale"
         }
     }
 
@@ -320,7 +343,7 @@ struct TMDailyPlanNextView<
                 id: UUID(),
                 key: viewModel.longRestNarrationPrefix.map { $0 + "remaining %lld" }
                     ?? Self.remainingKey,
-                argument: remainingBreaths(afterStarting: breath)
+                argument: breath.remaining
             )
         }
 
@@ -332,15 +355,15 @@ struct TMDailyPlanNextView<
 
     /// Whether "N napas lagi" precedes this inhale cue.
     ///
-    /// The first breath never announces six. The approved script also says "1 napas lagi"
-    /// before "Sekali lagi"; the last breath speaks two inhale cues, so only the first one
-    /// carries the count. The older generic rest keeps its original 5…2 counts.
+    /// The first breath never announces the full count (that precedes it). The approved script
+    /// also says "1 napas lagi" before "Sekali lagi"; the last breath speaks two inhale cues, so
+    /// only the first one carries the count. The older generic rest counts down to 2.
     private func announcesRemainingBreaths(before breath: LongRestBreath, line: NarrationLine) -> Bool {
         guard breath.number > 1 else {
             return false
         }
 
-        guard breath.number == LongRestBreath.count else {
+        guard breath.isLast else {
             return true
         }
 
@@ -402,6 +425,7 @@ private final class MockDailyPlanNextViewModel: DailyPlanNextViewModelProtocol {
     let usesNextScript = false
     let usesScriptedLongRest = false
     let longRestNarrationPrefix: String? = nil
+    let longRestBreaths = 6
     let audioEvents = Empty<AudioEvent, Never>().eraseToAnyPublisher()
 
     func prepareRestNarration() {}

@@ -28,9 +28,11 @@ enum PracticePreferences {
     static func exerciseRepetitions(_ itemID: String) -> String {
         "practice.repetitions." + itemID
     }
-    static func exerciseRest(_ itemID: String) -> String {
-        "practice.rest." + itemID
-    }
+    /// The plan-wide rest between sets, in seconds. Replaces the earlier per-exercise
+    /// `practice.rest.<id>` values, which are no longer read.
+    static let shortRestSeconds = "practice.shortRest"
+    /// The plan-wide narrated breaths between exercises and between sides.
+    static let longRestBreaths = "practice.longRestBreaths"
     /// How much of each key repetition is saved; see `ReplayRecording`.
     static let replayRecording = "practice.replayRecording"
     /// What a saved video hides; see `VideoCensoring`.

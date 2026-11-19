@@ -153,7 +153,7 @@ struct TMFingerSessionView<Service: FingerSessionServiceProtocol>: View {
         case .rest:
             if let rest = model.scriptedRest {
                 TMTherapyBreathingRest(
-                    cue: LocalizedStringKey(OppositionGuidance.prefix(for: model.routine.side) + rest.key),
+                    cue: LocalizedStringKey(rest.cueKey(prefix: OppositionGuidance.prefix(for: model.routine.side))),
                     intensity: rest.intensity,
                     pause: model.pause,
                     stop: {
