@@ -1,7 +1,11 @@
 #!/usr/bin/env python3
 # generate_marizka_counts.py
 # Created by dimaswisodewo on 16/11/2026.
-"""Generate offline Marizka number clips for both app languages.
+"""Generate offline number clips for both app languages.
+
+Indonesian numbers are spoken by Marizka and English numbers by Katherine, the voices of each
+language's instructions (generate_narration.VOICE_NAMES). The script and the marizka-<language>-…
+filenames keep their names because NarrationClips.countResourceName depends on them.
 
 From the repository root, set ELEVENLABS_API_KEY in the environment, then run:
 
@@ -43,6 +47,7 @@ import re
 import shutil
 import subprocess
 import sys
+import tempfile
 import time
 from pathlib import Path
 
@@ -402,22 +407,24 @@ def render(line, seed, voice_id, api_key):
 class Recorder:
     """Records seeded candidate takes, skipping those whose fingerprint is unchanged."""
 
-    def __init__(self, voice_id, api_key, manifest, force):
-        self.voice_id = voice_id
+    def __init__(self, voice_ids, api_key, manifest, force):
+        # One voice per language, so a run records each number in its language's voice.
+        self.voice_ids = voice_ids
         self.api_key = api_key
         self.manifest = manifest
         self.force = force
         self.rendered = 0
 
     def takes(self, line, seeds):
+        voice_id = self.voice_ids[line["language"]]
         paths = []
         for seed in seeds:
             path = candidate_path(line, seed)
             key = f'{line["name"]}@{seed}'
-            stamp = fingerprint(line, self.voice_id, seed)
+            stamp = fingerprint(line, voice_id, seed)
             if self.force or not path.exists() or self.manifest.get(key) != stamp:
                 print(f'render {line["name"]} seed {seed}: {line["text"]}', flush=True)
-                path.write_bytes(render(line, seed, self.voice_id, self.api_key))
+                path.write_bytes(render(line, seed, voice_id, self.api_key))
                 self.manifest[key] = stamp
                 self.save()
                 self.rendered += 1
@@ -451,16 +458,33 @@ def choose_take(line, recorder):
     return calm_problems(line, measurements.get(chosen.stem))
 
 
-def normalize():
+def normalize(planned=None):
+    """Levels raw takes into the bundle folder; with `planned`, only those clips.
+
+    The normalizer reads a whole folder, so selected takes are levelled from a temporary copy;
+    otherwise re-encoding would rewrite every other bundled number.
+    """
     print(f"Normalizing into {OUTPUT.relative_to(ROOT)}.", flush=True)
-    result = subprocess.run(["swift", str(narration.NORMALIZER), str(RAW), str(OUTPUT)])
+    if planned is None:
+        result = subprocess.run(["swift", str(narration.NORMALIZER), str(RAW), str(OUTPUT)])
+        return result.returncode == 0
+
+    with tempfile.TemporaryDirectory() as selected:
+        for line in planned:
+            source = RAW / (line["name"] + ".mp3")
+            if source.is_file():
+                shutil.copyfile(source, Path(selected) / source.name)
+        result = subprocess.run(["swift", str(narration.NORMALIZER), selected, str(OUTPUT)])
     return result.returncode == 0
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("--voice-name", default="Marizka")
-    parser.add_argument("--voice-id", help="Use this voice ID instead of searching My Voices.")
+    parser.add_argument(
+        "--voice-name",
+        help="Use this voice for every selected clip instead of each language's VOICE_NAMES voice.",
+    )
+    parser.add_argument("--voice-id", help="Use this voice ID for every selected clip.")
     parser.add_argument(
         "--only",
         help="Comma-separated clip names or globs to render, e.g. 'marizka-id-countdown-*'.",
@@ -509,15 +533,18 @@ def main():
     if not api_key:
         parser.error("Set ELEVENLABS_API_KEY in the environment or ignored .env file.")
 
-    voice_id, voice_name = (
-        (args.voice_id, args.voice_id) if args.voice_id
-        else find_voice(api_key, args.voice_name)
-    )
-    print(f"Voice: {voice_name} ({voice_id}), model: {MODEL}")
+    voice_ids = {}
+    for language in sorted({line["language"] for line in planned}):
+        voice_id, voice_name = (
+            (args.voice_id, args.voice_id) if args.voice_id
+            else find_voice(api_key, args.voice_name or narration.VOICE_NAMES[language])
+        )
+        voice_ids[language] = voice_id
+        print(f"Voice ({language}): {voice_name} ({voice_id}), model: {MODEL}")
 
     CANDIDATES.mkdir(parents=True, exist_ok=True)
     manifest = json.loads(MANIFEST.read_text()) if MANIFEST.exists() else {}
-    recorder = Recorder(voice_id, api_key, manifest, args.force)
+    recorder = Recorder(voice_ids, api_key, manifest, args.force)
     still_energetic = []
 
     for line in planned:
@@ -529,7 +556,7 @@ def main():
     for name, problems in still_energetic:
         print(f"  best take still not calm {name}: {', '.join(problems)}", file=sys.stderr)
 
-    if not normalize():
+    if not normalize(planned if patterns else None):
         parser.error("Normalization failed; raw MP3 files are still available for retry.")
 
     if not check_outputs():

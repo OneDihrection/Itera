@@ -1650,3 +1650,29 @@ At the product owner's request, the circle of the short rest between sets (`TMTh
 Rest timing, `BreathingRest`, `RestBreath` and narration are unchanged.
 
 Verification: XcodeGen and a Debug Simulator build with IPHONEOS_DEPLOYMENT_TARGET=17.0, no warnings. On the iPad Pro 13-inch Simulator, `gallery:rest` drew the circle and it changed between captures, but the system camera prompt covered it, so the look was not fully checked. Pending on the M1 iPad: smoothness at 60 fps and thermals during a rest, the look in light and dark mode, pause freezing the wobble, Reduce Motion, and the scripted arm-raise and opposition rests, the timed guided and finger rests and the Balancing rest.
+
+## Native-English narration voice (2026-11-19)
+
+At the product owner's request, English narration no longer uses Marizka, whose English carried an Indonesian accent. English instructions and English numbers are now spoken by Katherine ("Katherine – Warm & Calm" from the ElevenLabs Voice Library, added to My Voices as "Tuntun EN Katherine"), a native American-English voice. Indonesian stays Marizka. This supersedes the voice named in *English recorded instructions and Marizka-only counts* and *Bilingual Marizka numbers*. The recipe and the calm gate are unchanged.
+
+- **Choice.** The library search for calm, soft female English voices returned 314. The product owner narrowed them to American and middle-aged voices. Free previews of 12 of these were measured with `Tools/measure_pitch.swift`, and the 5 closest to the 163 Hz reference recorded the same 7 lines (5 instructions, countdown "Three", repetition "Seven.") with the production recipe, best of 3 seeds:
+  - Katherine: median 135 Hz, 7/7 calm;
+  - Deedee: 127 Hz, 7/7;
+  - Shanny: 163 Hz, 7/7;
+  - Avery: 155 Hz, 6/7;
+  - Andrea: 182 Hz, 4/7;
+  - Marizka, for comparison: 171 Hz, 6/7.
+
+  The product owner chose Katherine by ear.
+- **Generators.** `generate_narration.VOICE_NAMES` maps each language to its voice, and `generate_marizka_counts.py` looks up one voice per language through it, so one run records each number in its language's voice. `--voice-name` and `--voice-id` still override. The `marizka-<language>-…` filenames and the script name are kept, because `NarrationClips.countResourceName` and AGENTS.md depend on them.
+- **Scoped runs.** A plain Indonesian `generate_narration.py` run, meant to fill 6 missing lines, re-recorded 135 lines that had no cached raw take or a stale fingerprint. It then re-levelled the whole raw folder and rewrote 308 approved NarrationID clips. Everything was restored from git before anything was committed. `generate_narration.py` gained `--only` (names or globs). With `--only`, both generators level only the selected takes, from a temporary folder, so other bundled clips are never re-encoded. API requests now also retry read timeouts.
+- **Indonesian gaps.** `demo.step.nextFinger`, `demo.step.otherArm`, `demo.step.peak`, `demo.step.start`, `session.switchArm.left` and `session.switchArm.right` were recorded in Marizka, so no Indonesian instruction falls back to the system voice.
+- **Configurable counts.** Sets (1–5) and repetitions (1–20) are configurable, so English has no count-bearing sentence. Every count is a number clip: repetitions 1–100 cover the 5 × 20 maximum, plus countdowns 1–10.
+
+Result: 187 English instruction clips (median 148 Hz, 90th percentile 162 Hz) and 110 English numbers (median 139 Hz, 90th percentile 153 Hz). All passed `--check`, with no missing, stray or not-calm clips and every countdown within 0.90 s. The Indonesian numbers and instructions are unchanged except for the 6 new clips.
+
+Verification: XcodeGen and a Debug Simulator build with IPHONEOS_DEPLOYMENT_TARGET=17.0 passed. The built app contains 456 Indonesian, 187 English and 220 number clips, and sampled clips match the sources byte for byte. Pending on the M1 iPad:
+- Katherine's tone and loudness next to Marizka through the speaker;
+- English pronunciation and countdown fit at the one-second tick;
+- English card timing with the new recordings;
+- Stop/Go recognition during English narration, including self-trigger from lines containing "go".

@@ -18,7 +18,7 @@ struct NarrationLine: Equatable {
     /// number a number line speaks.
     var argument: Int? = nil
 
-    /// A Marizka repetition number ("Tiga."), for counts no recorded sentence states.
+    /// A recorded repetition number ("Tiga."), for counts no recorded sentence states.
     static func number(_ value: Int) -> NarrationLine {
         NarrationLine(key: numberKey, argument: value)
     }
@@ -29,8 +29,8 @@ struct NarrationLine: Equatable {
 /// Human-sounding narration recorded ahead of time and bundled with the app.
 ///
 /// `Tools/generate_narration.py` renders sentences in Indonesian and English, while
-/// `Tools/generate_marizka_counts.py` renders number takes in both languages, all in Marizka's
-/// voice. `Tools/normalize_narration.swift` levels them as bundled AAC. Sessions stay offline:
+/// `Tools/generate_marizka_counts.py` renders number takes in both languages: Marizka speaks
+/// Indonesian and Katherine English, the same voice as each language's instructions. `Tools/normalize_narration.swift` levels them as bundled AAC. Sessions stay offline:
 /// nothing is synthesized over the network at runtime. A missing clip falls back to the
 /// on-device system voice.
 enum NarrationClips {

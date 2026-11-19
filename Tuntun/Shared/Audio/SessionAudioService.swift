@@ -326,13 +326,13 @@ final class SessionAudioService: NSObject, SessionAudioServiceProtocol, AVSpeech
             ?? Bundle.main.url(forResource: name, withExtension: "m4a")
     }
 
-    /// Marizka's recorded number. Callers speak the number with the system voice when the
+    /// The recorded number in the session's language. Callers speak the number with the system voice when the
     /// clip is missing.
     private func countClipName(_ number: Int) -> String {
         NarrationClips.countResourceName(number, language: language, countdown: false)
     }
 
-    /// Marizka's short countdown take, or her full-length number when no short take exists.
+    /// The short countdown take, or the full-length number when no short take exists.
     private func countdownClipName(_ number: Int) -> String {
         if let url = NarrationClips.countdownURL(number, language: language) {
             return url.deletingPathExtension().lastPathComponent

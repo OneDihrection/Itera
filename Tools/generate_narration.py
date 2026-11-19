@@ -18,14 +18,22 @@ Usage, from the repository root:
     python3 Tools/generate_narration.py --language en --check
     xcodegen generate
 
-Only new or changed sentences are rendered on later runs (see Tools/narration-manifest.json
-and Tools/narration-en-manifest.json). English sentences are recorded the way the Marizka
-counts are: every line must sound as low, stable and calm as the Indonesian instructions, so
-each is recorded with several seeds and Tools/measure_pitch.swift keeps the calmest take.
+Record and level only some lines; every other bundled clip is left untouched:
+    python3 Tools/generate_narration.py --only 'narration-id-session.switchArm.*'
+
+A plain run re-records every sentence whose cached raw take is missing or whose fingerprint
+changed, then re-levels the whole raw folder into the app. Use --only to fill gaps without
+touching approved recordings. Only new or changed sentences are rendered on later runs (see Tools/narration-manifest.json
+and Tools/narration-en-manifest.json). Indonesian is spoken by Marizka and English by
+Katherine, a native American-English voice (VOICE_NAMES). English sentences are recorded the
+way the counts are: every line must sound as low, stable and calm as the Indonesian
+instructions, so each is recorded with several seeds and Tools/measure_pitch.swift keeps the
+calmest take.
 Numbers are not rendered here; Tools/generate_marizka_counts.py owns them.
 """
 
 import argparse
+import fnmatch
 import hashlib
 import json
 import math
@@ -34,6 +42,7 @@ import re
 import ssl
 import subprocess
 import shutil
+import socket
 import sys
 import tempfile
 import time
@@ -58,6 +67,13 @@ MANIFEST_EN = ROOT / "Tools/narration-en-manifest.json"
 LANGUAGE = "id"
 LANGUAGES = ("id", "en")
 API = "https://api.elevenlabs.io"
+# The ElevenLabs "My Voices" name that speaks each language. Katherine ("Katherine - Warm &
+# Calm", Voice Library) was chosen by ear on 2026-11-19 from calm middle-aged American voices
+# that passed the calm gate; Marizka's English carried an Indonesian accent.
+VOICE_NAMES = {
+    "id": "Marizka",
+    "en": "Tuntun EN Katherine",
+}
 SUPPORTED_GROUPS = {"finger", "body", "opposition-left", "arm-raise-left"}
 # The approved arm-raise and opposition scripts are Indonesian only.
 ENGLISH_GROUPS = {"finger", "body"}
@@ -356,6 +372,12 @@ def request(method, path, api_key, query=None, body=None, accept="application/js
                 time.sleep(wait)
                 continue
             sys.exit(f"ElevenLabs error {error.code} on {path}: {detail}")
+        except (TimeoutError, socket.timeout):
+            # A slow render or a stalled connection; recorded takes are cached, so retrying is safe.
+            wait = 2 ** attempt
+            print(f"  timed out, retrying in {wait}s", file=sys.stderr)
+            time.sleep(wait)
+            continue
         except urllib.error.URLError as error:
             if "CERTIFICATE_VERIFY_FAILED" in str(error.reason):
                 sys.exit(
@@ -463,13 +485,17 @@ def main():
     global LANGUAGE, RAW, OUTPUT, MANIFEST
 
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("--voice-name", default="Marizka")
+    parser.add_argument("--voice-name", help="Override the language's voice in VOICE_NAMES.")
     parser.add_argument("--voice-id", help="Use this voice ID instead of searching by name.")
     parser.add_argument("--model", default="eleven_multilingual_v2")
     parser.add_argument("--language", choices=LANGUAGES, default="id", help="Catalog language to record.")
     parser.add_argument(
         "--groups",
         help="Comma-separated: finger, body, opposition-left, arm-raise-left (English: finger, body).",
+    )
+    parser.add_argument(
+        "--only",
+        help="Comma-separated clip names or globs to render and level, e.g. 'narration-id-demo.step.*'.",
     )
     parser.add_argument("--dry-run", action="store_true", help="List sentences and characters only.")
     parser.add_argument("--force", action="store_true", help="Re-render every sentence.")
@@ -486,16 +512,23 @@ def main():
     unknown = groups - allowed
     if unknown:
         parser.error("Unknown groups for this language: " + ", ".join(sorted(unknown)))
-    lines = collect_lines(groups)
+    all_lines = collect_lines(groups)
+    patterns = [pattern.strip() for pattern in (args.only or "").split(",") if pattern.strip()]
+    lines = [
+        line for line in all_lines
+        if not patterns or any(fnmatch.fnmatchcase(line["name"], pattern) for pattern in patterns)
+    ]
+    if not lines:
+        parser.error(f"--only matched no sentences: {args.only}")
     characters = sum(len(line["text"]) for line in lines)
 
     if args.check:
         if LANGUAGE != "en":
             parser.error("--check measures English recordings; use --language en.")
-        sys.exit(0 if check_calm(lines) else 1)
+        sys.exit(0 if check_calm(all_lines) else 1)
 
     if args.normalize_only:
-        normalize()
+        normalize(lines if patterns else None)
         return
 
     if args.dry_run:
@@ -509,7 +542,7 @@ def main():
     if not api_key:
         sys.exit("Set ELEVENLABS_API_KEY in this terminal or the ignored .env file (it is never stored).")
 
-    voice_id, voice_name = (args.voice_id, args.voice_id) if args.voice_id else find_voice(api_key, args.voice_name)
+    voice_id, voice_name = (args.voice_id, args.voice_id) if args.voice_id else find_voice(api_key, args.voice_name or VOICE_NAMES[LANGUAGE])
     print(f"Voice: {voice_name} ({voice_id}), model {args.model}")
 
     RAW.mkdir(parents=True, exist_ok=True)
@@ -533,8 +566,8 @@ def main():
         rendered += 1
 
     print(f"\nRendered {rendered} takes for {len(lines)} sentences into {RAW.relative_to(ROOT)}.")
-    normalize()
-    if LANGUAGE == "en" and not check_calm(lines):
+    normalize(lines if patterns else None)
+    if LANGUAGE == "en" and not check_calm(all_lines):
         sys.exit(1)
     print("Next: run `xcodegen generate` so the new clips are bundled.")
 
@@ -644,10 +677,23 @@ def check_calm(lines):
     return not missing and not stray and not not_calm
 
 
-def normalize():
-    """Levels every raw clip into the app's narration folder (fast, no credits used)."""
+def normalize(lines=None):
+    """Levels raw clips into the app's narration folder (fast, no credits used).
+
+    With `lines`, only their raw takes are levelled, from a temporary folder, because the
+    normalizer reads a whole folder and re-encoding would rewrite every other bundled clip.
+    """
     print("Levelling loudness...", flush=True)
-    result = subprocess.run(["swift", str(NORMALIZER), str(RAW), str(OUTPUT)])
+    if lines is None:
+        result = subprocess.run(["swift", str(NORMALIZER), str(RAW), str(OUTPUT)])
+    else:
+        with tempfile.TemporaryDirectory() as selected:
+            for line in lines:
+                source = RAW / (line["name"] + ".mp3")
+                if source.is_file():
+                    shutil.copyfile(source, Path(selected) / source.name)
+            result = subprocess.run(["swift", str(NORMALIZER), selected, str(OUTPUT)])
+
     if result.returncode != 0:
         sys.exit("Normalizing failed; the raw MP3s are kept in Tools/NarrationRaw.")
 
