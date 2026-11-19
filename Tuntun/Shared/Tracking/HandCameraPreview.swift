@@ -42,8 +42,15 @@ final class TMCameraPreviewView: UIView {
     var videoBoundsChanged: ((CGRect?) -> Void)?
     private var videoBounds: CGRect?
     private var reportedReady = false
-    private var appliedOrientation: AVCaptureVideoOrientation?
+    /// The capture angle last sent to the camera service; cleared so the next layout sends it again.
+    private var appliedCaptureAngle: CGFloat?
     private var previewObservation: NSKeyValueObservation?
+    /// The camera's preview and capture angles; it reports changes on the main queue.
+    private lazy var rotation = CameraRotationTracker { [weak self] angles in
+        MainActor.assumeIsolated {
+            self?.applyRotation(angles)
+        }
+    }
     private let videoMask = CAShapeLayer()
 
     override init(frame: CGRect) {
@@ -51,7 +58,7 @@ final class TMCameraPreviewView: UIView {
         preview.actions = ["bounds": NSNull(), "position": NSNull(), "transform": NSNull()]
         previewObservation = preview.observe(\.isPreviewing, options: [.new]) { [weak self] _, _ in
             Task { @MainActor in
-                self?.appliedOrientation = nil
+                self?.appliedCaptureAngle = nil
                 self?.setNeedsLayout()
                 self?.reportReadiness()
             }
@@ -63,7 +70,8 @@ final class TMCameraPreviewView: UIView {
     override func didMoveToWindow() {
         super.didMoveToWindow()
         if window == nil {
-            appliedOrientation = nil
+            appliedCaptureAngle = nil
+            rotation.stop()
         }
         setNeedsLayout()
         reportReadiness()
@@ -71,34 +79,24 @@ final class TMCameraPreviewView: UIView {
 
     override func layoutSubviews() {
         super.layoutSubviews()
-        guard let scene = window?.windowScene else {
+        guard window?.windowScene != nil else {
             return
         }
-        let orientation: AVCaptureVideoOrientation
-        #if targetEnvironment(macCatalyst)
-        // Mac windows have no interface orientation, and Mac cameras already deliver landscape frames.
-        orientation = .landscapeLeft
-        #else
-        switch scene.interfaceOrientation {
-        case .landscapeLeft: orientation = .landscapeLeft
-        case .landscapeRight: orientation = .landscapeRight
-        default:
+        #if !targetEnvironment(macCatalyst)
+        // Mac windows have no interface orientation, and Mac cameras already deliver landscape
+        // frames, so only iPad rotates.
+        guard window?.windowScene?.interfaceOrientation.isLandscape == true else {
             reportReadiness()
             return
         }
-        #endif
-        if appliedOrientation != orientation {
-            appliedOrientation = orientation
-            cameraService?.orient(orientation)
+
+        if let angles = rotation.track(preview.connection, previewLayer: preview) {
+            applyRotation(angles)
         }
+        #endif
         CATransaction.begin()
         CATransaction.setDisableActions(true)
         if let connection = preview.connection {
-            #if !targetEnvironment(macCatalyst)
-            if connection.isVideoOrientationSupported, connection.videoOrientation != orientation {
-                connection.videoOrientation = orientation
-            }
-            #endif
             if connection.isVideoMirroringSupported {
                 if connection.automaticallyAdjustsVideoMirroring {
                     connection.automaticallyAdjustsVideoMirroring = false
@@ -111,6 +109,23 @@ final class TMCameraPreviewView: UIView {
         updateVideoMask()
         CATransaction.commit()
         reportReadiness()
+    }
+
+    /// Keeps the preview upright and sends the capture angle to the camera service when it changes.
+    private func applyRotation(_ angles: CameraRotationTracker.Angles) {
+        if let connection = preview.connection {
+            CATransaction.begin()
+            CATransaction.setDisableActions(true)
+            CameraRotationTracker.apply(angles.preview, to: connection)
+            CATransaction.commit()
+        }
+
+        guard appliedCaptureAngle != angles.capture else {
+            return
+        }
+
+        appliedCaptureAngle = angles.capture
+        cameraService?.rotateCapture(to: angles.capture)
     }
 
     private func updateVideoMask() {

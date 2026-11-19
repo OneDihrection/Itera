@@ -63,6 +63,12 @@ struct TMBodyCameraPreview: UIViewRepresentable {
         private var videoBounds: CGRect?
         var front = true
         private var lastOrientation: UIInterfaceOrientation?
+        /// The camera's preview angle; it reports changes on the main queue.
+        private lazy var rotation = CameraRotationTracker { [weak self] angles in
+            MainActor.assumeIsolated {
+                self?.applyPreviewRotation(angles.preview)
+            }
+        }
         private var reportedReady = false
         override class var layerClass: AnyClass { AVCaptureVideoPreviewLayer.self }
         var previewLayer: AVCaptureVideoPreviewLayer { layer as! AVCaptureVideoPreviewLayer }
@@ -71,6 +77,7 @@ struct TMBodyCameraPreview: UIViewRepresentable {
             super.didMoveToWindow()
             if window == nil {
                 lastOrientation = nil
+                rotation.stop()
             }
             setNeedsLayout()
             reportReadiness()
@@ -107,7 +114,6 @@ struct TMBodyCameraPreview: UIViewRepresentable {
                   orientation == .landscapeLeft || orientation == .landscapeRight else { return }
             #endif
             let right = orientation == .landscapeRight
-            let videoOrientation: AVCaptureVideoOrientation = right ? .landscapeRight : .landscapeLeft
             CATransaction.begin()
             CATransaction.setDisableActions(true)
             if let connection = previewLayer.connection {
@@ -116,9 +122,8 @@ struct TMBodyCameraPreview: UIViewRepresentable {
                     connection.videoRotationAngle = 0
                 }
                 #else
-                if connection.isVideoOrientationSupported,
-                   connection.videoOrientation != videoOrientation {
-                    connection.videoOrientation = videoOrientation
+                if let angles = rotation.track(connection, previewLayer: previewLayer) {
+                    CameraRotationTracker.apply(angles.preview, to: connection)
                 }
                 #endif
                 if connection.isVideoMirroringSupported {
@@ -137,6 +142,17 @@ struct TMBodyCameraPreview: UIViewRepresentable {
                 lastOrientation = orientation
                 DispatchQueue.main.async { [weak self] in self?.onOrientation?(right) }
             }
+        }
+
+        private func applyPreviewRotation(_ angle: CGFloat) {
+            guard let connection = previewLayer.connection else {
+                return
+            }
+
+            CATransaction.begin()
+            CATransaction.setDisableActions(true)
+            CameraRotationTracker.apply(angle, to: connection)
+            CATransaction.commit()
         }
 
         private func updateVideoBounds(_ bounds: CGRect?) {

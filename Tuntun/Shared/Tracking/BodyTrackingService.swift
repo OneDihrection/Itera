@@ -277,16 +277,15 @@ final class BodyTrackingService: NSObject, AVCaptureVideoDataOutputSampleBufferD
         session.addInput(input)
         session.addOutput(output)
         if let connection = output.connection(with: .video) {
-            // Semantic orientation accounts for the selected camera's sensor mounting.
-            // A fixed raw angle can invert front-camera frames by 180 degrees.
+            // The camera's own capture angle accounts for its sensor mounting; a fixed angle can
+            // invert front-camera frames by 180 degrees (the default differs on newer iPads). The
+            // session is rebuilt for each interface orientation, so one reading per build is
+            // current: the iPad is held the way the interface faces (`configure(landscapeRight:)`).
             #if targetEnvironment(macCatalyst)
-            if connection.isVideoRotationAngleSupported(0) {
-                connection.videoRotationAngle = 0
-            }
+            CameraRotationTracker.apply(0, to: connection)
             #else
-            if connection.isVideoOrientationSupported {
-                connection.videoOrientation = orientation
-            }
+            let rotation = AVCaptureDevice.RotationCoordinator(device: camera, previewLayer: nil)
+            CameraRotationTracker.apply(rotation.videoRotationAngleForHorizonLevelCapture, to: connection)
             #endif
             if connection.isVideoMirroringSupported {
                 connection.automaticallyAdjustsVideoMirroring = false

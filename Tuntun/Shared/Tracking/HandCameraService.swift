@@ -98,14 +98,16 @@ final class HandCameraService: NSObject, AVCaptureVideoDataOutputSampleBufferDel
         }
     }
 
-    func orient(_ orientation: AVCaptureVideoOrientation) {
+    /// Rotates the analysed frames to `angle`, the camera's horizon-level capture angle from the
+    /// preview's `CameraRotationTracker`. Frames from before a rotation get a stale generation.
+    func rotateCapture(to angle: CGFloat) {
         #if targetEnvironment(macCatalyst)
         // Mac cameras already deliver upright landscape frames; forcing an orientation rotates them.
         return
         #else
         queue.async { [self] in
-            if let connection = output.connection(with: .video), connection.videoOrientation != orientation {
-                connection.videoOrientation = orientation
+            if let connection = output.connection(with: .video),
+               CameraRotationTracker.apply(angle, to: connection) {
                 generation = UUID()
             }
         }
@@ -134,10 +136,8 @@ final class HandCameraService: NSObject, AVCaptureVideoDataOutputSampleBufferDel
         output.alwaysDiscardsLateVideoFrames = true
         output.setSampleBufferDelegate(self, queue: queue)
         session.addOutput(output)
+        // The preview sets the rotation as soon as it is laid out (`rotateCapture(to:)`).
         if let connection = output.connection(with: .video) {
-            #if !targetEnvironment(macCatalyst)
-            connection.videoOrientation = .landscapeLeft
-            #endif
             connection.automaticallyAdjustsVideoMirroring = false
             connection.isVideoMirrored = false
             if connection.isVideoStabilizationSupported {
