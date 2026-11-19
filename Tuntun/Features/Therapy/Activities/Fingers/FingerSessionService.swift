@@ -61,7 +61,8 @@ final class FingerSessionService: FingerSessionServiceProtocol {
         only: FingerExercise? = nil,
         side: HandSide? = nil,
         sets: Int? = nil,
-        repetitions: Int? = nil
+        repetitions: Int? = nil,
+        restSeconds: Int? = nil
     ) {
         let model = category == .fingers ? fingers : forearm
         let checkpoint = continuing ? model.checkpoint : nil
@@ -72,6 +73,7 @@ final class FingerSessionService: FingerSessionServiceProtocol {
             routine.side = side ?? routine.side
             routine.sets = sets ?? routine.sets
             routine.repetitions = repetitions ?? routine.repetitions
+            routine.restSeconds = restSeconds ?? routine.restSeconds
         }
 
         session = FingerSessionViewModel(

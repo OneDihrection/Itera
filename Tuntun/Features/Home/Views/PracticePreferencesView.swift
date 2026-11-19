@@ -7,17 +7,12 @@
 
 import SwiftUI
 
-struct TMPracticePreferencesView<
-    ViewModel: PracticePreferencesViewModelProtocol,
-    Builder: PracticePreferencesContentBuildable
->: View {
+struct TMPracticePreferencesView<ViewModel: PracticePreferencesViewModelProtocol>: View {
     @AppStorage(ExerciseMusicTrack.storageKey) private var musicTrack = ExerciseMusicTrack.defaultValue
     @State private var viewModel: ViewModel
-    private let builder: Builder
-    @Environment(\.buttonFeedback) private var buttonFeedback
     @Environment(\.scenePhase) private var scenePhase
-    /// The nested Debug plan editor sheet.
-    @State private var editingPlan = false
+    /// Arrange mode: drag handles and show/hide toggles instead of each exercise's settings.
+    @State private var arranging = false
     @AppStorage(PracticePreferences.calmMode) private var calmMode = false
     @AppStorage(PracticePreferences.buttonSounds) private var buttonSounds = true
 
@@ -28,39 +23,13 @@ struct TMPracticePreferencesView<
     @AppStorage(PracticePreferences.videoCensoring) private var videoCensoring = PracticePreferences.videoCensoringChoice
     @AppStorage(AppLanguage.storageKey) private var language = AppLanguage.selected.rawValue
 
-    init(viewModel: ViewModel, builder: Builder) {
+    init(viewModel: ViewModel) {
         _viewModel = State(initialValue: viewModel)
-        self.builder = builder
     }
 
     var body: some View {
         Form {
-            // The same saved finger routine the plan page edits; a session in progress keeps
-            // the snapshot it started with.
-            Section {
-                Picker("settings.trainingSide", selection: $viewModel.sidePreference) {
-                    Text("settings.trainingSideDefault").tag("")
-                    Text("session.left").tag(HandSide.left.rawValue)
-                    Text("session.right").tag(HandSide.right.rawValue)
-                }
-                .frame(minHeight: 64)
-                TMTherapyNumberControl(title: "plan.setsShort", value: $viewModel.sets, range: 1...5, showsBackground: false)
-                TMTherapyNumberControl(title: "plan.repsShort", value: $viewModel.repetitions, range: 1...20, showsBackground: false)
-                TMTherapyNumberControl(
-                    title: "plan.restSeconds",
-                    value: $viewModel.restSeconds,
-                    range: 5...120,
-                    step: 5,
-                    showsBackground: false
-                )
-            } header: {
-                Text("settings.exerciseTitle").typography(.headline)
-            } footer: {
-                Text("settings.exerciseHelp").typography(.body)
-            }
-            if let key = viewModel.errorKey {
-                Section { TMTherapyError(key: key) }
-            }
+            exercisesSection
             Section {
                 TMLanguageSelector(language: $language)
                     .frame(minHeight: 64)
@@ -99,10 +68,8 @@ struct TMPracticePreferencesView<
             } footer: {
                 Text("cognitive.soundHelp").typography(.body)
             }
-            #if DEBUG
-            debugSection
-            #endif
         }
+        .environment(\.editMode, .constant(arranging ? .active : .inactive))
         .typography(.body)
         .tint(TherapyPalette.green)
         .navigationTitle("cognitive.settings")
@@ -110,9 +77,7 @@ struct TMPracticePreferencesView<
         .toolbar {
             ToolbarItem(placement: .confirmationAction) {
                 Button("action.done") {
-                    Task {
-                        await viewModel.done()
-                    }
+                    viewModel.done()
                 }
                     .typography(.headline)
                     .frame(minHeight: 64)
@@ -128,28 +93,191 @@ struct TMPracticePreferencesView<
 
             viewModel.refreshPermissions()
         }
-        .onDisappear { Task { await viewModel.save() } }
-        #if DEBUG
-        .sheet(isPresented: $editingPlan) {
-            NavigationStack {
-                builder.buildDebugPlanEditor()
-            }
-            .modalEnvironment(buttonFeedback: buttonFeedback)
-        }
-        #endif
     }
 
-    #if DEBUG
-    // MARK: - Debug
+    // MARK: - Exercises
 
-    private var debugSection: some View {
+    /// The one place for exercise preferences, in the plan's order. Normally each exercise folds
+    /// its side, sets, repetitions and rest under its name; Arrange shows drag handles and
+    /// show/hide switches instead. Every change is saved at once.
+    private var exercisesSection: some View {
         Section {
-            TMDebugActionButton(title: "debug.planEditor.open", symbol: "list.bullet") {
-                editingPlan = true
+            ForEach(viewModel.layoutEntries) { entry in
+                if let item = viewModel.item(for: entry) {
+                    if arranging {
+                        arrangeRow(entry, item: item)
+                    } else {
+                        exerciseRow(entry, item: item)
+                    }
+                }
             }
+            .onMove { source, destination in
+                viewModel.moveEntries(fromOffsets: source, toOffset: destination)
+            }
+
+            if arranging {
+                TMTherapyTextButton(title: "settings.resetOrder", symbol: "arrow.counterclockwise") {
+                    viewModel.resetLayout()
+                }
+                .frame(minHeight: 64)
+            }
+        } header: {
+            exercisesHeader
+        } footer: {
+            Text(arranging ? "settings.arrangeHelp" : "settings.planExercisesHelp")
+                .typography(.body)
         }
     }
-    #endif
+
+    private var exercisesHeader: some View {
+        HStack {
+            Text("settings.planExercisesTitle")
+                .typography(.headline)
+
+            Spacer()
+
+            Button(arranging ? "action.done" : "settings.arrange") {
+                withAnimation {
+                    arranging.toggle()
+                }
+            }
+            .typography(.headline)
+            .textCase(nil)
+            // Section headers draw text in the secondary style; keep the action visibly tappable.
+            .foregroundStyle(TherapyPalette.green)
+            .frame(minHeight: 44)
+        }
+    }
+
+    private func arrangeRow(_ entry: DailyPlanLayout.Entry, item: DailyPlanItem) -> some View {
+        Toggle(isOn: shownBinding(for: entry)) {
+            Text(LocalizedStringKey(viewModel.titleKey(for: item)))
+                .typography(.headline)
+        }
+        .frame(minHeight: 64)
+    }
+
+    private func exerciseRow(_ entry: DailyPlanLayout.Entry, item: DailyPlanItem) -> some View {
+        DisclosureGroup {
+            exerciseControls(item)
+        } label: {
+            exerciseLabel(entry, item: item)
+        }
+        .frame(minHeight: 64)
+    }
+
+    private func exerciseLabel(_ entry: DailyPlanLayout.Entry, item: DailyPlanItem) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(LocalizedStringKey(viewModel.titleKey(for: item)))
+                .typography(.headline)
+
+            exerciseSummary(entry, item: item)
+                .typography(.body)
+                .foregroundStyle(.secondary)
+        }
+        .opacity(entry.isShown ? 1 : 0.6)
+        .accessibilityElement(children: .combine)
+    }
+
+    @ViewBuilder
+    private func exerciseSummary(_ entry: DailyPlanLayout.Entry, item: DailyPlanItem) -> some View {
+        if entry.isShown {
+            let counts = viewModel.counts(for: item)
+
+            HStack(spacing: 6) {
+                if viewModel.hasSide(item) {
+                    Text(sideKey(viewModel.side(for: item)))
+                    Text(verbatim: "·")
+                }
+
+                Text("plan.sets \(counts.sets)")
+                Text(verbatim: "·")
+                Text("plan.repetitions \(counts.repetitions)")
+            }
+        } else {
+            Text("settings.hidden")
+        }
+    }
+
+    @ViewBuilder
+    private func exerciseControls(_ item: DailyPlanItem) -> some View {
+        if viewModel.hasSide(item) {
+            Picker("settings.side", selection: sideBinding(for: item)) {
+                Text("session.right").tag(RoutineSides.right)
+                Text("session.left").tag(RoutineSides.left)
+                Text("settings.side.both").tag(RoutineSides.both)
+            }
+            .frame(minHeight: 64)
+        }
+
+        TMTherapyNumberControl(
+            title: "plan.setsShort",
+            value: setsBinding(for: item),
+            range: DailyPlanOverrides.setsRange,
+            showsBackground: false
+        )
+
+        TMTherapyNumberControl(
+            title: "plan.repsShort",
+            value: repetitionsBinding(for: item),
+            range: DailyPlanOverrides.repetitionsRange,
+            showsBackground: false
+        )
+
+        TMTherapyNumberControl(
+            title: "plan.restSeconds",
+            value: restBinding(for: item),
+            range: DailyPlanOverrides.restRange,
+            step: 5,
+            showsBackground: false
+        )
+    }
+
+    private func sideKey(_ side: RoutineSides) -> LocalizedStringKey {
+        switch side {
+        case .right:
+            return "session.right"
+        case .left:
+            return "session.left"
+        case .both:
+            return "settings.side.both"
+        }
+    }
+
+    private func shownBinding(for entry: DailyPlanLayout.Entry) -> Binding<Bool> {
+        Binding(
+            get: { entry.isShown },
+            set: { viewModel.setShown($0, for: entry) }
+        )
+    }
+
+    private func sideBinding(for item: DailyPlanItem) -> Binding<RoutineSides> {
+        Binding(
+            get: { viewModel.side(for: item) },
+            set: { viewModel.setSide($0, for: item) }
+        )
+    }
+
+    private func setsBinding(for item: DailyPlanItem) -> Binding<Int> {
+        Binding(
+            get: { viewModel.counts(for: item).sets },
+            set: { viewModel.setSets($0, for: item) }
+        )
+    }
+
+    private func repetitionsBinding(for item: DailyPlanItem) -> Binding<Int> {
+        Binding(
+            get: { viewModel.counts(for: item).repetitions },
+            set: { viewModel.setRepetitions($0, for: item) }
+        )
+    }
+
+    private func restBinding(for item: DailyPlanItem) -> Binding<Int> {
+        Binding(
+            get: { viewModel.restSeconds(for: item) },
+            set: { viewModel.setRestSeconds($0, for: item) }
+        )
+    }
 
     // MARK: - Voice control
 
@@ -259,33 +387,83 @@ struct TMPracticePreferencesView<
 @MainActor
 @Observable
 private final class MockPracticePreferencesViewModel: PracticePreferencesViewModelProtocol {
-    var sidePreference = ""
-    var sets = 2
-    var repetitions = 5
-    var restSeconds = 20
-    let errorKey: String? = nil
+    private let items = Array(DailyPlan.standard.prefix(4))
+    private(set) var layoutEntries: [DailyPlanLayout.Entry]
+    private var sides: [String: RoutineSides] = [:]
+    private var setCounts: [String: Int] = [:]
+    private var repetitionCounts: [String: Int] = [:]
+    private var rests: [String: Int] = [:]
     let voiceEnabled = false
     let voiceFallback: VoicePermissionFallback? = .openSettings(messageKey: "home.microphoneDenied")
 
-    func done() async {}
-    func save() async {}
+    init() {
+        layoutEntries = DailyPlanLayout.standard(Array(DailyPlan.standard.prefix(4))).entries
+    }
+
+    func item(for entry: DailyPlanLayout.Entry) -> DailyPlanItem? {
+        items.first { $0.id == entry.itemID }
+    }
+
+    func titleKey(for item: DailyPlanItem) -> String {
+        DailyPlanViewModel.titleKey(for: item.exercise)
+    }
+
+    func setShown(_ shown: Bool, for entry: DailyPlanLayout.Entry) {
+        guard let index = layoutEntries.firstIndex(where: { $0.itemID == entry.itemID }) else {
+            return
+        }
+
+        layoutEntries[index].isShown = shown
+    }
+
+    func moveEntries(fromOffsets source: IndexSet, toOffset destination: Int) {
+        layoutEntries.move(fromOffsets: source, toOffset: destination)
+    }
+
+    func resetLayout() {
+        layoutEntries = DailyPlanLayout.standard(items).entries
+    }
+
+    func hasSide(_ item: DailyPlanItem) -> Bool {
+        true
+    }
+
+    func side(for item: DailyPlanItem) -> RoutineSides {
+        sides[item.id] ?? .both
+    }
+
+    func setSide(_ side: RoutineSides, for item: DailyPlanItem) {
+        sides[item.id] = side
+    }
+
+    func counts(for item: DailyPlanItem) -> (sets: Int, repetitions: Int) {
+        (setCounts[item.id] ?? 2, repetitionCounts[item.id] ?? 5)
+    }
+
+    func setSets(_ sets: Int, for item: DailyPlanItem) {
+        setCounts[item.id] = sets
+    }
+
+    func setRepetitions(_ repetitions: Int, for item: DailyPlanItem) {
+        repetitionCounts[item.id] = repetitions
+    }
+
+    func restSeconds(for item: DailyPlanItem) -> Int {
+        rests[item.id] ?? 20
+    }
+
+    func setRestSeconds(_ seconds: Int, for item: DailyPlanItem) {
+        rests[item.id] = seconds
+    }
+
+    func done() {}
     func refreshPermissions() {}
     func resolveVoiceAccess() async {}
 }
 
-@MainActor
-private struct MockPreferencesBuilder: PracticePreferencesContentBuildable {
-    @ViewBuilder func buildDebugPlanEditor() -> some View {
-        Text(verbatim: "Plan editor")
-    }
-}
-
 #Preview("Settings") {
     NavigationStack {
-        TMPracticePreferencesView(
-            viewModel: MockPracticePreferencesViewModel(),
-            builder: MockPreferencesBuilder()
-        )
+        TMPracticePreferencesView(viewModel: MockPracticePreferencesViewModel())
     }
 }
 #endif

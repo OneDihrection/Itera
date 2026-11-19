@@ -53,17 +53,21 @@ final class DailyPlanViewModel: DailyPlanSessionReporting {
     private(set) var restingBeforeNext = false
     private(set) var oppositionRestSide: HandSide?
     private(set) var armRaiseRestSide: TherapySide?
-    /// The second arm of a scripted arm raise, waiting behind its long rest. `nil` starts at
-    /// the first arm. The plan item is marked done only after its last arm.
-    private var pendingArmRaiseSide: TherapySide?
+    /// The second side of an item that runs one session per side (the scripted arm raise, a
+    /// finger exercise on both hands), waiting behind its long rest. `nil` starts at the first
+    /// side. The plan item is marked done only after its last side.
+    private var pendingSecondSide: TherapySide?
+    /// Sides chosen per exercise in Settings, by item id. Items without a choice use their
+    /// program's saved side (`savedSide(of:)`).
+    private(set) var sideChoices: [String: RoutineSides] = [:]
+    /// Sets, repetitions and rest chosen per exercise in Settings, by item id. A missing value
+    /// keeps the program's own.
+    private(set) var overrides: [String: DailyPlanOverrides] = [:]
 
     var usesScriptedLongRest: Bool {
         oppositionRestSide != nil || armRaiseRestSide != nil
     }
     private(set) var errorKey: String?
-    var sidePreference = UserDefaults.standard.string(forKey: PracticePreferences.dailyPlanSide) ?? "" {
-        didSet { UserDefaults.standard.set(sidePreference, forKey: PracticePreferences.dailyPlanSide) }
-    }
 
     @ObservationIgnored private let repository: any DailyPlanProgressRepository
     @ObservationIgnored private let fingers: FingerHomeViewModel
@@ -74,10 +78,8 @@ final class DailyPlanViewModel: DailyPlanSessionReporting {
     @ObservationIgnored private let router: any DailyPlanRouterProtocol
     @ObservationIgnored private var loadFailed = false
 
-    #if DEBUG
-    /// The debug plan editor's arrangement and custom counts.
-    private(set) var debugLayout: DebugPlanLayout
-    #endif
+    /// Which exercises Beranda shows and their order, as arranged in Settings.
+    private(set) var layout: DailyPlanLayout
 
     /// - Parameters:
     ///   - fingers: the finger program, whose saved routine and checkpoint finger items use.
@@ -105,34 +107,38 @@ final class DailyPlanViewModel: DailyPlanSessionReporting {
         self.fingerSessionService = fingerSessionService
         self.router = router
 
-        #if DEBUG
-        let layout = DebugPlanLayout.load(for: items)
-        self.debugLayout = layout
+        let layout = DailyPlanLayout.load(for: items)
+        self.layout = layout
         self.items = layout.items(from: items)
-        #else
-        self.items = items
-        #endif
+
+        sideChoices = Self.loadSideChoices(for: items)
+        overrides = Self.loadOverrides(for: items)
     }
 
-    #if DEBUG
-    // MARK: - Debug layout
+    // MARK: - Layout
 
-    /// Saves the debug editor's layout and rearranges Beranda. Ignored while a plan runs, so
-    /// the open item's index never shifts under it.
-    func applyDebugLayout(_ layout: DebugPlanLayout) {
+    /// Saves the arrangement and rearranges Beranda. Ignored while a plan runs, so the open
+    /// item's index never shifts under it.
+    func applyLayout(_ layout: DailyPlanLayout) {
         guard !isRunning else {
             return
         }
 
         let reconciled = layout.reconciled(with: standardItems)
         reconciled.save()
-        debugLayout = reconciled
+        self.layout = reconciled
         items = reconciled.items(from: standardItems)
     }
 
-    /// The sets and repetitions `item` runs with now, custom counts included. The editor
-    /// starts a newly customized item from these.
-    func debugCounts(
+    /// Every exercise shown, in the standard order.
+    func resetLayout() {
+        applyLayout(.standard(standardItems))
+    }
+
+    // MARK: - Counts
+
+    /// The sets and repetitions `item` runs with now, Settings' choices included.
+    func counts(
         for item: DailyPlanItem
     ) -> (sets: Int, repetitions: Int) {
         var sets = 1
@@ -151,15 +157,69 @@ final class DailyPlanViewModel: DailyPlanSessionReporting {
 
         return (sets, repetitions)
     }
-    #endif
 
-    /// Custom counts from the debug plan editor; always `nil` in Release builds.
+    func setSets(_ sets: Int, for item: DailyPlanItem) {
+        let value = DailyPlanOverrides.clamped(sets, to: DailyPlanOverrides.setsRange)
+        overrides[item.id, default: DailyPlanOverrides()].sets = value
+        UserDefaults.standard.set(value, forKey: PracticePreferences.exerciseSets(item.id))
+    }
+
+    func setRepetitions(_ repetitions: Int, for item: DailyPlanItem) {
+        let value = DailyPlanOverrides.clamped(repetitions, to: DailyPlanOverrides.repetitionsRange)
+        overrides[item.id, default: DailyPlanOverrides()].repetitions = value
+        UserDefaults.standard.set(value, forKey: PracticePreferences.exerciseRepetitions(item.id))
+    }
+
+    /// Rest before each later set: Settings' choice, otherwise the program's own.
+    func restSeconds(for item: DailyPlanItem) -> Int {
+        if let rest = overrides[item.id]?.restSeconds {
+            return rest
+        }
+
+        switch item.exercise {
+        case .finger(let exercise):
+            return homeModel(for: exercise.category).routine.restSeconds
+        case .therapy(let kind):
+            return kind.category.map { routineModel(for: $0).configuration.restSeconds }
+                ?? RoutineConfiguration().restSeconds
+        case .balance(let exercise):
+            return BalancePracticeSettings(exercise: exercise).restSeconds
+        }
+    }
+
+    func setRestSeconds(_ seconds: Int, for item: DailyPlanItem) {
+        let value = DailyPlanOverrides.clamped(seconds, to: DailyPlanOverrides.restRange)
+        overrides[item.id, default: DailyPlanOverrides()].restSeconds = value
+        UserDefaults.standard.set(value, forKey: PracticePreferences.exerciseRest(item.id))
+    }
+
+    private func restSeconds(of exercise: DailyPlanItem.Exercise) -> Int {
+        restSeconds(for: DailyPlanItem(exercise: exercise))
+    }
+
+    /// Counts chosen in Settings, which replace the program's own (and, when they differ from the
+    /// recording, the Indonesian scripts' recorded counts).
     private func customCounts(for itemID: String) -> (sets: Int?, repetitions: Int?)? {
-        #if DEBUG
-        return debugLayout.override(for: itemID).map { ($0.sets, $0.repetitions) }
-        #else
-        return nil
-        #endif
+        overrides[itemID].map { ($0.sets, $0.repetitions) }
+    }
+
+    private static func loadOverrides(for items: [DailyPlanItem]) -> [String: DailyPlanOverrides] {
+        let defaults = UserDefaults.standard
+        var loaded: [String: DailyPlanOverrides] = [:]
+
+        for item in items {
+            let value = DailyPlanOverrides(
+                sets: defaults.object(forKey: PracticePreferences.exerciseSets(item.id)) as? Int,
+                repetitions: defaults.object(forKey: PracticePreferences.exerciseRepetitions(item.id)) as? Int,
+                restSeconds: defaults.object(forKey: PracticePreferences.exerciseRest(item.id)) as? Int
+            )
+
+            if value != DailyPlanOverrides() {
+                loaded[item.id] = value
+            }
+        }
+
+        return loaded
     }
 
     // MARK: - Progress
@@ -202,18 +262,22 @@ final class DailyPlanViewModel: DailyPlanSessionReporting {
     }
 
     var hasAutomaticRest: Bool {
-        isRunning && !restingBeforeNext && (upcomingIndex != nil || awaitsSecondArmRaiseSide)
+        isRunning && !restingBeforeNext && (upcomingIndex != nil || awaitsSecondSide)
     }
 
     /// The open arm raise still has its other arm to run after the long rest.
-    private var awaitsSecondArmRaiseSide: Bool {
-        guard let currentIndex,
-              case .therapy(.armRaise) = items[currentIndex].exercise,
-              let side = armRaiseScriptSide else {
+    private var awaitsSecondSide: Bool {
+        guard let currentIndex else {
             return false
         }
 
-        return armRaiseSide(after: side) != nil
+        let exercise = items[currentIndex].exercise
+
+        guard let side = passSide(for: exercise) else {
+            return false
+        }
+
+        return passSide(after: side, for: exercise) != nil
     }
 
     var nextSessionItemID: String? {
@@ -284,12 +348,109 @@ final class DailyPlanViewModel: DailyPlanSessionReporting {
         }
     }
 
-    private var selectedSide: HandSide? {
-        HandSide(rawValue: sidePreference)
+    // MARK: - Sides
+
+    /// Sit to stand has no side; every other plan exercise offers right, left or both.
+    func hasSide(_ item: DailyPlanItem) -> Bool {
+        item.exercise != .balance(.sitToStand)
     }
 
+    /// The side chosen for this exercise in Settings, or its program's saved side.
+    func side(for item: DailyPlanItem) -> RoutineSides {
+        sideChoices[item.id] ?? savedSide(of: item.exercise)
+    }
+
+    func setSide(_ side: RoutineSides, for item: DailyPlanItem) {
+        sideChoices[item.id] = side
+        UserDefaults.standard.set(side.rawValue, forKey: PracticePreferences.exerciseSide(item.id))
+    }
+
+    private func side(of exercise: DailyPlanItem.Exercise) -> RoutineSides {
+        side(for: DailyPlanItem(exercise: exercise))
+    }
+
+    /// Saved per-exercise choices. A side chosen for the whole plan before per-exercise sides
+    /// existed carries over to every item that has no choice of its own.
+    private static func loadSideChoices(for items: [DailyPlanItem]) -> [String: RoutineSides] {
+        let defaults = UserDefaults.standard
+        let legacy = defaults.string(forKey: PracticePreferences.dailyPlanSide).flatMap(RoutineSides.init(rawValue:))
+        var choices: [String: RoutineSides] = [:]
+
+        for item in items {
+            let saved = defaults.string(forKey: PracticePreferences.exerciseSide(item.id))
+                .flatMap(RoutineSides.init(rawValue:))
+
+            if let side = saved ?? legacy {
+                choices[item.id] = side
+            }
+        }
+
+        return choices
+    }
+
+    /// The side each program uses without a Settings choice: the finger routine's hand, the
+    /// arm or task program's configuration, or the Balancing exercise's saved arm.
+    private func savedSide(of exercise: DailyPlanItem.Exercise) -> RoutineSides {
+        switch exercise {
+        case .finger(let exercise):
+            return homeModel(for: exercise.category).routine.side == .right ? .right : .left
+        case .therapy(let kind):
+            return configuredExercise(for: kind).sides
+        case .balance(let exercise):
+            let selection = BalancePracticeSettings(exercise: exercise).armSelection
+            return RoutineSides(rawValue: selection.rawValue) ?? .both
+        }
+    }
+
+    /// The sides an item runs as separate sessions, in order, or `nil` when one session covers
+    /// its side or sides: the Indonesian arm-raise briefs, and a finger exercise on both hands
+    /// (finger sessions track one hand).
+    private func passes(for exercise: DailyPlanItem.Exercise) -> [TherapySide]? {
+        switch exercise {
+        case .therapy(.armRaise):
+            return armRaiseScriptSides
+        case .finger:
+            return side(of: exercise) == .both ? [.left, .right] : nil
+        case .therapy, .balance:
+            return nil
+        }
+    }
+
+    /// The side the next or open session of an item trains, when it runs one session per side.
+    private func passSide(for exercise: DailyPlanItem.Exercise) -> TherapySide? {
+        guard let sides = passes(for: exercise) else {
+            return nil
+        }
+
+        guard isCurrent(exercise), let pendingSecondSide, sides.contains(pendingSecondSide) else {
+            return sides.first
+        }
+
+        return pendingSecondSide
+    }
+
+    /// The side after `side` that still needs its own session, if any.
+    private func passSide(after side: TherapySide, for exercise: DailyPlanItem.Exercise) -> TherapySide? {
+        guard let sides = passes(for: exercise),
+              let index = sides.firstIndex(of: side),
+              sides.indices.contains(index + 1) else {
+            return nil
+        }
+
+        return sides[index + 1]
+    }
+
+    private func isCurrent(_ exercise: DailyPlanItem.Exercise) -> Bool {
+        currentIndex.map { items[$0].exercise == exercise } ?? false
+    }
+
+    /// The hand a finger session trains: this pass's hand on both hands, otherwise the chosen one.
     func fingerSide(for exercise: FingerExercise) -> HandSide {
-        selectedSide ?? homeModel(for: exercise.category).routine.side
+        if let pass = passSide(for: .finger(exercise)) {
+            return pass == .right ? .right : .left
+        }
+
+        return side(of: .finger(exercise)) == .right ? .right : .left
     }
 
     func usesOppositionScript(itemID: String) -> Bool {
@@ -350,39 +511,27 @@ final class DailyPlanViewModel: DailyPlanSessionReporting {
 
     // MARK: - Scripted arm raise
 
-    /// The arms the approved Indonesian arm-raise briefs train, in order: left, then right.
-    /// A chosen plan side runs that arm only. `nil` keeps the program's own guidance.
-    /// The briefs apply even with custom debug counts; their two sets of five win.
+    /// The arms the approved Indonesian arm-raise briefs train, in order: both sides run left,
+    /// then right, as two sessions; one side runs that arm only. `nil` keeps the program's own
+    /// guidance. The briefs apply even with custom debug counts; their two sets of five win.
     private var armRaiseScriptSides: [TherapySide]? {
         guard AppLanguage.selected == .indonesian else {
             return nil
         }
 
-        guard let selectedSide else {
+        switch side(of: .therapy(.armRaise)) {
+        case .left:
+            return [.left]
+        case .right:
+            return [.right]
+        case .both:
             return [.left, .right]
         }
-
-        return [selectedSide == .left ? .left : .right]
     }
 
     /// The arm the next or open arm-raise session trains, while the briefs apply.
     var armRaiseScriptSide: TherapySide? {
-        guard let sides = armRaiseScriptSides else {
-            return nil
-        }
-
-        return pendingArmRaiseSide.flatMap { sides.contains($0) ? $0 : nil } ?? sides.first
-    }
-
-    /// The arm after `side` that still needs its own full session, if any.
-    private func armRaiseSide(after side: TherapySide) -> TherapySide? {
-        guard let sides = armRaiseScriptSides,
-              let index = sides.firstIndex(of: side),
-              sides.indices.contains(index + 1) else {
-            return nil
-        }
-
-        return sides[index + 1]
+        passSide(for: .therapy(.armRaise))
     }
 
     func markArmRaiseRest(_ side: TherapySide?) {
@@ -391,8 +540,9 @@ final class DailyPlanViewModel: DailyPlanSessionReporting {
 
     func balanceSettings(for exercise: BalanceExercise) -> BalancePracticeSettings {
         var settings = BalancePracticeSettings(exercise: exercise)
-        if !exercise.isSitToStand, let side = selectedSide {
-            settings.armSelection = side == .left ? .left : .right
+        if !exercise.isSitToStand {
+            settings.armSelection = BalanceArmSelection(rawValue: side(of: .balance(exercise)).rawValue)
+                ?? settings.armSelection
         }
 
         if let counts = customCounts(for: exercise.rawValue) {
@@ -401,6 +551,8 @@ final class DailyPlanViewModel: DailyPlanSessionReporting {
             settings.sets = min(range.upperBound, max(range.lowerBound, sets))
             settings.repetitions = counts.repetitions ?? settings.repetitions
         }
+
+        settings.restSeconds = restSeconds(of: .balance(exercise))
 
         return settings
     }
@@ -418,17 +570,21 @@ final class DailyPlanViewModel: DailyPlanSessionReporting {
         }
     }
 
-    /// Applies the daily-plan side to the saved exercise configuration for this session.
-    func routineExercise(for kind: TherapyKind) -> RoutineExercise {
+    /// The program's saved configuration for `kind`, before the plan applies its side and counts.
+    private func configuredExercise(for kind: TherapyKind) -> RoutineExercise {
         guard let category = kind.category else {
             return RoutineExercise(kind: kind)
         }
 
         let configuration = routineModel(for: category).configuration
-        var exercise = configuration.exercises.first { $0.kind == kind } ?? RoutineExercise(kind: kind)
-        if let side = selectedSide {
-            exercise.sides = side == .left ? .left : .right
-        }
+        return configuration.exercises.first { $0.kind == kind } ?? RoutineExercise(kind: kind)
+    }
+
+    /// Applies the exercise's side to the saved exercise configuration for this session. Both
+    /// sides alternate within one session.
+    func routineExercise(for kind: TherapyKind) -> RoutineExercise {
+        var exercise = configuredExercise(for: kind)
+        exercise.sides = side(of: .therapy(kind))
 
         if let counts = customCounts(for: kind.rawValue) {
             exercise.sets = counts.sets ?? exercise.sets
@@ -481,7 +637,7 @@ final class DailyPlanViewModel: DailyPlanSessionReporting {
 
         isRunning = true
         currentIndex = index
-        pendingArmRaiseSide = nil
+        pendingSecondSide = nil
         router.showIntro(itemID: items[index].id)
     }
 
@@ -514,18 +670,18 @@ final class DailyPlanViewModel: DailyPlanSessionReporting {
             return
         }
 
-        // The left arm's session is followed by the long rest, then the right arm's own intro
-        // and session, as the two briefs describe. The same item stays current.
-        if case .therapy(.armRaise) = items[currentIndex].exercise,
-           let side = armRaiseScriptSide,
-           let nextSide = armRaiseSide(after: side) {
-            pendingArmRaiseSide = nextSide
+        // The first side's session is followed by the long rest, then the other side's own intro
+        // and session (as the two arm-raise briefs describe). The same item stays current.
+        let exercise = items[currentIndex].exercise
+        if let side = passSide(for: exercise),
+           let nextSide = passSide(after: side, for: exercise) {
+            pendingSecondSide = nextSide
             restingBeforeNext = true
             presentPlanNext()
             return
         }
 
-        pendingArmRaiseSide = nil
+        pendingSecondSide = nil
         progress = progress.current(on: .now)
         progress.completed.insert(items[currentIndex].id)
         Task { await saveProgress() }
@@ -558,7 +714,7 @@ final class DailyPlanViewModel: DailyPlanSessionReporting {
         isRunning = false
         restingBeforeNext = false
         currentIndex = nil
-        pendingArmRaiseSide = nil
+        pendingSecondSide = nil
         router.endRun()
     }
 
@@ -574,8 +730,8 @@ final class DailyPlanViewModel: DailyPlanSessionReporting {
         switch items[index].exercise {
         case .finger(let exercise):
             let checkpoint = homeModel(for: exercise.category).checkpoint
-            let side = selectedSide
-            let matchesSide = side.map { checkpoint?.routine.side == $0 } ?? true
+            let side = fingerSide(for: exercise)
+            let matchesSide = checkpoint.map { $0.routine.side == side } ?? true
             let routine = fingerRoutine(for: exercise)
 
             // A checkpoint saved under other counts would not run what the card shows.
@@ -590,7 +746,8 @@ final class DailyPlanViewModel: DailyPlanSessionReporting {
                 only: exercise,
                 side: side,
                 sets: routine.sets,
-                repetitions: routine.repetitions
+                repetitions: routine.repetitions,
+                restSeconds: restSeconds(of: .finger(exercise))
             )
             route = .fingerSession
 
@@ -600,7 +757,7 @@ final class DailyPlanViewModel: DailyPlanSessionReporting {
                 ?? RoutineConfiguration()
             let routine = Routine(
                 activities: exercise.activities,
-                restSeconds: Double(configuration.restSeconds),
+                restSeconds: Double(restSeconds(of: .therapy(kind))),
                 practiceSeconds: Double(configuration.practiceSeconds)
             )
             route = .therapySession(routine)

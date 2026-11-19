@@ -63,11 +63,26 @@ struct DailyPlanItem: Identifiable, Hashable {
     }
 }
 
+/// Sets, repetitions and rest chosen for one exercise in Settings; `nil` keeps the program's own.
+struct DailyPlanOverrides: Equatable {
+    static let setsRange = 1...5
+    static let repetitionsRange = 1...20
+    /// Rest before each later set, in seconds; Settings steps by 5.
+    static let restRange = 5...120
+
+    var sets: Int?
+    var repetitions: Int?
+    var restSeconds: Int?
+
+    static func clamped(_ value: Int, to range: ClosedRange<Int>) -> Int {
+        min(range.upperBound, max(range.lowerBound, value))
+    }
+}
+
 enum DailyPlan {
     /// The daily exercises in practice order: the two scripted exercises first, then the other
-    /// hand and forearm exercises, arm, shoulder, trunk and the task. The plan is fixed for now;
-    /// change this list to change it. Debug builds can hide, reorder and resize items with
-    /// `DebugPlanLayout`.
+    /// hand and forearm exercises, arm, shoulder, trunk and the task. This is the default order;
+    /// Settings can reorder and hide items (`DailyPlanLayout`) and set each one's side and counts.
     static let standard: [DailyPlanItem] = {
         // The approved scripts open with Sentuh Jempol ke Jari ("Hari ini kita akan mulai…")
         // and continue with Angkat Lengan ("Selanjutnya…"), so both lead the plan.

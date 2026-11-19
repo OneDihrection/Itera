@@ -151,9 +151,10 @@ final class AppComponent: HistoryDependency, HomeDependency, TherapySessionDepen
     }
 
     #if DEBUG
-    /// Opens a plan intro named by the `intro:` launch argument.
+    /// Opens a plan intro named by the `intro:` launch argument, or Settings for `settings`.
     func openDebugIntroIfRequested() {
         DebugScreenLauncher.openIntroIfRequested(plan: dailyPlan)
+        DebugScreenLauncher.openSettingsIfRequested(router: homeRouter)
     }
     #endif
 }

@@ -12,6 +12,7 @@ import SwiftUI
 ///
 ///     -TuntunScreen intro:<plan item id>     opens that plan item's intro through the plan
 ///     -TuntunScreen gallery:<screen>         shows live, pause, setDone or allDone with sample values
+///     -TuntunScreen settings                 opens the Settings sheet on Beranda
 ///
 /// Release builds never compile this file.
 enum DebugScreenLauncher {
@@ -41,6 +42,15 @@ enum DebugScreenLauncher {
         }
 
         plan.begin(from: String(argument.dropFirst("intro:".count)))
+    }
+
+    @MainActor
+    static func openSettingsIfRequested(router: HomeRouter) {
+        guard argument == "settings" else {
+            return
+        }
+
+        router.openPracticePreferences()
     }
 }
 

@@ -53,17 +53,8 @@ protocol HomeContentBuildable: PlanCoverBuildable, DailyPlanNextContentBuildable
     @ViewBuilder @MainActor func buildPracticePreferences() -> PracticePreferencesScreen
 }
 
-/// What the settings sheet can present over itself.
-protocol PracticePreferencesContentBuildable {
-    #if DEBUG
-    associatedtype DebugPlanEditorScreen: View
-
-    @ViewBuilder @MainActor func buildDebugPlanEditor() -> DebugPlanEditorScreen
-    #endif
-}
-
 @MainActor
-final class HomeBuilder: HomeContentBuildable, PracticePreferencesContentBuildable {
+final class HomeBuilder: HomeContentBuildable {
     private let dependency: any HomeDependency
 
     /// Created once, so a rebuilt root keeps the same screen model. The stack, sheet and cover
@@ -114,24 +105,13 @@ final class HomeBuilder: HomeContentBuildable, PracticePreferencesContentBuildab
 
     @ViewBuilder func buildPracticePreferences() -> some View {
         let viewModel: some PracticePreferencesViewModelProtocol = PracticePreferencesViewModel(
-            home: dependency.fingers,
             plan: dependency.dailyPlan,
             router: dependency.homeRouter,
             permissionService: dependency.permissionService
         )
 
-        TMPracticePreferencesView(viewModel: viewModel, builder: self)
+        TMPracticePreferencesView(viewModel: viewModel)
     }
-
-    #if DEBUG
-    @ViewBuilder func buildDebugPlanEditor() -> some View {
-        let viewModel: some DebugPlanEditorViewModelProtocol = DebugPlanEditorViewModel(
-            plan: dependency.dailyPlan
-        )
-
-        TMDebugPlanEditorView(viewModel: viewModel)
-    }
-    #endif
 
     // MARK: - Plan cover
 

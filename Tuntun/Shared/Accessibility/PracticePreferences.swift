@@ -14,7 +14,23 @@ enum PracticePreferences {
     static let buttonSounds = "practice.buttonSounds"
     /// How Home and Progress address the patient. Stored only on this device; empty means no name.
     static let patientName = "practice.patientName"
+    /// The earlier plan-wide training side; read only to carry it over to each exercise.
     static let dailyPlanSide = "practice.dailyPlanSide"
+    /// Each exercise's training side (`RoutineSides`), keyed by its daily-plan item id.
+    static func exerciseSide(_ itemID: String) -> String {
+        "practice.side." + itemID
+    }
+    /// Each exercise's sets and repetitions, keyed by its daily-plan item id; missing keeps the
+    /// program's own.
+    static func exerciseSets(_ itemID: String) -> String {
+        "practice.sets." + itemID
+    }
+    static func exerciseRepetitions(_ itemID: String) -> String {
+        "practice.repetitions." + itemID
+    }
+    static func exerciseRest(_ itemID: String) -> String {
+        "practice.rest." + itemID
+    }
     /// How much of each key repetition is saved; see `ReplayRecording`.
     static let replayRecording = "practice.replayRecording"
     /// What a saved video hides; see `VideoCensoring`.

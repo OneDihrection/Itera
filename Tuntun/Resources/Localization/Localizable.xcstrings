@@ -3881,96 +3881,6 @@
         }
       }
     },
-    "debug.planEditor.customCounts" : {
-      "comment" : "Debug builds only: overrides one daily-plan exercise's sets and repetitions.",
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Custom sets & reps"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Set & repetisi khusus"
-          }
-        }
-      }
-    },
-    "debug.planEditor.help" : {
-      "comment" : "Debug builds only: explains the daily-plan editor.",
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Choose which exercises Beranda shows, drag to reorder, and set custom sets and repetitions. A custom count replaces the program's settings and the recorded Indonesian script for that exercise."
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Pilih latihan yang tampil di Beranda, seret untuk mengubah urutan, dan atur set serta repetisi khusus. Jumlah khusus menggantikan pengaturan program dan naskah rekaman bahasa Indonesia untuk latihan itu."
-          }
-        }
-      }
-    },
-    "debug.planEditor.open" : {
-      "comment" : "Debug builds only: opens the daily-plan editor from Settings.",
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Edit Beranda exercises"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ubah latihan Beranda"
-          }
-        }
-      }
-    },
-    "debug.planEditor.reset" : {
-      "comment" : "Debug builds only: restores the standard daily plan in the editor.",
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Reset"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Atur ulang"
-          }
-        }
-      }
-    },
-    "debug.planEditor.title" : {
-      "comment" : "Debug builds only: title of the daily-plan editor.",
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Beranda exercises"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Latihan Beranda"
-          }
-        }
-      }
-    },
     "debug.startExercise" : {
       "comment" : "Debug builds only: skips the plan intro narration and opens the exercise at once.",
       "extractionState" : "stale",
@@ -17753,6 +17663,38 @@
         }
       }
     },
+    "settings.arrange" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Arrange"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Atur urutan"
+          }
+        }
+      }
+    },
+    "settings.arrangeHelp" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Drag to change the order. Switch an exercise off to leave it out of today's plan."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Seret untuk mengubah urutan. Matikan latihan agar tidak masuk rencana hari ini."
+          }
+        }
+      }
+    },
     "settings.censorBackgroundOnly" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -17821,34 +17763,18 @@
         }
       }
     },
-    "settings.exerciseHelp" : {
+    "settings.hidden" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Applies from the next session. A session in progress keeps its own settings."
+            "value" : "Hidden"
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Berlaku mulai sesi berikutnya. Sesi yang sedang berjalan tidak berubah."
-          }
-        }
-      }
-    },
-    "settings.exerciseTitle" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Finger exercises"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Latihan jari"
+            "value" : "Disembunyikan"
           }
         }
       }
@@ -17897,6 +17823,38 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Nama pasien"
+          }
+        }
+      }
+    },
+    "settings.planExercisesHelp" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Applies from the next session. Each exercise has its own side, sets, repetitions and rest. Both sides alternate after every repetition; finger exercises run once for each hand. Counts other than the recorded two sets of five change what the Indonesian scripts say."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Berlaku mulai sesi berikutnya. Tiap latihan punya sisi, set, repetisi, dan istirahatnya sendiri. Kedua sisi bergantian setiap repetisi; latihan jari dilakukan sekali untuk tiap tangan. Jumlah selain dua set lima repetisi yang direkam mengubah narasi naskah bahasa Indonesia."
+          }
+        }
+      }
+    },
+    "settings.planExercisesTitle" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Exercises"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Latihan"
           }
         }
       }
@@ -18088,34 +18046,50 @@
         }
       }
     },
-    "settings.trainingSide" : {
+    "settings.resetOrder" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Training side"
+            "value" : "Restore default order"
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Sisi yang dilatih"
+            "value" : "Kembalikan urutan awal"
           }
         }
       }
     },
-    "settings.trainingSideDefault" : {
+    "settings.side" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Use exercise settings"
+            "value" : "Side"
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Ikuti pengaturan latihan"
+            "value" : "Sisi"
+          }
+        }
+      }
+    },
+    "settings.side.both" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Both sides"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kedua sisi"
           }
         }
       }

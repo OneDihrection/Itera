@@ -43,30 +43,43 @@ enum VoicePermissionFallback: Equatable {
 
 @MainActor
 protocol PracticePreferencesViewModelProtocol: AnyObject, Observable {
-    /// The daily plan's training side: empty for the default, otherwise a `HandSide` raw value.
-    var sidePreference: String { get set }
-    var sets: Int { get set }
-    var repetitions: Int { get set }
-    var restSeconds: Int { get set }
-    var errorKey: String? { get }
+    /// Every plan exercise in the plan's order, with whether Beranda shows it.
+    var layoutEntries: [DailyPlanLayout.Entry] { get }
+    /// The plan item an entry stands for.
+    func item(for entry: DailyPlanLayout.Entry) -> DailyPlanItem?
+    func titleKey(for item: DailyPlanItem) -> String
+    func setShown(_ shown: Bool, for entry: DailyPlanLayout.Entry)
+    func moveEntries(fromOffsets source: IndexSet, toOffset destination: Int)
+    /// Every exercise shown, in the standard order.
+    func resetLayout()
+
+    func hasSide(_ item: DailyPlanItem) -> Bool
+    /// Right only, left only, or both sides.
+    func side(for item: DailyPlanItem) -> RoutineSides
+    func setSide(_ side: RoutineSides, for item: DailyPlanItem)
+    /// What the exercise runs with now: Settings' choice, otherwise its program's own.
+    func counts(for item: DailyPlanItem) -> (sets: Int, repetitions: Int)
+    func setSets(_ sets: Int, for item: DailyPlanItem)
+    func setRepetitions(_ repetitions: Int, for item: DailyPlanItem)
+    func restSeconds(for item: DailyPlanItem) -> Int
+    func setRestSeconds(_ seconds: Int, for item: DailyPlanItem)
+
     /// Voice control is always on; this mirrors whether microphone and speech access allow it.
     var voiceEnabled: Bool { get }
     var voiceFallback: VoicePermissionFallback? { get }
 
-    /// Saves the finger routine and closes the sheet when saving succeeded.
-    func done() async
-    func save() async
+    func done()
     func refreshPermissions()
     /// Requests the missing voice permissions, or opens the system Settings when they were denied.
     func resolveVoiceAccess() async
 }
 
-/// The settings sheet: edits the same saved finger routine and plan side that Beranda uses.
-/// A session in progress keeps the snapshot it started with.
+/// The settings sheet. Every exercise preference is per plan exercise and is saved as it
+/// changes: order, visibility, side, sets, repetitions and rest. A session in progress keeps the
+/// snapshot it started with.
 @MainActor
 @Observable
 final class PracticePreferencesViewModel: PracticePreferencesViewModelProtocol {
-    private let home: FingerHomeViewModel
     private let plan: DailyPlanViewModel
     @ObservationIgnored private let router: any HomeRouterProtocol
     /// Not ignored: its statuses are observable, so the voice row follows permission changes.
@@ -76,51 +89,86 @@ final class PracticePreferencesViewModel: PracticePreferencesViewModelProtocol {
     private static let voicePermissions: [AppPermission] = [.microphone, .speechRecognition]
 
     init(
-        home: FingerHomeViewModel,
         plan: DailyPlanViewModel,
         router: any HomeRouterProtocol,
         permissionService: any PermissionServiceProtocol
     ) {
-        self.home = home
         self.plan = plan
         self.router = router
         self.permissionService = permissionService
     }
 
-    var sidePreference: String {
-        get { plan.sidePreference }
-        set { plan.sidePreference = newValue }
+    // MARK: - Layout
+
+    var layoutEntries: [DailyPlanLayout.Entry] {
+        plan.layout.entries
     }
 
-    var sets: Int {
-        get { home.routine.sets }
-        set { home.routine.sets = newValue }
+    func item(for entry: DailyPlanLayout.Entry) -> DailyPlanItem? {
+        plan.standardItems.first { $0.id == entry.itemID }
     }
 
-    var repetitions: Int {
-        get { home.routine.repetitions }
-        set { home.routine.repetitions = newValue }
+    func titleKey(for item: DailyPlanItem) -> String {
+        DailyPlanViewModel.titleKey(for: item.exercise)
     }
 
-    var restSeconds: Int {
-        get { home.routine.restSeconds }
-        set { home.routine.restSeconds = newValue }
-    }
+    func setShown(_ shown: Bool, for entry: DailyPlanLayout.Entry) {
+        var layout = plan.layout
 
-    var errorKey: String? {
-        home.errorKey
-    }
-
-    func done() async {
-        guard await home.saveRoutine() else {
+        guard let index = layout.entries.firstIndex(where: { $0.itemID == entry.itemID }) else {
             return
         }
 
-        router.dismissSheet()
+        layout.entries[index].isShown = shown
+        plan.applyLayout(layout)
     }
 
-    func save() async {
-        _ = await home.saveRoutine()
+    func moveEntries(fromOffsets source: IndexSet, toOffset destination: Int) {
+        var layout = plan.layout
+        layout.moveEntries(fromOffsets: source, toOffset: destination)
+        plan.applyLayout(layout)
+    }
+
+    func resetLayout() {
+        plan.resetLayout()
+    }
+
+    // MARK: - Exercise settings
+
+    func hasSide(_ item: DailyPlanItem) -> Bool {
+        plan.hasSide(item)
+    }
+
+    func side(for item: DailyPlanItem) -> RoutineSides {
+        plan.side(for: item)
+    }
+
+    func setSide(_ side: RoutineSides, for item: DailyPlanItem) {
+        plan.setSide(side, for: item)
+    }
+
+    func counts(for item: DailyPlanItem) -> (sets: Int, repetitions: Int) {
+        plan.counts(for: item)
+    }
+
+    func setSets(_ sets: Int, for item: DailyPlanItem) {
+        plan.setSets(sets, for: item)
+    }
+
+    func setRepetitions(_ repetitions: Int, for item: DailyPlanItem) {
+        plan.setRepetitions(repetitions, for: item)
+    }
+
+    func restSeconds(for item: DailyPlanItem) -> Int {
+        plan.restSeconds(for: item)
+    }
+
+    func setRestSeconds(_ seconds: Int, for item: DailyPlanItem) {
+        plan.setRestSeconds(seconds, for: item)
+    }
+
+    func done() {
+        router.dismissSheet()
     }
 
     // MARK: - Voice control
