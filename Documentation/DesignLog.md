@@ -1627,3 +1627,16 @@ Sit to stand drew nothing over the camera. Since *Body exercises without camera 
 - **Pop on each repetition.** `TMSessionBubbleOverlay` gained `captureCompletions`: each increase pops the capture circle (needs `holdRadius`). `BalanceSessionView` passes the completed count; the other Balancing exercises show the capture circle only during calibration, before any count, and a reset for the next set does not pop.
 
 Verification: XcodeGen and a Debug Simulator build with IPHONEOS_DEPLOYMENT_TARGET=17.0. Pending on the M1 iPad: the hip circle filling in the seated and standing holds, the arc following the rise in practice and the pop on each count, facing either way and in both orientations; Reduce Motion.
+
+## Shader breathing circle (2026-11-19)
+
+At the product owner's request, the circle of the short rest between sets (`TMTherapyBreathingRest`) is drawn by a Metal shader, as the long rest's waves are. The former `Circle` with a rust `strokeBorder` changed scale and opacity once per rest sample with a linear animation (1 s for Balancing and the timed rests, 0.15 s for the scripted breathing), so it stepped and stood still between samples and looked flat.
+- **`TMTherapyBreathingCircle`** (DesignSystem) renders `BreathingCircle.metal` (`colorEffect`) inside `TimelineView(.animation)` capped at 60 fps. The breath expansion (0 at rest, 1 at a full breath, from the existing intensity) is an animatable shader argument eased linearly toward each sample over the caller's `animationDuration` (default now 0.25 s, slightly longer than the scripted rest's 0.2 s ticks).
+- **Look.** The previous sizes and curves are kept: the circle grows from 76% to full size and the ring (36% of the radius, as before) goes from 25% to full strength. Added: soft feathered edges, an inner-edge highlight, brightening up to 10% toward white and a faint rust halo that swells with the breath, a soft `planPanel` fill lighter at the centre, and an edge wobble of about 1–2% of the radius. The layer leaves room for the halo, so the frame grew from 400 to 460 pt for about the same circle size.
+- **Pause.** `TMTherapyBreathingRest(paused:)` stops the wobble clock; the guided, finger and Balancing sessions pass their paused state. The clock is the long rest's, extracted as `ShaderMotionClock` and shared by both shaders.
+- **Reduce Motion** draws a still, full-strength circle, as before.
+- **Debug.** `-TuntunScreen gallery:rest` shows the short rest breathing on a 6 s inhale and 3 s exhale.
+
+Rest timing, `BreathingRest`, `RestBreath` and narration are unchanged.
+
+Verification: XcodeGen and a Debug Simulator build with IPHONEOS_DEPLOYMENT_TARGET=17.0, no warnings. On the iPad Pro 13-inch Simulator, `gallery:rest` drew the circle and it changed between captures, but the system camera prompt covered it, so the look was not fully checked. Pending on the M1 iPad: smoothness at 60 fps and thermals during a rest, the look in light and dark mode, pause freezing the wobble, Reduce Motion, and the scripted arm-raise and opposition rests, the timed guided and finger rests and the Balancing rest.

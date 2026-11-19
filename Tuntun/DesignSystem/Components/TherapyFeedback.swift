@@ -33,15 +33,16 @@ struct TMTherapyProgressRing: View {
 }
 
 /// A breathing cue driven by the rest clock. The session owns narration and timing.
+/// `animationDuration` is how long the circle eases toward each `intensity` sample; `paused`
+/// stops its idle motion.
 struct TMTherapyBreathingRest: View {
     let cue: LocalizedStringKey
     let intensity: Double
-    var animationDuration = 0.15
+    var animationDuration = 0.25
+    var paused = false
     let pause: () -> Void
     let stop: () -> Void
     var skip: (() -> Void)? = nil
-
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         VStack(spacing: 20) {
@@ -57,22 +58,13 @@ struct TMTherapyBreathingRest: View {
             }
             .multilineTextAlignment(.center)
 
-            GeometryReader { geometry in
-                let diameter = min(400, geometry.size.width, geometry.size.height)
-                Circle()
-                    .fill(TherapyPalette.planPanel.opacity(0.35))
-                    .overlay {
-                        Circle()
-                            .strokeBorder(TherapyPalette.brand, lineWidth: diameter * 0.18)
-                            .opacity(reduceMotion ? 1 : intensity)
-                    }
-                    .frame(width: diameter, height: diameter)
-                    .scaleEffect(reduceMotion ? 1 : 0.76 + 0.24 * (intensity - 0.25) / 0.75)
-                    .animation(reduceMotion ? nil : .linear(duration: animationDuration), value: intensity)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .accessibilityHidden(true)
-            }
-            .frame(maxHeight: 400)
+            TMTherapyBreathingCircle(
+                intensity: intensity,
+                paused: paused,
+                smoothing: animationDuration
+            )
+            .aspectRatio(1, contentMode: .fit)
+            .frame(maxWidth: 460, maxHeight: 460)
 
             Spacer(minLength: 0)
 
