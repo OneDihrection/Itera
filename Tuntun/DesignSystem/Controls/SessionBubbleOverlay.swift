@@ -48,6 +48,8 @@ struct TMSessionBubbleOverlay: View {
     var holdProgress = 0.0
     /// The capture circle's radius in normalized image height; nil keeps 60 pt.
     var holdRadius: Double? = nil
+    /// Counts completions on the capture circle; each increase pops it. Needs `holdRadius`.
+    var captureCompletions = 0
     /// A lone joint marker, for guidance without bubbles such as a direction-only reach.
     var trackedJoint: CGPoint? = nil
     var movementCue: SessionMovementCue? = nil
@@ -85,6 +87,9 @@ struct TMSessionBubbleOverlay: View {
         .animation(.easeOut(duration: 0.35), value: preview)
         .onChange(of: bubbleGuide?.dwellProgress) { old, new in
             trackAcceptance(old: old, new: new)
+        }
+        .onChange(of: captureCompletions) { old, new in
+            popCapture(old: old, new: new)
         }
         .allowsHitTesting(false)
         .accessibilityHidden(true)
@@ -143,6 +148,18 @@ struct TMSessionBubbleOverlay: View {
         }
 
         popSpot = spot
+        pops += 1
+    }
+
+    /// A completion on the capture circle pops it where it is drawn; a reset to fewer does not.
+    private func popCapture(old: Int, new: Int) {
+        guard new > old,
+              let captureJoint,
+              let holdRadius else {
+            return
+        }
+
+        popSpot = (captureJoint, holdRadius)
         pops += 1
     }
 

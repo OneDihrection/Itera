@@ -104,7 +104,8 @@ struct BalanceOverlay: Equatable {
     let compensationWarning: Bool
     /// Shoulder, elbow, and wrist of the working arm, drawn when the movement is an arm rotation.
     var armChain: [TherapyPoint] = []
-    /// The target marker is the patient's own wrist, held still during end-pose calibration.
+    /// The target marker is the patient's own joint, drawn as one circle with `targetProgress`:
+    /// the wrist held still during end-pose calibration, or sit to stand's hip throughout.
     var isCalibrationHold = false
     /// Where the wrist should head while the comfortable end is calibrated; nil hides the cue.
     var calibrationTip: TherapyPoint? = nil

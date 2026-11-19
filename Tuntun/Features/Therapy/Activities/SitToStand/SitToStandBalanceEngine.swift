@@ -129,9 +129,10 @@ struct SitToStandBalanceEngine: BalanceMovementEngine {
         snapshot.overlay = overlay(for: value, marker: marker)
     }
 
-    /// The tracked shoulder, hip, and knee, drawn as one chain beside the patient.
-    /// - Parameter marker: `nil` for no countdown marker, `true` for the blue seated marker and
-    ///   `false` for the orange standing one; the marker sits on the hip with the count beside it.
+    /// The hip as one circle beside the patient: its arc is the hold during calibration and the
+    /// rise during practice.
+    /// - Parameter marker: `nil` outside a calibration hold, `true` for the seated hold and
+    ///   `false` for the standing one.
     private func overlay(for value: SitToStandSnapshot, marker: Bool?) -> BalanceOverlay? {
         guard let joints = value.joints else {
             return nil
@@ -145,16 +146,29 @@ struct SitToStandBalanceEngine: BalanceMovementEngine {
             rightShoulder: joints.shoulder,
             leftHip: joints.hip,
             rightHip: joints.hip,
-            wrist: nil,
-            target: marker == nil ? nil : joints.hip,
+            wrist: joints.hip,
+            target: joints.hip,
             isReturnTarget: marker ?? false,
-            targetRadius: marker == nil ? 0 : bubbleRadius(aspect: value.aspect),
+            targetRadius: bubbleRadius(aspect: value.aspect),
             crossedMidline: false,
-            targetProgress: marker == nil ? 0 : snapshot.calibrationProgress,
+            targetProgress: hipProgress(for: value, marker: marker),
             holdSecondsRemaining: marker == nil ? nil : snapshot.calibrationCountdown,
             compensationWarning: value.cue != nil,
-            armChain: [joints.shoulder, joints.hip, joints.knee],
-            isCalibrationHold: marker != nil
+            isCalibrationHold: true
         )
+    }
+
+    /// The hip circle's arc: the calibration hold while one runs, the calibrated rise during
+    /// practice, and empty otherwise.
+    private func hipProgress(for value: SitToStandSnapshot, marker: Bool?) -> Double {
+        if marker != nil {
+            return snapshot.calibrationProgress
+        }
+
+        guard value.phase == .practice else {
+            return 0
+        }
+
+        return min(1, max(0, value.rise))
     }
 }

@@ -247,13 +247,15 @@ struct TMBalanceSessionView<ViewModel: BalanceSessionViewModelProtocol>: View {
 
         if let target = overlay.target {
             if overlay.isCalibrationHold {
-                // The patient's own wrist is the marker while the end pose is held still.
+                // The patient's own joint is the marker: the wrist while the end pose is held
+                // still, or sit to stand's hip, which pops on each counted repetition.
                 TMSessionBubbleOverlay(
                     imageAspect: overlay.aspect,
                     bubbleGuide: nil,
                     captureJoint: overlay.wrist.map(normalized),
                     holdProgress: overlay.targetProgress,
                     holdRadius: overlay.targetRadius,
+                    captureCompletions: model.snapshot.metrics.completedTouches,
                     mirrored: true
                 )
             } else {
