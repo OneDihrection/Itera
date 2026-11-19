@@ -220,6 +220,7 @@ struct TMTherapySessionView<ViewModel: TherapySessionViewModelProtocol>: View {
             TMTherapyBreathingRest(
                 cue: LocalizedStringKey(breath.cueKey(prefix: model.snapshot.armRaiseNarrationPrefix)),
                 intensity: breath.intensity,
+                paused: model.snapshot.paused,
                 pause: { model.command(.pause) },
                 stop: { requestEnd() }
             )
@@ -228,6 +229,7 @@ struct TMTherapySessionView<ViewModel: TherapySessionViewModelProtocol>: View {
             TMTherapyBreathingRest(
                 cue: LocalizedStringKey(breath.phase.key),
                 intensity: breath.intensity,
+                paused: model.snapshot.paused,
                 pause: { model.command(.pause) },
                 stop: {
                     if usesLightLayout {

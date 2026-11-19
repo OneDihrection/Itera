@@ -47,6 +47,7 @@ struct TMBalanceSessionView<ViewModel: BalanceSessionViewModelProtocol>: View {
                     cue: LocalizedStringKey(breath.phase.key),
                     intensity: breath.intensity,
                     animationDuration: 1,
+                    paused: model.paused,
                     pause: model.pause,
                     stop: requestEnd
                 )

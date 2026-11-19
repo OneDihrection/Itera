@@ -11,7 +11,7 @@ import SwiftUI
 /// Debug-only launch argument for checking screens on the Simulator without touch:
 ///
 ///     -TuntunScreen intro:<plan item id>     opens that plan item's intro through the plan
-///     -TuntunScreen gallery:<screen>         shows live, pause, setDone or allDone with sample values
+///     -TuntunScreen gallery:<screen>         shows live, pause, rest, setDone or allDone with sample values
 ///     -TuntunScreen settings                 opens the Settings sheet on Beranda
 ///
 /// Release builds never compile this file.
@@ -83,6 +83,8 @@ struct TMDebugScreenGallery: View {
                     EmptyView()
                 }
             }
+        case "rest":
+            rest
         case "setDone":
             TMTherapySetSummary(
                 heading: heading,
@@ -111,6 +113,21 @@ struct TMDebugScreenGallery: View {
 
     private var heading: TMTherapyExerciseHeading {
         TMTherapyExerciseHeading(eyebrow: Text("plan.exerciseNumber \(1)"), title: Text("balance.title"))
+    }
+
+    /// The short rest breathing on its own rhythm: 6 s inhale, 3 s exhale, as `RestBreath`.
+    private var rest: some View {
+        TimelineView(.periodic(from: .now, by: 0.2)) { timeline in
+            let phase = timeline.date.timeIntervalSinceReferenceDate.truncatingRemainder(dividingBy: 9)
+            let expansion = phase < 6 ? phase / 6 : 1 - (phase - 6) / 3
+
+            TMTherapyBreathingRest(
+                cue: phase < 6 ? "rest.breath.inhale" : "rest.breath.exhale",
+                intensity: 0.25 + 0.75 * (1 - cos(expansion * .pi)) / 2,
+                pause: {},
+                stop: {}
+            )
+        }
     }
 
     private var live: some View {

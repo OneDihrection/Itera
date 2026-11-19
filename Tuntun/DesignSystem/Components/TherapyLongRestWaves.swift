@@ -19,7 +19,7 @@ struct TMTherapyLongRestWaves: View {
     let paused: Bool
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @State private var clock = SwayClock()
+    @State private var clock = ShaderMotionClock()
 
     private static let base = Color(red: 0.50, green: 0.16, blue: 0.05)
     private static let bands = [
@@ -100,38 +100,5 @@ private struct LongRestWaveShader: ViewModifier, Animatable {
                 .color(bands[2])
             )
         )
-    }
-}
-
-// MARK: - Sway clock
-
-/// Seconds of sway motion, excluding time spent paused.
-private struct SwayClock {
-    private var accumulated = 0.0
-    private var runningSince: Date?
-
-    mutating func resume(at date: Date) {
-        guard runningSince == nil else {
-            return
-        }
-
-        runningSince = date
-    }
-
-    mutating func pause(at date: Date) {
-        guard let runningSince else {
-            return
-        }
-
-        accumulated += max(0, date.timeIntervalSince(runningSince))
-        self.runningSince = nil
-    }
-
-    func time(at date: Date) -> Double {
-        guard let runningSince else {
-            return accumulated
-        }
-
-        return accumulated + max(0, date.timeIntervalSince(runningSince))
     }
 }

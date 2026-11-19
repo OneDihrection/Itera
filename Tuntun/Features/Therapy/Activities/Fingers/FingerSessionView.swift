@@ -155,6 +155,7 @@ struct TMFingerSessionView<Service: FingerSessionServiceProtocol>: View {
                 TMTherapyBreathingRest(
                     cue: LocalizedStringKey(rest.cueKey(prefix: OppositionGuidance.prefix(for: model.routine.side))),
                     intensity: rest.intensity,
+                    paused: model.paused,
                     pause: model.pause,
                     stop: {
                         endRequested = true
@@ -166,6 +167,7 @@ struct TMFingerSessionView<Service: FingerSessionServiceProtocol>: View {
                 TMTherapyBreathingRest(
                     cue: LocalizedStringKey(breath.phase.key),
                     intensity: breath.intensity,
+                    paused: model.paused,
                     pause: model.pause,
                     stop: {
                         endRequested = true
