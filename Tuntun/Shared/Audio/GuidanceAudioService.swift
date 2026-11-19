@@ -56,6 +56,15 @@ final class GuidanceAudioService: NSObject, AVSpeechSynthesizerDelegate {
     private var narrationID: UUID?
     private var narrationQueue: [PreparedAudioClip] = []
     private var narrationClip: PreparedAudioClip?
+    /// Starts the next cue once the line it replaces has finished or faded (`speak`).
+    private var afterNarration: (() -> Void)?
+    /// The quiet moment after a faded line, before the next cue starts.
+    private var handOffGap: Task<Void, Never>?
+
+    /// A line with at most this much left finishes before the next cue; a longer one fades out.
+    private static let handOffFinishWindow: TimeInterval = 1.0
+    private static let handOffFade: TimeInterval = 0.25
+    private static let handOffPause: TimeInterval = 0.3
     private var loadedClips: [String: PreparedAudioClip] = [:]
 
     override init() {
@@ -98,21 +107,74 @@ final class GuidanceAudioService: NSObject, AVSpeechSynthesizerDelegate {
     /// Speaks one cue. When every line has a bundled recording, those play in order;
     /// otherwise, or if a recording fails, `text` is spoken by the system voice.
     /// Either way the cue reports `.completed` exactly once.
+    ///
+    /// A cue still playing is handed off, never cut: its current line finishes and its remaining
+    /// lines are dropped, or, with more than a second left, the line fades out and the new cue
+    /// starts after a short pause. The replaced cue's late `.completed` carries its own identity.
+    /// Call `cancelSpeech` first where speech must stop at once.
     @discardableResult
     func speak(_ text: String, lines: [NarrationLine] = []) -> UUID {
-        cancelSpeech()
         let id = UUID()
+        music.setDucked(true)
+        handOff { [weak self] in
+            self?.start(id, text: text, lines: lines)
+        }
+        return id
+    }
+
+    private func handOff(then start: @escaping () -> Void) {
+        handOffGap?.cancel()
+        handOffGap = nil
+        afterNarration = nil
+
+        if narrationID != nil, let clip = narrationClip {
+            narrationQueue.removeAll()
+
+            if let remaining = clip.remaining(), remaining <= Self.handOffFinishWindow {
+                afterNarration = start
+                return
+            }
+
+            stopNarrationClips(fade: Self.handOffFade)
+            startAfterGap(start)
+            return
+        }
+
+        guard !utterances.isEmpty else {
+            stopNarrationClips()
+            start()
+            return
+        }
+
+        utterances.removeAll()
+        synthesizer.stopSpeaking(at: .word)
+        startAfterGap(start)
+    }
+
+    private func startAfterGap(_ start: @escaping () -> Void) {
+        handOffGap = Task { [weak self] in
+            do {
+                try await Task.sleep(for: .seconds(Self.handOffFade + Self.handOffPause))
+            } catch {
+                return
+            }
+
+            self?.handOffGap = nil
+            start()
+        }
+    }
+
+    private func start(_ id: UUID, text: String, lines: [NarrationLine]) {
         music.setDucked(true)
 
         if let recorded = recordedClips(for: lines) {
             narrationID = id
             narrationQueue = recorded
             playNextNarrationClip(id: id, fallback: text)
-            return id
+            return
         }
 
         synthesize(text, id: id)
-        return id
     }
 
     private func synthesize(_ text: String, id: UUID) {
@@ -164,8 +226,8 @@ final class GuidanceAudioService: NSObject, AVSpeechSynthesizerDelegate {
 
         guard !narrationQueue.isEmpty else {
             stopNarrationClips()
-            music.setDucked(false)
             events.send(.completed(id))
+            finishHandOff()
             return
         }
 
@@ -179,6 +241,10 @@ final class GuidanceAudioService: NSObject, AVSpeechSynthesizerDelegate {
 
             if success {
                 self.playNextNarrationClip(id: id, fallback: text)
+            } else if self.afterNarration != nil {
+                // The cue was already being replaced; go straight to its successor.
+                self.stopNarrationClips()
+                self.finishHandOff()
             } else {
                 self.stopNarrationClips()
                 self.synthesize(text, id: id)
@@ -191,11 +257,22 @@ final class GuidanceAudioService: NSObject, AVSpeechSynthesizerDelegate {
         }
     }
 
-    private func stopNarrationClips() {
+    private func stopNarrationClips(fade: TimeInterval = 0.04) {
         narrationID = nil
         narrationQueue.removeAll()
-        narrationClip?.stop()
+        narrationClip?.stop(fade: fade)
         narrationClip = nil
+    }
+
+    /// Starts the cue waiting on the line that just ended, or lets the music back up.
+    private func finishHandOff() {
+        guard let start = afterNarration else {
+            music.setDucked(false)
+            return
+        }
+
+        afterNarration = nil
+        start()
     }
 
     func playButtonClick() {
@@ -309,6 +386,9 @@ final class GuidanceAudioService: NSObject, AVSpeechSynthesizerDelegate {
     }
 
     func cancelSpeech() {
+        handOffGap?.cancel()
+        handOffGap = nil
+        afterNarration = nil
         stopNarrationClips()
         utterances.removeAll()
         synthesizer.stopSpeaking(at: .immediate)

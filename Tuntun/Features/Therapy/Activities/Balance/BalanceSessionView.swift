@@ -193,6 +193,18 @@ struct TMBalanceSessionView<ViewModel: BalanceSessionViewModelProtocol>: View {
         .accessibilityLabel(LocalizedStringKey(model.exercise.key("cameraAccessibility")))
     }
 
+    /// The countdown's seconds while it runs; the target is drawn quietly beneath it.
+    private var countdownSeconds: Int? {
+        guard !model.permissionDenied,
+              !model.allSetsDone,
+              model.restRemaining == nil,
+              !model.cameraWaiting else {
+            return nil
+        }
+
+        return model.countdownOverlaySeconds
+    }
+
     /// A camera failure offers a retry; otherwise waiting shows the calm camera message.
     @ViewBuilder
     private var cameraStatus: some View {
@@ -258,6 +270,7 @@ struct TMBalanceSessionView<ViewModel: BalanceSessionViewModelProtocol>: View {
                     ),
                     singleZone: overlay.isReturnTarget,
                     showsStart: false,
+                    preview: countdownSeconds != nil,
                     mirrored: true
                 )
             }

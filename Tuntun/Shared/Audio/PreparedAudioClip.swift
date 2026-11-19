@@ -12,14 +12,32 @@ import AVFoundation
 final class PreparedAudioClip {
     private let worker: PlayerWorker
     private var identity: UUID?
+    /// The clip's length, reported by the player once its first play starts off the main thread.
+    private var duration: TimeInterval?
+    /// System uptime of the current play, cleared when it stops.
+    private var startedAt: TimeInterval?
 
     init(url: URL) throws {
         worker = PlayerWorker(url: url)
     }
 
+    /// Seconds left in the current play, or nil when nothing plays or the length is not yet known.
+    func remaining(at now: TimeInterval = ProcessInfo.processInfo.systemUptime) -> TimeInterval? {
+        guard identity != nil, let duration, let startedAt else {
+            return nil
+        }
+
+        return max(0, duration - (now - startedAt))
+    }
+
     func play(id: UUID, volume: Float = 1, completion: @escaping (UUID, Bool) -> Void) -> Bool {
         identity = id
-        worker.play(volume: volume) { [weak self] success in
+        startedAt = ProcessInfo.processInfo.systemUptime
+        worker.play(volume: volume, started: { [weak self] duration in
+            Task { @MainActor in
+                self?.duration = duration
+            }
+        }) { [weak self] success in
             Task { @MainActor in
                 guard let self, self.identity == id else { return }
                 self.identity = nil
@@ -32,6 +50,7 @@ final class PreparedAudioClip {
     /// Fades out before pausing, so a cut never clicks. A later `play` takes over immediately.
     func stop(fade: TimeInterval = 0.04) {
         identity = nil
+        startedAt = nil
         worker.stop(fade: fade)
     }
 
@@ -39,6 +58,7 @@ final class PreparedAudioClip {
         private let queue = DispatchQueue(label: "Tuntun.audioClip", qos: .userInitiated)
         private let url: URL
         private var player: AVAudioPlayer?
+
         private var completion: ((Bool) -> Void)?
         /// Changes on every play and stop, so late callbacks from an earlier play are ignored.
         private var token = 0
@@ -52,7 +72,7 @@ final class PreparedAudioClip {
             }
         }
 
-        func play(volume: Float, completion: @escaping (Bool) -> Void) {
+        func play(volume: Float, started: @escaping (TimeInterval) -> Void, completion: @escaping (Bool) -> Void) {
             queue.async {
                 self.token &+= 1
                 self.player?.pause()
@@ -67,6 +87,8 @@ final class PreparedAudioClip {
                         self.finish(false)
                         return
                     }
+
+                    started(player.duration)
                 } catch {
                     self.finish(false)
                 }

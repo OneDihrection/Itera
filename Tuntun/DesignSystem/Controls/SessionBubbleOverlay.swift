@@ -52,6 +52,9 @@ struct TMSessionBubbleOverlay: View {
     var trackedJoint: CGPoint? = nil
     var movementCue: SessionMovementCue? = nil
     var reachArrow: SessionReachArrow? = nil
+    /// Before practice starts (the countdown and its cue): every circle is a quiet outline with no
+    /// hold arc or merge, so the patient sees where to move before the bubble becomes live.
+    var preview = false
     let mirrored: Bool
 
     /// Counts accepted holds; each change plays the pop burst at `popSpot`.
@@ -77,7 +80,9 @@ struct TMSessionBubbleOverlay: View {
             )
 
             circles
+                .opacity(preview ? 0.6 : 1)
         }
+        .animation(.easeOut(duration: 0.35), value: preview)
         .onChange(of: bubbleGuide?.dwellProgress) { old, new in
             trackAcceptance(old: old, new: new)
         }
@@ -145,11 +150,11 @@ struct TMSessionBubbleOverlay: View {
 
     @ViewBuilder
     private func jointMarker(_ mapping: Mapping) -> some View {
-        if let trackedJoint {
+        if let joint = trackedJoint ?? previewJoint {
             TMTherapyMergingGuide(
-                center: mapping.point(trackedJoint),
+                center: mapping.point(joint),
                 diameter: Self.jointDiameter,
-                active: true
+                active: !preview
             )
         }
     }
@@ -182,7 +187,13 @@ struct TMSessionBubbleOverlay: View {
     ) -> some View {
         let bubble = mapping.point(center(of: zone, in: guide))
 
-        if let tracked = guide.trackedJoint {
+        if preview {
+            TMTherapyMergingGuide(
+                center: bubble,
+                diameter: diameter,
+                active: false
+            )
+        } else if let tracked = guide.trackedJoint {
             let joint = mapping.point(tracked)
 
             TMTherapyMergingGuide(
@@ -230,6 +241,15 @@ struct TMSessionBubbleOverlay: View {
 
         return TMTherapyPopBurst(trigger: pops, diameter: max(1, radius * 2))
             .position(center)
+    }
+
+    /// The guide's joint, drawn apart from the bubble while previewing.
+    private var previewJoint: CGPoint? {
+        guard preview else {
+            return nil
+        }
+
+        return bubbleGuide?.trackedJoint
     }
 
     // MARK: - Zones

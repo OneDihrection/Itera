@@ -12,7 +12,7 @@ Move the Indonesian arm-raise script out of the engine, `MovementActivity` and t
 
 - `usesArmRaiseScript` branches in `SessionEngine.swift` at ≈ 195, 203, 207, 214, 229-259, 288, 383-412, 487-491, 512-519, 552-555, 567-579, 629, 637, 653, 665-685, 699, 767, 815-822 and 1011.
 - `TherapySessionViewModel.swift:109` decides the language: `scriptedArmRaise: AppLanguage.selected == .indonesian`.
-- `MovementActivity` has `scriptedGuidance` and `waitingForGuidance` (≈ 12-13, 60-77, 114-141, 156, 204-212, 264, 547). Script mode switches it to 3 s dwells and a 5 s next-set countdown.
+- `MovementActivity` has `scriptedGuidance`. Script mode switches it to 3 s dwells and a 5 s next-set countdown. (`waitingForGuidance` was removed on 2026-11-19.)
 - Views branch on `usesArmRaiseScript` and `armRaiseNarrationPrefix`.
 - `ArmRaiseGuidance.swift` and `Shared/ScriptedRepetitions.swift` hold the key tables.
 
@@ -51,8 +51,8 @@ Move the Indonesian arm-raise script out of the engine, `MovementActivity` and t
 - The session receives `GuidanceMode` (`.generic` or `.scriptedIndonesian`) at `init` from the frozen language. One factory switch, next to the activity factory switch, picks the policy.
 - `MovementActivity`:
   - Takes `MovementTiming` (dwell and capture seconds) in `init`.
-  - Loses `scriptedGuidance` and `waitingForGuidance`.
-  - The engine sends `.evidenceHeld` when `policy.timing.gatesScoringOnNarration`. It must reproduce today's reset of `last`/`lastValid`.
+  - Loses `scriptedGuidance`.
+  - No narration gate is needed for arm raise: since *Body exercises do not wait for narration* (2026-11-19) its evidence never waits for a line, and the step-change reset of `last`/`lastValid` stays in `MovementActivity`.
 - Remove from the engine and snapshot: `usesArmRaiseScript`, `armRaiseNarrationPrefix`, `pendingPrefix`, `lastScriptHoldCount`. Views read neutral fields instead (for example `cueStyle`, `countdownTitleKey`). `armRaiseScriptSide` for the long rest becomes `policy.longRestScript`.
 - `TherapySessionViewModel` only maps an `Utterance` to `SessionAudioService`. The demo-step chime stays.
 

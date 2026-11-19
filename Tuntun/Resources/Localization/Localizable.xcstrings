@@ -11453,7 +11453,6 @@
       }
     },
     "plan.voice" : {
-      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -17638,6 +17637,7 @@
       }
     },
     "session.switchArm.left" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -17654,6 +17654,7 @@
       }
     },
     "session.switchArm.right" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {

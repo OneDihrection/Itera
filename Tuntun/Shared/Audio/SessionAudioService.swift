@@ -77,7 +77,11 @@ final class SessionAudioService: NSObject, SessionAudioServiceProtocol, AVSpeech
     private var afterClip: (() -> Void)?
     private var failedClip: (() -> Void)?
     private var pendingSpeech: (id: UUID, text: String, line: NarrationLine?)?
+    /// A prefixed cue (a count or chime, then a line) that arrived while a hand-off was running.
+    private var pendingGuidance: (id: UUID, cue: SessionAudioCue)?
     private var pendingCounts: [(id: UUID, number: Int)] = []
+    /// The quiet moment after a faded-out cue; new speech waits for it (`handOffSpeech`).
+    private var handOffGap: Task<Void, Never>?
     private var speechWatchdog: Task<Void, Never>?
     private var closingWatchdog: Task<Void, Never>?
 
@@ -140,7 +144,103 @@ final class SessionAudioService: NSObject, SessionAudioServiceProtocol, AVSpeech
 
     /// True while a cue, count or narration clip is being spoken or queued.
     var isNarrating: Bool {
-        !utteranceIDs.isEmpty || clipID != nil || pendingSpeech != nil || !pendingCounts.isEmpty
+        !utteranceIDs.isEmpty
+            || clipID != nil
+            || pendingSpeech != nil
+            || pendingGuidance != nil
+            || !pendingCounts.isEmpty
+            || handOffGap != nil
+    }
+
+    /// True while speech must wait: a cue is playing or a hand-off's quiet moment is running.
+    private var speechBusy: Bool {
+        !utteranceIDs.isEmpty || clipID != nil || handOffGap != nil
+    }
+
+    // MARK: - Hand-off
+
+    /// A line with at most this much left finishes before the next cue; a longer one fades out.
+    private static let handOffFinishWindow: TimeInterval = 1.0
+    private static let handOffFade: TimeInterval = 0.25
+    /// The quiet moment between a faded line and the next cue, so the change is heard as a new
+    /// instruction rather than a cut.
+    private static let handOffPause: TimeInterval = 0.3
+
+    /// Makes room for a cue that replaces the current one because the session moved on, without a
+    /// hard cut: a line that is nearly over finishes and the next cue follows it; otherwise the
+    /// recorded line fades out (the system voice stops after its current word) and the next cue
+    /// starts after a short pause. Queued prompts and counts are obsolete and dropped. Pause,
+    /// Stop, voice "stop" and interruptions use `cancelSpeech`, which stays immediate.
+    func handOffSpeech() {
+        dropPendingSpeech()
+        closingWatchdog?.cancel()
+        closingWatchdog = nil
+
+        if let id = clipID, let clip = activeClip {
+            // Whatever was to follow this clip belongs to the cue being replaced.
+            afterClip = nil
+            failedClip = nil
+
+            if let remaining = clip.remaining(), remaining <= Self.handOffFinishWindow {
+                return
+            }
+
+            clipID = nil
+            activeClip = nil
+            clipWatchdog?.cancel()
+            clipWatchdog = nil
+            clip.stop(fade: Self.handOffFade)
+            events.send(.cancelled(id))
+            startHandOffGap()
+            return
+        }
+
+        guard !utteranceIDs.isEmpty else {
+            return
+        }
+
+        let cancelled = Array(utteranceIDs.values)
+        utteranceIDs.removeAll()
+        speechWatchdog?.cancel()
+        speechWatchdog = nil
+        synthesizer.stopSpeaking(at: .word)
+        for id in cancelled {
+            events.send(.cancelled(id))
+        }
+        startHandOffGap()
+    }
+
+    /// Music stays ducked through the pause, so it does not swell between two cues.
+    private func startHandOffGap() {
+        handOffGap?.cancel()
+        handOffGap = Task { [weak self] in
+            do {
+                try await Task.sleep(for: .seconds(Self.handOffFade + Self.handOffPause))
+            } catch {
+                return
+            }
+
+            guard let self else {
+                return
+            }
+
+            self.handOffGap = nil
+            self.drainPendingAudio()
+
+            if !self.speechBusy {
+                self.music.setDucked(false)
+            }
+        }
+    }
+
+    private func dropPendingSpeech() {
+        let dropped = [pendingSpeech?.id, pendingGuidance?.id].compactMap { $0 } + pendingCounts.map(\.id)
+        pendingSpeech = nil
+        pendingGuidance = nil
+        pendingCounts.removeAll(keepingCapacity: true)
+        for id in dropped {
+            events.send(.cancelled(id))
+        }
     }
 
     /// Short effects never play over speech: fade them out before any narration begins.
@@ -151,9 +251,8 @@ final class SessionAudioService: NSObject, SessionAudioServiceProtocol, AVSpeech
     }
 
     func speak(id: UUID, text: String) {
-        if !utteranceIDs.isEmpty || clipID != nil {
-            if let previous = pendingSpeech { events.send(.cancelled(previous.id)) }
-            pendingSpeech = (id, text, nil)
+        if speechBusy {
+            queueSpeech((id, text, nil))
             return
         }
         guard let voice else {
@@ -189,9 +288,12 @@ final class SessionAudioService: NSObject, SessionAudioServiceProtocol, AVSpeech
     }
 
     func cancelSpeech() {
-        let cancelled = Array(utteranceIDs.values) + [clipID, pendingSpeech?.id].compactMap { $0 }
+        let cancelled = Array(utteranceIDs.values) + [clipID, pendingSpeech?.id, pendingGuidance?.id].compactMap { $0 }
             + pendingCounts.map(\.id)
         pendingSpeech = nil
+        pendingGuidance = nil
+        handOffGap?.cancel()
+        handOffGap = nil
         pendingCounts.removeAll(keepingCapacity: true)
         speechWatchdog?.cancel()
         speechWatchdog = nil
@@ -282,7 +384,7 @@ final class SessionAudioService: NSObject, SessionAudioServiceProtocol, AVSpeech
                 return
             }
         case .count(let number):
-            if !utteranceIDs.isEmpty || clipID != nil {
+            if speechBusy {
                 guard pendingCounts.count < 32 else {
                     events.send(.feedbackUnavailable)
                     return
@@ -314,7 +416,11 @@ final class SessionAudioService: NSObject, SessionAudioServiceProtocol, AVSpeech
                 speak(id: id, text: String(number))
             }
         case .guidance(let prefix, let key):
-            cancelSpeech()
+            handOffSpeech()
+            guard !speechBusy else {
+                pendingGuidance = (id, cue)
+                return
+            }
             let name: String
             let timeout: Double
             switch prefix {
@@ -357,7 +463,9 @@ final class SessionAudioService: NSObject, SessionAudioServiceProtocol, AVSpeech
         let onlyOlderHoldNumber = clipID != nil && clipID == holdSecondID
         return utteranceIDs.isEmpty
             && pendingSpeech == nil
+            && pendingGuidance == nil
             && pendingCounts.isEmpty
+            && handOffGap == nil
             && (clipID == nil || onlyOlderHoldNumber)
     }
 
@@ -369,7 +477,7 @@ final class SessionAudioService: NSObject, SessionAudioServiceProtocol, AVSpeech
         }
         holdSecondID = nil
 
-        let quiet = utteranceIDs.isEmpty && clipID == nil && pendingSpeech == nil && pendingCounts.isEmpty
+        let quiet = !speechBusy && pendingSpeech == nil && pendingGuidance == nil && pendingCounts.isEmpty
         guard number > 0, quiet else {
             return
         }
@@ -390,11 +498,8 @@ final class SessionAudioService: NSObject, SessionAudioServiceProtocol, AVSpeech
     func speak(id: UUID, key: String, argument: Int? = nil) {
         let text = spokenText(for: key, argument: argument)
         let line = NarrationLine(key: key, argument: argument)
-        guard utteranceIDs.isEmpty, clipID == nil else {
-            if let previous = pendingSpeech {
-                events.send(.cancelled(previous.id))
-            }
-            pendingSpeech = (id, text, line)
+        guard !speechBusy else {
+            queueSpeech((id, text, line))
             return
         }
         let name = NarrationClips.resourceName(for: line, language: language)
@@ -495,11 +600,24 @@ final class SessionAudioService: NSObject, SessionAudioServiceProtocol, AVSpeech
         drainPendingAudio()
     }
 
+    /// One prompt waits at a time: a newer one replaces whichever prompt was waiting.
+    private func queueSpeech(_ speech: (id: UUID, text: String, line: NarrationLine?)) {
+        let replaced = [pendingSpeech?.id, pendingGuidance?.id].compactMap { $0 }
+        pendingSpeech = speech
+        pendingGuidance = nil
+        for id in replaced {
+            events.send(.cancelled(id))
+        }
+    }
+
     private func drainPendingAudio() {
-        guard utteranceIDs.isEmpty, clipID == nil else { return }
+        guard !speechBusy else { return }
         if !pendingCounts.isEmpty {
             let next = pendingCounts.removeFirst()
             play(id: next.id, cue: .count(next.number))
+        } else if let next = pendingGuidance {
+            pendingGuidance = nil
+            play(id: next.id, cue: next.cue)
         } else if let next = pendingSpeech {
             pendingSpeech = nil
             if let line = next.line {

@@ -346,7 +346,7 @@ final class BalanceSessionViewModel: BalanceSessionViewModelProtocol {
         guard !paused, let phase = restBreath?.phase else {
             return
         }
-        audioService.cancelSpeech()
+        audioService.handOffSpeech()
         audioService.speak(id: UUID(), key: phase.key)
     }
 
@@ -357,7 +357,7 @@ final class BalanceSessionViewModel: BalanceSessionViewModelProtocol {
         }
 
         restRemaining = nil
-        audioService.cancelSpeech()
+        audioService.handOffSpeech()
         setNumber += 1
         lastSpokenCountdown = nil
         engine.nextSet()
@@ -626,7 +626,7 @@ final class BalanceSessionViewModel: BalanceSessionViewModelProtocol {
 
             calibrationFinished = true
             openingCue = .complete
-            audioService.cancelSpeech()
+            audioService.handOffSpeech()
             if exercise.isSitToStand {
                 // Restart the seated countdown after both announcements finish.
                 engine.consume(frame, scoringEnabled: false)

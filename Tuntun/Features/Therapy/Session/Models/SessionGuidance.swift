@@ -20,9 +20,13 @@ struct SessionGuidance {
         case activity
     }
 
+    /// The pause after a card's narration before the next card. Long enough to finish reading a
+    /// short card, short enough that the session never feels stalled.
+    static let defaultQuietDelay = 1.5
+
     let cards: [Card]
     let destination: Destination
-    var quietDelay: Double = 3
+    var quietDelay: Double = defaultQuietDelay
     var watchdog: Double = 20
 
     /// - Parameter side: The side being calibrated, when an alternating activity introduces each

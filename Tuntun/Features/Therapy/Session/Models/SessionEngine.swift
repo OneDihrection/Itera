@@ -22,7 +22,11 @@ enum SessionEvent {
 
 enum SessionEffect {
     case speak(UUID, String)
+    /// Stops narration at once: pause, stop, recalibration and the end of the session.
     case cancelSpeech
+    /// The session moved on and the next cue replaces the current one: the narration finishes or
+    /// fades out before it, never a hard cut (`SessionAudioService.handOffSpeech`).
+    case handOffSpeech
     case audio(UUID, SessionAudioCue)
     case checkpoint(SessionCheckpoint)
     case finalize(SessionSummary)
@@ -128,6 +132,10 @@ struct SessionEngine {
     /// for the camera. Scoring still rejects frames older than 300 ms; this only stops a brief
     /// inference or main-thread hitch from cancelling narration and replaying it on every gap.
     static let cameraWaitGrace = 1.0
+
+    /// How long a demonstration card stays after its narration, so the looping clip can be seen
+    /// once more without the voice. Kept short: the clip already played under the narration.
+    static let demonstrationHold = 3.0
 
     init(routine: Routine = .demo(), date: Date = Date(), scriptedArmRaise: Bool = false) {
         self.scriptedArmRaise = scriptedArmRaise
@@ -738,7 +746,7 @@ struct SessionEngine {
             }
             if snapshot.restBreath != nil {
                 snapshot.restBreath = nil
-                effects.append(.cancelSpeech)
+                effects.append(.handOffSpeech)
             }
             switch progress.advanceAfterRest() {
             case .set:
@@ -805,7 +813,7 @@ struct SessionEngine {
         // A newer cue replaces the side cue, and with it the instruction owed after it.
         instructionFollowsSideCue = false
         if timed || liveTowel || snapshot.usesArmRaiseScript {
-            effects.append(.cancelSpeech)
+            effects.append(.handOffSpeech)
         }
         let id = UUID()
         gate = GuidanceGate(
@@ -921,7 +929,9 @@ struct SessionEngine {
             guard case .card(_, let demonstration) = opening.step else {
                 return
             }
-            stage.advanceAt = demonstration ? now + 8 : now + (guidancePlan?.quietDelay ?? 3)
+            stage.advanceAt = demonstration
+                ? now + Self.demonstrationHold
+                : now + (guidancePlan?.quietDelay ?? SessionGuidance.defaultQuietDelay)
         case .feedback(let feedback):
             stage.advanceAt = max(now, feedback.enteredAt + 2)
         case .preparing, .practice, .rest, .summary:

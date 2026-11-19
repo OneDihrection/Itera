@@ -231,6 +231,9 @@ struct TMFingerSessionView<Service: FingerSessionServiceProtocol>: View {
                     completionID: model.activity.holdCompletionID,
                     onCompletionPresented: model.holdCompletionPresented
                 )
+                // The targets are drawn quietly until the countdown ends.
+                .opacity(model.activity.phase == .countdown ? 0.6 : 1)
+                .animation(.easeOut(duration: 0.35), value: model.activity.phase == .countdown)
             }
         }
     }

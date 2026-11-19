@@ -437,6 +437,7 @@ final class TherapySessionViewModel: TherapySessionViewModelProtocol {
                 }
             case .audio(let id, let cue): audioService.play(id: id, cue: cue)
             case .cancelSpeech: audioService.cancelSpeech()
+            case .handOffSpeech: audioService.handOffSpeech()
             case .keepRepClip(let request):
                 trackingService.clips.keep(
                     group: request.group,

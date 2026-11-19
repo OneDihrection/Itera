@@ -341,6 +341,8 @@ final class FingerSessionViewModel: FingerSessionViewModelProtocol {
                 lastCountdownCue = cue
                 // Marizka says "tiga, dua, satu" when recorded; otherwise the beep as before.
                 if countdown > 0, !guidanceAudioService.playCountdown(countdown) {
+                    // Countdown time is authoritative, so the number never waits for a hand-off.
+                    guidanceAudioService.cancelSpeech()
                     _ = guidanceAudioService.speak(String(countdown))
                 }
             }

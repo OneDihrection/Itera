@@ -43,6 +43,8 @@ struct DirectionalReachActivity: TherapyActivity {
     private var suspended = false
     private var viewport: TherapyViewport?
     private var restartingRound = false
+    /// A direction's assessment window has not started: its cue is still playing and the wrist
+    /// is still at the start. Either ending starts the window; the start hold never waits.
     private var awaitingGuidance = true
     private var pendingOutcomes: [ReachOutcome] = []
     private var missingSince: Double?
@@ -115,9 +117,6 @@ struct DirectionalReachActivity: TherapyActivity {
             }
         case .resume:
             suspended = false
-            if phase == .start {
-                awaitingGuidance = true
-            }
         case .recalibrate:
             landmarkSmoother.reset()
             phase = .start
@@ -129,7 +128,6 @@ struct DirectionalReachActivity: TherapyActivity {
             restartingRound = false
             snapshot.rehearsal = false
             snapshot.instruction = "session.reachStart"
-            awaitingGuidance = true
             clearEvidence()
         case .tick(let time):
             if let last, time - last > Self.trackingLossReset {
@@ -421,7 +419,6 @@ struct DirectionalReachActivity: TherapyActivity {
         switch phase {
         case .start:
             snapshot.instruction = "session.reachStart"
-            guard !awaitingGuidance else { return }
 
             // The drawn bubble is the tolerance, so staying inside the ring the patient sees is
             // enough; a body-scaled tolerance was smaller than detector jitter.
@@ -466,6 +463,13 @@ struct DirectionalReachActivity: TherapyActivity {
                 progress: snapshot.progress, aspect: frame.aspect, jointHold: true
             )
             snapshot.guide?.farthest = peakPoint.map { shoulder + $0 }
+
+            // A patient who moves during the cue is measured at once; one who waits for it does
+            // not lose window time while listening.
+            let startTolerance = sharedBubbleRadius(aspect: frame.aspect, viewport: viewport)
+            if awaitingGuidance, (relative - start).length > startTolerance {
+                awaitingGuidance = false
+            }
 
             guard !awaitingGuidance else {
                 return

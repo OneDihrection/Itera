@@ -206,6 +206,13 @@ struct TMTherapySessionView<ViewModel: TherapySessionViewModelProtocol>: View {
             || model.snapshot.presentation?.countdownLength != nil
     }
 
+    /// Practice has not started yet: the countdown, or the cue before it, is still running. The
+    /// target is drawn quietly until then.
+    var showsIndicatorPreview: Bool {
+        model.snapshot.stage == .activity
+            && model.snapshot.presentation?.countdownLength != nil
+    }
+
     @ViewBuilder
     private var fullScreenPresentation: some View {
         if model.snapshot.stage == .rest, let breath = model.snapshot.guidedSetBreathing,
@@ -529,6 +536,8 @@ struct TMTherapySessionView<ViewModel: TherapySessionViewModelProtocol>: View {
                    model.snapshot.stage == .activity,
                    case .towel(let towel) = model.snapshot.presentation {
                     TMTowelWorkspaceView(snapshot: model.towelDisplay ?? towel, interpolates: model.towelInterpolates)
+                        .opacity(showsIndicatorPreview ? 0.6 : 1)
+                        .animation(.easeOut(duration: 0.35), value: showsIndicatorPreview)
                 }
                 if !usesLightLayout, !hasFullScreenPresentation, model.snapshot.stage == .activity,
                     let active = cornerExampleActive
@@ -983,6 +992,7 @@ struct TMTherapySessionView<ViewModel: TherapySessionViewModelProtocol>: View {
                 : nil,
             movementCue: movementCue,
             reachArrow: reachArrow,
+            preview: showsIndicatorPreview,
             mirrored: true
         )
     }

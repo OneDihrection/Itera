@@ -9,8 +9,9 @@ import Foundation
 
 struct MovementActivity: TherapyActivity {
     private let configuration: SessionActivity
+    /// The Indonesian arm-raise script: 3 s captures and dwells and a 5 s next-set countdown. Its
+    /// spoken lines follow the movement; evidence never waits for them, as in Balancing.
     private let scriptedGuidance: Bool
-    private var waitingForGuidance: Bool
     private var setNumber = 1
     private var snapshot = MovementSnapshot()
     private var hold = StableHold()
@@ -73,7 +74,6 @@ struct MovementActivity: TherapyActivity {
     init(configuration: SessionActivity, scriptedGuidance: Bool = false) {
         self.configuration = configuration
         self.scriptedGuidance = scriptedGuidance
-        waitingForGuidance = scriptedGuidance
     }
     var presentation: ActivityPresentation {
         var value = snapshot
@@ -109,11 +109,7 @@ struct MovementActivity: TherapyActivity {
             snapshot.instruction = "session.countdown"
             returningBeforePractice = false
         case .guidanceCompleted:
-            if scriptedGuidance {
-                waitingForGuidance = false
-                last = nil
-                lastValid = nil
-            }
+            break
         case .viewport(let value):
             if viewport != value {
                 viewport = value
@@ -121,18 +117,12 @@ struct MovementActivity: TherapyActivity {
             }
         case .suspend:
             suspended = true
-            if scriptedGuidance {
-                waitingForGuidance = true
-            }
             landmarkSmoother.reset()
             interrupt()
         case .resume:
             // An interrupted countdown stays pending; the session restarts it after its cue.
             suspended = false
         case .recalibrate:
-            if scriptedGuidance {
-                waitingForGuidance = true
-            }
             start = nil
             target = nil
             snapshot.countingDown = false
@@ -190,7 +180,7 @@ struct MovementActivity: TherapyActivity {
                 }
             }
         case .observation(let frame):
-            if !suspended, !waitingForGuidance {
+            if !suspended {
                 let filtered = landmarkSmoother.consume(frame)
                 consume(filtered)
             }
@@ -198,7 +188,7 @@ struct MovementActivity: TherapyActivity {
         if scriptedGuidance,
            oldPhase != phase || oldCount != snapshot.count || hadStart != (start != nil)
             || hadTarget != (target != nil) || (wasCountingDown && !snapshot.countingDown) {
-            waitingForGuidance = true
+            // Each step's hold starts from fresh samples.
             last = nil
             lastValid = nil
             if target != nil, !snapshot.countingDown {
