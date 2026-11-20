@@ -768,6 +768,18 @@ final class BalanceSessionViewModel: BalanceSessionViewModelProtocol {
             return
         }
 
+        // A held seat, a held stand or a stand in practice popped the hip circle: the pop sound
+        // leads into the instruction that changed with it.
+        if let completions = current.overlay?.completions,
+           completions > previous.overlay?.completions ?? completions {
+            lastSpokenCountdown = nil
+            audioService.play(
+                id: UUID(),
+                cue: .guidance(prefix: .holdPopped, key: current.instructionKey)
+            )
+            return
+        }
+
         // Only the countdown before practice is counted aloud; the seated hold is shown, not spoken.
         if let remaining = current.calibrationCountdown, current.instructionKey == "session.countdown" {
             speakCountdown(remaining)

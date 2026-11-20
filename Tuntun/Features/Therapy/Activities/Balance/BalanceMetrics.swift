@@ -112,6 +112,15 @@ struct BalanceOverlay: Equatable {
     /// Where the calibration cue starts: the wrist's resting position, fixed to the body so the
     /// cue stays put while the wrist moves through it.
     var calibrationTail: TherapyPoint? = nil
+    /// The joint that moves along the cue when it is not the wrist, such as sit to stand's
+    /// shoulder while leaning or hip while rising.
+    var calibrationJoint: TherapyPoint? = nil
+    /// False draws the joint marker as a quiet outline with no arc, for a repetition that can no
+    /// longer count or while waiting for the patient to return.
+    var holdActive = true
+    /// Milestones that pop the joint marker, when they differ from completed repetitions: sit to
+    /// stand also pops on its calibration holds and each stand. Nil pops on each repetition.
+    var completions: Int? = nil
 }
 
 struct BalanceSnapshot: Equatable {

@@ -319,7 +319,7 @@ final class GuidanceAudioService: NSObject, AVSpeechSynthesizerDelegate {
         let name: String
         switch cue {
         case .countdown: name = "countdown"
-        case .holdPopped: name = "hold-pop"
+        case .holdPopped: name = HoldPopSound.resourceName
         case .setCompleted: name = "set-complete"
         case .demoChanged: name = DemoChangeSound.resourceName
         }

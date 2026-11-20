@@ -14,6 +14,8 @@ indirect enum SessionAudioCue {
     /// always matches the bubble without cutting off an instruction.
     case holdSecond(Int)
     case target
+    /// A completed hold or milestone popped on the indicator: the short `hold-pop` effect.
+    case holdPopped
     /// The live demonstration moved to a new step; a soft chime draws the patient's eye to it.
     case demoChanged
     case towelGrab
@@ -28,4 +30,9 @@ enum DemoChangeSound {
     /// A soft 0.8 s chime otherwise heard only at the end of a session. Change the name here to
     /// use a dedicated sound.
     static let resourceName = "closing-chime"
+}
+
+/// The clip played when an indicator pops; the finger sessions play the same file.
+enum HoldPopSound {
+    static let resourceName = "hold-pop"
 }

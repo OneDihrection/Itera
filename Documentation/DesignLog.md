@@ -1797,3 +1797,47 @@ The console repeated `AVAudioSession_iOS.mm:978 This method can lead to UI unres
 - **Strings (same change).** Reach summary outcome and phase names used an interpolated `LocalizedStringKey`, which looked up `session.reachOutcome.%@`/`session.reachPhase.%@` and showed raw keys; they now use literal keys. Number-only accessibility values (`TMTherapyProgressDots`, `TMTherapyStepStrip`) are verbatim, the per-repetition chart's axis labels are `chart.axis.repetition`/`chart.axis.value`, and `TMTherapyPageHeader` takes an optional title instead of an empty key. Unused stale catalog keys were removed; keys built at runtime (and every narrated key) are `manual` in the String Catalog so Xcode does not mark them stale.
 
 Verification: XcodeGen and a Debug Simulator build with IPHONEOS_DEPLOYMENT_TARGET=17.0 succeed without warnings; every key the compiler extracts is in the catalog. Pending on the M1 iPad: no main-thread warning in the console through the plan intro, long rest, a guided, finger and Balancing session and button taps after a finger session; narration and music start without clipping or a late start after Stop; the first button click after a session; Stop/Go during narration; the reach summary shows translated outcomes and phases in both languages.
+
+## Sit to stand repetition arc (2026-11-20)
+
+At the product owner's request, sit to stand's hip indicator now shows whether a repetition is progressing. Since *Sit to stand hip indicator*, the arc during practice was the calibrated rise alone. The required forward lean drew nothing. A stand without the lean filled the arc although it would never count. The arc emptied while sitting back down, so the pop came on an empty circle. Waiting to return to the seat looked the same as live practice. The 100 pt circle, the size of the arm exercises' target bubbles, also read as a place to reach rather than the tracked hip.
+- **One cycle per repetition.** `SitToStandActivity` publishes `repetitionProgress`. The lean toward its target fills 0–¼, rising from `liftRise` to `standingRise` fills ¼–¾, standing holds ¾, and lowering from `standingRise` to `seatedRise` fills the rest. The arc is full during the 0.25 s seated dwell, just before the count and its pop, and restarts after. It only moves back when the movement does, for example when sitting down from a partial rise. Counting rules are unchanged.
+- **Quiet when it won't count.** `repetitionCounts` is false once a repetition is flagged (`sts.leanFirst`, `sts.slowDown`) and while waiting for the seat. `BalanceOverlay.holdActive` carries it, also false during the return to the seat before practice, to `TMSessionBubbleOverlay(captureActive:)`, which draws the hip as a quiet outline with no arc.
+- **72 pt hip circle.** `SitToStandBalanceEngine.hipDiameter` uses `fixedBubbleRadius`; the pop follows the same radius.
+- **Step arrow.** The existing blue calibration cue (`SessionMovementCue`, drawn by `TMSessionGuideArrows`) shows the next move. It is fixed to the calibrated poses, and the camera stays still during a session. While leaning, it is the trunk turning forward around the seated hip from the seated shoulder to the lean target, and the shoulder moves along it. While rising, it runs from the seated hip to the standing hip. During the trial, before a stand has been seen, it points one trunk length up. While sitting down or returning to the seat, it runs back down. There is no arrow during the holds, the countdown, standing still, an invalid repetition or lost tracking. `BalanceOverlay` gained `calibrationJoint` and `calibrationPivot`. `BalanceSessionView` draws the cue with the hip marker only when `calibrationJoint` is set, so the arm exercises' wrist hold stays free of their range cue as before.
+
+No narration or strings changed: `sts.leanForward`, `sts.standUp`, `sts.sitDown` and `sts.leanFirst` already speak each step.
+
+Verification: XcodeGen and a Debug Simulator build with IPHONEOS_DEPLOYMENT_TARGET=17.0. A temporary harness over `SitToStandActivity.swift` drove synthetic side-view poses through calibration and practice and passed 14 checks:
+- the arc went 0→0.25 leaning, 0.25→0.75 rising, held 0.75 standing (with no arrow), went 0.75→1.00 lowering, was full just before the count and restarted after it, never going backward
+- a stand without the lean was quiet, empty, arrowless and not counted, and the next repetition was live again
+- the trial showed the up arrow and then, after the stand hold, the down arrow
+
+Pending on the M1 iPad: the arc filling during the lean and while sitting down; a full arc lining up with the pop and the spoken count; the quiet outline after a stand without the lean and while returning to the seat; the 72 pt circle reading as on the hip; the lean arrow bending the right way facing left and right, in both orientations; the up and down arrows matching the real hip path, with the passed stretch dimming; the arrow switching between steps without a jarring jump; no arrow during holds and the countdown; Reduce Motion.
+
+## Sit to stand calibration and milestone pops (2026-11-20)
+
+The product owner still found sit to stand unclear after *Sit to stand repetition arc*. They asked for one repeated pattern: sit, stand, sit, with the indicator popping each time a position is reached. They also chose to drop the forward-lean rule and to play the `hold-pop` sound on the new pops.
+- **Calibration order.** The seated hold (`sts.holdSeated`, 3 s) now pops the hip circle. The trial then asks "Stand and hold" (`sts.holdStanding`) from its start, under an up arrow: one trunk length up until a stand is seen, then to the best stand so far. The arrow hides while the stand hold fills. The stand hold is now required. Completing it pops the circle and asks the patient to sit (`sts.sitDown`) under a down arrow, and calibration finishes once they have settled back into the seat. Sitting before the hold completes asks them to stand again; this supersedes "sitting early still finishes the trial".
+- **No lean rule.** Practice stages are seated → rising → standing → lowering. The `.leaning` stage, `leanReached`, the trial's peak lean, the lean targets and the `sts.leanFirst` flag are gone, so any controlled stand and sit counts. This supersedes the lean requirement of the original activity and of *Sit to stand without the ankle*. Trunk lean is still recorded. The abrupt-descent rule (`sts.slowDown`) stays.
+- **Two halves, two pops.** `repetitionProgress` fills 0→1 with the rise to `standingRise`. Reaching the stand pops it and switches to "sit down" in the same frame. It then fills 0→1 again as the patient sits, and the count pops it. This supersedes the one-cycle arc and the lean arrow of *Sit to stand repetition arc*. The quiet outline for a repetition that cannot count, the 72 pt size and the up/down arrows stay.
+- **One pop trigger.** `SitToStandSnapshot.completions` counts every milestone: the held seat, the held stand, each practice stand and each count. It only grows. `BalanceOverlay.completions` carries it, and `BalanceSessionView` passes it as `captureCompletions`, falling back to completed repetitions for the other exercises. A count therefore pops once.
+- **Sound.** `SessionAudioCue.holdPopped` plays `hold-pop.wav` (`HoldPopSound.resourceName`, shared with the finger sessions' `GuidanceAudioService`), alone or as a guidance prefix before a line. When the milestone count rises without a repetition, `BalanceSessionViewModel.updateSitToStandAudio` plays the pop, then the instruction that changed with it. A count keeps the target chime and `voice.returnSameSide`.
+- **Narration retired.** `sts.trial`, `sts.leanForward` and `sts.leanFirst` were removed from the String Catalog, the registry and the manifests, with their bundled clips and raw takes. `NarrationScript.md` was refreshed with `--report`. Nothing was recorded. `sts.standUp`'s second line ("Keep leaning forward as you rise") remains as advice.
+
+Verification: XcodeGen and a Debug Simulator build with IPHONEOS_DEPLOYMENT_TARGET=17.0. A temporary harness over `SitToStandActivity.swift` drove synthetic side-view poses and passed 18 checks:
+- the seated hold popped and asked for a stand; there was no pop while rising
+- sitting before the stand hold asked for a stand again, under an up arrow
+- the stand hold popped, switched to sit down and showed a down arrow
+- calibration ended in the countdown, with no arrow
+- practice started under an up arrow
+- two straight-up repetitions with no lean each counted with two pops, each arc full at its pop, the sit-down instruction on the stand pop's frame, and each half's arc only growing
+
+Pending on the M1 iPad:
+- the calibration order and its narration in both languages
+- the pops and `hold-pop` at the held seat, the held stand and each stand, and a single pop with the chime on each count
+- the arrows facing either way and in both orientations
+- a stand without the lean counting
+- an abrupt sit not counting
+- Stop/Go during the pops
+- Reduce Motion

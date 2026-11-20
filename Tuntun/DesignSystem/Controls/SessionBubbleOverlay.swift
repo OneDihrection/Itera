@@ -50,6 +50,8 @@ struct TMSessionBubbleOverlay: View {
     var holdRadius: Double? = nil
     /// Counts completions on the capture circle; each increase pops it. Needs `holdRadius`.
     var captureCompletions = 0
+    /// False draws the capture circle as a quiet outline with no arc.
+    var captureActive = true
     /// A lone joint marker, for guidance without bubbles such as a direction-only reach.
     var trackedJoint: CGPoint? = nil
     var movementCue: SessionMovementCue? = nil
@@ -244,8 +246,8 @@ struct TMSessionBubbleOverlay: View {
                 center: mapping.point(captureJoint),
                 diameter: radius * 2,
                 progress: holdProgress,
-                active: true,
-                showsTimer: true
+                active: captureActive,
+                showsTimer: captureActive
             )
         }
     }

@@ -236,31 +236,35 @@ struct TMBalanceSessionView<ViewModel: BalanceSessionViewModelProtocol>: View {
             CGPoint(x: point.x / overlay.aspect, y: point.y)
         }
         // While the comfortable end is shown, the cue runs from the wrist's resting position; the
-        // wrist moves along it.
+        // wrist moves along it. Sit to stand moves its hip along its up or down arrow.
         let movementCue: SessionMovementCue? = {
-            guard let wrist = overlay.wrist,
+            guard let joint = overlay.calibrationJoint ?? overlay.wrist,
                   let tip = overlay.calibrationTip else {
                 return nil
             }
 
             return SessionMovementCue(
-                tail: normalized(overlay.calibrationTail ?? wrist),
+                tail: normalized(overlay.calibrationTail ?? joint),
                 tip: normalized(tip),
-                joint: normalized(wrist)
+                joint: normalized(joint)
             )
         }()
 
         if let target = overlay.target {
             if overlay.isCalibrationHold {
                 // The patient's own joint is the marker: the wrist while the end pose is held
-                // still, or sit to stand's hip, which pops on each counted repetition.
+                // still, or sit to stand's hip, which pops on each held pose, stand and count.
                 TMSessionBubbleOverlay(
                     imageAspect: overlay.aspect,
                     bubbleGuide: nil,
                     captureJoint: overlay.wrist.map(normalized),
                     holdProgress: overlay.targetProgress,
                     holdRadius: overlay.targetRadius,
-                    captureCompletions: model.snapshot.metrics.completedTouches,
+                    captureCompletions: overlay.completions ?? model.snapshot.metrics.completedTouches,
+                    captureActive: overlay.holdActive,
+                    // Only sit to stand's step arrow is drawn with its marker; the arm exercises
+                    // keep their wrist hold free of the range cue.
+                    movementCue: overlay.calibrationJoint == nil ? nil : movementCue,
                     mirrored: true
                 )
             } else {

@@ -16552,40 +16552,6 @@
         }
       }
     },
-    "sts.leanFirst" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Lean forward before you stand\nThis repetition did not count."
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Condong ke depan sebelum berdiri\nRepetisi ini tidak dihitung."
-          }
-        }
-      }
-    },
-    "sts.leanForward" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Lean forward a little\nOnly as far as comfortable."
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Condong sedikit ke depan\nSebatas yang nyaman."
-          }
-        }
-      }
-    },
     "sts.sitDown" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -16650,23 +16616,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Pastikan bahu, pinggul, dan lutut terlihat"
-          }
-        }
-      }
-    },
-    "sts.trial" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Do one sit-to-stand your own way\nLean forward, stand up, then sit back down at a comfortable pace."
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Lakukan satu kali duduk ke berdiri dengan cara Anda\nCondong ke depan, berdiri, lalu duduk kembali sesuai kenyamanan Anda."
           }
         }
       }

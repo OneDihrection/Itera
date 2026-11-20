@@ -131,7 +131,7 @@ final class SessionAudioService: NSObject, SessionAudioServiceProtocol, AVSpeech
             prepareClip(countdownClipName(number))
         }
 
-        for name in ["button-click", "target-reached", "set-complete"] {
+        for name in ["button-click", "target-reached", "set-complete", HoldPopSound.resourceName] {
             if let url = Bundle.main.url(forResource: name, withExtension: "wav") {
                 towelEffects[name] = try? PreparedAudioClip(url: url)
             }
@@ -346,7 +346,7 @@ final class SessionAudioService: NSObject, SessionAudioServiceProtocol, AVSpeech
 
     func play(id: UUID, cue: SessionAudioCue) {
         switch cue {
-        case .towelGrab, .towelFold, .towelCompleted:
+        case .towelGrab, .towelFold, .towelCompleted, .holdPopped:
             guard UserDefaults.standard.object(forKey: PracticePreferences.celebrationSounds) as? Bool ?? true else {
                 return
             }
@@ -354,6 +354,7 @@ final class SessionAudioService: NSObject, SessionAudioServiceProtocol, AVSpeech
             switch cue {
             case .towelGrab: name = "button-click"
             case .towelFold: name = "target-reached"
+            case .holdPopped: name = HoldPopSound.resourceName
             default: name = "set-complete"
             }
             towelEffects.values.forEach { $0.stop() }
@@ -429,6 +430,9 @@ final class SessionAudioService: NSObject, SessionAudioServiceProtocol, AVSpeech
             switch prefix {
             case .target:
                 name = "target-reached"
+                timeout = 2
+            case .holdPopped:
+                name = HoldPopSound.resourceName
                 timeout = 2
             case .count(let number):
                 name = countClipName(number)

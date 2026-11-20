@@ -19,9 +19,13 @@ struct SitToStandBalanceEngine: BalanceMovementEngine {
     private(set) var snapshot = BalanceSnapshot()
     var viewport: TherapyViewport?
 
-    /// The shared bubble radius in normalized image height for the current camera frame.
-    private func bubbleRadius(aspect: Double) -> Double {
-        sharedBubbleRadius(aspect: aspect, viewport: viewport)
+    /// The hip circle is smaller than the 100 pt target bubbles, so it reads as the tracked hip
+    /// rather than a place to reach.
+    private static let hipDiameter = 72.0
+
+    /// The hip circle's radius in normalized image height for the current camera frame.
+    private func hipRadius(aspect: Double) -> Double {
+        fixedBubbleRadius(diameter: Self.hipDiameter, aspect: aspect, viewport: viewport)
     }
     private var activity: SitToStandActivity
     private let goal: Int
@@ -92,7 +96,11 @@ struct SitToStandBalanceEngine: BalanceMovementEngine {
             snapshot.phase = .complete
             snapshot.calibrationCountdown = nil
             snapshot.instructionKey = "sitToStand.voice.complete"
-            snapshot.overlay = overlay(for: value, marker: nil)
+
+            // Nothing is left to do, so no next move is shown.
+            var finished = value
+            finished.guide = nil
+            snapshot.overlay = overlay(for: finished, marker: nil)
             return
         }
 
@@ -117,7 +125,7 @@ struct SitToStandBalanceEngine: BalanceMovementEngine {
             snapshot.calibrationCountdown = nil
 
             switch value.stage {
-            case .seated, .leaning: snapshot.phase = .reaching
+            case .seated: snapshot.phase = .reaching
             case .rising, .standing, .lowering: snapshot.phase = .holding
             }
         }
@@ -130,7 +138,7 @@ struct SitToStandBalanceEngine: BalanceMovementEngine {
     }
 
     /// The hip as one circle beside the patient: its arc is the hold during calibration and the
-    /// rise during practice.
+    /// progress through each repetition during practice, with an arrow for the next move.
     /// - Parameter marker: `nil` outside a calibration hold, `true` for the seated hold and
     ///   `false` for the standing one.
     private func overlay(for value: SitToStandSnapshot, marker: Bool?) -> BalanceOverlay? {
@@ -149,17 +157,35 @@ struct SitToStandBalanceEngine: BalanceMovementEngine {
             wrist: joints.hip,
             target: joints.hip,
             isReturnTarget: marker ?? false,
-            targetRadius: bubbleRadius(aspect: value.aspect),
+            targetRadius: hipRadius(aspect: value.aspect),
             crossedMidline: false,
             targetProgress: hipProgress(for: value, marker: marker),
             holdSecondsRemaining: marker == nil ? nil : snapshot.calibrationCountdown,
             compensationWarning: value.cue != nil,
-            isCalibrationHold: true
+            isCalibrationHold: true,
+            calibrationTip: value.guide?.tip,
+            calibrationTail: value.guide?.tail,
+            calibrationJoint: value.guide?.joint,
+            holdActive: isHipActive(value),
+            completions: value.completions
         )
     }
 
-    /// The hip circle's arc: the calibration hold while one runs, the calibrated rise during
-    /// practice, and empty otherwise.
+    /// Quiet while returning to the seat before practice and while the current repetition cannot
+    /// count, so a filling arc always means progress that will be counted.
+    private func isHipActive(_ value: SitToStandSnapshot) -> Bool {
+        switch value.phase {
+        case .returnToSeat:
+            return false
+        case .practice:
+            return value.repetitionCounts
+        case .seatedCapture, .trial, .countdown:
+            return true
+        }
+    }
+
+    /// The hip circle's arc: the calibration hold while one runs, the progress through the current
+    /// repetition during practice, and empty otherwise.
     private func hipProgress(for value: SitToStandSnapshot, marker: Bool?) -> Double {
         if marker != nil {
             return snapshot.calibrationProgress
@@ -169,6 +195,6 @@ struct SitToStandBalanceEngine: BalanceMovementEngine {
             return 0
         }
 
-        return min(1, max(0, value.rise))
+        return min(1, max(0, value.repetitionProgress))
     }
 }

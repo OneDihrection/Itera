@@ -206,13 +206,10 @@ Every narrated line, from `Tools/narration-registry.json` and the String Catalog
 | `sitToStand.voice.rightTarget` | voice | Condong ke depan, lalu berdiri. | Lean forward, then stand. | id ✓ · en ✓ |
 | `sts.holdSeated` | voice | Duduk dengan nyaman dan tahan posisi Posisi duduk apa pun yang nyaman, menyamping ke kamera. | Sit comfortably and hold still Any comfortable seat works, side to the camera. | id ✓ · en ✓ |
 | `sts.holdStanding` | voice | Berdiri dan tahan Tahan posisi berdiri yang nyaman. | Stand and hold Hold a comfortable standing pose. | id ✓ · en ✓ |
-| `sts.leanFirst` | voice | Condong ke depan sebelum berdiri Repetisi ini tidak dihitung. | Lean forward before you stand This repetition did not count. | id ✓ · en ✓ |
-| `sts.leanForward` | voice | Condong sedikit ke depan Sebatas yang nyaman. | Lean forward a little Only as far as comfortable. | id ✓ · en ✓ |
 | `sts.sitDown` | voice | Duduk perlahan Kendalikan saat turun. | Sit down slowly Control your lowering. | id ✓ · en ✓ |
 | `sts.slowDown` | voice | Duduk sedikit lebih perlahan Repetisi ini tidak dihitung. | Sit down a bit more slowly This repetition did not count. | id ✓ · en ✓ |
 | `sts.standUp` | voice | Berdiri sesuai kemampuan Anda Tetap condong ke depan saat bangkit. | Stand up at your own pace Keep leaning forward as you rise. | id ✓ · en ✓ |
 | `sts.trackingLost` | voice | Pastikan bahu, pinggul, dan lutut terlihat | Keep your shoulder, hip, and knee in view | id ✓ · en ✓ |
-| `sts.trial` | voice | Lakukan satu kali duduk ke berdiri dengan cara Anda Condong ke depan, berdiri, lalu duduk kembali sesuai kenyamanan Anda. | Do one sit-to-stand your own way Lean forward, stand up, then sit back down at a comfortable pace. | id ✓ · en ✓ |
 | `towel.approach` | voice | Satukan ibu jari dan jari telunjuk (jepit) di lingkaran yang bersinar. | Pinch your thumb and index finger together on the glowing circle. | id ✓ · en ✓ |
 | `towel.demo` | voice | Satukan ibu jari dan jari telunjuk (jepit) di lingkaran yang bersinar, geser ke lingkaran berikutnya, lalu buka tangan. Mulai setelah hitungan mundur, meskipun panduan masih berbicara. | Pinch your thumb and index finger together on the glowing circle, slide to the next circle, then open your hand. You can begin after the countdown, even while guidance speaks. | id ✓ · en ✓ |
 | `towel.fold` | voice | Geser jari yang menjepit ke lingkaran berikutnya. | Slide your pinched fingers to the next circle. | id ✓ · en ✓ |
