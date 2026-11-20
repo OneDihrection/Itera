@@ -17,7 +17,8 @@ import SwiftUI
 /// acceptance boundary). The hold progress arc is a `TMTherapyGuideBubble` laid exactly on the
 /// shader's outline, which keeps the bubble's completion acknowledgment. The caller decides
 /// `merge` from its own geometry; changes are eased with a short spring, and Reduce Motion
-/// applies them at once.
+/// applies them at once. A single circle may also `glide`: its centre and size then ease between
+/// tracking samples, so a circle fed at the camera rate moves at the display rate.
 struct TMTherapyMergingGuide: View {
     enum Anchor {
         /// Both circles meet halfway and the merged circle grows slightly.
@@ -54,15 +55,48 @@ struct TMTherapyMergingGuide: View {
     var secondSymbol: String? = nil
     /// How `merge` changes ease; pass a curve without bounce for a calmer indicator.
     var mergeAnimation: Animation = .spring(duration: 0.35, bounce: 0.15)
+    /// Single circle only: eases the centre and diameter toward each new value. Nil places them
+    /// at once.
+    var glide: Animation? = nil
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
+        content
+            .animation(reduceMotion ? nil : mergeAnimation, value: merge)
+            .allowsHitTesting(false)
+            .accessibilityHidden(true)
+    }
+
+    @ViewBuilder
+    private var content: some View {
+        if let glide, first == second, firstDiameter == nil {
+            // Geometry is kept out of the layer's own animatable data, so merging callers keep
+            // tracking their points exactly.
+            GlidingCircleLayer(guide: self, center: second, diameter: diameter)
+                .animation(reduceMotion ? nil : glide, value: second)
+                .animation(reduceMotion ? nil : glide, value: diameter)
+        } else {
+            layer(
+                first: first,
+                second: second,
+                firstDiameter: firstDiameter ?? diameter,
+                secondDiameter: diameter
+            )
+        }
+    }
+
+    fileprivate func layer(
+        first: CGPoint,
+        second: CGPoint,
+        firstDiameter: CGFloat,
+        secondDiameter: CGFloat
+    ) -> some View {
         MergingGuideLayer(
             first: first,
             second: second,
-            firstDiameter: firstDiameter ?? diameter,
-            secondDiameter: diameter,
+            firstDiameter: firstDiameter,
+            secondDiameter: secondDiameter,
             merge: min(1, max(0, merge)),
             anchor: anchor,
             progress: progress,
@@ -76,9 +110,6 @@ struct TMTherapyMergingGuide: View {
             firstSymbol: firstSymbol,
             secondSymbol: secondSymbol
         )
-        .animation(reduceMotion ? nil : mergeAnimation, value: merge)
-        .allowsHitTesting(false)
-        .accessibilityHidden(true)
     }
 }
 
@@ -96,7 +127,8 @@ extension TMTherapyMergingGuide {
         tint: Color = TherapyPalette.guidanceOrange,
         popsOnCompletion: Bool = false,
         filled: Bool = true,
-        symbol: String? = nil
+        symbol: String? = nil,
+        glide: Animation? = nil
     ) {
         self.init(
             first: center,
@@ -112,7 +144,37 @@ extension TMTherapyMergingGuide {
             tint: tint,
             popsOnCompletion: popsOnCompletion,
             filled: filled,
-            secondSymbol: symbol
+            secondSymbol: symbol,
+            glide: glide
+        )
+    }
+}
+
+// MARK: - Gliding circle
+
+/// Interpolates a single circle's centre and diameter frame by frame, then draws the layer at
+/// the interpolated geometry.
+private struct GlidingCircleLayer: View, Animatable {
+    let guide: TMTherapyMergingGuide
+    var center: CGPoint
+    var diameter: CGFloat
+
+    var animatableData: AnimatablePair<CGPoint.AnimatableData, CGFloat> {
+        get {
+            AnimatablePair(center.animatableData, diameter)
+        }
+        set {
+            center.animatableData = newValue.first
+            diameter = newValue.second
+        }
+    }
+
+    var body: some View {
+        guide.layer(
+            first: center,
+            second: center,
+            firstDiameter: diameter,
+            secondDiameter: diameter
         )
     }
 }

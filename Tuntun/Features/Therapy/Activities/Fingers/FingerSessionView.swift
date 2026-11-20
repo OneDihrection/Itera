@@ -230,6 +230,7 @@ struct TMFingerSessionView<Service: FingerSessionServiceProtocol>: View {
                     returning: model.activity.returning,
                     showsTimer: model.showsGuideTimer,
                     guiding: model.showsGuideIndicators,
+                    openness: model.activity.gripOpenness,
                     completionID: model.activity.holdCompletionID,
                     onCompletionPresented: model.holdCompletionPresented
                 )

@@ -20,6 +20,9 @@ struct TMFingerLandmarkOverlay: View {
     let returning: Bool
     let showsTimer: Bool
     let guiding: Bool
+    /// Full and hook fist: how open the hand is (1 open, 0 closed), which sizes the whole-hand
+    /// circle. Nil keeps the open size.
+    var openness: Double? = nil
     var completionID: UUID? = nil
     var onCompletionPresented: (UUID) -> Void = { _ in }
 
@@ -41,7 +44,11 @@ struct TMFingerLandmarkOverlay: View {
     /// Whole-hand circle diameter in palm lengths: an open hand reaches about one palm length
     /// from the middle knuckle to the wrist and to the fingertips, plus room for a spread thumb.
     private static let handCircleRatio: CGFloat = 2.3
+    /// Whole-hand circle diameter around a closed fist, in palm lengths.
+    private static let closedHandCircleRatio: CGFloat = 1.3
     private static let minimumHandCircle: CGFloat = 100
+    /// Eases the whole-hand circle between 30 Hz tracking samples without visible lag.
+    private static let handCircleGlide: Animation = .interpolatingSpring(duration: 0.15, bounce: 0)
 
     // MARK: - Thumb opposition merge
 
@@ -121,7 +128,8 @@ struct TMFingerLandmarkOverlay: View {
                     completionID: completionID,
                     onCompletionPresented: onCompletionPresented,
                     popsOnCompletion: true,
-                    filled: false
+                    filled: false,
+                    glide: Self.handCircleGlide
                 )
             }
         } else {
@@ -216,9 +224,10 @@ struct TMFingerLandmarkOverlay: View {
     /// A circle around the hand, kept fully on screen.
     ///
     /// It is centred on the middle knuckle and sized from the palm length, which barely change
-    /// while the fingers open and close, so the circle stays still through each repetition. The
-    /// joint bounding box shrinks with a closing fist and jumps as joints cross the confidence
-    /// threshold, so it is used only when the wrist or middle knuckle is not visible.
+    /// while the fingers open and close. In full and hook fist it grows as the hand opens and
+    /// shrinks as it closes, following `openness`; in forearm rotation it keeps one size. The
+    /// joint bounding box jumps as joints cross the confidence threshold, so it is used only
+    /// when the wrist or middle knuckle is not visible.
     private func handCircle(
         palm: CGFloat,
         width: Double,
@@ -255,7 +264,7 @@ struct TMFingerLandmarkOverlay: View {
         if hasPalmAnchors {
             return (
                 point(9, width: width, height: height, origin: origin),
-                palm * Self.handCircleRatio
+                palm * handCircleRatio
             )
         }
 
@@ -265,8 +274,21 @@ struct TMFingerLandmarkOverlay: View {
 
         return (
             CGPoint(x: bounds.midX, y: bounds.midY),
-            Self.stepped(hypot(bounds.width, bounds.height) * 1.03)
+            // Unstepped: the glide smooths it, and steps would show as jumps.
+            hypot(bounds.width, bounds.height) * 1.03
         )
+    }
+
+    /// Whole-hand circle diameter in palm lengths: from the closed to the open size with the
+    /// grip's openness, and the open size otherwise.
+    private var handCircleRatio: CGFloat {
+        guard let openness else {
+            return Self.handCircleRatio
+        }
+
+        let open = CGFloat(min(1, max(0, openness)))
+
+        return Self.closedHandCircleRatio + (Self.handCircleRatio - Self.closedHandCircleRatio) * open
     }
 
     private func fingertipCircleCenter(

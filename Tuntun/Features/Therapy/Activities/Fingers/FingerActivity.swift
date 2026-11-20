@@ -26,6 +26,9 @@ struct FingerActivity {
     private(set) var returning = false
     private(set) var progress = 0.0
     private(set) var movementFraction = 0.0
+    /// Full and hook fist only: how open the hand is for the whole-hand circle, 1 open and
+    /// 0 closed. Presentation only; it is never scored.
+    private(set) var gripOpenness: Double?
     private(set) var remaining = 0.0
     private(set) var activeSeconds = 0.0
     private(set) var baselines = [Double](repeating: 0, count: 4)
@@ -109,6 +112,10 @@ struct FingerActivity {
     /// A hold starts only at `contactEntry` and survives up to `contactExit`.
     private static let contactEntry = 0.35
     private static let contactExit = 0.45
+    /// Grip metric of an open hand and of a fist, used for `gripOpenness` until the patient's
+    /// own start and target poses are calibrated.
+    private static let nominalOpenGrip = 0.10
+    private static let nominalClosedGrip = 0.50
 
     var rangeProgress: Double { min(1, rangeElapsed / Self.rangeDuration) }
     /// How far the automatic start of practice has advanced after the range is shown.
@@ -181,6 +188,7 @@ struct FingerActivity {
         forearmDirectionLocked = false
         resetRange()
         rangeTooSmall = false
+        gripOpenness = nil
         breakEvidence()
     }
 
@@ -265,6 +273,22 @@ struct FingerActivity {
         }
     }
 
+    /// Maps the filtered grip metric onto the patient's calibrated start (open) and target
+    /// (fist) poses, so even a small range swings the circle fully; before calibration a
+    /// nominal range is used. A frame without a metric keeps the last value.
+    private mutating func updateGripOpenness(_ value: Double) {
+        guard kind == .fullFist || kind == .hookFist else {
+            return
+        }
+
+        let calibrated = initialized[0] && targets[0] - baselines[0] > 0.08
+        let open = calibrated ? baselines[0] : Self.nominalOpenGrip
+        let closed = calibrated ? targets[0] : Self.nominalClosedGrip
+        let closure = (value - open) / (closed - open)
+
+        gripOpenness = 1 - min(1, max(0, closure))
+    }
+
     private mutating func beginCountdown() {
         phase = .countdown
         remaining = scriptedGuidance && set > 1 ? 5 : 3
@@ -280,6 +304,8 @@ struct FingerActivity {
         }
         let value = metricFilter.consume(rawValue, at: evidence.timestamp)
             * (kind == .forearmRotation ? forearmDirection : 1)
+        // Updated in every phase, before the waits below, so the circle follows the hand.
+        updateGripOpenness(value)
         // A completed hold remains the current instruction until its full ring is presented.
         if holdCompletionID != nil {
             lastTimestamp = evidence.timestamp
