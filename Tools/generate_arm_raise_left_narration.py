@@ -5,63 +5,21 @@
 
     python3 Tools/generate_arm_raise_left_narration.py --dry-run
     python3 Tools/generate_arm_raise_left_narration.py
+    python3 Tools/generate_arm_raise_left_narration.py --only 'narration-id-armRaise.left.rest.*'
 
 Set ELEVENLABS_API_KEY in the terminal first. --dry-run makes no API calls.
-The String Catalog is the single source for both playback keys and spoken text.
+The keys are the `arm-raise-left` lines of Tools/narration-registry.json and their words come from the
+String Catalog, so this is the same as `generate_narration.py --groups arm-raise-left`: raw takes stay
+in Tools/NarrationRaw/ArmRaiseLeft with their cache in Tools/arm-raise-left-narration-manifest.json.
+Repetition counts are Marizka numbers from Tools/generate_marizka_counts.py.
 """
 
-import json
 import sys
-from pathlib import Path
 
 import generate_narration as narrator
 
-TOOLS = Path(__file__).resolve().parent
-PREFIX = "armRaise.left."
-
-
-def collect_approved_lines(groups):
-    if groups != {"arm-raise-left"}:
-        sys.exit("This generator only supports --groups arm-raise-left.")
-
-    strings = json.loads(narrator.CATALOG.read_text(encoding="utf-8"))["strings"]
-    lines = []
-    for key, entry in strings.items():
-        if not key.startswith(PREFIX) or key in {PREFIX + "title", PREFIX + "calibration.title"}:
-            continue
-        text = narrator.indonesian_text(strings.get("speak." + key, {})) or narrator.indonesian_text(entry)
-        if not text:
-            sys.exit(f"Missing Indonesian narration: {key}")
-        arguments = range(1, 7) if key.endswith(" %lld") else (None,)
-        for argument in arguments:
-            spoken = text if argument is None else text.replace("%lld", narrator.indonesian_number(argument))
-            lines.append({
-                "key": key,
-                "argument": argument,
-                "text": spoken,
-                "name": narrator.clip_name(key, argument),
-            })
-
-    # Repetition counts are Marizka numbers from Tools/generate_marizka_counts.py.
-    if not lines:
-        sys.exit(f"No armRaise.left narration found in {narrator.CATALOG}.")
-    if len({line["name"] for line in lines}) != len(lines):
-        sys.exit("Duplicate narration filenames; generation stopped.")
-    return sorted(lines, key=lambda line: line["name"])
-
 
 def main():
-    narrator.RAW = TOOLS / "NarrationRaw" / "ArmRaiseLeft"
-    narrator.MANIFEST = TOOLS / "arm-raise-left-narration-manifest.json"
-    narrator.VOICE_SETTINGS = {
-        "stability": 0.70,
-        "similarity_boost": 0.8,
-        "style": 0.0,
-        "use_speaker_boost": True,
-        "speed": 0.88,
-    }
-    narrator.SEED = 20261110
-    narrator.collect_lines = collect_approved_lines
     if not any(arg == "--groups" or arg.startswith("--groups=") for arg in sys.argv[1:]):
         sys.argv.extend(["--groups", "arm-raise-left"])
     narrator.main()

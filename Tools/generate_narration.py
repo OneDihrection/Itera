@@ -3,7 +3,10 @@
 # Created by Amelia Putri Aftiana on 05/11/2026.
 """Renders Tuntun's narration once with ElevenLabs, for bundling in the app.
 
-Each spoken sentence is a String Catalog key. This script reads the text of those keys in
+Each spoken sentence is a String Catalog key. Tools/narration-registry.json lists every
+narrated key with its group, languages, on-screen role and voice tuning; the words live only in
+the catalog (the key's text, or `speak.<key>` when the spoken wording differs from the screen).
+This script reads the text of those keys in
 one language and saves one MP3 per key under Tools/NarrationRaw (Indonesian) or
 Tools/NarrationRaw/EN (English), then runs Tools/normalize_narration.swift to level their
 loudness into Tuntun/Resources/Audio/NarrationID or NarrationEN as AAC. The app plays a
@@ -20,6 +23,12 @@ Usage, from the repository root:
 
 Record and level only some lines; every other bundled clip is left untouched:
     python3 Tools/generate_narration.py --only 'narration-id-session.switchArm.*'
+
+An approved Indonesian script is recorded on its own, into its own raw folder and cache:
+    python3 Tools/generate_narration.py --groups opposition-left --only 'narration-id-opposition.left.rest.*'
+
+Refresh the review sheet (every line, where it shows, what it says, whether it is bundled):
+    python3 Tools/generate_narration.py --report
 
 A plain run re-records every sentence whose cached raw take is missing or whose fingerprint
 changed, then re-levels the whole raw folder into the app. Use --only to fill gaps without
@@ -74,91 +83,28 @@ VOICE_NAMES = {
     "id": "Marizka",
     "en": "Tuntun EN Katherine",
 }
-SUPPORTED_GROUPS = {"finger", "body", "opposition-left", "arm-raise-left"}
-# The approved arm-raise and opposition scripts are Indonesian only.
-ENGLISH_GROUPS = {"finger", "body"}
-
-# Finger exercises: FingerSessionViewModel.narrate() speaks these keys in order.
-FINGER_PREFIXES = ("baseline.", "move.", "demo.", "return.", "finger.", "recovery.")
-FINGER_KEYS = (
-    "session.ready", "session.good", "session.restInstruction", "session.complete",
-    "reflection.title",
-    # Forearm rotation calibrates a comfortable range first (FingerActivity.calibratesRange).
-    "range.ready", "range.instruction", "range.resultSpoken",
-)
-# Format keys with the values the app passes; FingerActivity holds for 2 seconds.
-FORMAT_KEYS = {
-    "guide.holdDuration %lld": (2,),
-    # The long rest between plan exercises counts six breaths down to two (DailyPlanNextView).
-    "rest.long.remaining %lld": (2, 3, 4, 5, 6),
+# Every narrated catalog key, its recording group, languages, on-screen role and voice tuning.
+# The words themselves live only in the String Catalog.
+REGISTRY = ROOT / "Tools/narration-registry.json"
+DISPLAY_KINDS = {"screen", "voice", "partly"}
+# Instruction groups share the default folders. Each approved Indonesian script keeps its own raw
+# takes and cache, so levelling one never re-encodes another's approved clips.
+GROUP_STORAGE = {
+    "opposition-left": ("OppositionLeft", "opposition-left-narration-manifest.json"),
+    "opposition-right": ("OppositionRight", "opposition-right-narration-manifest.json"),
+    "arm-raise-left": ("ArmRaiseLeft", "arm-raise-left-narration-manifest.json"),
+    "arm-raise-right": ("ArmRaiseRight", "arm-raise-right-narration-manifest.json"),
 }
+DEFAULT_GROUPS = ("finger", "body")
 
-# Format keys whose number is read as an Indonesian word rather than a digit.
-SPELLED_FORMAT_KEYS = {"rest.long.remaining %lld"}
 
-# Arm, reaching and balance sessions: keys spoken through SessionAudioService.
-BODY_KEYS = (
-    "balance.voice.complete", "balance.voice.leftTarget", "balance.voice.returnAndSwitch",
-    "balance.voice.returnSameSide", "balance.voice.rightTarget",
-    "parity.audioUnavailable", "parity.closingComplete", "parity.closingPartial",
-    "parity.getReady", "parity.moveComfortably", "parity.reachOpening",
-    "session.cameraWait", "session.countdown", "session.farther", "session.holdStart",
-    "session.holdTarget", "session.moveTarget", "session.reachStart", "session.rest",
-    "session.returnStart", "session.timedPractice",
-    "session.reachRight", "session.reachLeft", "session.reachUp",
-    # Activity instructions announced by SessionEngine (DirectionalReachActivity,
-    # FoldTowelActivity, SitToStandActivity) and its stage cards.
-    "session.assistance.sitToStand", "session.feedback", "session.skipped",
-    "session.reachAcross", "session.reachLeftFar", "session.reachRightFar", "session.reachUpFar",
-    "session.reachTrackingLost",
-    "sts.holdSeated", "sts.holdStanding", "sts.leanFirst", "sts.leanForward", "sts.sitDown",
-    "sts.slowDown", "sts.standUp", "sts.trackingLost", "sts.trial",
-    "towel.approach", "towel.fold", "towel.recover", "towel.release", "towel.trackingLost",
-    # An alternating bilateral exercise names the arm that takes over (SessionEngine.sideCueKey).
-    "session.switchArm.left", "session.switchArm.right",
-    # Sit-to-stand in BalanceSessionViewModel speaks the engine's instruction key.
-    "sitToStand.tracking",
-    # Rotation exercises narrate each calibration step (speakCalibrationGuidanceIfNeeded).
-    "rotation.calibration.startHint", "rotation.calibration.endHint",
-    "internalRotation.calibration.endHint",
-    # Calibration pages announced by SessionEngine and BalanceSessionViewModel's opening cues.
-    "calibration.intro", "calibration.try", "calibration.complete", "calibration.countdown",
-    # Breathing guidance spoken during Balancing rests (SessionDurationClock breath phases).
-    "rest.breath.inhale", "rest.breath.exhale",
-    # The fold-towel opening and demonstration cards (SessionGuidance).
-    "towel.opening.left", "towel.opening.right", "towel.demo",
-    # Balancing speaks the engine's reach instruction when its practice countdown ends.
-    "balance.reachRight", "balance.reachLeft",
-    "rotation.rotateRight", "rotation.rotateLeft",
-    "internalRotation.rotateRight", "internalRotation.rotateLeft",
-    "shoulderFlexion.rotateRight", "shoulderFlexion.rotateLeft",
-    # The long breathing rest between daily-plan exercises (DailyPlanNextView).
-    "rest.long.opening", "rest.long.restInvitation", "rest.long.instructions", "rest.long.posture",
-    "rest.long.inhaleFirst", "rest.long.inhale", "rest.long.inhaleLast", "rest.long.hold",
-    "rest.long.exhaleSlow", "rest.long.exhaleShoulders", "rest.long.exhale", "rest.long.exhaleLast",
-    "rest.long.settle", "rest.long.closing", "rest.long.nextExercise",
-    # The rest then names the next exercise (DailyPlanViewModel.nextSessionTitleKey).
-    "exercise.fullFist", "exercise.hookFist", "exercise.opposition", "exercise.spreading",
-    "exercise.extensionSequence", "exercise.forearmRotation",
-    "session.armRaise", "session.elbowBend", "session.directionalReach", "session.foldTowel",
-    "balance.title", "rotation.title", "internalRotation.title", "shoulderFlexion.title",
-    "sitToStand.title",
-) + tuple(
-    f"session.opening.{kind}.{side}.{part}"
-    for kind in ("armRaise", "elbowBend")
-    for side in ("left", "right")
-    for part in ("positioning", "ready")
-) + tuple(
-    # BalanceExercise.key("voice.*") for the exercises added after Balancing. Keys an exercise
-    # shares with another prefix are absent from the catalog and skipped by collect_lines.
-    f"{prefix}.voice.{name}"
-    for prefix in ("rotation", "shoulderFlexion", "internalRotation", "sitToStand")
-    for name in ("complete", "leftTarget", "rightTarget", "returnAndSwitch", "returnSameSide")
-)
+def load_registry():
+    return json.loads(REGISTRY.read_text(encoding="utf-8"))["lines"]
 
-# The app speaks `speak.<key>` when the catalog has one (shorter than the displayed text), so the
-# recording is rendered from it. Rendering a spoken variant for a key that already has a recording
-# replaces that recording on the next run, because the text fingerprint changes.
+
+# The app speaks `speak.<key>` when the catalog has one (different from the displayed text), so
+# the recording is rendered from it. Rendering a spoken variant for a key that already has a
+# recording replaces that recording on the next run, because the text fingerprint changes.
 SPOKEN_PREFIX = "speak."
 UNITS = ["", "satu", "dua", "tiga", "empat", "lima", "enam", "tujuh", "delapan", "sembilan"]
 
@@ -213,45 +159,26 @@ VOICE_SETTINGS = {
 # toward one soft, patient, explaining delivery instead of each clip finding its own tone.
 SEED = 20261110
 
-# Takes that came out rushed with the shared seed (well above the ~10 characters per second of
-# the other lines) are re-rendered with their own seed; voice settings stay the same. Add a line
-# here, or change its seed, to retake just that line on the next run.
-RETAKE_SEEDS = {
-    "narration-id-recovery.oneHand": 7102,
-    "narration-id-recovery.calibration": 7103,
-    "narration-id-towel.fold": 7104,
-    "narration-id-session.complete": 7105,
-    "narration-id-balance.voice.leftTarget": 7106,
-}
+# Per-line tuning lives in the registry's `tuning.<language>`:
+# - `seed`: takes that came out rushed with the shared seed (well above the ~10 characters per
+#   second of the other lines) are re-rendered with their own seed. Change it to retake a line.
+# - `speed`: short commands the model reads in a rush even with another seed get a slower speed
+#   (the API accepts speeds from 0.7), so their pace matches the other lines. Only `speed`
+#   changes; stability, style and the lead-in stay the same, so the voice does not.
+# - `leadIn`: an instruction added to the unspoken lead-in, so the line is rendered as its next
+#   sentence and carries on in the same tone ("Posisikan tangan…" follows "Gunakan tangan kanan.").
 
 
 def seed_for(line):
-    return line.get("seed") or RETAKE_SEEDS.get(line["name"], SEED)
-
-
-# Short commands the model reads in a rush even with another seed (about 13-15 characters per
-# second against ~10 for the rest) get a slower speed, so their pace matches the other lines.
-# Only `speed` changes; stability, style and the lead-in stay the same, so the voice does not.
-# The API accepts speeds from 0.7.
-SLOW_LINES = {
-    # Close to the normal speed so it keeps the movement-instruction voice; a comma in its
-    # speak.* text supplies the rest of the slowing (see LEAD_INS).
-    "narration-id-recovery.position": 0.84,
-    "narration-id-recovery.oneHand": 0.72,
-    "narration-id-recovery.calibration": 0.70,
-    "narration-id-towel.fold": 0.70,
-    "narration-id-session.complete": 0.76,
-    "narration-id-balance.voice.leftTarget": 0.78,
-    # Long-rest lines measured at 13.1 and 12.5 characters per second at the normal speed.
-    "narration-id-rest.long.opening": 0.74,
-    "narration-id-rest.long.instructions": 0.76,
-}
+    # English takes set their own `seed` while recording the calmest of several.
+    return line.get("seed") or line.get("tuning", {}).get("seed", SEED)
 
 
 def settings_for(line):
     settings = dict(VOICE_SETTINGS)
-    if line["name"] in SLOW_LINES:
-        settings["speed"] = SLOW_LINES[line["name"]]
+    speed = line.get("tuning", {}).get("speed")
+    if speed is not None:
+        settings["speed"] = speed
     return settings
 
 
@@ -259,18 +186,11 @@ TONE_LEAD_IN = "Dengan suara yang lembut, tenang, dan sabar, ia menjelaskan pela
 # The same "explaining slowly" direction for English, which measured as calm as Indonesian.
 TONE_LEAD_IN_EN = "In a soft, calm and patient voice, she explains slowly:"
 
-# Lines that should sound exactly like a particular instruction are rendered as its next
-# sentence: that instruction is added to the unspoken lead-in, so the model carries on in the
-# same tone. "Posisikan tangan…" follows "Gunakan tangan kanan." as in a live finger session.
-LEAD_INS = {
-    "narration-id-recovery.position": TONE_LEAD_IN + " Gunakan tangan kanan.",
-}
-
 
 def lead_in_for(line):
-    if LANGUAGE == "en":
-        return TONE_LEAD_IN_EN
-    return LEAD_INS.get(line["name"], TONE_LEAD_IN)
+    base = TONE_LEAD_IN_EN if LANGUAGE == "en" else TONE_LEAD_IN
+    extra = line.get("tuning", {}).get("leadIn")
+    return f"{base} {extra}" if extra else base
 
 
 def clip_name(key, argument=None):
@@ -290,50 +210,99 @@ def indonesian_text(entry):
     return localized_text(entry, "id")
 
 
-def spoken_number(argument, key):
+def spoken_number(argument, spelled):
     """Counts the patient hears are spelled out ("enam napas lagi", "six breaths left")."""
-    if key not in SPELLED_FORMAT_KEYS and key != "armRaise.left.longRest.remaining %lld":
+    if not spelled:
         return str(argument)
     return indonesian_number(argument) if LANGUAGE == "id" else english_number(argument)
 
 
+def spoken_text(strings, key, language):
+    """The words a key speaks: its `speak.<key>` variant, otherwise its displayed text."""
+    return (
+        localized_text(strings.get(SPOKEN_PREFIX + key, {}), language)
+        or localized_text(strings.get(key, {}), language)
+    )
+
+
 def collect_lines(groups):
+    """Every registry line in `groups` for the current language, with its spoken text."""
     strings = json.loads(CATALOG.read_text(encoding="utf-8"))["strings"]
-    wanted = []
-
-    for group, prefix in (("opposition-left", "opposition.left."), ("arm-raise-left", "armRaise.left.")):
-        if group not in groups:
-            continue
-        for key in strings:
-            if not key.startswith(prefix) or key in {prefix + "title", prefix + "calibration.title"}:
-                continue
-            arguments = range(1, 7) if key.endswith(" %lld") else (None,)
-            wanted.extend((key, argument) for argument in arguments)
-
-    for key, entry in strings.items():
-        if "finger" in groups and (key.startswith(FINGER_PREFIXES) or key in FINGER_KEYS):
-            wanted.append((key, None))
-        elif "body" in groups and key in BODY_KEYS:
-            wanted.append((key, None))
-
-    if "finger" in groups:
-        for key, values in FORMAT_KEYS.items():
-            wanted.extend((key, value) for value in values)
-
     lines = []
-    for key, argument in wanted:
-        text = (
-            localized_text(strings.get(SPOKEN_PREFIX + key, {}), LANGUAGE)
-            or localized_text(strings.get(key, {}), LANGUAGE)
-        )
-        if not text:
-            print(f"skip {key}: no {LANGUAGE} text", file=sys.stderr)
+
+    for entry in load_registry():
+        if entry["group"] not in groups or LANGUAGE not in entry["languages"]:
             continue
-        if argument is not None:
-            text = text.replace("%lld", spoken_number(argument, key))
-        lines.append({"key": key, "argument": argument, "text": text, "name": clip_name(key, argument)})
+
+        text = spoken_text(strings, entry["key"], LANGUAGE)
+        if not text:
+            sys.exit(f"{entry['key']}: no {LANGUAGE} text in the String Catalog.")
+
+        tuning = entry.get("tuning", {}).get(LANGUAGE, {})
+        for argument in entry.get("arguments") or (None,):
+            spoken = text
+            if argument is not None:
+                spoken = text.replace("%lld", spoken_number(argument, entry.get("spellNumber", False)))
+
+            lines.append({
+                "key": entry["key"],
+                "argument": argument,
+                "text": spoken,
+                "name": clip_name(entry["key"], argument),
+                "tuning": tuning,
+            })
 
     return sorted(lines, key=lambda line: line["name"])
+
+
+# MARK: - Registry checks
+
+
+def registry_problems():
+    """Registry errors that would record the wrong text or overwrite another clip."""
+    strings = json.loads(CATALOG.read_text(encoding="utf-8"))["strings"]
+    problems = []
+    seen = set()
+
+    for entry in load_registry():
+        key = entry["key"]
+        if key in seen:
+            problems.append(f"{key}: listed twice")
+        seen.add(key)
+
+        if entry.get("group") not in DEFAULT_GROUPS and entry.get("group") not in GROUP_STORAGE:
+            problems.append(f"{key}: unknown group {entry.get('group')!r}")
+        if entry.get("display") not in DISPLAY_KINDS:
+            problems.append(f"{key}: display must be one of {sorted(DISPLAY_KINDS)}")
+        if key.endswith(" %lld") != bool(entry.get("arguments")):
+            problems.append(f"{key}: format keys, and only they, list `arguments`")
+        for language in entry.get("languages", []):
+            if language not in LANGUAGES:
+                problems.append(f"{key}: unknown language {language!r}")
+            elif not spoken_text(strings, key, language):
+                problems.append(f"{key}: no {language} text in the String Catalog")
+
+    return problems
+
+
+def unregistered_spoken_keys():
+    """`speak.<key>` variants whose key no registry line records."""
+    strings = json.loads(CATALOG.read_text(encoding="utf-8"))["strings"]
+    registered = {entry["key"] for entry in load_registry()}
+    return sorted(
+        key[len(SPOKEN_PREFIX):] for key in strings
+        if key.startswith(SPOKEN_PREFIX) and key[len(SPOKEN_PREFIX):] not in registered
+    )
+
+
+def verify_registry():
+    problems = registry_problems()
+    for problem in problems:
+        print(f"registry: {problem}", file=sys.stderr)
+    for key in unregistered_spoken_keys():
+        print(f"registry: warning: speak.{key} has no registry line, so it is never recorded", file=sys.stderr)
+    if problems:
+        sys.exit(f"Fix {len(problems)} problem(s) in {REGISTRY.relative_to(ROOT)}.")
 
 
 def tls_context():
@@ -491,7 +460,10 @@ def main():
     parser.add_argument("--language", choices=LANGUAGES, default="id", help="Catalog language to record.")
     parser.add_argument(
         "--groups",
-        help="Comma-separated: finger, body, opposition-left, arm-raise-left (English: finger, body).",
+        help=(
+            "Comma-separated registry groups (default: finger,body). An approved script "
+            "(opposition-left/right, arm-raise-left/right) is recorded on its own."
+        ),
     )
     parser.add_argument(
         "--only",
@@ -501,17 +473,31 @@ def main():
     parser.add_argument("--force", action="store_true", help="Re-render every sentence.")
     parser.add_argument("--normalize-only", action="store_true", help="Re-level existing raw clips; no API calls.")
     parser.add_argument("--check", action="store_true", help="English: report missing and not-calm clips.")
+    parser.add_argument("--report", action="store_true", help=f"Write {REPORT.relative_to(ROOT)} and stop.")
     args = parser.parse_args()
 
+    verify_registry()
+    if args.report:
+        write_report()
+        return
+
     LANGUAGE = args.language
-    allowed = ENGLISH_GROUPS if LANGUAGE == "en" else SUPPORTED_GROUPS
     if LANGUAGE == "en":
         RAW, OUTPUT, MANIFEST = RAW_EN, OUTPUT_EN, MANIFEST_EN
 
-    groups = {group.strip() for group in (args.groups or ",".join(sorted(allowed))).split(",")}
+    allowed = {entry["group"] for entry in load_registry() if LANGUAGE in entry["languages"]}
+    groups = {group.strip() for group in (args.groups or ",".join(DEFAULT_GROUPS)).split(",")}
     unknown = groups - allowed
     if unknown:
         parser.error("Unknown groups for this language: " + ", ".join(sorted(unknown)))
+
+    scripts = groups & GROUP_STORAGE.keys()
+    if scripts and len(groups) > 1:
+        parser.error("Record an approved script on its own: " + ", ".join(sorted(scripts)))
+    if scripts:
+        folder, manifest_name = GROUP_STORAGE[next(iter(scripts))]
+        RAW, MANIFEST = RAW / folder, ROOT / "Tools" / manifest_name
+
     all_lines = collect_lines(groups)
     patterns = [pattern.strip() for pattern in (args.only or "").split(",") if pattern.strip()]
     lines = [
@@ -570,6 +556,97 @@ def main():
     if LANGUAGE == "en" and not check_calm(all_lines):
         sys.exit(1)
     print("Next: run `xcodegen generate` so the new clips are bundled.")
+
+
+# MARK: - Review sheet
+
+REPORT = ROOT / "Documentation/NarrationScript.md"
+REPORT_GROUPS = (
+    ("finger", "Finger exercises"),
+    ("body", "Body exercises, Balancing and rests"),
+    ("opposition-left", "Thumb opposition script, left"),
+    ("opposition-right", "Thumb opposition script, right"),
+    ("arm-raise-left", "Arm raise script, left"),
+    ("arm-raise-right", "Arm raise script, right"),
+)
+CLIP_FOLDERS = {"id": OUTPUT, "en": OUTPUT_EN}
+
+
+def report_cell(text):
+    return (text or "–").replace("|", "\\|").replace("\n", " ")
+
+
+def report_wording(strings, entry, language):
+    """The screen and spoken wording of a key in one language, for the review table."""
+    if language not in entry["languages"]:
+        return "–"
+
+    screen = localized_text(strings.get(entry["key"], {}), language)
+    spoken = localized_text(strings.get(SPOKEN_PREFIX + entry["key"], {}), language)
+    if not spoken or spoken == screen:
+        return report_cell(screen)
+    if entry["display"] == "voice":
+        return report_cell(spoken)
+    return f"**Screen:** {report_cell(screen)}<br>**Spoken:** {report_cell(spoken)}"
+
+
+def report_clips(entry):
+    """Which recorded languages have every clip of a key bundled."""
+    global LANGUAGE
+    marks = []
+
+    for language in entry["languages"]:
+        LANGUAGE = language
+        names = [clip_name(entry["key"], argument) for argument in entry.get("arguments") or (None,)]
+        bundled = all((CLIP_FOLDERS[language] / (name + ".m4a")).is_file() for name in names)
+        marks.append(f"{language} {'✓' if bundled else '✗'}")
+
+    LANGUAGE = "id"
+    return " · ".join(marks)
+
+
+def write_report():
+    """Writes the review sheet: every narrated line, where it shows and what it says."""
+    strings = json.loads(CATALOG.read_text(encoding="utf-8"))["strings"]
+    registry = load_registry()
+    rows = [
+        "<!-- NarrationScript.md — Created by dimaswisodewo on 19/11/2026. -->",
+        "<!-- Generated by `python3 Tools/generate_narration.py --report`; do not edit by hand. -->",
+        "",
+        "# Narration script",
+        "",
+        "Every narrated line, from `Tools/narration-registry.json` and the String Catalog. Change "
+        "wording in `Localizable.xcstrings` (the key for the screen, `speak.<key>` for spoken "
+        "wording that differs), then re-record the line with `--only` and refresh this sheet.",
+        "",
+        "**Display:** *screen*: the text is shown while it is spoken. *partly*: shown in some "
+        "screens only (see the note). *voice*: heard, never shown. **Clip:** ✓ when every "
+        "recording of the key is bundled.",
+    ]
+
+    for group, title in REPORT_GROUPS:
+        entries = [entry for entry in registry if entry["group"] == group]
+        if not entries:
+            continue
+
+        rows += [
+            "",
+            f"## {title} (`{group}`)",
+            "",
+            "| Key | Display | Indonesian | English | Clip |",
+            "| --- | --- | --- | --- | --- |",
+        ]
+        for entry in entries:
+            display = entry["display"]
+            if entry.get("shownOn"):
+                display += f"<br><sub>{report_cell(entry['shownOn'])}</sub>"
+            rows.append(
+                f"| `{entry['key']}` | {display} | {report_wording(strings, entry, 'id')} "
+                f"| {report_wording(strings, entry, 'en')} | {report_clips(entry)} |"
+            )
+
+    REPORT.write_text("\n".join(rows) + "\n", encoding="utf-8")
+    print(f"Wrote {REPORT.relative_to(ROOT)} ({len(registry)} keys).")
 
 
 def local_api_key():
