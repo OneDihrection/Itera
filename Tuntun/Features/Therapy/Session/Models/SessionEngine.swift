@@ -823,7 +823,7 @@ struct SessionEngine {
             id: id,
             startedAt: now,
             watchdog: watchdogSeconds(timed: timed),
-            read: snapshot.stage != .instruction && snapshot.stage != .demonstration
+            read: !cueShownOnCard
         )
         if timed || snapshot.stage == .preparationWait { stage.advanceAt = nil }
         snapshot.instruction = key
@@ -1178,6 +1178,22 @@ struct SessionEngine {
         snapshot.seconds = 0
     }
     #endif
+
+    /// True when the current opening or demonstration cue is also a full-page card that must be
+    /// read before advancing. The light-layout therapies run these cues over the camera with no
+    /// text on screen, so they wait only for their narration.
+    private var cueShownOnCard: Bool {
+        guard snapshot.stage == .instruction || snapshot.stage == .demonstration else {
+            return false
+        }
+
+        switch progress.currentActivity?.kind {
+        case .armRaise, .elbowBend, .directionalReach, .foldTowel:
+            return false
+        case .sitToStand, .crossMidline, .externalRotation, .internalRotation, .shoulderFlexion, nil:
+            return true
+        }
+    }
 
     /// Help text exists only for the dark-layout therapies; the light-layout ones show no Help.
     private var currentAssistanceKey: String? {

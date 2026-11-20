@@ -1738,3 +1738,15 @@ Pending on the M1 iPad:
 - the arm raise and elbow bend demo card plays recorded;
 - tone and loudness match the neighbouring lines;
 - Stop/Go recognition still works during the new lines.
+
+## No calibration card on the camera (2026-11-20)
+
+At the user's request no exercise shows instruction text over the camera any more. *No instruction caption on the camera* kept the guided calibration card: white measured text on black along the video's bottom edge during the opening and demonstration cues of arm raise, elbow bend, directional reach and fold towel. It is removed; narration speaks those cues. This supersedes "the guided calibration card stays" in that entry.
+
+- **Views.** `TherapyLightSession` drops `calibrationCard` and its overlay; `showsCalibrationCard` is renamed `showsCameraOpening` and still keeps the calibration layout (heading, hidden counters) during those cues. `lightGuidanceText` loses its `compact` option and `TMTherapySessionView.calibrationCaptionSize` is removed.
+- **Engine.** That card hosted the measured-reading gate, so `SessionEngine.announce` now opens a cue's `GuidanceGate` already read when no card shows it (`cueShownOnCard`: false for the four light-layout kinds). Their opening and demonstration cues advance after narration completes, fails or reaches its watchdog, then the usual quiet delay or demonstration hold. Dark-layout cards still wait for reading.
+- **Design system.** `TMTherapyVideoFooter` and `TMMeasuredInstructionText`'s single-line `compact` mode had no other caller and are removed.
+- **Narration registry.** The 17 lines flagged as shown on that card (`calibration.intro`, `parity.example.*`, `parity.reachOpening`, `session.opening.armRaise/elbowBend.*`, `session.switchArm.*`, `towel.opening.*`, `towel.demo`) are now `voice`; `Documentation/NarrationScript.md` regenerated. No wording or recording changed.
+- **Unchanged.** Narration, quiet delays, the demonstration column and title, counters, controls, camera-wait and failure notices, countdown cover and breathing rest.
+
+Verification: XcodeGen and a Debug Simulator build with IPHONEOS_DEPLOYMENT_TARGET=17.0 succeed; no references remain to the removed card, footer or caption size. Pending on the M1 iPad: no text over the camera in arm raise, elbow bend, reach and fold towel (both languages); their opening and demonstration cues advance on their own after narration, also with VoiceOver on and when narration fails; finger and Balancing sessions unchanged.

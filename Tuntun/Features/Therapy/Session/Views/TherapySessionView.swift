@@ -15,7 +15,6 @@ struct TMTherapySessionView<ViewModel: TherapySessionViewModelProtocol>: View {
     /// Read from UIAccessibility instead of the environment key, which traps on Mac Catalyst.
     @State var voiceOver = UIAccessibility.isVoiceOverRunning
     @ScaledMetric(relativeTo: .largeTitle) var instructionSize = 96.0
-    @ScaledMetric(relativeTo: .title3) var calibrationCaptionSize = TMTherapyInstructionBubble.baseFontSize
     @Environment(\.scenePhase) private var scenePhase
     @AppStorage(PracticePreferences.calmMode) private var calmMode = false
     @State private var celebrationStart: Date?

@@ -18,7 +18,6 @@ struct TMMeasuredInstructionText: UIViewRepresentable {
     let voiceOver: Bool
     /// White suits the dark session screens; light screens pass `.label`.
     var textColor: UIColor = .white
-    var compact = false
     let onReadingChanged: (UUID, Bool) -> Void
 
     func makeUIView(context: Context) -> TMReadingScrollView { TMReadingScrollView() }
@@ -27,7 +26,7 @@ struct TMMeasuredInstructionText: UIViewRepresentable {
         view.apply(textColor: textColor)
         view.configure(
             phrase: phrase, id: instructionID, fontSize: fontSize,
-            reduceMotion: reduceMotion, voiceOver: voiceOver, compact: compact,
+            reduceMotion: reduceMotion, voiceOver: voiceOver,
             onReadingChanged: onReadingChanged
         )
     }
@@ -42,7 +41,6 @@ struct TMMeasuredInstructionText: UIViewRepresentable {
         private var measuredSize = CGSize.zero
         private var reduceMotion = false
         private var voiceOver = false
-        private var compact = false
         private var readingComplete = false
         private var generation = 0
         private var resumeAt = 0.0
@@ -73,30 +71,21 @@ struct TMMeasuredInstructionText: UIViewRepresentable {
         required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
 
         func configure(
-            phrase: String, id: UUID, fontSize: CGFloat, reduceMotion: Bool, voiceOver: Bool, compact: Bool,
+            phrase: String, id: UUID, fontSize: CGFloat, reduceMotion: Bool, voiceOver: Bool,
             onReadingChanged: @escaping (UUID, Bool) -> Void
         ) {
             self.onReadingChanged = onReadingChanged
             guard instructionID != id || configuredPhrase != phrase || text.font.pointSize != fontSize
-                    || self.reduceMotion != reduceMotion || self.voiceOver != voiceOver
-                    || self.compact != compact else { return }
+                    || self.reduceMotion != reduceMotion || self.voiceOver != voiceOver else { return }
             displayLink?.invalidate()
             displayLink = nil
             instructionID = id
             configuredPhrase = phrase
-            let font = AppFont.uiFont(size: fontSize, weight: compact ? .medium : .bold)
+            let font = AppFont.uiFont(size: fontSize, weight: .bold)
             text.font = font
-            text.numberOfLines = compact ? 1 : 0
-            text.adjustsFontSizeToFitWidth = compact
-            text.minimumScaleFactor = compact ? 0.7 : 1
-            if compact {
-                text.text = phrase.split(whereSeparator: \.isNewline).joined(separator: " · ")
-            } else {
-                text.attributedText = fullPageText(phrase, font: font)
-            }
+            text.attributedText = fullPageText(phrase, font: font)
             self.reduceMotion = reduceMotion
             self.voiceOver = voiceOver
-            self.compact = compact
             measuredSize = .zero
             setNeedsLayout()
         }

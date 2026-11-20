@@ -89,7 +89,7 @@ Every narrated line, from `Tools/narration-registry.json` and the String Catalog
 | `balance.voice.rightTarget` | voice | Gerakkan tangan kanan ke bahu kiri. | Move your right hand to your left shoulder. | id ✓ · en ✓ |
 | `calibration.complete` | voice | Kalibrasi selesai dan sudah tersimpan, terima kasih | Calibration is complete and saved for this session, thank you | id ✓ · en ✓ |
 | `calibration.countdown` | screen<br><sub>countdown title</sub> | Latihan akan dimulai dalam | The exercise will begin in | id ✓ · en ✓ |
-| `calibration.intro` | partly<br><sub>calibration card over the camera (arm raise, elbow bend, reach, fold towel); voice only in finger and Balancing sessions</sub> | Sebelum mulai, kita kalibrasi dulu ya | Before we start, let’s calibrate | id ✓ · en ✓ |
+| `calibration.intro` | voice | Sebelum mulai, kita kalibrasi dulu ya | Before we start, let’s calibrate | id ✓ · en ✓ |
 | `calibration.try` | voice | Coba ikuti gerakannya sekali, senyamannya saja | Try the movement once, as comfortably as you can | id ✓ · en ✓ |
 | `exercise.extensionSequence` | screen<br><sub>exercise heading, plan rows and reports</sub> | Luruskan Jari Satu per Satu | Straighten in turn | id ✓ · en ✓ |
 | `exercise.forearmRotation` | screen<br><sub>exercise heading, plan rows and reports</sub> | Rotasi lengan bawah | Forearm rotation | id ✓ · en ✓ |
@@ -108,9 +108,9 @@ Every narrated line, from `Tools/narration-registry.json` and the String Catalog
 | `parity.closingPartial` | voice | Latihan berakhir | Session ended | id ✓ · en ✓ |
 | `parity.getReady` | voice | Bersiap | Get ready | id ✓ · en ✓ |
 | `parity.moveComfortably` | voice | Bergerak sebatas nyaman | Move as far as comfortable | id ✓ · en ✓ |
-| `parity.example.left` | screen<br><sub>calibration card over the camera (arm raise, elbow bend)</sub> | Perhatikan lengan kiri | Watch the left arm | id ✓ · en ✓ |
-| `parity.example.right` | screen<br><sub>calibration card over the camera (arm raise, elbow bend)</sub> | Perhatikan lengan kanan | Watch the right arm | id ✓ · en ✓ |
-| `parity.reachOpening` | screen<br><sub>calibration card over the camera (arm raise, elbow bend, reach, fold towel)</sub> | Tahan posisi tangan Pastikan wajah dan bahu terlihat. | **Screen:** Hold your hand still Keep your face and shoulders visible.<br>**Spoken:** Hold still. | id ✓ · en ✓ |
+| `parity.example.left` | voice | Perhatikan lengan kiri | Watch the left arm | id ✓ · en ✓ |
+| `parity.example.right` | voice | Perhatikan lengan kanan | Watch the right arm | id ✓ · en ✓ |
+| `parity.reachOpening` | voice | Tahan posisi tangan Pastikan wajah dan bahu terlihat. | Hold still. | id ✓ · en ✓ |
 | `plan.purpose.armRaise` | screen<br><sub>plan intro focus text</sub> | Membantu bahu mengangkat lengan lebih tinggi, seperti saat meraih rak atau menyisir rambut. | Helps the shoulder lift the arm higher, such as when reaching a shelf or combing hair. | id ✓ · en ✓ |
 | `plan.purpose.crossMidline` | screen<br><sub>plan intro focus text</sub> | Melatih bahu dan lengan agar lebih mudah bergerak menyilang tubuh, seperti saat memasang sabuk pengaman. | Trains the shoulder and arm to move across the body more easily, such as when fastening a seat belt. | id ✓ · en ✓ |
 | `plan.purpose.directionalReach` | screen<br><sub>plan intro focus text</sub> | Melatih meraih ke berbagai arah, seperti saat mengambil barang di meja atau rak. | Trains reaching in different directions, such as when taking things from a table or shelf. | id ✓ · en ✓ |
@@ -167,14 +167,14 @@ Every narrated line, from `Tools/narration-registry.json` and the String Catalog
 | `session.holdStart` | voice | Tahan posisi | Hold still | id ✓ · en ✓ |
 | `session.holdTarget` | voice | Tahan posisi | Hold still | id ✓ · en ✓ |
 | `session.moveTarget` | voice | Gerakkan ke lingkaran | Move to the circle | id ✓ · en ✓ |
-| `session.opening.armRaise.left.positioning` | screen<br><sub>calibration card over the camera (arm raise, elbow bend, reach, fold towel)</sub> | **Screen:** Turunkan lengan kiri Hadap kamera.<br>**Spoken:** Turunkan lengan kiri. | **Screen:** Lower your left arm Face the camera.<br>**Spoken:** Lower your left arm. | id ✓ · en ✓ |
-| `session.opening.armRaise.left.ready` | screen<br><sub>calibration card over the camera (arm raise, elbow bend, reach, fold towel)</sub> | **Screen:** Turunkan lengan kiri Hadap kamera.<br>**Spoken:** Turunkan lengan kiri. | **Screen:** Lower your left arm Face the camera.<br>**Spoken:** Lower your left arm. | id ✓ · en ✓ |
-| `session.opening.armRaise.right.positioning` | screen<br><sub>calibration card over the camera (arm raise, elbow bend, reach, fold towel)</sub> | **Screen:** Turunkan lengan kanan Hadap kamera.<br>**Spoken:** Turunkan lengan kanan. | **Screen:** Lower your right arm Face the camera.<br>**Spoken:** Lower your right arm. | id ✓ · en ✓ |
-| `session.opening.armRaise.right.ready` | screen<br><sub>calibration card over the camera (arm raise, elbow bend, reach, fold towel)</sub> | **Screen:** Turunkan lengan kanan Hadap kamera.<br>**Spoken:** Turunkan lengan kanan. | **Screen:** Lower your right arm Face the camera.<br>**Spoken:** Lower your right arm. | id ✓ · en ✓ |
-| `session.opening.elbowBend.left.positioning` | screen<br><sub>calibration card over the camera (arm raise, elbow bend, reach, fold towel)</sub> | **Screen:** Luruskan siku kiri Sisi kiri menghadap kamera.<br>**Spoken:** Luruskan siku kiri. | **Screen:** Straighten your left elbow Left side toward camera.<br>**Spoken:** Straighten your left elbow. | id ✓ · en ✓ |
-| `session.opening.elbowBend.left.ready` | screen<br><sub>calibration card over the camera (arm raise, elbow bend, reach, fold towel)</sub> | **Screen:** Luruskan siku kiri Sisi kiri menghadap kamera.<br>**Spoken:** Luruskan siku kiri. | **Screen:** Straighten your left elbow Left side toward camera.<br>**Spoken:** Straighten your left elbow. | id ✓ · en ✓ |
-| `session.opening.elbowBend.right.positioning` | screen<br><sub>calibration card over the camera (arm raise, elbow bend, reach, fold towel)</sub> | **Screen:** Luruskan siku kanan Sisi kanan menghadap kamera.<br>**Spoken:** Luruskan siku kanan. | **Screen:** Straighten your right elbow Right side toward camera.<br>**Spoken:** Straighten your right elbow. | id ✓ · en ✓ |
-| `session.opening.elbowBend.right.ready` | screen<br><sub>calibration card over the camera (arm raise, elbow bend, reach, fold towel)</sub> | **Screen:** Luruskan siku kanan Sisi kanan menghadap kamera.<br>**Spoken:** Luruskan siku kanan. | **Screen:** Straighten your right elbow Right side toward camera.<br>**Spoken:** Straighten your right elbow. | id ✓ · en ✓ |
+| `session.opening.armRaise.left.positioning` | voice | Turunkan lengan kiri. | Lower your left arm. | id ✓ · en ✓ |
+| `session.opening.armRaise.left.ready` | voice | Turunkan lengan kiri. | Lower your left arm. | id ✓ · en ✓ |
+| `session.opening.armRaise.right.positioning` | voice | Turunkan lengan kanan. | Lower your right arm. | id ✓ · en ✓ |
+| `session.opening.armRaise.right.ready` | voice | Turunkan lengan kanan. | Lower your right arm. | id ✓ · en ✓ |
+| `session.opening.elbowBend.left.positioning` | voice | Luruskan siku kiri. | Straighten your left elbow. | id ✓ · en ✓ |
+| `session.opening.elbowBend.left.ready` | voice | Luruskan siku kiri. | Straighten your left elbow. | id ✓ · en ✓ |
+| `session.opening.elbowBend.right.positioning` | voice | Luruskan siku kanan. | Straighten your right elbow. | id ✓ · en ✓ |
+| `session.opening.elbowBend.right.ready` | voice | Luruskan siku kanan. | Straighten your right elbow. | id ✓ · en ✓ |
 | `session.reachAcross` | voice | Jangkau ke seberang, putar badan | Reach across, turn your body | id ✓ · en ✓ |
 | `session.reachLeft` | voice | Jangkau ke kiri. | Reach left. | id ✓ · en ✓ |
 | `session.reachLeftFar` | voice | Jangkau ke kiri sejauh mungkin | Reach left as far as you can | id ✓ · en ✓ |
@@ -187,8 +187,8 @@ Every narrated line, from `Tools/narration-registry.json` and the String Catalog
 | `session.rest` | voice | Istirahat sebelum latihan berikutnya | Rest. | id ✓ · en ✓ |
 | `session.returnStart` | voice | Kembali ke awal | Back to start | id ✓ · en ✓ |
 | `session.skipped` | voice | Latihan dilewati oleh pendamping | Activity skipped by caregiver | id ✓ · en ✓ |
-| `session.switchArm.left` | partly<br><sub>card before an alternating reach's opening; voice only during practice</sub> | Sekarang lengan kiri. | Now your left arm. | id ✓ · en ✓ |
-| `session.switchArm.right` | partly<br><sub>card before an alternating reach's opening; voice only during practice</sub> | Sekarang lengan kanan. | Now your right arm. | id ✓ · en ✓ |
+| `session.switchArm.left` | voice | Sekarang lengan kiri. | Now your left arm. | id ✓ · en ✓ |
+| `session.switchArm.right` | voice | Sekarang lengan kanan. | Now your right arm. | id ✓ · en ✓ |
 | `session.timedPractice` | voice | Latihan waktu · hanya waktu gerakan yang terbaca | Timed practice. | id ✓ · en ✓ |
 | `shoulderFlexion.rotateLeft` | voice | Angkat lengan kiri, telapak menghadap atas | Raise your left arm, palm up | id ✓ · en ✓ |
 | `shoulderFlexion.rotateRight` | voice | Angkat lengan kanan, telapak menghadap atas | Raise your right arm, palm up | id ✓ · en ✓ |
@@ -214,10 +214,10 @@ Every narrated line, from `Tools/narration-registry.json` and the String Catalog
 | `sts.trackingLost` | voice | Pastikan bahu, pinggul, dan lutut terlihat | Keep your shoulder, hip, and knee in view | id ✓ · en ✓ |
 | `sts.trial` | voice | Lakukan satu kali duduk ke berdiri dengan cara Anda Condong ke depan, berdiri, lalu duduk kembali sesuai kenyamanan Anda. | Do one sit-to-stand your own way Lean forward, stand up, then sit back down at a comfortable pace. | id ✓ · en ✓ |
 | `towel.approach` | voice | Satukan ibu jari dan jari telunjuk (jepit) di lingkaran yang bersinar. | Pinch your thumb and index finger together on the glowing circle. | id ✓ · en ✓ |
-| `towel.demo` | screen<br><sub>calibration card over the camera (arm raise, elbow bend, reach, fold towel)</sub> | **Screen:** Jepit di lingkaran yang bersinar, geser, lalu buka tangan.<br>**Spoken:** Satukan ibu jari dan jari telunjuk (jepit) di lingkaran yang bersinar, geser ke lingkaran berikutnya, lalu buka tangan. Mulai setelah hitungan mundur, meskipun panduan masih berbicara. | **Screen:** Pinch on the glowing circle, slide, then open your hand.<br>**Spoken:** Pinch your thumb and index finger together on the glowing circle, slide to the next circle, then open your hand. You can begin after the countdown, even while guidance speaks. | id ✓ · en ✓ |
+| `towel.demo` | voice | Satukan ibu jari dan jari telunjuk (jepit) di lingkaran yang bersinar, geser ke lingkaran berikutnya, lalu buka tangan. Mulai setelah hitungan mundur, meskipun panduan masih berbicara. | Pinch your thumb and index finger together on the glowing circle, slide to the next circle, then open your hand. You can begin after the countdown, even while guidance speaks. | id ✓ · en ✓ |
 | `towel.fold` | voice | Geser jari yang menjepit ke lingkaran berikutnya. | Slide your pinched fingers to the next circle. | id ✓ · en ✓ |
-| `towel.opening.left` | screen<br><sub>calibration card over the camera (arm raise, elbow bend, reach, fold towel)</sub> | Lipat handuk dengan tangan kiri. Empat lipatan untuk satu pengulangan. | Fold the towel with your left hand. Four folds make one repetition. | id ✓ · en ✓ |
-| `towel.opening.right` | screen<br><sub>calibration card over the camera (arm raise, elbow bend, reach, fold towel)</sub> | Lipat handuk dengan tangan kanan. Empat lipatan untuk satu pengulangan. | Fold the towel with your right hand. Four folds make one repetition. | id ✓ · en ✓ |
+| `towel.opening.left` | voice | Lipat handuk dengan tangan kiri. Empat lipatan untuk satu pengulangan. | Fold the towel with your left hand. Four folds make one repetition. | id ✓ · en ✓ |
+| `towel.opening.right` | voice | Lipat handuk dengan tangan kanan. Empat lipatan untuk satu pengulangan. | Fold the towel with your right hand. Four folds make one repetition. | id ✓ · en ✓ |
 | `towel.recover` | voice | Tetap jepit jari untuk melanjutkan. | Keep pinching to continue. | id ✓ · en ✓ |
 | `towel.release` | voice | Sekarang buka tangan. | Now open your hand. | id ✓ · en ✓ |
 | `towel.trackingLost` | voice | Tampilkan tangan ke kamera. | Show your hand to the camera. | id ✓ · en ✓ |

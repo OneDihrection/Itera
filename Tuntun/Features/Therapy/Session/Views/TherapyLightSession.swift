@@ -63,7 +63,7 @@ extension TMTherapySessionView {
         #endif
     }
 
-    /// Every light activity shows its opening and demonstration cards over the live camera.
+    /// Every light activity runs its opening and demonstration cues over the live camera.
     private var usesCameraOpening: Bool {
         switch model.snapshot.activity?.kind {
         case .armRaise, .elbowBend, .directionalReach, .foldTowel: return true
@@ -76,13 +76,14 @@ extension TMTherapySessionView {
         isCalibrationLayout && model.snapshot.activity?.kind != .foldTowel
     }
 
-    private var showsCalibrationCard: Bool {
+    /// The opening and demonstration cues keep the calibration layout; they are spoken, not shown.
+    private var showsCameraOpening: Bool {
         usesCameraOpening
             && (model.snapshot.stage == .instruction || model.snapshot.stage == .demonstration)
     }
 
     var isCalibrationLayout: Bool {
-        if showsCalibrationCard || (usesCameraOpening && model.snapshot.stage == .preparing) {
+        if showsCameraOpening || (usesCameraOpening && model.snapshot.stage == .preparing) {
             return true
         }
         if model.snapshot.stage == .preparationWait || model.snapshot.speaksCalibrationComplete {
@@ -129,21 +130,10 @@ extension TMTherapySessionView {
         return name
     }
 
-    /// The shared preview with camera-wait and failure notices at its top edge, clear of the cue.
+    /// The shared preview with camera-wait and failure notices at its top edge. No instruction text
+    /// is drawn over the camera; narration speaks the cue.
     private var lightCamera: some View {
         camera
-            .overlay(alignment: .topLeading) {
-                if showsCalibrationCard, !model.snapshot.cameraWaiting {
-                    if let videoBounds {
-                        TMTherapyVideoFooter(bounds: videoBounds) {
-                            calibrationCard
-                        }
-                    } else {
-                        calibrationCard
-                            .frame(maxHeight: .infinity, alignment: .bottom)
-                    }
-                }
-            }
             .overlay(alignment: .top) {
                 VStack(spacing: 10) {
                     if model.snapshot.cameraWaiting {
@@ -164,21 +154,6 @@ extension TMTherapySessionView {
                 }
                 .padding(22)
             }
-    }
-
-    private var calibrationCard: some View {
-        VStack(spacing: 12) {
-            lightGuidanceText(demonstrating: true, compact: true)
-
-            if voiceOver, let id = model.snapshot.guidanceID {
-                TMTherapyButton(title: "session.readingComplete", pill: true, brand: true) {
-                    model.readingChanged(id, complete: true)
-                }
-            }
-        }
-        .padding(16)
-        .frame(maxHeight: voiceOver || dynamicTypeSize.isAccessibilitySize ? 180 : 84)
-        .background(Color.black)
     }
 
     func requestEnd() {
@@ -282,17 +257,15 @@ extension TMTherapySessionView {
 
     /// Measured reading stays the advancement gate for every instruction and demonstration card.
     @ViewBuilder
-    private func lightGuidanceText(demonstrating: Bool, compact: Bool = false) -> some View {
+    private func lightGuidanceText(demonstrating: Bool) -> some View {
         if let id = model.snapshot.guidanceID {
-            let fullPageSize = demonstrating ? instructionSize / 2 : instructionSize * 2 / 3
             TMMeasuredInstructionText(
                 phrase: guidancePhrase,
                 instructionID: id,
-                fontSize: compact ? calibrationCaptionSize : fullPageSize,
+                fontSize: demonstrating ? instructionSize / 2 : instructionSize * 2 / 3,
                 reduceMotion: reduceMotion,
                 voiceOver: voiceOver,
-                textColor: compact ? .white : .label,
-                compact: compact,
+                textColor: .label,
                 onReadingChanged: { id, complete in model.readingChanged(id, complete: complete) }
             )
             .frame(maxWidth: .infinity, maxHeight: .infinity)

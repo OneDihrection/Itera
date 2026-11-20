@@ -140,19 +140,6 @@ struct TMTherapyInstructionBubble: View {
     }
 }
 
-/// Positions content along the actual video edge, inside the rounded camera frame.
-struct TMTherapyVideoFooter<Content: View>: View {
-    let bounds: CGRect
-    @ViewBuilder let content: Content
-
-    var body: some View {
-        content
-            .frame(width: bounds.width, height: bounds.height, alignment: .bottom)
-            .clipShape(RoundedRectangle(cornerRadius: 28))
-            .position(x: bounds.midX, y: bounds.midY)
-    }
-}
-
 // MARK: - Back
 
 /// The rust "‹ Kembali" text action at the top of the intro.
