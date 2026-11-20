@@ -38,6 +38,8 @@ struct MovementActivity: TherapyActivity {
     /// When usable evidence went missing, and when it came back while the message still shows.
     private var missingSince: Double?
     private var recoveringSince: Double?
+    /// When display-only frames lost the limb, so the drawn guide survives a brief dropout.
+    private var previewMissingSince: Double?
 
     /// Confidence floor for the hip and shoulders.
     private static let jointConfidence: Float = 0.3
@@ -184,6 +186,16 @@ struct MovementActivity: TherapyActivity {
                 let filtered = landmarkSmoother.consume(frame)
                 consume(filtered)
             }
+        case .preview(let frame):
+            if !suspended {
+                preview(landmarkSmoother.consume(frame))
+            }
+
+            // Only the drawing moved: nothing for the session to react to.
+            return ActivityTransition(
+                status: suspended ? .suspended : .running,
+                presentation: presentation
+            )
         }
         if scriptedGuidance,
            oldPhase != phase || oldCount != snapshot.count || hadStart != (start != nil)
@@ -333,22 +345,11 @@ struct MovementActivity: TherapyActivity {
         }
         last = time
         let left = configuration.side == .left
-        let referenceJoint: BodyJoint =
-            configuration.kind == .armRaise
-            ? (left ? .leftHip : .rightHip) : (left ? .leftShoulder : .rightShoulder)
-        let anchorJoint: BodyJoint =
-            configuration.kind == .armRaise
-            ? (left ? .leftShoulder : .rightShoulder) : (left ? .leftElbow : .rightElbow)
-        let trackedJoint: BodyJoint =
-            configuration.kind == .armRaise
-            ? (left ? .leftElbow : .rightElbow) : (left ? .leftWrist : .rightWrist)
-        guard let reference = point(referenceJoint, in: frame),
-            let anchor = point(anchorJoint, in: frame),
-            let tracked = point(trackedJoint, in: frame)
-        else {
+        guard let joints = limbJoints(in: frame) else {
             loseTracking(at: time)
             return
         }
+        let (reference, anchor, tracked) = joints
         let scale = (reference - anchor).length
         guard scale > 0.03 else {
             loseTracking(at: time)
@@ -454,17 +455,27 @@ struct MovementActivity: TherapyActivity {
                 snapshot.pose = .looping
                 phase = 0
             }
+            // The guide stays until the next frame, and the capture circle pops.
             hold.clear()
             snapshot.progress = 0
-            snapshot.guide = nil
-            return
-        }
-        if snapshot.countingDown {
-            // The session's countdown is running or waiting for its cue: nothing is scored yet.
-            snapshot.guide = nil
+            snapshot.captureCompletions += 1
             return
         }
         guard let start, let target else {
+            return
+        }
+        if snapshot.countingDown {
+            // The session's countdown is running or waiting for its cue: nothing is scored yet,
+            // but the bubbles and the joint stay drawn, quietly, beneath it.
+            snapshot.guide = practiceGuide(
+                start: start,
+                target: target,
+                anchor: anchor,
+                scale: scale,
+                tracked: tracked,
+                progress: 0,
+                aspect: frame.aspect
+            )
             return
         }
         let startCenter = anchor + start.scaled(scale)
@@ -483,20 +494,26 @@ struct MovementActivity: TherapyActivity {
         let progress = dwell.progress(duration: dwellDuration)
         snapshot.instruction = phase == 1 ? "session.moveTarget" : "session.returnStart"
         snapshot.progress = progress
-        snapshot.guide = TargetGuide(
-            start: startCenter, target: targetCenter, tracked: tracked, radius: radius,
-            targetActive: phase == 1, progress: progress, aspect: frame.aspect,
-            pivot: anchor)
+        snapshot.guide = practiceGuide(
+            start: start,
+            target: target,
+            anchor: anchor,
+            scale: scale,
+            tracked: tracked,
+            progress: progress,
+            aspect: frame.aspect
+        )
         guard progress >= 1 else {
             return
         }
+
+        // The accepted guide stays drawn at full progress; the next frame's drop pops it.
         dwell.reset()
         if returningBeforePractice {
             returningBeforePractice = false
             snapshot.countingDown = true
             snapshot.seconds = Int(countdownDuration)
             snapshot.instruction = "session.countdown"
-            snapshot.guide = nil
         } else if phase == 2 {
             snapshot.count += 1
             phase = 1
@@ -505,10 +522,111 @@ struct MovementActivity: TherapyActivity {
         }
         if scriptedGuidance {
             snapshot.progress = 0
-            snapshot.guide = nil
             snapshot.instruction = snapshot.countingDown ? "session.countdown"
                 : (phase == 1 ? "session.moveTarget" : "session.returnStart")
         }
+    }
+
+    // MARK: - Guide
+
+    /// The reference, anchor and tracked joints of the exercised limb, or nil when one is missing.
+    private func limbJoints(
+        in frame: TrackingObservation
+    ) -> (reference: TherapyPoint, anchor: TherapyPoint, tracked: TherapyPoint)? {
+        let left = configuration.side == .left
+        let armRaise = configuration.kind == .armRaise
+        let referenceJoint: BodyJoint = armRaise
+            ? (left ? .leftHip : .rightHip)
+            : (left ? .leftShoulder : .rightShoulder)
+        let anchorJoint: BodyJoint = armRaise
+            ? (left ? .leftShoulder : .rightShoulder)
+            : (left ? .leftElbow : .rightElbow)
+        let trackedJoint: BodyJoint = armRaise
+            ? (left ? .leftElbow : .rightElbow)
+            : (left ? .leftWrist : .rightWrist)
+
+        guard let reference = point(referenceJoint, in: frame),
+              let anchor = point(anchorJoint, in: frame),
+              let tracked = point(trackedJoint, in: frame) else {
+            return nil
+        }
+
+        return (reference, anchor, tracked)
+    }
+
+    /// The start and target bubbles, fixed to the body, with the tracked joint.
+    private func practiceGuide(
+        start: TherapyPoint,
+        target: TherapyPoint,
+        anchor: TherapyPoint,
+        scale: Double,
+        tracked: TherapyPoint,
+        progress: Double,
+        aspect: Double
+    ) -> TargetGuide {
+        TargetGuide(
+            start: anchor + start.scaled(scale),
+            target: anchor + target.scaled(scale),
+            tracked: tracked,
+            radius: zoneRadius(aspect: aspect),
+            targetActive: phase == 1,
+            progress: progress,
+            aspect: aspect,
+            pivot: anchor
+        )
+    }
+
+    /// Moves the drawn guide with the patient while a spoken cue holds scoring back, as Balancing
+    /// does. Nothing is credited and no phase changes; a hold shows its frozen progress, and one
+    /// just accepted shows none, so its bubble pops. A brief dropout keeps the last guide.
+    private mutating func preview(_ frame: TrackingObservation) {
+        let time = frame.timestamp
+
+        guard let joints = limbJoints(in: frame) else {
+            let since = previewMissingSince ?? time
+            previewMissingSince = since
+
+            if time - since > Self.dwellTrackingGrace {
+                snapshot.guide = nil
+            }
+            return
+        }
+
+        previewMissingSince = nil
+        let (reference, anchor, tracked) = joints
+        let scale = (reference - anchor).length
+
+        guard scale > 0.03 else {
+            return
+        }
+
+        guard let start, let target else {
+            let calibrationTip = snapshot.guide?.calibrationTip
+            snapshot.guide = TargetGuide(
+                start: start.map { anchor + $0.scaled(scale) } ?? tracked,
+                target: tracked,
+                tracked: tracked,
+                radius: zoneRadius(aspect: frame.aspect),
+                targetActive: false,
+                progress: hold.progress,
+                aspect: frame.aspect,
+                capturing: true,
+                savedStart: start != nil,
+                pivot: anchor
+            )
+            snapshot.guide?.calibrationTip = calibrationTip
+            return
+        }
+
+        snapshot.guide = practiceGuide(
+            start: start,
+            target: target,
+            anchor: anchor,
+            scale: scale,
+            tracked: tracked,
+            progress: snapshot.countingDown ? 0 : dwell.progress(duration: dwellDuration),
+            aspect: frame.aspect
+        )
     }
 
     // MARK: - Calibration cue

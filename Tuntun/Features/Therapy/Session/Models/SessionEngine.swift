@@ -509,10 +509,13 @@ struct SessionEngine {
         }
         aspect = frame.aspect
         updateReadiness()
-        guard canProgress, snapshot.stage == .activity, frame.timestamp >= evidenceBoundary else {
+        guard canProgress, frame.timestamp >= evidenceBoundary else {
             return
         }
-        guard !awaitingCountdownCue else { return }
+        guard snapshot.stage == .activity, !awaitingCountdownCue else {
+            previewWhileGated(frame)
+            return
+        }
         finishCountdownIfDue()
         // Only the arm-raise script still compares cue keys across the event (Phase 6).
         let old = activity?.presentation
@@ -613,6 +616,29 @@ struct SessionEngine {
         } else if facts.contains(.cueChanged(result.presentation.instruction)) {
             announce(result.presentation.instruction, timed: false)
         }
+    }
+
+    /// While a spoken cue holds scoring back, the activity still moves its drawn guide, so the
+    /// patient keeps seeing the tracked joint, as Balancing does. The frame is never scored and
+    /// its transition carries no facts, so nothing advances.
+    private mutating func previewWhileGated(_ frame: TrackingObservation) {
+        let gated: Bool
+
+        switch stage {
+        case .opening:
+            gated = true
+        case .practice:
+            gated = awaitingCountdownCue
+        case .preparing, .feedback, .rest, .summary:
+            gated = false
+        }
+
+        guard gated,
+              let transition = activity?.handle(.preview(frame)) else {
+            return
+        }
+
+        snapshot.presentation = transition.presentation
     }
 
     private mutating func updateReadiness() {

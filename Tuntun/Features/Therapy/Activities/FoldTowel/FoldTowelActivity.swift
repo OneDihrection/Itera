@@ -43,7 +43,7 @@ struct FoldTowelActivity: TherapyActivity {
             if !suspended, last.map({ time - $0 > 0.15 }) == true {
                 loseTracking(at: time)
             }
-        case .guidanceCompleted:
+        case .guidanceCompleted, .preview:
             break
         case .countdownFinished:
             if snapshot.phase == .countdown {

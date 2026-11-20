@@ -60,6 +60,8 @@ struct MovementSnapshot {
     var countingDown = false
     var seconds = 3
     var trackingMessage: String?
+    /// Counts completed start and target captures; each increase pops the capture circle.
+    var captureCompletions = 0
 }
 
 struct ReachSnapshot {
@@ -150,6 +152,9 @@ enum ActivityPresentation {
 
 enum ActivityEvent {
     case observation(TrackingObservation)
+    /// A frame that arrives while a spoken cue holds scoring back. It only moves what is drawn:
+    /// it never credits a hold, dwell or repetition and changes no phase.
+    case preview(TrackingObservation)
     case tick(Double)
     case suspend
     case resume

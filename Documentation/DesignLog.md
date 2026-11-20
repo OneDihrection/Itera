@@ -1750,3 +1750,18 @@ At the user's request no exercise shows instruction text over the camera any mor
 - **Unchanged.** Narration, quiet delays, the demonstration column and title, counters, controls, camera-wait and failure notices, countdown cover and breathing rest.
 
 Verification: XcodeGen and a Debug Simulator build with IPHONEOS_DEPLOYMENT_TARGET=17.0 succeed; no references remain to the removed card, footer or caption size. Pending on the M1 iPad: no text over the camera in arm raise, elbow bend, reach and fold towel (both languages); their opening and demonstration cues advance on their own after narration, also with VoiceOver on and when narration fails; finger and Balancing sessions unchanged.
+
+## Indicator visible during narration (2026-11-20)
+
+The user reported that in some body exercises the tracking indicator disappeared when narration started, which also hid the acceptance pop. Causes in the guided session (arm raise, elbow bend, directional reach):
+
+- `SessionEngine.observation` dropped every frame outside `.activity` and while the countdown cue played, so the opening cues, "try the movement", "calibration complete" and the countdown cue froze or hid the indicator; `TherapySessionView` also drew it only in `.activity`.
+- `MovementActivity` cleared its guide on each calibration capture, on entering the countdown, during the countdown, and (Indonesian arm-raise script) on every accepted start or target, exactly when the praise or next line starts. Clearing unmounted `TMSessionBubbleOverlay`, so its pop never played. Reach cleared its guide on every accepted arrival the same way. The countdown therefore also contradicted §5 ("the target is drawn quietly beneath it").
+
+Changes:
+- **Activities.** New `ActivityEvent.preview(TrackingObservation)`: it moves only the drawn guide, credits nothing, changes no phase and returns no facts. `MovementActivity` rebuilds its capture or practice guide from it (frozen hold progress, none after an acceptance); `DirectionalReachActivity` moves the wrist on its kept bubbles (or the start bubble on the wrist); towel and timed practice ignore it; `AlternatingSidesActivity` forwards it to the active side. A dropout keeps the last guide for 0.5 s. Accepted holds and arrivals keep their guide at full progress until the next frame, the movement countdown draws the quiet start and target bubbles with the live joint, and each completed capture increments `MovementSnapshot.captureCompletions`.
+- **Engine.** `previewWhileGated` sends gated frames (opening stages, or a countdown waiting for its cue) to the activity's `preview` and updates only the presentation. Scoring gates are unchanged.
+- **View.** `TherapySessionView` draws the bubble overlay during the activity and the opening, instruction and demonstration stages (not while paused, waiting for the camera, in feedback, rest or summary). It passes `captureCompletions` and gives captures no bubble dwell, so a capture pops its circle once.
+- **Unchanged.** Balancing already previewed gated frames (`showSkeletonWhileGated`); finger and fold-towel indicators.
+
+Verification: XcodeGen and a Debug Simulator build with IPHONEOS_DEPLOYMENT_TARGET=17.0 succeed. Pending on the M1 iPad: the Indonesian arm-raise script keeps the joint drawn and pops on every accepted start and target while its lines play; English arm raise, elbow bend and reach keep the indicator through the opening cues, "try the movement", "calibration complete" and the countdown cue, and calibration captures pop once; no hold or repetition is credited during a gated cue; alternating sides hand over without a stale guide.

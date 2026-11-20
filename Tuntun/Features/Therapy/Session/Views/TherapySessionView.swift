@@ -212,6 +212,30 @@ struct TMTherapySessionView<ViewModel: TherapySessionViewModelProtocol>: View {
             && model.snapshot.presentation?.countdownLength != nil
     }
 
+    /// The body indicator stays on the camera while cues are spoken over it, not only during
+    /// practice, so the patient always sees their tracked joint.
+    private var showsBodyIndicator: Bool {
+        guard !model.snapshot.paused, !model.snapshot.cameraWaiting else {
+            return false
+        }
+
+        switch model.snapshot.stage {
+        case .activity, .preparationWait, .instruction, .demonstration:
+            return true
+        case .preparing, .feedback, .rest, .summary:
+            return false
+        }
+    }
+
+    /// Completed calibration captures, so each one pops its capture circle.
+    private var captureCompletions: Int {
+        guard case .movement(let movement) = model.snapshot.presentation else {
+            return 0
+        }
+
+        return movement.captureCompletions
+    }
+
     @ViewBuilder
     private var fullScreenPresentation: some View {
         if model.snapshot.stage == .rest, let breath = model.snapshot.guidedSetBreathing,
@@ -527,8 +551,7 @@ struct TMTherapySessionView<ViewModel: TherapySessionViewModelProtocol>: View {
                     onVideoBounds: usesLightLayout ? { videoBounds = $0 } : nil
                 )
                     .frame(width: geometry.size.width, height: geometry.size.height)
-                if !model.snapshot.paused, !model.snapshot.cameraWaiting,
-                    model.snapshot.stage == .activity,
+                if showsBodyIndicator,
                     let guide = model.snapshot.presentation?.guide
                 {
                     bubbleOverlay(guide)
@@ -956,7 +979,8 @@ struct TMTherapySessionView<ViewModel: TherapySessionViewModelProtocol>: View {
             radius: guide.radius,
             activeZone: guide.targetActive ? .target : .start,
             trackedJointInside: inside,
-            dwellProgress: guide.jointHold ? 0 : guide.progress,
+            // A capture pops its circle through `captureCompletions`, never the bubble.
+            dwellProgress: guide.jointHold || guide.capturing ? 0 : guide.progress,
             pivot: guide.pivot.map(normalized)
         )
         // The cue starts at the saved start, fixed to the body; the joint only marks how far along
@@ -988,6 +1012,7 @@ struct TMTherapySessionView<ViewModel: TherapySessionViewModelProtocol>: View {
             captureJoint: (guide.capturing || guide.jointHold) ? normalized(guide.tracked) : nil,
             holdProgress: guide.progress,
             holdRadius: guide.radius,
+            captureCompletions: captureCompletions,
             trackedJoint: guide.directionOnly && !guide.capturing && !guide.jointHold
                 ? normalized(guide.tracked)
                 : nil,

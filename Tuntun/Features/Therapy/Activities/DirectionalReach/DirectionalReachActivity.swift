@@ -48,6 +48,8 @@ struct DirectionalReachActivity: TherapyActivity {
     private var awaitingGuidance = true
     private var pendingOutcomes: [ReachOutcome] = []
     private var missingSince: Double?
+    /// When display-only frames lost the wrist, so the drawn guide survives a brief dropout.
+    private var previewMissingSince: Double?
     private var recoveringSince: Double?
 
     /// Seconds evidence must be missing before the tracking message replaces the instruction.
@@ -135,6 +137,16 @@ struct DirectionalReachActivity: TherapyActivity {
             }
         case .observation(let frame):
             if !suspended { consume(landmarkSmoother.consume(frame)) }
+        case .preview(let frame):
+            if !suspended {
+                preview(landmarkSmoother.consume(frame))
+            }
+
+            // Only the drawing moved: nothing for the session to react to.
+            return ActivityTransition(
+                status: phase == .finished ? .finished : (suspended ? .suspended : .running),
+                presentation: presentation
+            )
         }
         return ActivityTransition(
             status: phase == .finished ? .finished : (suspended ? .suspended : .running),
@@ -441,7 +453,7 @@ struct DirectionalReachActivity: TherapyActivity {
                 phase = .assess
                 awaitingGuidance = true
                 snapshot.instruction = assessmentKey
-                resetAttempt()
+                resetAttempt(keepingGuide: true)
             }
         case .assess:
             guard let start else {
@@ -505,11 +517,12 @@ struct DirectionalReachActivity: TherapyActivity {
                     snapshot.seconds = 3
                     snapshot.instruction = "session.countdown"
                 }
-                resetAttempt()
+                resetAttempt(keepingGuide: true)
             }
         case .countdown:
-            // The session's countdown is running or waiting for its cue.
-            break
+            // The session's countdown is running or waiting for its cue: nothing is scored, but
+            // the joint stays drawn.
+            followWrist(wrist)
         case .outward:
             snapshot.instruction = directionKey
             elapsed += delta
@@ -524,7 +537,7 @@ struct DirectionalReachActivity: TherapyActivity {
                     pendingOutcomes.append(ReachOutcome(direction: direction, evidence: evidence))
                 }
                 phase = .returning
-                resetAttempt()
+                resetAttempt(keepingGuide: reached)
             }
         case .returning:
             snapshot.instruction = "session.returnStart"
@@ -535,7 +548,7 @@ struct DirectionalReachActivity: TherapyActivity {
                 if restartingRound {
                     restartingRound = false
                     phase = .outward
-                    resetAttempt()
+                    resetAttempt(keepingGuide: true)
                     return
                 }
                 if direction < 2 {
@@ -545,7 +558,7 @@ struct DirectionalReachActivity: TherapyActivity {
                     if snapshot.rehearsal {
                         snapshot.rehearsal = false
                         phase = .outward
-                        resetAttempt()
+                        resetAttempt(keepingGuide: true)
                         return
                     }
                     // Only all three outward attempts and returns form a round.
@@ -560,7 +573,7 @@ struct DirectionalReachActivity: TherapyActivity {
                     }
                 }
                 phase = .outward
-                resetAttempt()
+                resetAttempt(keepingGuide: true)
             }
         case .finished: break
         }
@@ -657,7 +670,9 @@ struct DirectionalReachActivity: TherapyActivity {
         resetAttempt()
     }
 
-    private mutating func resetAttempt() {
+    /// Starts a new attempt. An accepted hold keeps its guide at full progress until the next
+    /// frame, whose drop pops the accepted bubble.
+    private mutating func resetAttempt(keepingGuide: Bool = false) {
         elapsed = 0
         peakForward = 0
         peakPoint = nil
@@ -666,7 +681,54 @@ struct DirectionalReachActivity: TherapyActivity {
         dwell.reset()
         last = nil
         snapshot.progress = 0
-        snapshot.guide = nil
+
+        if !keepingGuide {
+            snapshot.guide = nil
+        }
+    }
+
+    // MARK: - Display while gated
+
+    /// Moves the drawn guide with the wrist while a spoken cue holds scoring back, as Balancing
+    /// does. Nothing is credited and no phase changes. A brief dropout keeps the last guide.
+    private mutating func preview(_ frame: TrackingObservation) {
+        let time = frame.timestamp
+        let left = configuration.side == .left
+
+        guard let wrist = frame.point(left ? .leftWrist : .rightWrist) else {
+            let since = previewMissingSince ?? time
+            previewMissingSince = since
+
+            if time - since > Self.dwellTrackingGrace {
+                snapshot.guide = nil
+            }
+            return
+        }
+
+        previewMissingSince = nil
+
+        // Before the start is held its bubble sits on the wrist, as the start hold draws it.
+        guard phase != .start else {
+            let radius = sharedBubbleRadius(aspect: frame.aspect, viewport: viewport)
+            snapshot.guide = TargetGuide(
+                start: wrist,
+                target: wrist,
+                tracked: wrist,
+                radius: radius,
+                targetActive: false,
+                progress: hold.progress,
+                aspect: frame.aspect
+            )
+            return
+        }
+
+        followWrist(wrist)
+    }
+
+    /// Keeps the bubbles where they are and moves the joint; the arc shows only credited progress.
+    private mutating func followWrist(_ wrist: TherapyPoint) {
+        snapshot.guide?.tracked = wrist
+        snapshot.guide?.progress = snapshot.progress
     }
 
     private mutating func arrive(

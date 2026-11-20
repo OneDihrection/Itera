@@ -112,7 +112,8 @@ struct AlternatingSidesActivity: TherapyActivity {
             }
 
             forwardToActive(event)
-        case .tick, .guidanceCompleted, .command:
+        case .preview, .tick, .guidanceCompleted, .command:
+            // A pending switch waits for a scored frame, so the guide stays on the side just credited.
             forwardToActive(event)
         case .viewport, .suspend, .resume:
             forwardToAll(event)
