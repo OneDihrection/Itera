@@ -7,14 +7,15 @@
 
 import SwiftUI
 
-/// A short "bubble pops" celebration around a guide circle, played once per `trigger` change.
+/// A short completion pulse around a guide circle, played once per `trigger` change.
 ///
-/// A ring in `tint` swells slightly and fades while droplets fly well beyond it and shrink, about half a
-/// second in all. It draws nothing at rest, never blocks touches, and is hidden from
-/// accessibility (the caller's completion sound and state already report the moment).
-/// Reduce Motion keeps only a brief fading ring, without travel.
+/// The `completionPulse` Metal shader swells a soft glow in `tint` out from the circle's edge
+/// twice, like a heartbeat, while the outline briefly brightens; about 0.7 s in all. It draws
+/// nothing at rest, never blocks touches, and is hidden from accessibility (the caller's
+/// completion sound and state already report the moment). Reduce Motion plays one short beat
+/// with little travel.
 struct TMTherapyPopBurst: View {
-    /// Change this value to play the burst once; the initial value plays nothing.
+    /// Change this value to play the pulse once; the initial value plays nothing.
     let trigger: Int
     let diameter: CGFloat
     var tint: Color = TherapyPalette.guidanceOrange
@@ -25,21 +26,23 @@ struct TMTherapyPopBurst: View {
         let reduceMotion = reduceMotion
         let diameter = diameter
         let tint = tint
+        let duration = reduceMotion ? 0.3 : 0.7
 
         Color.clear
             .frame(width: diameter, height: diameter)
             .keyframeAnimator(initialValue: BurstFrame.rest, trigger: trigger) { content, frame in
                 content.overlay {
-                    BurstShape(frame: frame, diameter: diameter, tint: tint, reduceMotion: reduceMotion)
+                    PulseLayer(frame: frame, diameter: diameter, tint: tint, reduceMotion: reduceMotion)
                 }
             } keyframes: { _ in
+                // Linear here: the shader eases each beat itself.
                 KeyframeTrack(\.progress) {
                     MoveKeyframe(0)
-                    CubicKeyframe(1, duration: reduceMotion ? 0.25 : 0.5)
+                    LinearKeyframe(1, duration: duration)
                 }
                 KeyframeTrack(\.visible) {
                     MoveKeyframe(1)
-                    LinearKeyframe(1, duration: reduceMotion ? 0.25 : 0.5)
+                    LinearKeyframe(1, duration: duration)
                     MoveKeyframe(0)
                 }
             }
@@ -48,48 +51,43 @@ struct TMTherapyPopBurst: View {
     }
 }
 
-/// The ring and droplets of one burst frame.
-private struct BurstShape: View {
+/// The shader layer of one pulse frame, padded beyond the circle so the glow is never clipped
+/// square.
+private struct PulseLayer: View {
     let frame: BurstFrame
     let diameter: CGFloat
     let tint: Color
     let reduceMotion: Bool
 
-    private static let dropletCount = 8
-
-    var body: some View {
-        let fade = (1 - frame.progress) * frame.visible
-
-        ZStack {
-            Circle()
-                .stroke(tint, lineWidth: max(1, 8 * (1 - frame.progress)))
-                .scaleEffect(1 + (reduceMotion ? 0.1 : 0.3) * frame.progress)
-                .opacity(fade)
-
-            if !reduceMotion {
-                ForEach(0..<Self.dropletCount, id: \.self) { index in
-                    droplet(index, fade: fade)
-                }
-            }
-        }
-        .frame(width: diameter, height: diameter)
+    /// Matches `TMTherapyMergingGuide`'s outline, so the flash sits on the drawn ring.
+    private var ringWidth: CGFloat {
+        min(14, max(6, diameter * 0.17))
     }
 
-    private func droplet(_ index: Int, fade: Double) -> some View {
-        let angle = Double(index) / Double(Self.dropletCount) * 2 * .pi + .pi / 8
-        // Droplets fly well past the swelling ring, so the circle reads as bursting apart.
-        let distance = diameter / 2 * (1 + 1.2 * frame.progress)
-        let size = max(2, diameter * 0.17 * (1 - 0.75 * frame.progress))
+    var body: some View {
+        if frame.visible > 0 {
+            let radius = diameter / 2
+            // The farthest beat travels 35% of the radius and widens to 1.6 ring widths.
+            let side = diameter + (radius * 0.35 + ringWidth * 2) * 2
 
-        return Circle()
-            .fill(tint)
-            .frame(width: size, height: size)
-            .offset(x: cos(angle) * distance, y: sin(angle) * distance)
-            .opacity(fade)
+            Rectangle()
+                .fill(.black)
+                .frame(width: side, height: side)
+                .colorEffect(
+                    ShaderLibrary.completionPulse(
+                        .float2(Float(side), Float(side)),
+                        .float(Float(radius)),
+                        .float(Float(ringWidth)),
+                        .float(Float(frame.progress)),
+                        .float(reduceMotion ? 1 : 0),
+                        .color(tint)
+                    )
+                )
+        }
     }
 }
 
-/// One frame of the burst: `progress` runs 0 → 1, `visible` hides the resting state.
+/// One frame of the pulse: `progress` runs 0 → 1, `visible` hides the resting state.
 private struct BurstFrame {
     var progress: Double
     var visible: Double

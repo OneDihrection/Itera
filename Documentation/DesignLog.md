@@ -1765,3 +1765,12 @@ Changes:
 - **Unchanged.** Balancing already previewed gated frames (`showSkeletonWhileGated`); finger and fold-towel indicators.
 
 Verification: XcodeGen and a Debug Simulator build with IPHONEOS_DEPLOYMENT_TARGET=17.0 succeed. Pending on the M1 iPad: the Indonesian arm-raise script keeps the joint drawn and pops on every accepted start and target while its lines play; English arm raise, elbow bend and reach keep the indicator through the opening cues, "try the movement", "calibration complete" and the countdown cue, and calibration captures pop once; no hold or repetition is credited during a gated cue; alternating sides hand over without a stale guide.
+
+## Completion pulse replaces droplet burst (2026-11-20)
+
+The hold-completion "pop" sent eight droplets flying past the guide circle, which read as circles shooting around the indicator. The user asked for a pulse instead, drawn with a Metal shader like the indicator itself.
+
+- **Shader.** `completionPulse` (DesignSystem/Components/CompletionPulse.metal) draws a soft glow in the tint that swells out from the circle's edge and fades, twice like a heartbeat: the first beat over the first 60% of the pulse, a weaker second beat (60% strength, less travel) overlapping from 35%. The outline brightens slightly toward white during the first beat. Beats travel up to 35% of the radius and widen as they go.
+- **View.** `TMTherapyPopBurst` keeps its API (`trigger`, `diameter`, `tint`) and callers, so `TMTherapyGuideBubble`, `TMTherapyMergingGuide(popsOnCompletion:)` and `TMSessionBubbleOverlay` are unchanged. The pulse lasts 0.7 s (formerly 0.5 s); the shader layer is padded so the glow is never clipped. Reduce Motion plays one 0.3 s beat with little travel.
+
+Verification: XcodeGen and a Debug Simulator build succeed. Pending on the M1 iPad: the pulse on finger holds, body bubble acceptance, calibration captures and sit-to-stand counts; visibility on bright video; Reduce Motion; the overlay keeps 30 fps.
