@@ -76,9 +76,12 @@ Every narrated line, from `Tools/narration-registry.json` and the String Catalog
 
 | Key | Display | Indonesian | English | Clip |
 | --- | --- | --- | --- | --- |
+| `balance.activeWristMissing` | voice | Pastikan pergelangan tangan yang bergerak terlihat | Keep the moving wrist visible | id ✓ · en ✓ |
 | `balance.reachLeft` | voice | Sentuh bahu kanan dengan tangan kiri | Touch your right shoulder with your left hand | id ✓ · en ✓ |
 | `balance.reachRight` | voice | Sentuh bahu kiri dengan tangan kanan | Touch your left shoulder with your right hand | id ✓ · en ✓ |
+| `balance.pelvisMissing` | voice | Mundur sampai area pinggang terlihat | Move back until your waist is visible | id ✓ · en ✓ |
 | `balance.title` | screen<br><sub>exercise heading, plan rows and reports</sub> | Keseimbangan | Balancing | id ✓ · en ✓ |
+| `balance.tracking` | voice | Pastikan bahu, pinggul, dan pergelangan tangan yang dilatih terlihat | Keep your shoulders, hips, and working wrist visible | id ✓ · en ✓ |
 | `balance.voice.complete` | voice | Bagus. Semua sentuhan bahu sudah selesai. | Great work. All shoulder touches are complete. | id ✓ · en ✓ |
 | `balance.voice.leftTarget` | voice | Gerakkan tangan kiri ke bahu kanan. | Move your left hand to your right shoulder. | id ✓ · en ✓ |
 | `balance.voice.returnAndSwitch` | voice | Selesai. Kembali ke lingkaran biru dan tahan 5 detik, lalu ganti sisi. | Done. Return to the blue circle and hold for 5 seconds, then switch sides. | id ✓ · en ✓ |
@@ -105,7 +108,24 @@ Every narrated line, from `Tools/narration-registry.json` and the String Catalog
 | `parity.closingPartial` | voice | Latihan berakhir | Session ended | id ✓ · en ✓ |
 | `parity.getReady` | voice | Bersiap | Get ready | id ✓ · en ✓ |
 | `parity.moveComfortably` | voice | Bergerak sebatas nyaman | Move as far as comfortable | id ✓ · en ✓ |
+| `parity.example.left` | screen<br><sub>calibration card over the camera (arm raise, elbow bend)</sub> | Perhatikan lengan kiri | Watch the left arm | id ✓ · en ✓ |
+| `parity.example.right` | screen<br><sub>calibration card over the camera (arm raise, elbow bend)</sub> | Perhatikan lengan kanan | Watch the right arm | id ✓ · en ✓ |
 | `parity.reachOpening` | screen<br><sub>calibration card over the camera (arm raise, elbow bend, reach, fold towel)</sub> | Tahan posisi tangan Pastikan wajah dan bahu terlihat. | **Screen:** Hold your hand still Keep your face and shoulders visible.<br>**Spoken:** Hold still. | id ✓ · en ✓ |
+| `plan.purpose.armRaise` | screen<br><sub>plan intro focus text</sub> | Membantu bahu mengangkat lengan lebih tinggi, seperti saat meraih rak atau menyisir rambut. | Helps the shoulder lift the arm higher, such as when reaching a shelf or combing hair. | id ✓ · en ✓ |
+| `plan.purpose.crossMidline` | screen<br><sub>plan intro focus text</sub> | Melatih bahu dan lengan agar lebih mudah bergerak menyilang tubuh, seperti saat memasang sabuk pengaman. | Trains the shoulder and arm to move across the body more easily, such as when fastening a seat belt. | id ✓ · en ✓ |
+| `plan.purpose.directionalReach` | screen<br><sub>plan intro focus text</sub> | Melatih meraih ke berbagai arah, seperti saat mengambil barang di meja atau rak. | Trains reaching in different directions, such as when taking things from a table or shelf. | id ✓ · en ✓ |
+| `plan.purpose.elbowBend` | screen<br><sub>plan intro focus text</sub> | Melatih menekuk dan meluruskan siku, seperti saat menyuap makanan ke mulut. | Trains bending and straightening the elbow, such as when bringing food to the mouth. | id ✓ · en ✓ |
+| `plan.purpose.extensionSequence` | screen<br><sub>plan intro focus text</sub> | Melatih jari untuk bergerak secara terpisah, seperti saat menekan tombol. | Trains straightening each finger on its own, for pressing buttons or typing. | id ✓ · en ✓ |
+| `plan.purpose.externalRotation` | screen<br><sub>plan intro focus text</sub> | Melatih bahu berputar ke luar, supaya lebih mudah membuka lengan ke samping saat berpakaian. | Trains turning the shoulder outward, so reaching to the side is easier, such as when opening a door. | id ✓ · en ✓ |
+| `plan.purpose.foldTowel` | screen<br><sub>plan intro focus text</sub> | Melatih tangan dan lengan bekerja sama, seperti saat melipat pakaian. | Trains the hand and arm to work together, such as when folding clothes. | id ✓ · en ✓ |
+| `plan.purpose.forearmRotation` | screen<br><sub>plan intro focus text</sub> | Melatih memutar lengan bawah, seperti saat memutar gagang pintu atau menuang air. | Trains turning the forearm, such as when turning a door knob or pouring water. | id ✓ · en ✓ |
+| `plan.purpose.fullFist` | screen<br><sub>plan intro focus text</sub> | Melatih tangan untuk menggenggam dan melepaskan benda, seperti memegang gelas atau botol. | Builds grip strength for holding things firmly, such as a cup or a bag handle. | id ✓ · en ✓ |
+| `plan.purpose.hookFist` | screen<br><sub>plan intro focus text</sub> | Melatih jari untuk memegang benda dengan posisi kait, seperti saat menenteng kantong belanja. | Trains the finger joints to bend separately, for carrying a bag or holding a handle. | id ✓ · en ✓ |
+| `plan.purpose.internalRotation` | screen<br><sub>plan intro focus text</sub> | Melatih bahu berputar ke dalam, supaya lebih mudah saat merapikan pakaian atau memasukkan tangan ke saku. | Trains turning the shoulder inward, such as when tucking in a shirt or reaching behind the back. | id ✓ · en ✓ |
+| `plan.purpose.opposition` | screen<br><sub>plan intro focus text</sub> | Melatih jari tangan menjepit benda kecil, seperti mengancingkan baju atau memegang sendok | Trains the thumb to meet each finger, for picking up small things like a button or a coin. | id ✓ · en ✓ |
+| `plan.purpose.shoulderFlexion` | screen<br><sub>plan intro focus text</sub> | Melatih mengangkat lengan ke depan, seperti saat meraih rak yang tinggi. | Trains lifting the arm forward, such as when reaching a high shelf. | id ✓ · en ✓ |
+| `plan.purpose.sitToStand` | screen<br><sub>plan intro focus text</sub> | Melatih keseimbangan tubuh agar lebih mudah berdiri dari posisi duduk. | Builds leg and trunk control to stand up from a chair more steadily. | id ✓ · en ✓ |
+| `plan.purpose.spreading` | screen<br><sub>plan intro focus text</sub> | Melatih jari membuka lebar, supaya lebih mudah memegang benda besar, seperti piring atau botol. | Keeps the fingers flexible and wide open, for reaching around larger objects. | id ✓ · en ✓ |
 | `rest.breath.exhale` | screen<br><sub>breathing rest between sets</sub> | Buang napas perlahan | Breathe out slowly | id ✓ · en ✓ |
 | `rest.breath.inhale` | screen<br><sub>breathing rest between sets</sub> | Tarik napas perlahan | Breathe in slowly | id ✓ · en ✓ |
 | `rest.long.closing` | screen<br><sub>long rest between plan exercises</sub> | Istirahat selesai | The break is over | id ✓ · en ✓ |
@@ -123,10 +143,12 @@ Every narrated line, from `Tools/narration-registry.json` and the String Catalog
 | `rest.long.posture` | screen<br><sub>long rest between plan exercises</sub> | Duduk yang nyaman dan rilekskan bahu | Sit comfortably and relax your shoulders | id ✓ · en ✓ |
 | `rest.long.restInvitation` | screen<br><sub>long rest between plan exercises</sub> | kita istirahat sebentar ya | let’s take a short break | id ✓ · en ✓ |
 | `rest.long.settle` | screen<br><sub>long rest between plan exercises</sub> | Jeda sebentar… | Pause briefly… | id ✓ · en ✓ |
+| `rotation.armOutOfView` | voice | Mundur agar siku terlihat | Sit back to show your elbow | id ✓ · en ✓ |
 | `rotation.calibration.endHint` | voice | Putar lengan ke luar sejauh mungkin. Tahan 3 detik. | Turn your forearm out as far as you can. Hold 3 seconds. | id ✓ · en ✓ |
 | `rotation.calibration.startHint` | voice | Siku di sisi badan, tekuk 90°. Tahan 3 detik. | Elbow at your side, bent 90°. Hold 3 seconds. | id ✓ · en ✓ |
 | `rotation.rotateLeft` | voice | Putar lengan bawah kiri ke luar | Turn your left forearm outward | id ✓ · en ✓ |
 | `rotation.rotateRight` | voice | Putar lengan bawah kanan ke luar | Turn your right forearm outward | id ✓ · en ✓ |
+| `rotation.tracking` | voice | Bahu dan lengan harus terlihat | Keep shoulder and arm in view | id ✓ · en ✓ |
 | `rotation.title` | screen<br><sub>exercise heading, plan rows and reports</sub> | Putar Bahu ke Arah Luar | Shoulder external rotation | id ✓ · en ✓ |
 | `rotation.voice.complete` | voice | Kerja bagus. Semua rotasi selesai. | Great work. All rotations are complete. | id ✓ · en ✓ |
 | `rotation.voice.leftTarget` | voice | Putar lengan bawah kiri ke luar, siku di sisi badan. | Turn your left forearm outward, elbow at your side. | id ✓ · en ✓ |

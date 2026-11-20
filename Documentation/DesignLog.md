@@ -1705,3 +1705,36 @@ In Kepal dan Buka Tangan (full fist) the whole-hand circle did not respond to th
 - **Glide.** `TMTherapyMergingGuide` gained `glide` for a single circle: a private animatable layer interpolates its centre and diameter, outside the merging layer's own animatable data, so thumb opposition, fold towel and body bubbles are unchanged. The whole-hand circle (all three exercises) passes a 0.15 s spring without bounce; Reduce Motion places it at once.
 
 Verification: XcodeGen and a Debug Simulator build with IPHONEOS_DEPLOYMENT_TARGET=17.0. Pending on the M1 iPad: in full and hook fist the circle grows on opening and shrinks on closing through calibration and practice; a small-range hand still shows a clear change; the motion is smooth without visible stepping or lag; the circle stays inside the preview near the edges; the arc, pop and acknowledgment at the fist and open-hand holds; Reduce Motion; forearm rotation keeps one size; the overlay keeps 30 fps. Tune the nominal range and the 1.3 closed ratio on the device.
+
+## Recorded intro purposes, demo card and Balancing tracking lines (2026-11-20)
+
+At the product owner's request, every narrated line that still fell back to the system voice is now recorded. All registry keys already had clips. The gaps were keys the app speaks that had never been added to the registry:
+
+- **`plan.purpose.<item>`** (15 keys). These are read on each plan intro opened from Beranda. Indonesian used the system voice for every exercise without a script, and for opposition and arm raise when their script does not apply. English used it for all 15.
+- **`parity.example.left` / `parity.example.right`**. This is the arm raise and elbow bend demonstration card.
+- **Balancing tracking-loss lines**: `balance.tracking`, `balance.pelvisMissing`, `balance.activeWristMissing`, `rotation.tracking` and `rotation.armOutOfView`. `BalanceSessionViewModel` speaks the current instruction when its practice countdown ends. That instruction is one of these keys when the body, wrist or arm is lost at that moment. Shoulder flexion and internal rotation use the `rotation.*` keys through `BalanceExercise.key(_:)`.
+
+The 22 keys were added to `Tools/narration-registry.json` in the `body` group for both languages:
+- the purposes and the demo card as `screen`;
+- the tracking lines as `voice`.
+
+They were recorded with `--only` (Marizka, and Katherine taking the calmest of three seeds), so no approved clip was re-recorded or re-levelled. The wording is unchanged in the String Catalog.
+
+Lines that ran faster than the approved clips were retaken with registry tuning. The pace baseline is the approved lines over 40 characters: Indonesian median 11.4 characters per second (90th percentile 13.3), English median 14.1 (90th percentile 17.2).
+- Indonesian `balance.activeWristMissing`: speed 0.78.
+- Indonesian `plan.purpose.sitToStand`: speed 0.8, seed 7107. The first retake measured 184 Hz.
+- English `plan.purpose.directionalReach`, `elbowBend`, `forearmRotation`, `hookFist` and `internalRotation`: speed 0.8.
+
+What still uses the system voice: only failure paths, when a count clip is missing or fails to play. `TherapySessionViewModel`'s numeric-key branch also would, but nothing reaches it today. `narration-id-recovery.sharing.m4a` is a stray clip with no registry line or catalog key. It is left in place.
+
+Verification:
+- `--check --language en`: no missing, stray or not-calm clips; English pitch median 148 Hz.
+- `--report`: all 460 keys bundled.
+- XcodeGen and a Debug Simulator build with IPHONEOS_DEPLOYMENT_TARGET=17.0 passed.
+- The built app contains 478 Indonesian and 209 English narration clips, and sampled clips match their sources byte for byte.
+
+Pending on the M1 iPad:
+- each plan intro reads its purpose recorded in both languages, and Start still cuts it;
+- the arm raise and elbow bend demo card plays recorded;
+- tone and loudness match the neighbouring lines;
+- Stop/Go recognition still works during the new lines.
