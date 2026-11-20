@@ -407,7 +407,7 @@ extension TMTherapySessionView {
             elapsedSeconds: model.elapsedSeconds,
             resumeDisabled: !model.voiceReady,
             confirmingEndInitially: endRequested,
-            onEnd: { model.command(.stop) },
+            onEnd: endSession,
             onResume: {
                 endRequested = false
                 model.command(.resume)

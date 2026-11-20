@@ -170,10 +170,7 @@ struct TMPracticeCountdown: View {
             .accessibilityAction(named: Text("action.end"), stop)
         }
         .background {
-            Rectangle()
-                .fill(.regularMaterial)
-                .overlay(Color.black.opacity(0.5))
-                .ignoresSafeArea()
+            TMFrostedBackdrop()
         }
     }
 }

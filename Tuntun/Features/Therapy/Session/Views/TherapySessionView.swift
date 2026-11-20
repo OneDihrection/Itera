@@ -102,6 +102,13 @@ struct TMTherapySessionView<ViewModel: TherapySessionViewModelProtocol>: View {
                 TMSessionCelebration(start: celebrationStart).ignoresSafeArea()
             }
         }
+        .overlay {
+            loadingOverlay
+        }
+        .animation(
+            reduceMotion ? nil : .easeInOut(duration: 0.2),
+            value: model.isStarting || model.isFinishing
+        )
         .onChange(of: model.snapshot.stage) { _, stage in
             if stage == .rest {
                 restTotal = Double(model.snapshot.seconds)
@@ -258,7 +265,7 @@ struct TMTherapySessionView<ViewModel: TherapySessionViewModelProtocol>: View {
                     if usesLightLayout {
                         requestEnd()
                     } else {
-                        model.command(.stop)
+                        endSession()
                     }
                 }
             )
@@ -275,7 +282,7 @@ struct TMTherapySessionView<ViewModel: TherapySessionViewModelProtocol>: View {
                     if usesLightLayout {
                         requestEnd()
                     } else {
-                        model.command(.stop)
+                        endSession()
                     }
                 }
             )
@@ -302,7 +309,7 @@ struct TMTherapySessionView<ViewModel: TherapySessionViewModelProtocol>: View {
                     model.command(model.snapshot.paused ? .resume : .pause)
                 }
                 .disabled(model.snapshot.paused && !model.voiceReady)
-                Button("therapy.session.stop") { model.command(.stop) }
+                Button("therapy.session.stop") { endSession() }
             }
             .buttonStyle(TMSessionButtonStyle())
             if let failure = model.failure {
@@ -484,7 +491,7 @@ struct TMTherapySessionView<ViewModel: TherapySessionViewModelProtocol>: View {
                         .buttonStyle(TMSessionButtonStyle(compact: true))
                     Button("session.pause") { model.command(.pause) }
                         .buttonStyle(TMSessionButtonStyle(compact: true))
-                    Button("therapy.session.stop") { model.command(.stop) }
+                    Button("therapy.session.stop") { endSession() }
                         .buttonStyle(TMSessionButtonStyle(compact: true))
                 }
             }
@@ -870,7 +877,26 @@ struct TMTherapySessionView<ViewModel: TherapySessionViewModelProtocol>: View {
         .background(usesLightTheme ? TherapyPalette.canvas : Color.black)
     }
 
+    // MARK: - Loading
+
+    /// Covers starting and winding down, which do synchronous main-actor work.
+    @ViewBuilder
+    private var loadingOverlay: some View {
+        if !presentationOnly, model.isStarting {
+            TMLoadingOverlay(message: "loading.preparingSession")
+        } else if !presentationOnly, model.isFinishing {
+            TMLoadingOverlay(message: "loading.finishingSession")
+        }
+    }
+
     // MARK: - Leaving
+
+    /// Every Stop and End goes through the loading overlay.
+    func endSession() {
+        Task {
+            await model.end()
+        }
+    }
 
     /// While today's plan runs, the summary leads on to the next exercise.
     var summaryExitTitle: LocalizedStringKey {
@@ -889,22 +915,30 @@ struct TMTherapySessionView<ViewModel: TherapySessionViewModelProtocol>: View {
     }
 
     func leaveSummary(_ summary: SessionSummary) {
-        guard plan.isRunning else {
-            router.closeSession()
-            return
-        }
+        Task {
+            await model.leave()
 
-        plan.finish(completed: !summary.stopped && !summary.interrupted)
+            guard plan.isRunning else {
+                router.closeSession()
+                return
+            }
+
+            plan.finish(completed: !summary.stopped && !summary.interrupted)
+        }
     }
 
     /// Leaving before the session could start ends a running plan instead of skipping ahead.
     private func leaveWithoutResult() {
-        guard plan.isRunning else {
-            router.closeSession()
-            return
-        }
+        Task {
+            await model.leave()
 
-        plan.end()
+            guard plan.isRunning else {
+                router.closeSession()
+                return
+            }
+
+            plan.end()
+        }
     }
 
     private func summaryRow(_ result: SessionActivityResult) -> some View {

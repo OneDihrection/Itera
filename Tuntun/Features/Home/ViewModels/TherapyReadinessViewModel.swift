@@ -16,6 +16,10 @@ final class TherapyReadinessViewModel {
     private(set) var message = "home.setup"
     private(set) var action = "home.enablePermissions"
     private(set) var ready = false
+    /// Raised while an explicit Start validates listening, so the intro shows the loading
+    /// overlay. A successful start leaves it raised: the session opens in the same turn and
+    /// shows its own overlay, so the two join without a gap.
+    private(set) var preparingSession = false
 
     @ObservationIgnored private let permissionService: any PermissionServiceProtocol
     @ObservationIgnored private let audioService: any SessionAudioServiceProtocol
@@ -33,6 +37,11 @@ final class TherapyReadinessViewModel {
 
     func refresh() {
         guard !busy else { return }
+        preparingSession = false
+        evaluate()
+    }
+
+    private func evaluate() {
         permissionService.refresh()
         audioService.prepare()
         ready = false
@@ -77,15 +86,23 @@ final class TherapyReadinessViewModel {
     /// Returns navigation intent only after an explicit Start and successful input startup.
     func performAction() async -> Bool {
         guard !busy else { return false }
-        refresh()
+        busy = true
+        preparingSession = true
+
+        // Preparing audio blocks the main actor, so the overlay is drawn before it starts.
+        try? await Task.sleep(for: TMLoadingOverlay.presentationDelay)
+        evaluate()
+
         if action == "home.openSettings" {
+            busy = false
+            preparingSession = false
             if let url = URL(string: UIApplication.openSettingsURLString) {
                 await UIApplication.shared.open(url)
             }
             return false
         }
+
         let starting = ready
-        busy = true
         if historyRecoveryService.recoveryFailure != nil || historyRecoveryService.recovering {
             await historyRecoveryService.recoverHistory()
         } else if starting {
@@ -93,6 +110,7 @@ final class TherapyReadinessViewModel {
             audioService.stop()
             busy = false
             guard result == .started else {
+                preparingSession = false
                 ready = false
                 message = "home.voiceStartupFailed"
                 action = "home.retry"
@@ -100,6 +118,8 @@ final class TherapyReadinessViewModel {
             }
             return true
         } else {
+            // Permission prompts are system UI; the overlay must not sit beneath them.
+            preparingSession = false
             for permission in AppPermission.allCases {
                 guard await permissionService.request(permission) == .authorized else { break }
             }

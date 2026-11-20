@@ -25,7 +25,11 @@ struct TMFingerPauseDialog<Model: FingerSessionViewModelProtocol>: View {
             elapsedSeconds: Int(model.sessionElapsedSeconds),
             resumeDisabled: !model.canResume,
             confirmingEndInitially: confirmingEndInitially,
-            onEnd: { model.finish(completed: false) },
+            onEnd: {
+                Task {
+                    await model.end()
+                }
+            },
             onResume: {
                 onResume()
                 model.handleCommand(.resume)

@@ -13,6 +13,7 @@ struct TMFingerSessionView<Service: FingerSessionServiceProtocol>: View {
     private let router: any SessionRouterProtocol
 
     @Environment(\.scenePhase) private var scenePhase
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     /// Set when End was tapped on the live screen, so the pause dialog opens on its confirmation.
     @State private var endRequested = false
     @State private var videoBounds: CGRect?
@@ -112,8 +113,25 @@ struct TMFingerSessionView<Service: FingerSessionServiceProtocol>: View {
         .overlay(alignment: .topTrailing) {
             debugFinishButton(model)
         }
+        .overlay {
+            loadingOverlay(model)
+        }
+        .animation(
+            reduceMotion ? nil : .easeInOut(duration: 0.2),
+            value: model.isPreparing || model.isFinishing
+        )
         .environment(\.colorScheme, .light)
         .statusBarHidden(false)
+    }
+
+    /// Covers starting and ending, which do synchronous main-actor work.
+    @ViewBuilder
+    private func loadingOverlay(_ model: Service.Session) -> some View {
+        if model.isPreparing {
+            TMLoadingOverlay(message: "loading.preparingSession")
+        } else if model.isFinishing {
+            TMLoadingOverlay(message: "loading.finishingSession")
+        }
     }
 
     /// Debug builds only. Over the header's trailing corner, above stage pages and the pause

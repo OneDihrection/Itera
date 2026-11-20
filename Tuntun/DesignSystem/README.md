@@ -38,6 +38,8 @@ TMTherapyIconButton in Components/TherapyControls.swift provides a large icon ac
 
 `TMSessionStageSurface` provides the reference experience’s full-screen surface, 48-point inset, 24-point section spacing, and continuous 36-point border. It accepts content and controls without knowing about session state. `TMSessionCelebration` provides a cancellable three-second visual celebration and pauses its animation timeline afterward; the caller handles Reduce Motion. Its particle layout was adapted from VisionPoc’s `TherapyClosingSection.swift`.
 
+`TMLoadingOverlay` (Components/TherapyLoadingOverlay.swift) shows a large white spinner and one short message over `TMFrostedBackdrop`, the frosted, darkened backdrop it shares with `TMPracticeCountdown`. It takes every tap and reads as one VoiceOver element. Callers show it from their own loading flag and, before synchronous main-actor work, sleep `TMLoadingOverlay.presentationDelay` (50 ms) so it is drawn first. It owns no timing or session state.
+
 `TMTherapyGuideBubble` displays supplied hold progress without owning tracking or timers. Button activation uses a short press response without changing the original action or accessibility activation.
 
 `TMTherapyGuideBubble` accepts an optional diameter and outline-only styling for enclosing indicators. Its explicit `showsTimer` input enables the progress arc. The full arc marks completion.

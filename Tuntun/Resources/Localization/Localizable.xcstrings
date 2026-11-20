@@ -6896,6 +6896,38 @@
         }
       }
     },
+    "loading.finishingSession" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Finishing your exercise…"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Menyelesaikan latihan…"
+          }
+        }
+      }
+    },
+    "loading.preparingSession" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Getting your exercise ready…"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Menyiapkan latihan…"
+          }
+        }
+      }
+    },
     "move.extensionSequence" : {
       "extractionState" : "stale",
       "localizations" : {

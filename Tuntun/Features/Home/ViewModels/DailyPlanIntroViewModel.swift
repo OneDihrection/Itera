@@ -28,6 +28,8 @@ protocol DailyPlanIntroViewModelProtocol: AnyObject, Observable {
     var countdownSeconds: Int? { get }
     var startTitleKey: String { get }
     var startDisabled: Bool { get }
+    /// True while Start validates listening and opens the session.
+    var isPreparingSession: Bool { get }
     /// Set only when something blocks the start, such as a missing permission.
     var readinessMessageKey: String? { get }
 
@@ -108,6 +110,10 @@ final class DailyPlanIntroViewModel: DailyPlanIntroViewModelProtocol {
     /// "Lanjutkan" and resumes it. It is disabled only while readiness is being validated.
     var startDisabled: Bool {
         starting
+    }
+
+    var isPreparingSession: Bool {
+        readiness.preparingSession
     }
 
     var readinessMessageKey: String? {

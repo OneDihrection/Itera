@@ -9,6 +9,7 @@ import SwiftUI
 
 struct TMBalanceSessionView<ViewModel: BalanceSessionViewModelProtocol>: View {
     @Environment(\.scenePhase) private var scenePhase
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var model: ViewModel
     private let plan: any DailyPlanSessionReporting
     private let permissionService: any PermissionServiceProtocol
@@ -68,6 +69,9 @@ struct TMBalanceSessionView<ViewModel: BalanceSessionViewModelProtocol>: View {
 
             debugFinishButton
                 .zIndex(4)
+
+            loadingOverlay
+                .zIndex(5)
         }
         .animation(.easeOut(duration: 0.28), value: model.allSetsDone)
         .background(TherapyPalette.canvas)
@@ -382,14 +386,33 @@ struct TMBalanceSessionView<ViewModel: BalanceSessionViewModelProtocol>: View {
     /// Only a session that reached its goal counts as done in the plan.
     private func leave() {
         let completed = model.allSetsDone
-        model.stop()
 
-        guard plan.isRunning else {
-            router.closeSession()
-            return
+        Task {
+            await model.end()
+
+            guard plan.isRunning else {
+                router.closeSession()
+                return
+            }
+
+            plan.finish(completed: completed)
         }
+    }
 
-        plan.finish(completed: completed)
+    /// Covers starting and ending, which do synchronous main-actor work.
+    @ViewBuilder
+    private var loadingOverlay: some View {
+        Group {
+            if model.isPreparing, !model.permissionDenied {
+                TMLoadingOverlay(message: "loading.preparingSession")
+            } else if model.isFinishing {
+                TMLoadingOverlay(message: "loading.finishingSession")
+            }
+        }
+        .animation(
+            reduceMotion ? nil : .easeInOut(duration: 0.2),
+            value: model.isPreparing || model.isFinishing
+        )
     }
 
     /// Without camera access the session never started, so a running plan ends here.

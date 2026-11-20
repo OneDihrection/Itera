@@ -12,6 +12,7 @@ import SwiftUI
 struct TMDailyPlanIntroView<ViewModel: DailyPlanIntroViewModelProtocol>: View {
     @State private var viewModel: ViewModel
     @Environment(\.scenePhase) private var scenePhase
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     init(viewModel: ViewModel) {
         _viewModel = State(initialValue: viewModel)
@@ -23,6 +24,15 @@ struct TMDailyPlanIntroView<ViewModel: DailyPlanIntroViewModelProtocol>: View {
                 .overlay(alignment: .topTrailing) {
                     debugStartButton
                 }
+                .overlay {
+                    if viewModel.isPreparingSession {
+                        TMLoadingOverlay(message: "loading.preparingSession")
+                    }
+                }
+                .animation(
+                    reduceMotion ? nil : .easeInOut(duration: 0.2),
+                    value: viewModel.isPreparingSession
+                )
                 .navigationBarBackButtonHidden(true)
                 .toolbar(.hidden, for: .navigationBar)
                 .toolbar(.hidden, for: .tabBar)
@@ -163,6 +173,7 @@ private final class MockDailyPlanIntroViewModel: DailyPlanIntroViewModelProtocol
     let countdownSeconds: Int? = nil
     let startTitleKey = "exercise.start"
     let startDisabled = false
+    let isPreparingSession = false
     let readinessMessageKey: String? = nil
 
     func appear() {}

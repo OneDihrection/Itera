@@ -30,6 +30,10 @@ protocol BalanceSessionViewModelProtocol: AnyObject, Observable {
     var allSetsDone: Bool { get }
     var historySaveFailed: Bool { get }
     var elapsedSeconds: Int { get }
+    /// True until `start()` has prepared audio and started capture.
+    var isPreparing: Bool { get }
+    /// True from End until the page is replaced.
+    var isFinishing: Bool { get }
     /// The capture owner the camera preview attaches to.
     var trackingService: BodyTrackingService { get }
 
@@ -44,6 +48,7 @@ protocol BalanceSessionViewModelProtocol: AnyObject, Observable {
     func pause()
     func resume()
     func stop()
+    func end() async
     func openSettings()
     func retryHistorySave()
     #if DEBUG
@@ -56,6 +61,8 @@ protocol BalanceSessionViewModelProtocol: AnyObject, Observable {
 final class BalanceSessionViewModel: BalanceSessionViewModelProtocol {
     private(set) var snapshot = BalanceSnapshot()
     private(set) var permissionDenied = false
+    private(set) var isPreparing = true
+    private(set) var isFinishing = false
     private(set) var cameraWaiting = true
     private(set) var failure: String?
     private(set) var paused = false
@@ -194,6 +201,10 @@ final class BalanceSessionViewModel: BalanceSessionViewModelProtocol {
 
     func start(permissionService: any PermissionServiceProtocol) async {
         guard !started else { return }
+        defer { isPreparing = false }
+
+        // Preparing audio blocks the main actor, so the loading overlay is drawn first.
+        try? await Task.sleep(for: TMLoadingOverlay.presentationDelay)
         let status = await permissionService.request(.camera)
         guard status == .authorized else {
             permissionDenied = true
@@ -278,6 +289,7 @@ final class BalanceSessionViewModel: BalanceSessionViewModelProtocol {
         if !paused, !allSetsDone {
             audioService.startMusic()
         }
+        isPreparing = false
         let microphone = await permissionService.request(.microphone)
         let speech = await permissionService.request(.speechRecognition)
         if microphone == .authorized, speech == .authorized {
@@ -507,7 +519,12 @@ final class BalanceSessionViewModel: BalanceSessionViewModelProtocol {
         UIApplication.shared.open(url)
     }
 
+    /// Runs once: `end()` stops before leaving and the page's disappearance calls it again.
     func stop() {
+        guard started else {
+            return
+        }
+
         saveUnfinishedSession()
         restTask?.cancel()
         restTask = nil
@@ -519,6 +536,18 @@ final class BalanceSessionViewModel: BalanceSessionViewModelProtocol {
         subscriptions.removeAll()
         UIApplication.shared.isIdleTimerDisabled = wasIdleTimerDisabled
         started = false
+    }
+
+    /// Stops the session behind the loading overlay; stopping tears down capture and audio on
+    /// the main actor.
+    func end() async {
+        guard !isFinishing else {
+            return
+        }
+
+        isFinishing = true
+        try? await Task.sleep(for: TMLoadingOverlay.presentationDelay)
+        stop()
     }
 
     private func startVoiceListening() {

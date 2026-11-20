@@ -23,6 +23,10 @@ protocol FingerSessionViewModelProtocol: AnyObject, Observable {
     var finalSummary: FingerSessionSummary? { get }
     var finalSummarySaved: Bool { get }
     var saving: Bool { get }
+    /// True until `start()` has configured audio, listening and capture.
+    var isPreparing: Bool { get }
+    /// True from End until the page is replaced by the complete page.
+    var isFinishing: Bool { get }
     var errorKey: String? { get }
     var trackingReady: Bool { get }
     var waitingForCamera: Bool { get }
@@ -55,6 +59,7 @@ protocol FingerSessionViewModelProtocol: AnyObject, Observable {
     func pause()
     func handleCommand(_ command: VoiceCommand)
     func finish(completed: Bool)
+    func end() async
     func saveFinalSummary() async
     func skipRest()
     func remeasureRange()
@@ -93,6 +98,8 @@ final class FingerSessionViewModel: FingerSessionViewModelProtocol {
     private(set) var finalSummarySaved = false
     var hasFinished: Bool { finalSummary != nil }
     private(set) var hasStarted = false
+    private(set) var isPreparing = true
+    private(set) var isFinishing = false
     private(set) var celebrationID = 0
     private(set) var trackingRecovery = FingerTrackingRecovery()
     private(set) var trackingRecoveryPaused = false
@@ -355,6 +362,10 @@ final class FingerSessionViewModel: FingerSessionViewModelProtocol {
             return
         }
         hasStarted = true
+        defer { isPreparing = false }
+
+        // Configuring audio blocks the main actor, so the loading overlay is drawn first.
+        try? await Task.sleep(for: TMLoadingOverlay.presentationDelay)
         wasIdleTimerDisabled = UIApplication.shared.isIdleTimerDisabled
         UIApplication.shared.isIdleTimerDisabled = true
         if engine.finished {
@@ -393,6 +404,8 @@ final class FingerSessionViewModel: FingerSessionViewModelProtocol {
             durationClock.resume(at: ProcessInfo.processInfo.systemUptime)
         }
         startTimer()
+        // The checkpoint is written off the main actor, so the session shows without waiting.
+        isPreparing = false
         await saveCheckpoint()
     }
 
@@ -1098,6 +1111,18 @@ final class FingerSessionViewModel: FingerSessionViewModelProtocol {
         errorKey = nil
         finalSummary = engine.snapshot(outcome: completed ? .completed : .stopped)
         cleanup()
+    }
+
+    /// Ends the session behind the loading overlay; finishing tears down capture and audio on
+    /// the main actor.
+    func end() async {
+        guard !hasFinished, !isFinishing else {
+            return
+        }
+
+        isFinishing = true
+        try? await Task.sleep(for: TMLoadingOverlay.presentationDelay)
+        finish(completed: false)
     }
 
     func saveForLater() async -> Bool {

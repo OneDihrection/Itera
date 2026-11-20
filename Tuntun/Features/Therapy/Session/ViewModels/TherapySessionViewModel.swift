@@ -32,6 +32,8 @@ protocol TherapySessionViewModelProtocol: AnyObject, Observable {
     var entryMessage: String { get }
     var validating: Bool { get }
     var isStarting: Bool { get }
+    /// True from End or leaving the summary until the session has wound down.
+    var isFinishing: Bool { get }
     /// The capture owner the camera preview attaches to.
     var trackingService: BodyTrackingService { get }
 
@@ -47,6 +49,8 @@ protocol TherapySessionViewModelProtocol: AnyObject, Observable {
     func background()
     func foreground()
     func exit()
+    func end() async
+    func leave() async
     func retrySave()
     func acknowledgeSaveFailure()
 }
@@ -80,7 +84,8 @@ final class TherapySessionViewModel: TherapySessionViewModelProtocol {
     @ObservationIgnored private var engine = SessionEngine()
     @ObservationIgnored private var subscriptions = Set<AnyCancellable>()
     @ObservationIgnored private var timer: AnyCancellable?
-    @ObservationIgnored private var started = false
+    /// Observed: the loading overlay lifts when it is set (`isStarting`).
+    private var started = false
     @ObservationIgnored private var live = false
     @ObservationIgnored private var permissionService: (any PermissionServiceProtocol)?
     private(set) var entryFailure = false
@@ -90,6 +95,14 @@ final class TherapySessionViewModel: TherapySessionViewModelProtocol {
     /// True until the first `start` has validated entry and begun capture. Startup is not a failure,
     /// so the view shows a neutral waiting surface instead of recovery controls.
     var isStarting: Bool { !started && !entryFailure }
+    /// Set by `end()` until the stopped session's summary is shown and saved.
+    private var ending = false
+    /// Set by `leave()`; the page is about to be replaced, so it never clears.
+    private var leaving = false
+
+    var isFinishing: Bool {
+        leaving || (ending && (snapshot.summary == nil || saving))
+    }
     @ObservationIgnored private var exited = false
     @ObservationIgnored private var lastPermissionCheck = 0.0
     @ObservationIgnored private var pendingSaves: [SessionEffect] = []
@@ -135,6 +148,10 @@ final class TherapySessionViewModel: TherapySessionViewModelProtocol {
         validating = true
         defer { validating = false }
         self.permissionService = permissionService
+
+        // Preparing audio blocks the main actor, so the loading overlay is drawn first.
+        try? await Task.sleep(for: TMLoadingOverlay.presentationDelay)
+        guard !exited else { return }
         do {
             try await repository.recoverInterrupted()
             recovered = true
@@ -332,10 +349,43 @@ final class TherapySessionViewModel: TherapySessionViewModelProtocol {
     }
 
     func exit() {
+        guard !exited else {
+            return
+        }
+
         exited = true
         if snapshot.summary == nil { command(.stop) }
         cleanup()
         audioService.stop()
+    }
+
+    /// Stops the session behind the loading overlay; stopping tears down capture and listening
+    /// on the main actor.
+    func end() async {
+        guard started, snapshot.summary == nil, !ending else {
+            return
+        }
+
+        ending = true
+        try? await Task.sleep(for: TMLoadingOverlay.presentationDelay)
+        command(.stop)
+
+        // A stop the engine refused leaves the session running, so the overlay must lift.
+        if snapshot.summary == nil {
+            ending = false
+        }
+    }
+
+    /// Winds the session down behind the loading overlay before the page is replaced, so the
+    /// teardown does not stall the transition. `exit()` runs again on disappear as a no-op.
+    func leave() async {
+        guard !leaving else {
+            return
+        }
+
+        leaving = true
+        try? await Task.sleep(for: TMLoadingOverlay.presentationDelay)
+        exit()
     }
 
     func retrySave() {

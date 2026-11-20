@@ -12,6 +12,7 @@ import SwiftUI
 struct TMFingerSessionCompleteView<ViewModel: FingerSessionCompleteViewModelProtocol>: View {
     @State private var viewModel: ViewModel
     @Environment(\.scenePhase) private var scenePhase
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     init(viewModel: ViewModel) {
         _viewModel = State(initialValue: viewModel)
@@ -46,6 +47,12 @@ struct TMFingerSessionCompleteView<ViewModel: FingerSessionCompleteViewModelProt
         ) {
             closingAction
         }
+        .overlay {
+            if !savingFinished {
+                TMLoadingOverlay(message: "loading.finishingSession")
+            }
+        }
+        .animation(reduceMotion ? nil : .easeInOut(duration: 0.2), value: savingFinished)
         .environment(\.colorScheme, .light)
         .environment(\.locale, viewModel.sessionLocale)
         .interactiveDismissDisabled()
@@ -66,23 +73,17 @@ struct TMFingerSessionCompleteView<ViewModel: FingerSessionCompleteViewModelProt
     }
 
     /// The way on appears once saving has finished, whether or not it succeeded, so the
-    /// patient is never stuck on this page.
+    /// patient is never stuck on this page. The loading overlay covers the page while it saves.
     @ViewBuilder
     private var closingAction: some View {
-        if automaticallyRests {
-            if !savingFinished {
-                ProgressView("session.saving")
-            }
-        } else {
+        if !automaticallyRests {
             TMTherapyFinishActions(
                 title: closingTitle,
                 symbol: viewModel.isPlanRunning ? "play.fill" : nil,
                 disabled: !savingFinished,
                 action: viewModel.close
             ) {
-                if !savingFinished {
-                    ProgressView()
-                }
+                EmptyView()
             }
         }
     }
