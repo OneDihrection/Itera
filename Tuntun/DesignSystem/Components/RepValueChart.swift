@@ -43,8 +43,8 @@ struct TMRepValueChart: View {
         Chart(values) { item in
             if let value = item.value {
                 BarMark(
-                    x: .value("Repetition", String(item.repNumber)),
-                    y: .value("Value", value),
+                    x: .value("chart.axis.repetition", String(item.repNumber)),
+                    y: .value("chart.axis.value", value),
                     width: .ratio(0.6)
                 )
                 .clipShape(UnevenRoundedRectangle(topLeadingRadius: 4, topTrailingRadius: 4))

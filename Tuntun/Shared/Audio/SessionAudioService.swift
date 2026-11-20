@@ -48,6 +48,8 @@ final class SessionAudioService: NSObject, SessionAudioServiceProtocol, AVSpeech
     private var routeObserver: NSObjectProtocol?
     private let synthesizer = AVSpeechSynthesizer()
     private let music = ExerciseMusicPlayer()
+    /// Music waiting for the audio session; pausing or stopping cancels it so it cannot start late.
+    private var musicStart: Task<Void, Never>?
     /// The hold-bubble number currently playing, so the next second can replace it.
     private var holdSecondID: UUID?
     private var narrationClips: [String: PreparedAudioClip] = [:]
@@ -103,7 +105,7 @@ final class SessionAudioService: NSObject, SessionAudioServiceProtocol, AVSpeech
                 return
             }
             Task { @MainActor in
-                self?.music.pause()
+                self?.pauseMusic()
                 self?.events.send(.interrupted)
             }
         }
@@ -282,9 +284,10 @@ final class SessionAudioService: NSObject, SessionAudioServiceProtocol, AVSpeech
         }
     }
 
-    func prepareRestNarration() {
+    /// Prepares clips and activates the shared session; await it before the first line plays.
+    func prepareRestNarration() async {
         prepare()
-        try? NarrationAudioSession.activate()
+        try? await NarrationAudioSession.activate()
     }
 
     func cancelSpeech() {
@@ -823,21 +826,38 @@ final class SessionAudioService: NSObject, SessionAudioServiceProtocol, AVSpeech
     }
 
     func startMusic() {
-        do {
-            // The one app-wide configuration, so music never switches the narration route.
-            try NarrationAudioSession.activate()
-            music.start()
-        } catch {
-            music.pause()
+        musicStart?.cancel()
+        musicStart = Task { [weak self] in
+            do {
+                // The one app-wide configuration, so music never switches the narration route.
+                try await NarrationAudioSession.activate()
+            } catch {
+                self?.music.pause()
+                return
+            }
+
+            guard !Task.isCancelled else {
+                return
+            }
+
+            self?.music.start()
         }
     }
 
-    func pauseMusic() { music.pause() }
+    func pauseMusic() {
+        musicStart?.cancel()
+        music.pause()
+    }
+
     func resumeMusic() { startMusic() }
-    func stopMusic() { music.stop() }
+
+    func stopMusic() {
+        musicStart?.cancel()
+        music.stop()
+    }
 
     func stop() {
-        music.stop()
+        stopMusic()
         cancelSpeech()
         stopListening()
         inputWorker.stop(deactivate: true)

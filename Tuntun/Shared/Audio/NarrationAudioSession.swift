@@ -30,16 +30,51 @@ enum NarrationAudioSession {
 
     // MARK: - Activation
 
-    /// Configures the shared session, touching it only when something actually differs.
+    /// Configures and activates the shared session on `sessionQueue`, for main-actor callers.
     ///
-    /// Changing the category or reactivating while audio plays reconfigures the route and sample
-    /// rate, which clicks and glitches music and narration. Every caller therefore asks for the
-    /// same configuration, and repeated calls are no-ops apart from the speaker check.
-    static func activate(allowsBluetoothMicrophone: Bool = false) throws {
+    /// `setCategory` and `setActive(true)` block until the hardware is reconfigured, so they never
+    /// run on the main thread. The request is counted now, before the work is queued, so a
+    /// deactivation requested earlier cannot switch the session off after it.
+    static func activate(allowsBluetoothMicrophone: Bool = false) async throws {
+        countActivationRequest()
+
+        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+            sessionQueue.async {
+                do {
+                    try configureAndActivate(allowsBluetoothMicrophone: allowsBluetoothMicrophone)
+                    continuation.resume()
+                } catch {
+                    continuation.resume(throwing: error)
+                }
+            }
+        }
+    }
+
+    /// Configures and activates the shared session on the calling thread, for callers that
+    /// already run on their own audio queue (`AudioInputWorker`). Never call it on the main thread.
+    static func activateBlocking(allowsBluetoothMicrophone: Bool = false) throws {
+        assert(!Thread.isMainThread, "Activate the audio session with the async activate() on the main thread")
+
+        countActivationRequest()
+        try configureAndActivate(allowsBluetoothMicrophone: allowsBluetoothMicrophone)
+    }
+
+    private static func countActivationRequest() {
         lock.lock()
         defer { lock.unlock() }
 
         activationRequests += 1
+    }
+
+    /// Touches the session only when something actually differs.
+    ///
+    /// Changing the category or reactivating while audio plays reconfigures the route and sample
+    /// rate, which clicks and glitches music and narration. Every caller therefore asks for the
+    /// same configuration, and repeated calls are no-ops apart from the speaker check.
+    private static func configureAndActivate(allowsBluetoothMicrophone: Bool) throws {
+        lock.lock()
+        defer { lock.unlock() }
+
         let session = AVAudioSession.sharedInstance()
         let changed = try configureCategory(
             of: session,
@@ -100,12 +135,14 @@ enum NarrationAudioSession {
     static func deactivateInBackground() {
         let token = activationToken
 
-        deactivationQueue.async {
+        sessionQueue.async {
             deactivate(ifUnchangedSince: token)
         }
     }
 
-    private static let deactivationQueue = DispatchQueue(label: "Tuntun.audioDeactivation", qos: .utility)
+    /// Serial queue for the blocking session calls of main-actor callers, so activation and
+    /// deactivation run in the order they were requested and never on the main thread.
+    private static let sessionQueue = DispatchQueue(label: "Tuntun.audioSession", qos: .userInitiated)
 
     // MARK: - Route
 

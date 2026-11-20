@@ -385,7 +385,7 @@ final class FingerSessionViewModel: FingerSessionViewModelProtocol {
             return
         }
         do {
-            try guidanceAudioService.configure(language: language)
+            try await guidanceAudioService.configure(language: language)
         } catch {
             errorKey = "audio.unavailable"
         }
@@ -949,7 +949,7 @@ final class FingerSessionViewModel: FingerSessionViewModelProtocol {
         }
         errorKey = nil
         do {
-            try guidanceAudioService.configure(language: language)
+            try await guidanceAudioService.configure(language: language)
         } catch {
             errorKey = "audio.unavailable"
         }
@@ -1058,8 +1058,8 @@ final class FingerSessionViewModel: FingerSessionViewModelProtocol {
             return
         }
         do {
-            try guidanceAudioService.configure(language: language)
-            voiceEnabled = try guidanceAudioService.enableVoice()
+            try await guidanceAudioService.configure(language: language)
+            voiceEnabled = try await guidanceAudioService.enableVoice()
         } catch {
             voiceEnabled = false
         }

@@ -26,7 +26,7 @@ struct TMTherapyProgressDots: View {
             .background(Color.black.opacity(0.65), in: Capsule())
             .accessibilityElement(children: .ignore)
             .accessibilityLabel(Text(label))
-            .accessibilityValue(Text("\(done) / \(total)"))
+            .accessibilityValue(Text(verbatim: "\(done) / \(total)"))
     }
 
     @ViewBuilder

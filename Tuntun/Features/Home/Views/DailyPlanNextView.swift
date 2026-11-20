@@ -124,7 +124,7 @@ struct TMDailyPlanNextView<
             } catch {
                 return
             }
-            viewModel.prepareRestNarration()
+            await viewModel.prepareRestNarration()
             audioPrepared = true
         }
 
@@ -428,7 +428,7 @@ private final class MockDailyPlanNextViewModel: DailyPlanNextViewModelProtocol {
     let longRestBreaths = 6
     let audioEvents = Empty<AudioEvent, Never>().eraseToAnyPublisher()
 
-    func prepareRestNarration() {}
+    func prepareRestNarration() async {}
     func startMusic() {}
     func pauseMusic() {}
     func stopMusic() {}

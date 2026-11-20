@@ -39,6 +39,8 @@ final class DailyPlanIntroNarration {
         }
         let operation = UUID()
         operationID = operation
+        // Activates the shared session off the main thread before the first line plays.
+        await audioService.prepareRestNarration()
         // The intro is playback, not therapy. Do not silence it when microphone or command
         // recognition readiness is pending; startCurrent validates that before opening capture.
         guard operationID == operation, plan.isRunning,
@@ -72,7 +74,6 @@ final class DailyPlanIntroNarration {
         paused = false
         finished = false
         lineIndex = 0
-        audioService.prepareRestNarration()
         subscription = audioService.events.sink { [weak self] event in
             guard let self, self.running else {
                 return

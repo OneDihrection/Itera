@@ -33,7 +33,7 @@ struct TMTherapyStepStrip: View {
         .animation(.easeInOut(duration: 0.2), value: current)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(currentTitle)
-        .accessibilityValue(Text("\(min(current, steps.count - 1) + 1) / \(steps.count)"))
+        .accessibilityValue(Text(verbatim: "\(min(current, steps.count - 1) + 1) / \(steps.count)"))
     }
 
     private var currentTitle: Text {
@@ -71,9 +71,9 @@ struct TMTherapyStepStrip: View {
         ForEach(0..<3, id: \.self) { index in
             TMTherapyStepStrip(
                 steps: [
-                    TherapyStep(id: 0, title: "Grab", symbol: "hand.raised.fill"),
-                    TherapyStep(id: 1, title: "Slide", symbol: "arrow.left"),
-                    TherapyStep(id: 2, title: "Release", symbol: "hand.raised.fingers.spread")
+                    TherapyStep(id: 0, title: "towel.step.grab", symbol: "hand.raised.fill"),
+                    TherapyStep(id: 1, title: "towel.step.slide", symbol: "arrow.left"),
+                    TherapyStep(id: 2, title: "towel.step.release", symbol: "hand.raised.fingers.spread")
                 ],
                 current: index
             )

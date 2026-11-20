@@ -41,6 +41,8 @@ final class GuidanceAudioService: NSObject, AVSpeechSynthesizerDelegate {
     private var pendingCommandTask: Task<Void, Never>?
     private var utterances: [ObjectIdentifier: UUID] = [:]
     private let music = ExerciseMusicPlayer()
+    /// Music waiting for the audio session; pausing or stopping cancels it so it cannot start late.
+    private var musicStart: Task<Void, Never>?
     private var cuePlayer: AVAudioPlayer?
     private var buttonPlayer: AVAudioPlayer?
     private var audioSessionActive = false
@@ -97,11 +99,11 @@ final class GuidanceAudioService: NSObject, AVSpeechSynthesizerDelegate {
         }
     }
 
-    func configure(language: String) throws {
+    func configure(language: String) async throws {
         locale = language
         voice = NarrationVoice.best(for: language)
         vocabulary = VoiceCommandVocabulary()
-        try activateSession()
+        try await activateSession()
     }
 
     /// Speaks one cue. When every line has a bundled recording, those play in order;
@@ -281,10 +283,25 @@ final class GuidanceAudioService: NSObject, AVSpeechSynthesizerDelegate {
             return
         }
         lastButtonSound = now
-        do {
-            if !audioSessionActive {
-                try activateSession()
+
+        guard audioSessionActive else {
+            // Only the first tap after a deactivation waits for the session to come back.
+            Task { [weak self] in
+                do {
+                    try await self?.activateSession()
+                    self?.playButtonSound()
+                } catch {
+                    // Optional touch reinforcement must not disable an action or interrupt narration.
+                }
             }
+            return
+        }
+
+        playButtonSound()
+    }
+
+    private func playButtonSound() {
+        do {
             if buttonPlayer == nil, let url = Bundle.main.url(forResource: "button-click", withExtension: "wav") {
                 buttonPlayer = try AVAudioPlayer(contentsOf: url)
                 buttonPlayer?.volume = 0.18
@@ -395,7 +412,7 @@ final class GuidanceAudioService: NSObject, AVSpeechSynthesizerDelegate {
         music.setDucked(false)
     }
 
-    func enableVoice() throws -> Bool {
+    func enableVoice() async throws -> Bool {
         guard SFSpeechRecognizer.authorizationStatus() == .authorized,
               AVAudioApplication.shared.recordPermission == .granted,
               let candidate = SFSpeechRecognizer(locale: Locale(identifier: "en-US")),
@@ -403,7 +420,7 @@ final class GuidanceAudioService: NSObject, AVSpeechSynthesizerDelegate {
         recognizer = candidate
         voiceEnabled = true
         do {
-            try activateSession()
+            try await activateSession()
             try beginRecognition()
             return true
         } catch {
@@ -430,8 +447,8 @@ final class GuidanceAudioService: NSObject, AVSpeechSynthesizerDelegate {
 
     /// The shared configuration, so narration stays on the same loud route whether or not
     /// voice commands are listening.
-    private func activateSession() throws {
-        try NarrationAudioSession.activate(allowsBluetoothMicrophone: true)
+    private func activateSession() async throws {
+        try await NarrationAudioSession.activate(allowsBluetoothMicrophone: true)
         audioSessionActive = true
     }
 
@@ -559,22 +576,33 @@ final class GuidanceAudioService: NSObject, AVSpeechSynthesizerDelegate {
 
     func suspend() {
         cancelSpeech()
+        musicStart?.cancel()
         music.pause()
         cuePlayer?.stop()
         disableVoice()
     }
 
     func pauseAmbient() {
+        musicStart?.cancel()
         music.pause()
         cuePlayer?.stop()
     }
 
     func startMusic() {
-        do {
-            try activateSession()
-            music.start()
-        } catch {
-            music.pause()
+        musicStart?.cancel()
+        musicStart = Task { [weak self] in
+            do {
+                try await self?.activateSession()
+            } catch {
+                self?.music.pause()
+                return
+            }
+
+            guard !Task.isCancelled else {
+                return
+            }
+
+            self?.music.start()
         }
     }
 

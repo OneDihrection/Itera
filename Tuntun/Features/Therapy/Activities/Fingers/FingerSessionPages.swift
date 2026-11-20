@@ -184,7 +184,7 @@ struct TMFingerSessionCloseHeader<Model: FingerSessionViewModelProtocol>: View {
 
     var body: some View {
         TMTherapyPageHeader(
-            title: title ?? "",
+            title: title,
             leadingTitle: "session.close",
             leadingSymbol: "xmark",
             leadingAction: { model.handleCommand(.pause) },

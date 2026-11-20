@@ -137,7 +137,7 @@ struct TMTherapySessionView<ViewModel: TherapySessionViewModelProtocol>: View {
         .background(usesLightTheme ? TherapyPalette.canvas : Color.black)
         .foregroundStyle(usesLightTheme ? TherapyPalette.ink : Color.white)
         .toolbar(model.snapshot.summary == nil || usesLightTheme ? .hidden : .visible, for: .navigationBar)
-        .navigationTitle(model.snapshot.summary == nil ? "" : "session.summaryTitle")
+        .navigationTitle(model.snapshot.summary == nil ? Text(verbatim: "") : Text("session.summaryTitle"))
         .statusBarHidden(!usesLightLayout && model.snapshot.summary == nil)
         .navigationBarBackButtonHidden(model.snapshot.summary == nil || usesLightTheme)
         .task {
@@ -967,7 +967,7 @@ struct TMTherapySessionView<ViewModel: TherapySessionViewModelProtocol>: View {
                         Text(LocalizedStringKey([
                             "session.reachRight", "session.reachLeft", "session.reachUp",
                         ][outcome.direction]))
-                        Text(LocalizedStringKey("session.reachOutcome.\(outcome.evidence.rawValue)"))
+                        Text(reachOutcomeKey(outcome.evidence))
                     }
                     .typography(.caption)
                 }
@@ -982,11 +982,34 @@ struct TMTherapySessionView<ViewModel: TherapySessionViewModelProtocol>: View {
                         Text(LocalizedStringKey([
                             "session.reachRight", "session.reachLeft", "session.reachUp",
                         ][step.direction]))
-                        Text(LocalizedStringKey("session.reachPhase.\(step.phase.rawValue)"))
+                        Text(reachPhaseKey(step.phase))
                     }
                     .typography(.caption)
                 }
             }
+        }
+    }
+
+    /// Literal keys, so the catalog extracts them; an interpolated key looks up `…%@` instead.
+    private func reachOutcomeKey(_ evidence: ReachOutcome.Evidence) -> LocalizedStringKey {
+        switch evidence {
+        case .reached:
+            return "session.reachOutcome.reached"
+        case .notReached:
+            return "session.reachOutcome.notReached"
+        case .unscored:
+            return "session.reachOutcome.unscored"
+        }
+    }
+
+    private func reachPhaseKey(_ phase: ReachSkippedStep.Phase) -> LocalizedStringKey {
+        switch phase {
+        case .assessment:
+            return "session.reachPhase.assessment"
+        case .rehearsal:
+            return "session.reachPhase.rehearsal"
+        case .practice:
+            return "session.reachPhase.practice"
         }
     }
 

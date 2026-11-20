@@ -10,8 +10,9 @@ import SwiftUI
 // MARK: - Page header
 
 /// A centered page title with an optional leading circle action (back or close).
+/// Without a title the header keeps its height and shows only the action.
 struct TMTherapyPageHeader: View {
-    let title: LocalizedStringKey
+    let title: LocalizedStringKey?
     var leadingTitle: LocalizedStringKey? = nil
     var leadingSymbol = "chevron.left"
     var leadingAction: (() -> Void)? = nil
@@ -19,12 +20,14 @@ struct TMTherapyPageHeader: View {
 
     var body: some View {
         ZStack {
-            Text(title)
-                .typography(size: 24, weight: .semiBold, relativeTo: .title2)
-                .multilineTextAlignment(.center)
-                .lineLimit(2)
-                .padding(.horizontal, max(80, trailingContentWidth + 16))
-                .accessibilityAddTraits(.isHeader)
+            if let title {
+                Text(title)
+                    .typography(size: 24, weight: .semiBold, relativeTo: .title2)
+                    .multilineTextAlignment(.center)
+                    .lineLimit(2)
+                    .padding(.horizontal, max(80, trailingContentWidth + 16))
+                    .accessibilityAddTraits(.isHeader)
+            }
 
             if let leadingAction, let leadingTitle {
                 HStack {

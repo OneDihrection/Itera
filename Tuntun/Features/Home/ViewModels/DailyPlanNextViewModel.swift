@@ -23,7 +23,7 @@ protocol DailyPlanNextViewModelProtocol: AnyObject, Observable {
     var longRestBreaths: Int { get }
     var audioEvents: AnyPublisher<AudioEvent, Never> { get }
 
-    func prepareRestNarration()
+    func prepareRestNarration() async
     func startMusic()
     func pauseMusic()
     func stopMusic()
@@ -84,8 +84,8 @@ final class DailyPlanNextViewModel: DailyPlanNextViewModelProtocol {
 
     // MARK: - Audio
 
-    func prepareRestNarration() {
-        audioService.prepareRestNarration()
+    func prepareRestNarration() async {
+        await audioService.prepareRestNarration()
     }
 
     func startMusic() {

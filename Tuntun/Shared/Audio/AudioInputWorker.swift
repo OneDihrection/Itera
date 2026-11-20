@@ -24,7 +24,7 @@ final class AudioInputWorker: @unchecked Sendable {
             queue.async { [self] in
                 do {
                     // The same configuration the narrators use, so nothing flips mid-playback.
-                    try NarrationAudioSession.activate()
+                    try NarrationAudioSession.activateBlocking()
                     let input = self.engine.inputNode
                     self.enableVoiceProcessingIfNeeded(on: input)
                     let format = input.outputFormat(forBus: 0)
