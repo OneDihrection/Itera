@@ -1841,3 +1841,18 @@ Pending on the M1 iPad:
 - an abrupt sit not counting
 - Stop/Go during the pops
 - Reduce Motion
+
+## Foundation color palette (2026-11-20)
+
+The product owner supplied the Figma "Foundation Colors" page (Primary Yellow BG/Normal/Pressed, Secondary Blue, Error and Success Normal/Pressed, and the Background, Main Dark, Lighter Components and Disabled neutrals) for the new iteration of Beranda, the long and short rests and Progres. `TherapyPalette` now holds these as private raw tokens and maps its semantic tokens onto them, so call sites keep their token names. This supersedes the rust `brand` of *Daily plan timeline* and the system green, red and blue in the monochrome palette.
+
+- **Brand is yellow, labels on it are dark.** `brand` is #FFB700. White on it is about 1.8:1, so `onBrand` is Main Dark (#1A1A1A, about 10.5:1), and the completion mark takes a `checkColor` (`onBrand` on yellow).
+- **No yellow text.** Even Pressed #E28C00 is about 3.0:1 on white. The product owner chose Main Dark for text that the design shows in the brand colour. The new `brandInk` token is used by the target and progress numbers, "‹ Kembali", the movement-history link and the report's disclosure tint. Icons, rings, markers, outlines and fills stay yellow.
+- **Long rest.** The waves are yellow (`brand`, two lighter yellows, `brandPressed` in front), so their cue, counter and buttons use `onBrand` instead of white.
+- **Status colours.** `success`/`setDone` use Success/Normal. `green`, which also carries text and white labels, uses Success/Pressed (about 7:1). `warning` and the new `destructive` use Error/Normal (about 5:1).
+- **Neutrals.** `canvas` is #F9F9F9, `action` is Main Dark and `actionMuted` is Disabled in light mode. Dark mode keeps the earlier values where Figma gives none.
+- **Blue.** `guidanceBlue` and `restRing` use Secondary Blue #58A7F8.
+- **Unchanged.** The session screen's orange failure text stays `.orange`, because the new red would lose contrast on the dark session panels.
+
+Verification: XcodeGen and a Debug Simulator build (iPad Pro 13-inch, M5) succeeded. Contrast figures were computed from the hex values. Pending on the baseline iPad: Home timeline and the "Lanjutkan Latihan" pill, the exercise intro and live counters, the long and short rests, Progress and the session report, the pause dialog and a destructive confirmation, in light and dark mode.
+

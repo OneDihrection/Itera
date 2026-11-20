@@ -55,6 +55,21 @@ TMTherapyIconButton in Components/TherapyControls.swift provides a large icon ac
 `TMTherapyMetric` supports compact label spacing for horizontal session headers, retaining its large numeric value and combined accessibility label.
 
 
+## Foundation colors (2026-11-20)
+
+`TherapyPalette` takes its values from the Figma "Foundation Colors" page, held as private raw tokens (`yellowBackground` #FFFAEC, `yellowNormal` #FFB700, `yellowPressed` #E28C00, `secondaryBlue` #58A7F8, `errorNormal` #C5423D, `successNormal` #40895D, `successPressed` #2A6342, `neutralBackground` #F9F9F9, `mainDark` #1A1A1A, `disabledFill` #D9D7D5). Feature code uses only the semantic tokens mapped onto them:
+
+- `brand` (Primary Yellow), `brandPressed` (Pressed, the deep long-rest band), `planMarker`, `progressBar`; `progressSoftBar` is a lighter yellow.
+- `onBrand` is Main Dark: white on yellow is about 1.8:1. Yellow is never text on a light surface; text the design shows in the brand colour uses `brandInk` (Main Dark, `label` in dark mode).
+- `planCard` and `progressPanel` use Primary Yellow/BG in light mode.
+- `canvas` is Background #F9F9F9 and `action` Main Dark in light mode; `actionMuted` is Disabled #D9D7D5.
+- `success` and `setDone` are Success/Normal; `green` (text and fills under white) is Success/Pressed for about 7:1.
+- `warning` is Error/Normal (about 5:1 on white); `destructive` is the same red in both appearances for destructive pills.
+- `guidanceBlue` and `restRing` are Secondary Blue; `guidanceYellow` is Primary Yellow.
+- Dark-mode values keep the earlier tuned colours where Figma defines none.
+
+The long rest uses yellow waves (`brand`, two lighter yellows, `brandPressed` in front) with `onBrand` text and buttons.
+
 ## Monochrome pages
 
 The home, exercise start, session pages and progress page use a monochrome look: a white `canvas`, black `heroCard` surfaces with `onHero` text, grey `panel` fills, thin `outline` borders and dark `action` pills. `success`, `setDone`/`setDoneFill`, `restRing`/`restTrack` and `challengeFill`/`challengeInk` cover the few coloured states. All are light/dark adaptive tokens in `TherapyPalette`, mapped to system semantic colors (`label`, `systemBackground`, `secondarySystemBackground`, `separator`, `systemGray5`, `systemGreen`, `systemBlue`) wherever one fits.
@@ -101,7 +116,7 @@ Fold towel draws only the current zone with `TMTherapyMergingGuide(anchor: .fixe
 
 ## Daily plan timeline (2026-11-09)
 
-`TherapyPalette` adds `brand`/`onBrand` (rust capsule, white text about 5.9:1), `planCard` (warm off-white card, adaptive), `planMarker` (yellow next-item dot) and `planTrack` (dashed line and hollow dots). `TMTherapyButton(prominent:)` draws the large rust "Mulai Latihan" capsule (96 pt high, 36 pt label), sized to its label instead of filling the width.
+`TherapyPalette` adds `brand`/`onBrand` (yellow capsule, Main Dark text about 10.5:1; see "Foundation colors"), `planCard` (warm off-white card, adaptive), `planMarker` (yellow next-item dot) and `planTrack` (dashed line and hollow dots). `TMTherapyButton(prominent:)` draws the large yellow "Mulai Latihan" capsule (96 pt high, 36 pt label), sized to its label instead of filling the width.
 
 Components/TherapyTimeline.swift owns `TMTherapyTimelineRow` (a marker with solid yellow completed connectors and dashed upcoming connectors), `TMTherapyTimelineMarker` (`.current` and `.done` filled yellow, `.upcoming` hollow ring; the card provides the accessible state label), `TMTherapyPlanCard` (title, icon-and-value lines, trailing illustration, one button and one accessibility element whose value names the state) and `TMTherapyFloatingActionDock` (bottom content over a gradient-masked material fade that never takes taps; solid under Reduce Transparency). They take values and actions only; plan order, progress and session launching stay in Features/Home.
 
@@ -112,27 +127,27 @@ Components/TherapyTimeline.swift owns `TMTherapyTimelineRow` (a marker with soli
 Components/TherapyExerciseScreens.swift owns the five screens every exercise shares. All take values, content and actions; sessions keep their own timing, counting and navigation.
 
 - `TMTherapyExerciseHeading`: grey "Latihan N" eyebrow over a bold centred title.
-- `TMTherapyTargetStat` ("8 Repetisi", rust number) and `TMTherapyProgressStat` ("Repetisi 3 / 8"), laid out with `TMTherapyStatRow` and `TMTherapyStatDivider`.
+- `TMTherapyTargetStat` ("8 Repetisi", `brandInk` number) and `TMTherapyProgressStat` ("Repetisi 3 / 8"), laid out with `TMTherapyStatRow` and `TMTherapyStatDivider`.
 - `TMTherapyInstructionBubble`: a floating white cue bubble, shown only with the floating cue placement.
-- `TMTherapyBackButton`: the rust "‹ Kembali" text action.
+- `TMTherapyBackButton`: the dark `brandInk` "‹ Kembali" text action.
 - `TMTherapyExerciseIntro`: heading, a media slot (the exercise's own demonstration), focus text, a target slot, the safety note and the prominent start.
 - `TMTherapyExerciseLiveLayout`: heading with trailing accessories, the camera slot with the cue bubble, the "Ikuti gerakan ini" demonstration column, repetition and set counters (hidden while `calibrating`, their space kept so the camera does not move), and Pause (`TMTherapyButton(pill:brand:)`) and End. The camera keeps one position, so callers layer stage pages and dialogs over it without remounting the preview.
   Heights are proportional: the heading takes about 12% of the screen height, the counters and buttons about 20%, and the camera and demo row the rest, with minimums for small iPads. Counter text and button padding scale with the screen.
 - The attached video layout uses a centered heading, enlarged counters and taller controls, with no caption over the video. Finger, Balancing and light guided sessions share these settings. No instruction text is drawn over the camera in any exercise; narration speaks the cue.
 - `TMTherapyLongRest` presents a breathing cue over orange waves and uses static waves under Reduce Motion. The daily plan supplies timing and actions. The waves are `TMTherapyLongRestWaves`, drawn by the `longRestWaves` Metal shader (`LongRestWaves.metal`, `colorEffect`): every display frame up to 60 fps, the breath interpolated between the caller's samples, soft feathered edges. Inhale lifts the bands by 20%, 16% and 12% of the height (back to front, so they fan apart), swells each crest from 5% to 10% and brightens the bands up to 10% toward white; exhale reverses it. A slow crest sway runs on a clock that stops while paused.
-- `TMTherapyBreathingRest` (the short rest between sets) draws its circle with `TMTherapyBreathingCircle` (Components/TherapyBreathingCircle.swift), the `breathingCircle` Metal shader (`BreathingCircle.metal`, `colorEffect`): every display frame up to 60 fps, the breath eased over the caller's `animationDuration` toward each `intensity` sample. Inhale grows the circle from 76% to full size, raises the rust ring from 25% to full strength, lightens it up to 10% toward white and swells a faint halo; exhale reverses it. The ring is brightest on its inner edge over a soft `planPanel` fill, and its edge wobbles by about 1–2% of the radius on a clock that stops while `paused`. Reduce Motion draws a still full-strength circle. Both breathing shaders share `ShaderMotionClock`.
+- `TMTherapyBreathingRest` (the short rest between sets) draws its circle with `TMTherapyBreathingCircle` (Components/TherapyBreathingCircle.swift), the `breathingCircle` Metal shader (`BreathingCircle.metal`, `colorEffect`): every display frame up to 60 fps, the breath eased over the caller's `animationDuration` toward each `intensity` sample. Inhale grows the circle from 76% to full size, raises the yellow `brand` ring from 25% to full strength, lightens it up to 10% toward white and swells a faint halo; exhale reverses it. The ring is brightest on its inner edge over a soft `planPanel` fill, and its edge wobbles by about 1–2% of the radius on a clock that stops while `paused`. Reduce Motion draws a still full-strength circle. Both breathing shaders share `ShaderMotionClock`.
 - `TMTherapyPauseDialog`: a frosted backdrop with the paused card (set, title, practice time mm:ss, end with an inline confirmation, resume) and an `Extra` slot for caregiver recovery. `confirmingEndInitially` opens it on the confirmation when it came from an End button. It hugs its content and scrolls only when it does not fit.
-- `TMTherapySetSummary` with `TherapySetResult`: the set-done and all-done page (rust check, headline, message, results panel, total, optional rest line and actions).
+- `TMTherapySetSummary` with `TherapySetResult`: the set-done and all-done page (yellow check with a dark mark, headline, message, results panel, total, optional rest line and actions).
 - `TMTherapyFinishActions`: the way on from the all-done page (prominent button, optional repeat link, a slot above for saving or errors). Every exercise, the finger exercises included (`TMFingerSessionCompleteView`), ends on `TMTherapySetSummary` with this block.
 - `TMTherapyDemoCaption`: the "Ikuti gerakan ini" / paused pill drawn by the Balancing demonstrations, now one shared view. The `therapyDemoCaptionHidden` environment value hides it where a heading already says it; the intro and live layouts set it.
 
-Compatible additions: `TMTherapyCompletionMark(tint:)` (the screens pass `brand`), `TMTherapyButton(brand:)` for a rust pill, and `TherapyPalette.planPanel`, the warm grey behind demonstration media and the results panel.
+Compatible additions: `TMTherapyCompletionMark(tint:checkColor:)` (the screens pass `brand` and `onBrand`), `TMTherapyButton(brand:)` for a yellow pill, and `TherapyPalette.planPanel`, the warm grey behind demonstration media and the results panel.
 
 `Tools/generate_plan_art.py` draws the plan illustrations for the exercises added on 2026-11-09 (each finger movement, forearm rotation, elbow bend, directional reach, internal rotation and shoulder flexion) from the same figure shapes and colours as the first six, so all `plan-<id>` images match. Rerun it after changing a pose, then `xcodegen generate`.
 
 ## Clinician session report (2026-11-12)
 
-`TMSkeletonReplay` (Components/SkeletonReplay.swift) replays supplied poses as a stick figure on a `progressPanel`, with a 52-point terracotta play/pause circle and a scrubber. Poses are normalized points (origin bottom-left, unmirrored), bones are index pairs, and emphasized joints draw the moving limb in `emphasisColor` (default `brand`) over a white underlay, with white-ringed joints; the rest of the body is `planTrack`. It frames the union of all poses, loops while playing, mirrors by default to match the live preview, and starts paused at the midpoint under Reduce Motion. It knows nothing about exercises.
+`TMSkeletonReplay` (Components/SkeletonReplay.swift) replays supplied poses as a stick figure on a `progressPanel`, with a 52-point `brand` play/pause circle and a scrubber. Poses are normalized points (origin bottom-left, unmirrored), bones are index pairs, and emphasized joints draw the moving limb in `emphasisColor` (default `brand`) over a white underlay, with white-ringed joints; the rest of the body is `planTrack`. It frames the union of all poses, loops while playing, mirrors by default to match the live preview, and starts paused at the midpoint under Reduce Motion. It knows nothing about exercises.
 
 `TMRepClipPlayer` (Components/RepClipPlayer.swift) plays a supplied short silent clip with the same 52-point play/pause circle and scrubber as `TMSkeletonReplay`, on the same `progressPanel` with 24-point corners. It fits the whole frame (`resizeAspect`), loops while playing, mirrors by default to match the live preview, and starts paused at the midpoint under Reduce Motion. It takes a file URL and knows nothing about how the clip was made.
 
@@ -142,9 +157,9 @@ Compatible additions: `TMTherapyCompletionMark(tint:)` (the screens pass `brand`
 
 Components/DebugRibbon.swift exists only in debug builds (`#if DEBUG`). `.debugOnly()` marks any debug control with a dashed `TherapyPalette.debugAccent` (system orange) outline and a diagonal "DEBUG" corner ribbon (`TMDebugRibbon`); the decoration takes no taps and is hidden from VoiceOver, which hears a "Debug only" hint instead. `TMDebugActionButton` is `TMTherapyTextButton` with that marker. Every debug control must sit inside `#if DEBUG` and wear `.debugOnly()`. Session screens overlay their debug "Finish exercise" action on the header's trailing corner, above stage pages and the pause dialog, instead of using `TMTherapyExerciseLiveLayout`'s `accessories`, which would shift the centred heading.
 
-`TMTherapyProgressMetric` (Components/TherapyProgressSummary.swift) is the Progress pages' metric tile: a terracotta icon in a soft square, a large value and a muted unit. `TMTherapyProgressSessionCard` and the movement report share it.
+`TMTherapyProgressMetric` (Components/TherapyProgressSummary.swift) is the Progress pages' metric tile: a `brand` icon in a soft square, a large value and a muted unit. `TMTherapyProgressSessionCard` and the movement report share it.
 
 
 ## Demonstration step highlight (2026-11-12)
 
-`TMTherapyDemoHighlight` (Components/TherapyDemoHighlight.swift, `.therapyDemoHighlight(revision:announcement:)`) calls attention to a demonstration panel whose content moved to a new step. Each change of `revision` (never the first value seen) draws a thin 3 pt rust `brand` outline over a 5 pt `calmUnderlay` for about four seconds and pulses the panel gently three times (1.1 s each): a faint ring (55% opacity, 3 to 1 pt) ripples about 10 pt outward from the edge and fades, while the outline glows softly and the panel swells to 1.01. The motion is the signal; there is no badge. It posts the announcement to VoiceOver. Under Reduce Motion only the static outline shows. The ripple draws outside the panel, so callers leave about 10 pt around it. It takes no taps and knows nothing about exercises; the caller decides what a new step is. `TMTherapyExerciseLiveLayout` applies it to its demonstration through `demoRevision` and `demoAnnouncement`, and crossfades `demoTitle` when the revision changes.
+`TMTherapyDemoHighlight` (Components/TherapyDemoHighlight.swift, `.therapyDemoHighlight(revision:announcement:)`) calls attention to a demonstration panel whose content moved to a new step. Each change of `revision` (never the first value seen) draws a thin 3 pt yellow `brand` outline over a 5 pt `calmUnderlay` for about four seconds and pulses the panel gently three times (1.1 s each): a faint ring (55% opacity, 3 to 1 pt) ripples about 10 pt outward from the edge and fades, while the outline glows softly and the panel swells to 1.01. The motion is the signal; there is no badge. It posts the announcement to VoiceOver. Under Reduce Motion only the static outline shows. The ripple draws outside the panel, so callers leave about 10 pt around it. It takes no taps and knows nothing about exercises; the caller decides what a new step is. `TMTherapyExerciseLiveLayout` applies it to its demonstration through `demoRevision` and `demoAnnouncement`, and crossfades `demoTitle` when the revision changes.

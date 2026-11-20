@@ -8,14 +8,29 @@
 import SwiftUI
 
 enum TherapyPalette {
+    // MARK: - Foundation colors
+    //
+    // Raw values from the Figma "Foundation Colors" page (2026-11-20). Semantic tokens below map
+    // onto these; feature code uses the semantic tokens only.
+
+    private static let yellowBackground = rgb(0xFFFAEC)
+    private static let yellowNormal = rgb(0xFFB700)
+    private static let yellowPressed = rgb(0xE28C00)
+    private static let secondaryBlue = rgb(0x58A7F8)
+    private static let errorNormal = rgb(0xC5423D)
+    private static let successNormal = rgb(0x40895D)
+    private static let successPressed = rgb(0x2A6342)
+    private static let neutralBackground = rgb(0xF9F9F9)
+    private static let mainDark = rgb(0x1A1A1A)
+    private static let disabledFill = rgb(0xD9D7D5)
+
+    // MARK: - Semantic tokens
+
     static let cameraBackground = Color(red: 0.08, green: 0.14, blue: 0.13)
     static let ink = Color.primary
     static let muted = Color.secondary
-    static let green = Color(uiColor: UIColor { traits in
-        traits.userInterfaceStyle == .dark
-            ? UIColor(red: 0.61, green: 0.85, blue: 0.75, alpha: 1)
-            : UIColor(red: 0.08, green: 0.38, blue: 0.31, alpha: 1)
-    })
+    /// Green text, tints and fills under white text. Uses Success/Pressed so white keeps about 7:1.
+    static let green = adaptive(light: successPressed, dark: (0.61, 0.85, 0.75))
     static let onAccent = Color(uiColor: .systemBackground)
     static let cream = Color(uiColor: .systemGroupedBackground)
     static let surface = Color(uiColor: .secondarySystemGroupedBackground)
@@ -30,11 +45,10 @@ enum TherapyPalette {
             ? UIColor(red: 0.28, green: 0.19, blue: 0.13, alpha: 1)
             : UIColor(red: 0.98, green: 0.88, blue: 0.77, alpha: 1)
     })
-    static let warning = Color(uiColor: UIColor { traits in
-        traits.userInterfaceStyle == .dark
-            ? UIColor(red: 1, green: 0.72, blue: 0.51, alpha: 1)
-            : UIColor(red: 0.55, green: 0.22, blue: 0.12, alpha: 1)
-    })
+    /// Destructive pill fill under white text: Error/Normal in both appearances, about 5:1.
+    static let destructive = fixed(errorNormal)
+    /// Error/Normal. About 5:1 on white, so it serves as text and as a fill under white text.
+    static let warning = adaptive(light: errorNormal, dark: (1, 0.72, 0.51))
     /// Marks debug-only UI (`.debugOnly()`). Fixed orange so it never blends into the app's palette.
     static let debugAccent = Color(uiColor: .systemOrange)
     static let primary = green
@@ -55,7 +69,11 @@ enum TherapyPalette {
     // Increase Contrast automatically, as the Human Interface Guidelines recommend.
 
     /// Plain page background of the redesigned home, session and progress pages.
-    static let canvas = Color(uiColor: .systemBackground)
+    static let canvas = Color(uiColor: UIColor { traits in
+        traits.userInterfaceStyle == .dark
+            ? UIColor.systemBackground.resolvedColor(with: traits)
+            : uiColor(neutralBackground)
+    })
     /// High-contrast hero and program cards: black in light mode, a raised grey in dark mode.
     static let heroCard = Color(uiColor: UIColor { traits in
         traits.userInterfaceStyle == .dark
@@ -68,21 +86,29 @@ enum TherapyPalette {
     /// Thin outline for white cards on the progress page.
     static let outline = Color(uiColor: .separator)
     /// Primary pill buttons, such as "Mulai Latihan" and "Lanjutkan Latihan".
-    static let action = Color(uiColor: .label)
+    static let action = Color(uiColor: UIColor { traits in
+        traits.userInterfaceStyle == .dark
+            ? UIColor.label.resolvedColor(with: traits)
+            : uiColor(mainDark)
+    })
     static let onAction = Color(uiColor: .systemBackground)
     /// The alternative pill beside a primary action; its label uses `ink` for contrast.
-    static let actionMuted = Color(uiColor: .systemGray5)
+    static let actionMuted = Color(uiColor: UIColor { traits in
+        traits.userInterfaceStyle == .dark
+            ? UIColor.systemGray5.resolvedColor(with: traits)
+            : uiColor(disabledFill)
+    })
     /// Completion check for a finished session or set.
-    static let success = Color(uiColor: .systemGreen)
-    /// A completed set row. Darker than system teal so the check keeps 3:1 contrast.
-    static let setDone = adaptive(light: (0.0, 0.47, 0.43), dark: (0.36, 0.80, 0.74))
+    static let success = adaptive(light: successNormal, dark: (0.36, 0.80, 0.50))
+    /// A completed set row: Success/Normal, so the check keeps 3:1 contrast on its fill.
+    static let setDone = adaptive(light: successNormal, dark: (0.36, 0.80, 0.74))
     static let setDoneFill = adaptive(light: (0.89, 0.96, 0.95), dark: (0.10, 0.22, 0.21))
     /// Countdown ring shown while resting.
-    static let restRing = Color(uiColor: .systemBlue)
+    static let restRing = fixed(secondaryBlue)
     static let restTrack = Color(uiColor: .systemGray5)
     /// Fixed guidance colors for rings and landmarks over live video.
-    static let guidanceBlue = Color(red: 0.16, green: 0.65, blue: 0.98)
-    static let guidanceYellow = Color(red: 1.0, green: 0.72, blue: 0.0)
+    static let guidanceBlue = fixed(secondaryBlue)
+    static let guidanceYellow = fixed(yellowNormal)
     /// Finger-exercise rings and connectors: the plan's bright orange, readable on live video.
     static let guidanceOrange = Color(red: 0.96, green: 0.44, blue: 0.09)
     /// Dark edge drawn under every guidance shape so it keeps contrast on light and dark video.
@@ -93,20 +119,28 @@ enum TherapyPalette {
 
     // MARK: - Daily plan palette
 
-    /// Rust brand fill of the prominent "Mulai Latihan" capsule. White text on it is about 5.9:1.
-    static let progressPanel = Color(uiColor: UIColor { traits in
+    /// Warm panel behind progress tiles and the movement report: Primary Yellow/BG.
+    static let progressPanel = adaptive(light: yellowBackground, dark: (0.21, 0.16, 0.12))
+    static let progressBar = fixed(yellowNormal)
+    /// Lighter bars beside an emphasized `progressBar`: Primary Yellow/Normal halfway to its BG.
+    static let progressSoftBar = Color(red: 1, green: 0.85, blue: 0.46)
+    /// Primary Yellow fill of the prominent "Mulai Latihan" capsule, pills, rings and icons.
+    /// Too light for text on white (about 1.8:1): text uses `brandInk`, and labels on it `onBrand`.
+    static let brand = fixed(yellowNormal)
+    /// Primary Yellow/Pressed, the deeper band of the long-rest waves.
+    static let brandPressed = fixed(yellowPressed)
+    /// Main Dark label on a `brand` fill, about 10.5:1.
+    static let onBrand = fixed(mainDark)
+    /// Text that the design shows in the brand color, such as target numbers and "Kembali".
+    static let brandInk = Color(uiColor: UIColor { traits in
         traits.userInterfaceStyle == .dark
-            ? UIColor(red: 0.21, green: 0.16, blue: 0.12, alpha: 1)
-            : UIColor(red: 0.99, green: 0.96, blue: 0.92, alpha: 1)
+            ? UIColor.label.resolvedColor(with: traits)
+            : uiColor(mainDark)
     })
-    static let progressBar = Color(red: 0.96, green: 0.44, blue: 0.09)
-    static let progressSoftBar = Color(red: 1, green: 0.71, blue: 0.43)
-    static let brand = Color(red: 0.71, green: 0.22, blue: 0.10)
-    static let onBrand = Color.white
-    /// Warm off-white card behind each exercise in the plan timeline.
-    static let planCard = adaptive(light: (0.973, 0.957, 0.945), dark: (0.17, 0.155, 0.145))
+    /// Warm off-white card behind each exercise in the plan timeline: Primary Yellow/BG.
+    static let planCard = adaptive(light: yellowBackground, dark: (0.17, 0.155, 0.145))
     /// Filled timeline dot and completed connector. Fixed: it is a marker, not text.
-    static let planMarker = guidanceYellow
+    static let planMarker = brand
     /// Dashed timeline line and the outline of upcoming dots.
     static let planTrack = Color(uiColor: .systemGray4)
     /// Slightly deeper warm grey behind demo media and the set results panel.
@@ -118,8 +152,25 @@ enum TherapyPalette {
     ) -> Color {
         Color(uiColor: UIColor { traits in
             let value = traits.userInterfaceStyle == .dark ? dark : light
-            return UIColor(red: value.0, green: value.1, blue: value.2, alpha: 1)
+            return uiColor(value)
         })
+    }
+
+    private static func fixed(_ value: (Double, Double, Double)) -> Color {
+        Color(red: value.0, green: value.1, blue: value.2)
+    }
+
+    private static func uiColor(_ value: (Double, Double, Double)) -> UIColor {
+        UIColor(red: value.0, green: value.1, blue: value.2, alpha: 1)
+    }
+
+    /// Splits a 0xRRGGBB design value into sRGB components.
+    private static func rgb(_ hex: UInt32) -> (Double, Double, Double) {
+        (
+            Double((hex >> 16) & 0xFF) / 255,
+            Double((hex >> 8) & 0xFF) / 255,
+            Double(hex & 0xFF) / 255
+        )
     }
 
     static func illustrationBackground(at index: Int) -> Color {
@@ -141,10 +192,10 @@ struct TMTherapyButton: View {
     var disabled = false
     /// The monochrome pill appearance: dark when primary, grey when `secondary`.
     var pill = false
-    /// The large rust capsule that starts today's plan. It sizes to its label instead of
+    /// The large yellow brand capsule that starts today's plan. It sizes to its label instead of
     /// filling the width, and ignores `pill` and `secondary`.
     var prominent = false
-    /// With `pill`, fills the pill with the rust brand color instead of the dark action color.
+    /// With `pill`, fills the pill with the yellow brand color instead of the dark action color.
     var brand = false
     var extraVerticalPadding: CGFloat = 0
     let action: () -> Void
@@ -217,7 +268,7 @@ struct TMTherapyButton: View {
 
     private var background: Color {
         if destructive {
-            return pill ? Color(uiColor: .systemRed) : TherapyPalette.warning
+            return pill ? TherapyPalette.destructive : TherapyPalette.warning
         }
         if pill {
             if brand {

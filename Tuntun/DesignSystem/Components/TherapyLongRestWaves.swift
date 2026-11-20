@@ -7,7 +7,7 @@
 
 import SwiftUI
 
-/// Full-screen rust waves for the long breathing rest, drawn by the `longRestWaves` Metal shader.
+/// Full-screen yellow waves for the long breathing rest, drawn by the `longRestWaves` Metal shader.
 ///
 /// The caller publishes `intensity` (0.25 at rest, 1 at a full breath) at its own sampling rate;
 /// the breath is interpolated between samples and rendered every display frame (capped at
@@ -21,11 +21,13 @@ struct TMTherapyLongRestWaves: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var clock = ShaderMotionClock()
 
-    private static let base = Color(red: 0.50, green: 0.16, blue: 0.05)
+    /// Primary Yellow behind, two lighter yellow bands, then a Primary Yellow/Pressed front band,
+    /// following the long-rest design. Text over the waves uses `TherapyPalette.onBrand`.
+    private static let base = TherapyPalette.brand
     private static let bands = [
-        Color(red: 0.63, green: 0.19, blue: 0.06),
-        Color(red: 0.72, green: 0.22, blue: 0.05),
-        Color(red: 0.82, green: 0.26, blue: 0.04)
+        Color(red: 1.0, green: 0.78, blue: 0.24),
+        Color(red: 1.0, green: 0.85, blue: 0.47),
+        TherapyPalette.brandPressed
     ]
 
     /// Slightly longer than the long rest's 80 ms sampling, so a late sample never leaves the

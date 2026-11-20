@@ -126,10 +126,10 @@ struct TMTherapyLongRest: View {
             }
             .typography(.headline)
             .buttonStyle(.bordered)
-            .tint(.white)
+            .tint(TherapyPalette.onBrand)
             .padding(24)
         }
-        .foregroundStyle(.white)
+        .foregroundStyle(TherapyPalette.onBrand)
     }
 }
 

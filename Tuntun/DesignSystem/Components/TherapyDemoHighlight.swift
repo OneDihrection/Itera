@@ -11,7 +11,7 @@ import SwiftUI
 
 /// Calls attention to a demonstration panel whose content just moved to a new step.
 ///
-/// Each change of `revision` draws a thin rust outline for about four seconds and pulses the
+/// Each change of `revision` draws a thin yellow outline for about four seconds and pulses the
 /// panel three times, gently: a faint ring ripples outward from the edge and fades while the
 /// outline glows softly and the panel swells very slightly. The motion is the signal; there is no badge. `announcement` is
 /// posted to VoiceOver. The first revision seen is the starting state and is never highlighted.

@@ -34,7 +34,7 @@ struct TMMovementHistoryCard: View {
                     Label("history.card.viewMovement", systemImage: "chevron.right")
                         .labelStyle(TrailingIconLabelStyle())
                         .typography(size: 20, weight: .semiBold, relativeTo: .subheadline)
-                        .foregroundStyle(TherapyPalette.brand)
+                        .foregroundStyle(TherapyPalette.brandInk)
                 }
             }
             .foregroundStyle(TherapyPalette.ink)

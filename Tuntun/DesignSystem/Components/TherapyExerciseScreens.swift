@@ -52,7 +52,7 @@ struct TMTherapyExerciseHeading: View {
 
 // MARK: - Stats
 
-/// A large rust number with its unit beside it, such as "8 Repetisi".
+/// A large dark number with its unit beside it, such as "8 Repetisi".
 struct TMTherapyTargetStat: View {
     let value: Int
     let unit: Text
@@ -61,7 +61,7 @@ struct TMTherapyTargetStat: View {
         HStack(alignment: .firstTextBaseline, spacing: 16) {
             Text(value, format: .number)
                 .typography(size: 64, weight: .bold, relativeTo: .largeTitle)
-                .foregroundStyle(TherapyPalette.brand)
+                .foregroundStyle(TherapyPalette.brandInk)
             unit
                 .typography(size: 30, weight: .semiBold, relativeTo: .title2)
                 .foregroundStyle(TherapyPalette.muted)
@@ -70,7 +70,7 @@ struct TMTherapyTargetStat: View {
     }
 }
 
-/// "Repetisi 3 / 8": a label, the current value in rust and the total in grey.
+/// "Repetisi 3 / 8": a label, the current value in dark ink and the total in grey.
 struct TMTherapyProgressStat: View {
     let label: Text
     let value: Int
@@ -85,7 +85,7 @@ struct TMTherapyProgressStat: View {
             HStack(alignment: .firstTextBaseline, spacing: 8) {
                 Text(value, format: .number)
                     .typography(size: 56 * textScale, weight: .bold, relativeTo: .largeTitle)
-                    .foregroundStyle(TherapyPalette.brand)
+                    .foregroundStyle(TherapyPalette.brandInk)
                 Text(verbatim: "/ \(total)")
                     .typography(size: 48 * textScale, weight: .regular, relativeTo: .largeTitle)
                     .foregroundStyle(TherapyPalette.muted)
@@ -142,7 +142,7 @@ struct TMTherapyInstructionBubble: View {
 
 // MARK: - Back
 
-/// The rust "‹ Kembali" text action at the top of the intro.
+/// The dark "‹ Kembali" text action at the top of the intro.
 struct TMTherapyBackButton: View {
     let title: LocalizedStringKey
     let action: () -> Void
@@ -154,7 +154,7 @@ struct TMTherapyBackButton: View {
                 Text(title)
             }
             .typography(size: 24, weight: .semiBold, relativeTo: .title3)
-            .foregroundStyle(TherapyPalette.brand)
+            .foregroundStyle(TherapyPalette.brandInk)
             .frame(minHeight: 44)
             .contentShape(Rectangle())
         }
@@ -658,7 +658,7 @@ struct TherapySetResult: Identifiable, Equatable {
     }
 }
 
-/// "Set 2 selesai!" between sets, or "Latihan selesai" after the last one: a rust check,
+/// "Set 2 selesai!" between sets, or "Latihan selesai" after the last one: a yellow check,
 /// a short message, the result of every set and the total.
 struct TMTherapySetSummary<Actions: View>: View {
     let heading: TMTherapyExerciseHeading
@@ -680,8 +680,12 @@ struct TMTherapySetSummary<Actions: View>: View {
 
                     heading
 
-                    TMTherapyCompletionMark(size: 124 * scale, tint: TherapyPalette.brand)
-                        .padding(.top, 12 * scale)
+                    TMTherapyCompletionMark(
+                        size: 124 * scale,
+                        tint: TherapyPalette.brand,
+                        checkColor: TherapyPalette.onBrand
+                    )
+                    .padding(.top, 12 * scale)
 
                     VStack(spacing: 10 * scale) {
                         headline

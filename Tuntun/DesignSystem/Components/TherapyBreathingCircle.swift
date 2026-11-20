@@ -12,7 +12,7 @@ import SwiftUI
 /// The caller publishes `intensity` (0.25 at rest, 1 at a full breath) at its own sampling rate;
 /// the breath is interpolated over `smoothing` seconds toward each sample and rendered every
 /// display frame (capped at 60 fps), so the circle swells and settles continuously. Inhale grows
-/// the circle, strengthens and brightens its rust ring and swells a faint halo; exhale reverses it.
+/// the circle, strengthens and brightens its yellow ring and swells a faint halo; exhale reverses it.
 /// The edge wobbles gently on a clock that stops while `paused`. Reduce Motion draws a still,
 /// full-strength circle.
 struct TMTherapyBreathingCircle: View {

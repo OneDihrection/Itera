@@ -387,7 +387,10 @@ struct TMDailyPlanNextView<
             Spacer(minLength: 24)
 
             VStack(spacing: 20) {
-                TMTherapyCompletionMark(tint: TherapyPalette.brand)
+                TMTherapyCompletionMark(
+                    tint: TherapyPalette.brand,
+                    checkColor: TherapyPalette.onBrand
+                )
 
                 Text("plan.dayComplete")
                     .typography(size: 52, weight: .bold, relativeTo: .largeTitle)

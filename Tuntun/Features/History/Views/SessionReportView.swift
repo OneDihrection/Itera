@@ -86,7 +86,7 @@ struct TMSessionReportView<ViewModel: SessionReportViewModelProtocol>: View {
                     .padding(.top, 12)
             }
             .typography(.body)
-            .tint(TherapyPalette.brand)
+            .tint(TherapyPalette.brandInk)
 
             TMTherapyButton(title: "history.report.delete", symbol: "trash", secondary: true, pill: true) {
                 Task {
@@ -259,7 +259,7 @@ private struct TMSetReportSection<ViewModel: SessionReportViewModelProtocol>: Vi
                 .padding(.top, 12)
             }
             .typography(.body)
-            .tint(TherapyPalette.brand)
+            .tint(TherapyPalette.brandInk)
         }
     }
 
