@@ -45,7 +45,8 @@ protocol DailyPlanIntroViewModelProtocol: AnyObject, Observable {
 
 /// The page before each daily-plan exercise. Start validates readiness once, as an explicit
 /// start requires, then opens the session. Every intro opened from Beranda reads its
-/// introduction first (the scripted brief, or the exercise's purpose) and then starts on its own.
+/// introduction first (the scripted brief, or the exercise's purpose) and then starts on its own;
+/// Start during the reading skips the rest of it.
 @MainActor
 @Observable
 final class DailyPlanIntroViewModel: DailyPlanIntroViewModelProtocol {
@@ -102,15 +103,11 @@ final class DailyPlanIntroViewModel: DailyPlanIntroViewModelProtocol {
         narration.paused ? "session.resume" : "exercise.start"
     }
 
-    /// Mulai Latihan waits until the intro has been read in full, so the patient hears
-    /// every instruction before the session opens. While the intro is paused the same button
-    /// reads "Lanjutkan" and stays enabled to resume it.
+    /// Mulai Latihan stays enabled while the intro is read: tapping it skips the rest of the
+    /// narration and opens the session. While the intro is paused the same button reads
+    /// "Lanjutkan" and resumes it. It is disabled only while readiness is being validated.
     var startDisabled: Bool {
-        guard !narration.paused else {
-            return false
-        }
-
-        return starting || narration.running
+        starting
     }
 
     var readinessMessageKey: String? {
@@ -169,6 +166,11 @@ final class DailyPlanIntroViewModel: DailyPlanIntroViewModelProtocol {
             return
         }
 
+        if narration.running {
+            skipNarration()
+            return
+        }
+
         guard !starting else {
             return
         }
@@ -194,6 +196,25 @@ final class DailyPlanIntroViewModel: DailyPlanIntroViewModelProtocol {
 
     #if DEBUG
     func startWithoutNarration() {
+        skipNarration()
+    }
+    #endif
+
+    func back() {
+        narration.stop()
+
+        if presetCountdown != nil {
+            audioService.cancelSpeech()
+        }
+
+        plan.end()
+    }
+
+    // MARK: - Helpers
+
+    /// Stops the introduction where it is and opens the session the way its end would.
+    /// Stopping clears the narration's completion, so the session never opens twice.
+    private func skipNarration() {
         narration.stop()
 
         guard !starting else {
@@ -211,19 +232,6 @@ final class DailyPlanIntroViewModel: DailyPlanIntroViewModelProtocol {
             starting = false
         }
     }
-    #endif
-
-    func back() {
-        narration.stop()
-
-        if presetCountdown != nil {
-            audioService.cancelSpeech()
-        }
-
-        plan.end()
-    }
-
-    // MARK: - Helpers
 
     /// The after-rest intro of an unscripted exercise shows the plan's countdown instead, so
     /// speech never races it.

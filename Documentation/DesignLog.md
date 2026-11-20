@@ -1686,3 +1686,13 @@ At the product owner's request, narration gets one place to see and adjust every
 - **Unchanged.** Clip names, raw folders, manifests, voice settings, wording and every recording. No Swift changed.
 
 Verification: a temporary harness compared HEAD's line builders (the main generator and all four wrappers) with the new registry path for every group and both languages. All 642 lines had identical name, text, seed, voice settings and lead-in, the fingerprint's inputs, so no cached take is re-recorded. `--dry-run` lists the same counts per group (187 per language, 73, 90, 53, 52). `--check --language en` reports no missing, stray or not-calm clips, as on HEAD. `--report` shows every key bundled. XcodeGen and a Debug Simulator build with IPHONEOS_DEPLOYMENT_TARGET=17.0. No device check is needed: nothing at runtime changed.
+
+## Start skips the plan intro narration (2026-11-20)
+
+At the product owner's request, Mulai Latihan on a daily-plan intro is enabled while the intro is read, so a patient who already knows the brief can start at once. This supersedes "Mulai Latihan stays disabled while the intro plays" in *Narrated plan intros*.
+
+- Tapping Start while the narration plays stops it and opens the session the way its end would: `plan.launchAfterRest()` for an intro opened after a rest, otherwise `plan.startCurrent(readiness:)`, which still validates readiness. Stopping clears the narration's completion, so the session never opens twice.
+- Start is disabled only while that readiness check runs. While the intro is paused it still reads "Lanjutkan" and resumes.
+- The debug "Start without narration" button now calls the same path (`DailyPlanIntroViewModel.skipNarration()`).
+
+Verification: XcodeGen and a Debug Simulator build. Pending on the M1 iPad: Start during each intro (scripted and unscripted, both languages) cuts the speech at once and opens the session; an untouched intro still opens on its own; backgrounding during the intro still pauses it, and Lanjutkan resumes.
