@@ -58,7 +58,7 @@ bundle install
 
 Expected: Ruby 3.3, a selected full Xcode installation, and successful dependency installation. Set the Ruby PATH in your shell configuration if you want it to persist. Commit the existing Gemfile.lock; do not replace it casually during releases.
 
-The repository was previously validated with Xcode 27.1 and XcodeGen 2.45.4. CI uses macos-26 and prints its selected tool versions. Confirm those versions are compatible during the first run; hosted runner defaults can change.
+The repository was previously validated with Xcode 27.1 and XcodeGen 2.45.4. CI runs on GitHub's `xcode-27` hosted image (macOS 27, Apple Silicon), selects Xcode 27.1 explicitly, and prints its selected tool versions. Confirm those versions are compatible during the first run; hosted runner defaults can change.
 
 ### 3. Prepare your Apple app
 
