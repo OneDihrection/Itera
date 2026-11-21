@@ -146,6 +146,15 @@ enum TherapyPalette {
     /// Slightly deeper warm grey behind demo media and the set results panel.
     static let planPanel = adaptive(light: (0.937, 0.918, 0.894), dark: (0.20, 0.185, 0.17))
 
+    // MARK: - Progress palette
+
+    /// Secondary Blue ribbon behind the progress badge's number. Fixed: it is an illustration.
+    static let badgeRibbon = fixed(secondaryBlue)
+    /// Lighter inner fold of the badge ribbon.
+    static let badgeRibbonLight = Color(red: 0.62, green: 0.80, blue: 0.99)
+    /// Pale blue behind each exercise on a day's progress page (`TMHistoryCard`).
+    static let historyCard = adaptive(light: (0.937, 0.961, 0.996), dark: (0.11, 0.15, 0.21))
+
     private static func adaptive(
         light: (Double, Double, Double),
         dark: (Double, Double, Double)

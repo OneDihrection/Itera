@@ -1962,6 +1962,7 @@
       }
     },
     "balance.compensationWarning" : {
+      "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1975,8 +1976,7 @@
             "value" : "Tegakkan tubuh sebelum melanjutkan"
           }
         }
-      },
-      "extractionState" : "manual"
+      }
     },
     "balance.complete" : {
       "extractionState" : "manual",
@@ -2383,7 +2383,93 @@
         }
       }
     },
+    "calendar.legend.completed" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Completed"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Selesai"
+          }
+        }
+      }
+    },
+    "calendar.legend.partial" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Partly completed"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sebagian selesai"
+          }
+        }
+      }
+    },
+    "calendar.nextMonth" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Next month"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bulan berikutnya"
+          }
+        }
+      }
+    },
+    "calendar.previousMonth" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Previous month"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bulan sebelumnya"
+          }
+        }
+      }
+    },
+    "calendar.today" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Today"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hari ini"
+          }
+        }
+      }
+    },
     "calibration.complete" : {
+      "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -2397,8 +2483,7 @@
             "value" : "Kalibrasi selesai dan sudah tersimpan, terima kasih"
           }
         }
-      },
-      "extractionState" : "manual"
+      }
     },
     "calibration.countdown" : {
       "localizations" : {
@@ -2417,6 +2502,7 @@
       }
     },
     "calibration.intro" : {
+      "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -2430,10 +2516,10 @@
             "value" : "Sebelum mulai, kita kalibrasi dulu ya"
           }
         }
-      },
-      "extractionState" : "manual"
+      }
     },
     "calibration.try" : {
+      "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -2447,8 +2533,7 @@
             "value" : "Coba ikuti gerakannya sekali, senyamannya saja"
           }
         }
-      },
-      "extractionState" : "manual"
+      }
     },
     "camera.interrupted" : {
       "extractionState" : "manual",
@@ -2869,6 +2954,7 @@
       }
     },
     "demo.step.nextFinger" : {
+      "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -2882,8 +2968,7 @@
             "value" : "Jari berikutnya"
           }
         }
-      },
-      "extractionState" : "manual"
+      }
     },
     "demo.step.otherArm" : {
       "localizations" : {
@@ -3117,6 +3202,7 @@
       }
     },
     "exercise.forearmRotation" : {
+      "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -3130,8 +3216,7 @@
             "value" : "Rotasi lengan bawah"
           }
         }
-      },
-      "extractionState" : "manual"
+      }
     },
     "exercise.fullFist" : {
       "extractionState" : "manual",
@@ -3250,6 +3335,7 @@
       }
     },
     "exercise.start" : {
+      "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -3263,8 +3349,7 @@
             "value" : "Mulai Latihan"
           }
         }
-      },
-      "extractionState" : "manual"
+      }
     },
     "feeling.comfortable" : {
       "extractionState" : "manual",
@@ -3437,6 +3522,7 @@
       }
     },
     "guide.holdDuration %lld" : {
+      "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -3450,8 +3536,7 @@
             "value" : "Tahan %lld detik."
           }
         }
-      },
-      "extractionState" : "manual"
+      }
     },
     "guide.start" : {
       "extractionState" : "manual",
@@ -4150,7 +4235,42 @@
         }
       }
     },
+    "historyCard.hint" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Opens this exercise's report."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Membuka laporan latihan ini."
+          }
+        }
+      }
+    },
+    "historyCard.position %lld" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Exercise %lld"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Latihan ke-%lld"
+          }
+        }
+      }
+    },
     "home.armPractice" : {
+      "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -4164,8 +4284,7 @@
             "value" : "Latihan lengan dan menjangkau"
           }
         }
-      },
-      "extractionState" : "manual"
+      }
     },
     "home.back" : {
       "localizations" : {
@@ -4316,6 +4435,7 @@
       }
     },
     "home.positioning" : {
+      "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -4329,8 +4449,7 @@
             "value" : "Letakkan iPad agar tubuh bagian atas terlihat."
           }
         }
-      },
-      "extractionState" : "manual"
+      }
     },
     "home.ready" : {
       "extractionState" : "manual",
@@ -4350,6 +4469,7 @@
       }
     },
     "home.recheck" : {
+      "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -4363,8 +4483,7 @@
             "value" : "Periksa lagi"
           }
         }
-      },
-      "extractionState" : "manual"
+      }
     },
     "home.restricted" : {
       "extractionState" : "manual",
@@ -8275,6 +8394,7 @@
       }
     },
     "plan.fingerTitle" : {
+      "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -8288,8 +8408,7 @@
             "value" : "Latihan\njari"
           }
         }
-      },
-      "extractionState" : "manual"
+      }
     },
     "plan.focusTitle" : {
       "localizations" : {
@@ -8352,6 +8471,7 @@
       }
     },
     "plan.progressUnavailable" : {
+      "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -8365,8 +8485,7 @@
             "value" : "Kemajuan hari ini belum bisa disimpan."
           }
         }
-      },
-      "extractionState" : "manual"
+      }
     },
     "plan.purpose.armRaise" : {
       "extractionState" : "manual",
@@ -8858,7 +8977,42 @@
         }
       }
     },
+    "practiceDay.empty" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No practice on this day."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Belum ada latihan pada hari ini."
+          }
+        }
+      }
+    },
+    "practiceDay.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Your practice progress"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Perkembangan latihanmu"
+          }
+        }
+      }
+    },
     "progress.actual" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -8875,6 +9029,7 @@
       }
     },
     "progress.assistanceUnrecorded" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -8890,23 +9045,8 @@
         }
       }
     },
-    "progress.cancelHistoryDeletion" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Cancel"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Batal"
-          }
-        }
-      }
-    },
     "progress.chartHeadline" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -8923,6 +9063,7 @@
       }
     },
     "progress.chartIncreased" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -8971,6 +9112,7 @@
       }
     },
     "progress.dayEmpty" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -8987,6 +9129,7 @@
       }
     },
     "progress.dayPartial %lld" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -9003,6 +9146,7 @@
       }
     },
     "progress.daySessions %lld" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -9018,39 +9162,8 @@
         }
       }
     },
-    "progress.deleteHistory" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Delete practice history"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Hapus riwayat latihan"
-          }
-        }
-      }
-    },
-    "progress.deleteHistoryMessage" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Delete all practice sessions listed here? This cannot be undone."
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Hapus semua riwayat latihan di halaman ini? Riwayat yang dihapus tidak bisa dikembalikan."
-          }
-        }
-      }
-    },
     "progress.done" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -9067,6 +9180,7 @@
       }
     },
     "progress.doneRepetitions %lld" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -9083,6 +9197,7 @@
       }
     },
     "progress.doneValue %lld %lld %lld" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -9099,6 +9214,7 @@
       }
     },
     "progress.duration %lld" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -9146,7 +9262,59 @@
         }
       }
     },
+    "progress.header.caption" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This week"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Minggu ini"
+          }
+        }
+      }
+    },
+    "progress.header.empty" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No practice yet this week\nLet's start today!"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Belum ada latihan minggu ini\nAyo mulai hari ini!"
+          }
+        }
+      }
+    },
+    "progress.header.headline %lld" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "You've practised %lld times\nKeep going!"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kamu sudah berlatih sebanyak %lld kali\nTeruskan!"
+          }
+        }
+      }
+    },
     "progress.lastWeek" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -9163,6 +9331,7 @@
       }
     },
     "progress.latestThisWeek" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -9195,6 +9364,7 @@
       }
     },
     "progress.noSessionThisWeek" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -9211,6 +9381,7 @@
       }
     },
     "progress.notDone" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -9295,6 +9466,7 @@
       }
     },
     "progress.painRecorded" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -9311,6 +9483,7 @@
       }
     },
     "progress.painUnrecorded" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -9327,6 +9500,7 @@
       }
     },
     "progress.partial" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -9343,6 +9517,7 @@
       }
     },
     "progress.plan" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -9358,7 +9533,25 @@
         }
       }
     },
+    "progress.planHistoryUnavailable" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Completed days can't be read right now."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hari yang sudah selesai belum bisa dibaca."
+          }
+        }
+      }
+    },
     "progress.planValue %lld %lld" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -9391,6 +9584,7 @@
       }
     },
     "progress.sessionsRecorded %lld" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -9407,6 +9601,7 @@
       }
     },
     "progress.thisWeek" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -9423,6 +9618,7 @@
       }
     },
     "progress.threeWeeksAgo" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -9439,6 +9635,7 @@
       }
     },
     "progress.twoWeeksAgo" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -9455,6 +9652,7 @@
       }
     },
     "progress.weekDays %lld" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -9471,6 +9669,7 @@
       }
     },
     "progress.weekDetail %lld %lld %lld" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -9487,6 +9686,7 @@
       }
     },
     "progress.weeklyChart" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -10248,6 +10448,7 @@
       }
     },
     "reports.emptyDetail" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -10344,6 +10545,7 @@
       }
     },
     "rest.long.closing" : {
+      "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -10357,10 +10559,10 @@
             "value" : "Istirahat selesai"
           }
         }
-      },
-      "extractionState" : "manual"
+      }
     },
     "rest.long.exhale" : {
+      "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -10374,10 +10576,10 @@
             "value" : "Buang napas…"
           }
         }
-      },
-      "extractionState" : "manual"
+      }
     },
     "rest.long.exhaleLast" : {
+      "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -10391,10 +10593,10 @@
             "value" : "Buang, lepaskan semuanya…"
           }
         }
-      },
-      "extractionState" : "manual"
+      }
     },
     "rest.long.exhaleShoulders" : {
+      "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -10408,10 +10610,10 @@
             "value" : "Buang, bahu terasa lebih ringan…"
           }
         }
-      },
-      "extractionState" : "manual"
+      }
     },
     "rest.long.exhaleSlow" : {
+      "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -10425,10 +10627,10 @@
             "value" : "Buang perlahan…"
           }
         }
-      },
-      "extractionState" : "manual"
+      }
     },
     "rest.long.hold" : {
+      "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -10442,10 +10644,10 @@
             "value" : "Tahan sebentar…"
           }
         }
-      },
-      "extractionState" : "manual"
+      }
     },
     "rest.long.inhale" : {
+      "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -10459,10 +10661,10 @@
             "value" : "Tarik napas…"
           }
         }
-      },
-      "extractionState" : "manual"
+      }
     },
     "rest.long.inhaleFirst" : {
+      "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -10476,10 +10678,10 @@
             "value" : "Tarik napas pelan-pelan…"
           }
         }
-      },
-      "extractionState" : "manual"
+      }
     },
     "rest.long.inhaleLast" : {
+      "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -10493,10 +10695,10 @@
             "value" : "Sekali lagi"
           }
         }
-      },
-      "extractionState" : "manual"
+      }
     },
     "rest.long.instructions" : {
+      "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -10510,10 +10712,10 @@
             "value" : "Kita mulai dengan 6 kali tarikan napas"
           }
         }
-      },
-      "extractionState" : "manual"
+      }
     },
     "rest.long.nextExercise" : {
+      "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -10527,10 +10729,10 @@
             "value" : "Selanjutnya, kita akan melakukan latihan"
           }
         }
-      },
-      "extractionState" : "manual"
+      }
     },
     "rest.long.opening" : {
+      "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -10544,10 +10746,10 @@
             "value" : "Sebelum lanjut ke latihan berikutnya,"
           }
         }
-      },
-      "extractionState" : "manual"
+      }
     },
     "rest.long.posture" : {
+      "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -10561,8 +10763,7 @@
             "value" : "Duduk yang nyaman dan rilekskan bahu"
           }
         }
-      },
-      "extractionState" : "manual"
+      }
     },
     "rest.long.remaining %lld" : {
       "localizations" : {
@@ -10581,6 +10782,7 @@
       }
     },
     "rest.long.restInvitation" : {
+      "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -10594,10 +10796,10 @@
             "value" : "kita istirahat sebentar ya"
           }
         }
-      },
-      "extractionState" : "manual"
+      }
     },
     "rest.long.settle" : {
+      "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -10611,8 +10813,7 @@
             "value" : "Jeda sebentar…"
           }
         }
-      },
-      "extractionState" : "manual"
+      }
     },
     "rest.nextExercise %@" : {
       "localizations" : {
@@ -11660,6 +11861,7 @@
       }
     },
     "session.armRaise" : {
+      "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -11673,8 +11875,7 @@
             "value" : "Angkat lengan"
           }
         }
-      },
-      "extractionState" : "manual"
+      }
     },
     "session.assistance" : {
       "extractionState" : "manual",
@@ -11857,6 +12058,7 @@
       }
     },
     "session.directionalReach" : {
+      "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -11870,8 +12072,7 @@
             "value" : "Jangkauan terarah"
           }
         }
-      },
-      "extractionState" : "manual"
+      }
     },
     "session.duration" : {
       "extractionState" : "manual",
@@ -11924,6 +12125,7 @@
       }
     },
     "session.elbowBend" : {
+      "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -11937,8 +12139,7 @@
             "value" : "Tekuk siku"
           }
         }
-      },
-      "extractionState" : "manual"
+      }
     },
     "session.endAction" : {
       "localizations" : {
@@ -13402,6 +13603,7 @@
       }
     },
     "session.sitToStand" : {
+      "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -13415,8 +13617,7 @@
             "value" : "Berdiri dari Posisi Duduk"
           }
         }
-      },
-      "extractionState" : "manual"
+      }
     },
     "session.skip" : {
       "localizations" : {
@@ -14177,6 +14378,7 @@
       }
     },
     "settings.voiceNeedsAccess" : {
+      "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -14190,8 +14392,7 @@
             "value" : "Latihan belum bisa dimulai sampai akses mikrofon dan pengenalan ucapan diizinkan."
           }
         }
-      },
-      "extractionState" : "manual"
+      }
     },
     "shoulderFlexion.animationAccessibility" : {
       "localizations" : {
@@ -15975,6 +16176,7 @@
       }
     },
     "stage.countdown" : {
+      "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -15988,8 +16190,7 @@
             "value" : "Bersiap"
           }
         }
-      },
-      "extractionState" : "manual"
+      }
     },
     "stage.demonstration" : {
       "extractionState" : "manual",
@@ -16686,6 +16887,7 @@
       }
     },
     "therapy.session.start" : {
+      "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -16699,8 +16901,7 @@
             "value" : "Mulai"
           }
         }
-      },
-      "extractionState" : "manual"
+      }
     },
     "therapy.session.stop" : {
       "localizations" : {
@@ -16719,6 +16920,7 @@
       }
     },
     "towel.approach" : {
+      "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -16732,8 +16934,7 @@
             "value" : "Satukan ibu jari dan jari telunjuk (jepit) di lingkaran yang bersinar."
           }
         }
-      },
-      "extractionState" : "manual"
+      }
     },
     "towel.deleteError" : {
       "extractionState" : "manual",
@@ -16770,6 +16971,7 @@
       }
     },
     "towel.demo" : {
+      "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -16783,10 +16985,10 @@
             "value" : "Jepit di lingkaran yang bersinar, geser, lalu buka tangan."
           }
         }
-      },
-      "extractionState" : "manual"
+      }
     },
     "towel.fold" : {
+      "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -16800,8 +17002,7 @@
             "value" : "Geser jari yang menjepit ke lingkaran berikutnya."
           }
         }
-      },
-      "extractionState" : "manual"
+      }
     },
     "towel.foldNumber %lld" : {
       "extractionState" : "manual",
@@ -16940,6 +17141,7 @@
       }
     },
     "towel.recover" : {
+      "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -16953,10 +17155,10 @@
             "value" : "Tetap jepit jari untuk melanjutkan."
           }
         }
-      },
-      "extractionState" : "manual"
+      }
     },
     "towel.release" : {
+      "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -16970,8 +17172,7 @@
             "value" : "Sekarang buka tangan."
           }
         }
-      },
-      "extractionState" : "manual"
+      }
     },
     "towel.restart" : {
       "extractionState" : "manual",

@@ -686,6 +686,7 @@ final class DailyPlanViewModel: DailyPlanSessionReporting {
         pendingSecondSide = nil
         progress = progress.current(on: .now)
         progress.completed.insert(items[currentIndex].id)
+        progress.planned = items.map(\.id)
         Task { await saveProgress() }
 
         let next = upcomingIndex

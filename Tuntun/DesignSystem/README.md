@@ -60,7 +60,7 @@ TMTherapyIconButton in Components/TherapyControls.swift provides a large icon ac
 `TherapyPalette` takes its values from the Figma "Foundation Colors" page, held as private raw tokens (`yellowBackground` #FFFAEC, `yellowNormal` #FFB700, `yellowPressed` #E28C00, `secondaryBlue` #58A7F8, `errorNormal` #C5423D, `successNormal` #40895D, `successPressed` #2A6342, `neutralBackground` #F9F9F9, `mainDark` #1A1A1A, `disabledFill` #D9D7D5). Feature code uses only the semantic tokens mapped onto them:
 
 - `brand` (Primary Yellow), `brandPressed` (Pressed, the deep long-rest band), `planMarker`, `progressBar`; `progressSoftBar` is a lighter yellow.
-- `onBrand` is Main Dark: white on yellow is about 1.8:1. Yellow is never text on a light surface; text the design shows in the brand colour uses `brandInk` (Main Dark, `label` in dark mode).
+- `onBrand` is Main Dark: white on yellow is about 1.8:1. Yellow is never text on a light surface; text the design shows in the brand colour uses `brandInk` (Main Dark, `label` in dark mode). The one exception, at the product owner's request, is the "Perkembangan latihanmu" title on a day's progress page (2026-11-21).
 - `planCard` and `progressPanel` use Primary Yellow/BG in light mode.
 - `canvas` is Background #F9F9F9 and `action` Main Dark in light mode; `actionMuted` is Disabled #D9D7D5.
 - `success` and `setDone` are Success/Normal; `green` (text and fills under white) is Success/Pressed for about 7:1.
