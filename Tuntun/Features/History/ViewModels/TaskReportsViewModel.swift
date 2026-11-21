@@ -36,22 +36,4 @@ final class TaskReportsViewModel {
             errorKey = "towel.historyError"
         }
     }
-
-    /// Deletes every listed session and its replays, keeping any that fail so they stay visible.
-    func deleteAll() async {
-        guard !loading else {
-            return
-        }
-
-        errorKey = nil
-
-        for summary in summaries {
-            do {
-                try await repository.delete(id: summary.id)
-                summaries.removeAll { $0.id == summary.id }
-            } catch {
-                errorKey = "towel.deleteError"
-            }
-        }
-    }
 }

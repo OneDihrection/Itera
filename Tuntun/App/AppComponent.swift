@@ -28,6 +28,9 @@ final class AppComponent: HistoryDependency, HomeDependency, TherapySessionDepen
     /// Finger and forearm sessions share one folder, so this repository reads any session's
     /// key-repetition replays.
     let fingerReplayRepository: any FingerSessionRepository
+    /// One actor for the plan's progress file: the plan writes today's entry and the Progress
+    /// calendar reads every day, serialized on the same actor.
+    private let planProgressRepository = LocalDailyPlanProgressRepository()
 
     // MARK: - Shared models
 
@@ -96,7 +99,7 @@ final class AppComponent: HistoryDependency, HomeDependency, TherapySessionDepen
         )
 
         dailyPlan = DailyPlanViewModel(
-            repository: LocalDailyPlanProgressRepository(),
+            repository: planProgressRepository,
             fingers: fingers,
             forearm: forearm,
             armRoutine: armRoutine,
@@ -119,6 +122,11 @@ final class AppComponent: HistoryDependency, HomeDependency, TherapySessionDepen
     /// Sessions report to today's plan without depending on Home.
     var planReporting: any DailyPlanSessionReporting {
         dailyPlan
+    }
+
+    /// The Progress calendar reads the plan's saved days through History's own contract.
+    var planHistoryRepository: any DailyPlanHistoryRepository {
+        planProgressRepository
     }
 
     // MARK: - Feature builders

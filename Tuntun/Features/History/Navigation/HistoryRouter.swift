@@ -13,12 +13,15 @@ enum HistoryRoute: Hashable {
     case fingerReport(UUID)
     /// One arm-practice session with its key-repetition replays.
     case sessionReport(UUID)
+    /// One day's practice ("Perkembangan latihanmu"), at the start of that day.
+    case practiceDay(Date)
 }
 
 @MainActor
 protocol HistoryRouterProtocol: AnyObject {
     func showFingerReport(id: UUID)
     func showSessionReport(id: UUID)
+    func showPracticeDay(_ day: Date)
     func pop()
     func popToRoot()
 }
@@ -36,6 +39,10 @@ final class HistoryRouter: HistoryRouterProtocol {
 
     func showSessionReport(id: UUID) {
         path.append(.sessionReport(id))
+    }
+
+    func showPracticeDay(_ day: Date) {
+        path.append(.practiceDay(day))
     }
 
     func pop() {
