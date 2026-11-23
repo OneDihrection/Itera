@@ -436,10 +436,20 @@ final class ExerciseDetailViewModel: ExerciseDetailViewModelProtocol {
                 report: .session(summary.id),
                 side: Self.side(of: results),
                 repetitions: results.reduce(0) { $0 + $1.completedWork },
-                activeSeconds: results.reduce(0) { $0 + $1.practiceSeconds },
+                activeSeconds: results.reduce(0) { $0 + Self.activeSeconds(of: $1) },
                 metrics: results.flatMap { $0.repMetrics ?? [] }
             )
         }
+    }
+
+    /// A set's practice time. Movement, fold towel and Balancing sets saved before they credited
+    /// practice time stored 0; their repetition durations stand in for it.
+    private static func activeSeconds(of result: SessionActivityResult) -> Double {
+        guard result.practiceSeconds <= 0 else {
+            return result.practiceSeconds
+        }
+
+        return (result.repMetrics ?? []).reduce(0) { $0 + $1.duration }
     }
 
     private func fingerSessions() -> [ExerciseSession] {

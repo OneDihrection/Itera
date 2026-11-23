@@ -25,7 +25,7 @@ This document states what is true now. [Documentation/DesignLog.md](Documentatio
 - **Calibration:** capturing the start position and demonstrated endpoints for the current activity and camera setup. Not a clinical assessment.
 - **Observed target:** a position derived from stable calibration evidence. Never "maximum range of motion".
 - **Repetition:** one accepted start → target → start cycle. **Round:** one reach sequence (right, left, up, each with its return).
-- **Practice time:** time credited from usable evidence, excluding pauses, camera waits and lost tracking.
+- **Practice time:** time credited from usable evidence, excluding pauses, camera waits and lost tracking. Every activity saves it per set (`SessionActivityResult.practiceSeconds`): each fresh tracked practice frame credits at most 0.2 s and a gap over 0.3 s credits nothing, in movement (arm raise, elbow bend), reach, fold towel and Balancing alike; timed practice saves its seconds. It is the detail panel's time moving (log: *Practice time for every exercise*).
 - **Session summary:** a persistent record of goals, completed work and outcomes.
 - **Key repetitions:** the first, hardest and last repetition of a set, kept as skeletons and optional clips for clinicians.
 

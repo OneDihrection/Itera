@@ -1026,11 +1026,7 @@ struct SessionEngine {
     // MARK: - Recording
 
     private var practicedSeconds: Double {
-        switch activity?.presentation {
-        case .reach(let value): return value.practiceSeconds
-        case .timed(let value): return value.seconds
-        default: return 0
-        }
+        activity?.presentation.practiceSeconds ?? 0
     }
 
     /// Records the current set's outcome and moves to its feedback. Skip, completion and the

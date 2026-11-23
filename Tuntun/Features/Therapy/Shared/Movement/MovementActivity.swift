@@ -104,6 +104,7 @@ struct MovementActivity: TherapyActivity {
         case .nextSet:
             setNumber += 1
             snapshot.count = 0
+            snapshot.practiceSeconds = 0
             interrupt()
             landmarkSmoother.reset()
             snapshot.countingDown = true
@@ -478,6 +479,13 @@ struct MovementActivity: TherapyActivity {
             )
             return
         }
+
+        // Practice time follows reach's rule: each fresh frame credits at most 0.2 s, and a gap
+        // over 0.3 s credits nothing. The return before the first countdown is not practice.
+        if !returningBeforePractice {
+            snapshot.practiceSeconds += gap > 0 && gap <= 0.3 ? min(0.2, gap) : 0
+        }
+
         let startCenter = anchor + start.scaled(scale)
         let targetCenter = anchor + target.scaled(scale)
         let radius = zoneRadius(aspect: frame.aspect)

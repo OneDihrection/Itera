@@ -62,6 +62,8 @@ struct MovementSnapshot {
     var trackingMessage: String?
     /// Counts completed start and target captures; each increase pops the capture circle.
     var captureCompletions = 0
+    /// Seconds of scored practice in the current set, credited from fresh tracked frames only.
+    var practiceSeconds = 0.0
 }
 
 struct ReachSnapshot {
@@ -113,6 +115,16 @@ enum ActivityPresentation {
         case .movement(let value): return value.phase == .countdown ? value.seconds : nil
         case .reach(let value): return value.phase == .countdown ? value.seconds : nil
         case .timed(let value): return value.countdownSeconds
+        }
+    }
+
+    /// Seconds of practice credited in the current set, saved as the set's practice time.
+    var practiceSeconds: Double {
+        switch self {
+        case .towel(let value): return value.practiceSeconds
+        case .movement(let value): return value.practiceSeconds
+        case .reach(let value): return value.practiceSeconds
+        case .timed(let value): return value.seconds
         }
     }
 

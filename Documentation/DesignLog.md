@@ -2150,3 +2150,18 @@ At the user's request, all body and finger demonstration clips were re-rendered 
 - **App.** The five finger clips are `*_demonstration.mp4` in `Resources/Animations` (the old `Fingers/*.mov` are removed). `FingerDemonstrationView` loads them through `FingerExercise.demonstrationResourceName`. Clip lengths match the old ones, so the 4 s and 16 s timing is unchanged.
 
 Verification: ffprobe confirmed 768 × 768, 24 FPS, yuv420p and the expected frame counts; both blends reopen with textures resolved; the authoring tool rendered two clips from the new blend. Pending: an XcodeGen and Simulator build, playback on the baseline iPad, and the `hand-*` catalog thumbnails, which were not re-rendered.
+
+
+## Practice time for every exercise (2026-11-23)
+
+The user reported that the exercise detail panel's "Waktu bergerak" (time moving) always read 0 for some exercises. The tile sums each set's `SessionActivityResult.practiceSeconds`, but only directional reach (`ReachSnapshot.practiceSeconds`) and timed practice filled it. `SessionEngine.practicedSeconds` returned 0 for movement and fold towel, and `BalanceSessionLog.recordSet` never set it. So arm raise, elbow bend, fold towel and every Balancing exercise saved 0. Average seconds per repetition fell back to that 0 for sessions without every repetition's metrics, so it showed "–" there.
+
+- **Credit rule.** The existing reach rule now applies everywhere: each fresh tracked practice frame credits at most 0.2 s, and a gap over 0.3 s credits nothing. Pauses, camera waits, lost tracking, calibration and countdowns are never credited.
+- **Movement** (`MovementSnapshot.practiceSeconds`): credited in `MovementActivity.consume` on scored practice frames once calibrated, not during the countdown or the return before the first one. It resets on the next set.
+- **Fold towel** (`TowelSnapshot.practiceSeconds`): credited on measured frames in the practice phase. It resets on the next set and is kept through a restart (recalibrate or adjust target).
+- **Engine.** `ActivityPresentation.practiceSeconds` gives each presentation's figure. `SessionEngine.practicedSeconds` reads it, and `AlternatingSidesActivity` sums both sides for movement, towel and reach.
+- **Balancing.** `BalanceSessionViewModel.record(_:previous:)` credits counted frames that have an overlay. `recordSet` saves the total through the new `practiceSeconds` parameter of `BalanceSessionLog.recordSet`, then resets it. The pause dialog's `SessionDurationClock` is unchanged, because it also counts rests and waits.
+- **Earlier history.** `ExerciseDetailViewModel` uses a set's summed `RepMetrics.duration` when its saved practice time is 0, so sessions saved before this change no longer show 0. Stored files are not migrated.
+- The guided session summary now shows elapsed seconds for a movement or towel set with practice time but no repetition, as it already did for reach.
+
+Verification: XcodeGen and a Debug iOS Simulator build with `IPHONEOS_DEPLOYMENT_TARGET=17.0` succeeded. Nothing was run in the Simulator or on the iPad. Pending on the M1 iPad: arm raise, elbow bend (one side and both), fold towel and one Balancing exercise, each showing a nonzero time moving close to the active practice time; a pause and a tracking loss mid-set not adding time; a multi-set session crediting each set separately; and a day recorded before the change showing the backfilled figure.

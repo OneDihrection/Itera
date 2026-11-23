@@ -146,6 +146,9 @@ final class BalanceSessionViewModel: BalanceSessionViewModelProtocol {
     @ObservationIgnored private var log: BalanceSessionLog
     /// Per-repetition metrics and key-repetition skeletons for the current set.
     @ObservationIgnored private var recorder: KeyRepRecorder
+    /// Seconds of the current set credited from counted, tracked frames; saved with the set.
+    @ObservationIgnored private var practiceSeconds = 0.0
+    @ObservationIgnored private var lastRecordedFrame: Double?
     @ObservationIgnored private var pendingSaves: [PendingSave] = []
     @ObservationIgnored private var saving = false
     @ObservationIgnored private var recovered = false
@@ -894,6 +897,15 @@ final class BalanceSessionViewModel: BalanceSessionViewModelProtocol {
             && !paused
         let tracked = snapshot.overlay != nil
 
+        // Practice time follows the guided rule: each counted, tracked frame credits at most
+        // 0.2 s, and a gap over 0.3 s credits nothing.
+        let gap = lastRecordedFrame.map { frame.timestamp - $0 } ?? 0
+        lastRecordedFrame = frame.timestamp
+
+        if counted, tracked, gap > 0, gap <= 0.3 {
+            practiceSeconds += min(0.2, gap)
+        }
+
         let clip = recorder.observe(
             frame,
             counted: counted,
@@ -936,8 +948,10 @@ final class BalanceSessionViewModel: BalanceSessionViewModelProtocol {
             number: setNumber,
             completedWork: completedWork,
             outcome: outcome,
+            practiceSeconds: practiceSeconds,
             repMetrics: metrics.isEmpty ? nil : metrics
         )
+        practiceSeconds = 0
 
         // The numbers above are kept at every privacy level; the replay only when allowed.
         if replayRecording.savesSkeletons,
