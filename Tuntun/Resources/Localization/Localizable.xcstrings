@@ -2868,6 +2868,24 @@
         }
       }
     },
+    "debug.trySitToStand" : {
+      "comment" : "Debug builds only: opens the sit-to-stand intro without completing earlier plan exercises.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Try Sit to Stand"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Coba Berdiri dari Duduk"
+          }
+        }
+      }
+    },
     "demo.extensionSequence" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -7022,6 +7040,7 @@
       }
     },
     "home.greetingName %@" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -7038,6 +7057,7 @@
       }
     },
     "home.hello" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -7288,6 +7308,7 @@
       }
     },
     "home.wellWishes" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -11031,6 +11052,7 @@
       }
     },
     "plan.doneToday" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -11096,6 +11118,7 @@
       }
     },
     "plan.holdSeconds %lld" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "variations" : {
@@ -17408,13 +17431,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Live camera with the shoulder, hip, knee, and ankle outline"
+            "value" : "Live camera with a circle on the hip that follows you as you sit and stand"
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Kamera langsung dengan garis bahu, pinggul, lutut, dan pergelangan kaki"
+            "value" : "Kamera langsung dengan lingkaran di pinggul yang mengikuti gerakan duduk dan berdiri"
           }
         }
       }
@@ -17595,13 +17618,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Sit sideways to the camera with shoulder, hip, and knee in view."
+            "value" : "Sit sideways to the camera with your shoulder and hip in view. Your feet do not need to be in view."
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Duduk menyamping ke kamera dengan bahu, pinggul, dan lutut terlihat."
+            "value" : "Duduk menyamping ke kamera dengan bahu dan pinggul terlihat. Kaki tidak perlu terlihat."
           }
         }
       }

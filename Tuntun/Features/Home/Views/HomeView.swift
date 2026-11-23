@@ -85,6 +85,15 @@ struct TMHomeView<ViewModel: HomeViewModelProtocol, Builder: HomeContentBuildabl
         }
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
+            #if DEBUG
+            ToolbarItem(placement: .topBarLeading) {
+                TMDebugActionButton(title: "debug.trySitToStand", symbol: "figure.stand") {
+                    viewModel.begin(from: BalanceExercise.sitToStand.rawValue)
+                }
+                .disabled(!viewModel.rows.contains { $0.id == BalanceExercise.sitToStand.rawValue })
+            }
+            #endif
+
             ToolbarItem(placement: .primaryAction) {
                 Button {
                     viewModel.openPracticePreferences()

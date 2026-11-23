@@ -17,7 +17,7 @@ struct TMProgressHeaderCard: View {
     let badgeNumber: Int
 
     var body: some View {
-        TMTherapyCard(color: TherapyPalette.canvas, outlined: true, padding: 24) {
+        TMTherapyCard(color: TherapyPalette.progressCanvas, outlined: true, padding: 24) {
             ViewThatFits(in: .horizontal) {
                 HStack(alignment: .center, spacing: 32) {
                     message
@@ -61,6 +61,6 @@ struct TMProgressHeaderCard: View {
         badgeNumber: 3
     )
     .padding(32)
-    .background(TherapyPalette.canvas)
+    .background(TherapyPalette.progressCanvas)
 }
 #endif

@@ -74,6 +74,8 @@ enum TherapyPalette {
             ? UIColor.systemBackground.resolvedColor(with: traits)
             : uiColor(neutralBackground)
     })
+    /// White page surface behind the neutral Progress calendar and history cards.
+    static let progressCanvas = Color(uiColor: .systemBackground)
     /// High-contrast hero and program cards: black in light mode, a raised grey in dark mode.
     static let heroCard = Color(uiColor: UIColor { traits in
         traits.userInterfaceStyle == .dark
