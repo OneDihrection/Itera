@@ -1982,3 +1982,16 @@ Users asked for a way to delete an exercise's record, for example a session reco
 - **Refresh.** `ReportsViewModel` conforms to a new `PracticeHistoryProviding`. `PracticeDayViewModel` now reads its exercises from it instead of a snapshot, and the panel refreshes it after deleting, so the card leaves the day page and the calendar updates. If any session fails to delete, the panel stays open with an error, after still refreshing so partial deletions show.
 
 Verification: a Debug Simulator build with `IPHONEOS_DEPLOYMENT_TARGET=17.0` succeeded. Pending, because recording sessions needs the camera: on the baseline iPad, in both languages, delete a plan arm-raise record and a finger record. Then check that the panel closes, the card leaves, the calendar status changes, the session files and `daily-plan-progress.json` entry are gone, Beranda shows the item as not done, Cancel keeps everything, and an emptied day shows its empty message.
+
+
+## Rest pages without visible controls (2026-11-23)
+
+At the user's request, from two mockups, the short and long rest pages show only the breathing cue and "Bernapas senyamannya". The animations are unchanged: the `breathingCircle` and `longRestWaves` shaders, their timing and intensity mapping.
+
+- **Short rest** (`TMTherapyBreathingRest`): the cue and the muted comfort line sit above a circle of at most 240 points (was 460), centred on the white canvas. The Pause, Skip and End buttons are gone. As on the practice countdown, a tap anywhere calls `pause`, whose menu offers End. End and, where given, Skip are accessibility actions.
+- **Long rest** (`TMTherapyLongRest`): the cue and the comfort line are centred over the waves. The breaths-remaining counter is no longer drawn; VoiceOver reads it as the heading's value. A tap anywhere toggles pause, and paused the cue reads "Jeda". At the user's follow-up request the paused page has no Lanjutkan or Akhiri latihan buttons either: a second tap resumes, and End is only an accessibility action, so a sighted user cannot end the plan from the long rest itself.
+
+This replaces the rule that rest pages always show their buttons. Skip has no visible control any more; if it is needed on screen, add it back to the pause menu rather than the rest page.
+
+Verification: a Mac Catalyst build is the only check so far. Pending: the debug rest screens and a real session on the baseline iPad, in both languages and with VoiceOver, checking that a tap pauses and resumes, End is reachable from the short rest's pause menu and through VoiceOver on the long rest, and the circle and waves animate as before.
+
