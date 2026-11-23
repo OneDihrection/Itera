@@ -31,7 +31,9 @@ enum GuidanceAudioEvent {
 final class GuidanceAudioService: NSObject, AVSpeechSynthesizerDelegate {
     let events = PassthroughSubject<GuidanceAudioEvent, Never>()
     private let synthesizer = AVSpeechSynthesizer()
-    private let engine = AVAudioEngine()
+    /// Owns the microphone engine on its own queue: stopping an engine with a running input node
+    /// waits for audio I/O, which froze the screen when a finger session finished.
+    private let inputWorker = AudioInputWorker()
     private var recognizer: SFSpeechRecognizer?
     private var recognition: SFSpeechRecognitionTask?
     private var request: SFSpeechAudioBufferRecognitionRequest?
@@ -43,12 +45,15 @@ final class GuidanceAudioService: NSObject, AVSpeechSynthesizerDelegate {
     private let music = ExerciseMusicPlayer()
     /// Music waiting for the audio session; pausing or stopping cancels it so it cannot start late.
     private var musicStart: Task<Void, Never>?
-    private var cuePlayer: AVAudioPlayer?
+    /// The cue or number playing now; cues and numbers share one channel.
+    private var cueClip: PreparedAudioClip?
+    /// Loaded once per file: building an `AVAudioPlayer` on the main thread for every cue stalled
+    /// set ends, countdowns and hold seconds. `PreparedAudioClip` loads and plays off the main thread.
+    private var cueClips: [URL: PreparedAudioClip] = [:]
     private var buttonPlayer: AVAudioPlayer?
     private var lastButtonSound = 0.0
     private var interruption: NSObjectProtocol?
     private var routeObserver: NSObjectProtocol?
-    private var tapInstalled = false
     private(set) var voiceEnabled = false
     private var locale = "id-ID"
     /// Chosen once per configuration: the best installed voice for `locale`.
@@ -102,7 +107,21 @@ final class GuidanceAudioService: NSObject, AVSpeechSynthesizerDelegate {
         locale = language
         voice = NarrationVoice.best(for: language)
         vocabulary = VoiceCommandVocabulary()
+        preloadCues()
         try await activateSession()
+    }
+
+    /// Loads the cues and numbers a set's end, a countdown and hold seconds play, under the
+    /// session's loading overlay instead of at those moments.
+    private func preloadCues() {
+        let effects = ["countdown", HoldPopSound.resourceName, "set-complete", DemoChangeSound.resourceName]
+            .compactMap { Bundle.main.url(forResource: $0, withExtension: "wav") }
+        let countdowns = (1...10).compactMap { NarrationClips.countdownURL($0, language: narrationLanguage) }
+        let counts = (1...10).compactMap { NarrationClips.countURL($0, language: narrationLanguage) }
+
+        for url in effects + countdowns + counts {
+            _ = cueClip(for: url)
+        }
     }
 
     /// Speaks one cue. When every line has a bundled recording, those play in order;
@@ -325,16 +344,8 @@ final class GuidanceAudioService: NSObject, AVSpeechSynthesizerDelegate {
         guard let url = Bundle.main.url(forResource: name, withExtension: "wav") else {
             return
         }
-        do {
-            cuePlayer?.stop()
-            cuePlayer = try AVAudioPlayer(contentsOf: url)
-            cuePlayer?.volume = 0.30
-            cuePlayer?.prepareToPlay()
-            cuePlayer?.play()
-        } catch {
-            // Optional reinforcement never blocks readable guidance or progression.
-            cuePlayer = nil
-        }
+        // Optional reinforcement never blocks readable guidance or progression.
+        _ = playOnCueChannel(url, volume: 0.30)
     }
 
     /// True when recorded countdown numbers are bundled for the session language.
@@ -358,18 +369,30 @@ final class GuidanceAudioService: NSObject, AVSpeechSynthesizerDelegate {
             return false
         }
 
-        do {
-            cuePlayer?.stop()
-            let player = try AVAudioPlayer(contentsOf: url)
-            // Spoken numbers are guidance, so they play at full narration level, not cue level.
-            player.volume = 1
-            player.prepareToPlay()
-            cuePlayer = player
-            return player.play()
-        } catch {
-            cuePlayer = nil
+        // Spoken numbers are guidance, so they play at full narration level, not cue level.
+        return playOnCueChannel(url, volume: 1)
+    }
+
+    private func playOnCueChannel(_ url: URL, volume: Float) -> Bool {
+        cueClip?.stop()
+
+        guard let clip = cueClip(for: url) else {
+            cueClip = nil
             return false
         }
+
+        cueClip = clip
+        return clip.play(id: UUID(), volume: volume) { _, _ in }
+    }
+
+    private func cueClip(for url: URL) -> PreparedAudioClip? {
+        if let clip = cueClips[url] {
+            return clip
+        }
+
+        let clip = try? PreparedAudioClip(url: url)
+        cueClips[url] = clip
+        return clip
     }
 
     /// Speaks the number in the hold readout, only while no instruction is being spoken,
@@ -398,7 +421,7 @@ final class GuidanceAudioService: NSObject, AVSpeechSynthesizerDelegate {
 
     /// Discards an evidence-timed count when a hold is paused or its stage changes.
     func stopCount() {
-        cuePlayer?.stop()
+        cueClip?.stop()
     }
 
     func cancelSpeech() {
@@ -407,7 +430,11 @@ final class GuidanceAudioService: NSObject, AVSpeechSynthesizerDelegate {
         afterNarration = nil
         stopNarrationClips()
         utterances.removeAll()
-        synthesizer.stopSpeaking(at: .immediate)
+        // A synchronous call into the speech service; every countdown number cancels first, so
+        // it is skipped when nothing is queued.
+        if synthesizer.isSpeaking {
+            synthesizer.stopSpeaking(at: .immediate)
+        }
         music.setDucked(false)
     }
 
@@ -420,7 +447,18 @@ final class GuidanceAudioService: NSObject, AVSpeechSynthesizerDelegate {
         voiceEnabled = true
         do {
             try await activateSession()
-            try beginRecognition()
+
+            guard await inputWorker.start() else {
+                throw AudioError.unavailable
+            }
+
+            // Listening may have been switched off while the engine started.
+            guard voiceEnabled else {
+                inputWorker.stop()
+                return false
+            }
+
+            beginRecognition()
             return true
         } catch {
             disableVoice()
@@ -436,11 +474,7 @@ final class GuidanceAudioService: NSObject, AVSpeechSynthesizerDelegate {
         recognition = nil
         request?.endAudio()
         request = nil
-        engine.stop()
-        if tapInstalled {
-            engine.inputNode.removeTap(onBus: 0)
-            tapInstalled = false
-        }
+        inputWorker.stop()
         // The session keeps its configuration: switching category here changed loudness.
     }
 
@@ -450,33 +484,19 @@ final class GuidanceAudioService: NSObject, AVSpeechSynthesizerDelegate {
         try await NarrationAudioSession.activate(allowsBluetoothMicrophone: true)
     }
 
-    private func beginRecognition() throws {
+    /// Starts a new recognition request on the running input engine. The engine keeps running
+    /// between requests; only the request its tap feeds is replaced.
+    private func beginRecognition() {
         cancelPendingCommand()
         recognitionID = UUID()
         let id = recognitionID
         recognition?.cancel()
-        if tapInstalled {
-            engine.inputNode.removeTap(onBus: 0)
-            tapInstalled = false
-        }
-        let input = engine.inputNode
-        let format = input.outputFormat(forBus: 0)
-        guard format.sampleRate > 0, format.channelCount > 0 else {
-            throw AudioError.unavailable
-        }
         let bufferRequest = SFSpeechAudioBufferRecognitionRequest()
         bufferRequest.requiresOnDeviceRecognition = true
         bufferRequest.shouldReportPartialResults = true
         bufferRequest.contextualStrings = vocabulary.contextualStrings
         request = bufferRequest
-        input.installTap(onBus: 0, bufferSize: 1024, format: format) { buffer, _ in
-            bufferRequest.append(buffer)
-        }
-        tapInstalled = true
-        engine.prepare()
-        if !engine.isRunning {
-            try engine.start()
-        }
+        inputWorker.replaceRequest(bufferRequest)
         recognition = recognizer?.recognitionTask(with: bufferRequest) { [weak self] result, error in
             Task { @MainActor in
                 guard let self, self.voiceEnabled, self.recognitionID == id else {
@@ -506,11 +526,7 @@ final class GuidanceAudioService: NSObject, AVSpeechSynthesizerDelegate {
                 } else {
                     self.cancelPendingCommand()
                     if result?.isFinal == true {
-                        do {
-                            try self.beginRecognition()
-                        } catch {
-                            self.voiceFailed()
-                        }
+                        self.beginRecognition()
                     } else if error != nil {
                         self.voiceFailed()
                     }
@@ -549,11 +565,7 @@ final class GuidanceAudioService: NSObject, AVSpeechSynthesizerDelegate {
         guard voiceEnabled, recognitionID == requestID else {
             return
         }
-        do {
-            try beginRecognition()
-        } catch {
-            voiceFailed()
-        }
+        beginRecognition()
     }
 
     private func cancelPendingCommand() {
@@ -576,14 +588,14 @@ final class GuidanceAudioService: NSObject, AVSpeechSynthesizerDelegate {
         cancelSpeech()
         musicStart?.cancel()
         music.pause()
-        cuePlayer?.stop()
+        cueClip?.stop()
         disableVoice()
     }
 
     func pauseAmbient() {
         musicStart?.cancel()
         music.pause()
-        cuePlayer?.stop()
+        cueClip?.stop()
     }
 
     func startMusic() {

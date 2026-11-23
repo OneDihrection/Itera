@@ -76,14 +76,16 @@ final class ExerciseMusicPlayer {
         start()
     }
 
+    /// Stops and rewinds, keeping the loaded track. Releasing the player at a session's end and
+    /// loading it again for the long rest both ran on the main thread and stalled that move.
     func stop() {
         active = false
         paused = true
         cancelStartupCheck()
-        player?.stop()
-        player = nil
-        track = nil
+        player?.pause()
+        player?.currentTime = 0
         ducked = false
+        player?.volume = volume
     }
 
     func setDucked(_ value: Bool) {

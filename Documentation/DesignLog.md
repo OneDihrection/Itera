@@ -2235,3 +2235,36 @@ Verification: XcodeGen and a Debug iOS Simulator build with `IPHONEOS_DEPLOYMENT
 - **Code.** In the narrow layout of `TMExerciseProgressSection`, the demonstration (at most 340 points wide) now sits above `change`. The insights card follows at full width, because `main` removed `summary`.
 
 Verification: a Debug Simulator build after the merge. Pending on the baseline iPad: the panel checks listed under both source entries.
+
+## Freeze at set end and rest end (2026-11-23)
+
+The user reported that the screen still froze for a moment when an exercise or a rest finished, with or without the Debug Skip rest. The fix in *Faster exit after End* (commit b5a61912) is still in place, but it only traced Pause → End. A source trace of the automatic set end, rest start and end, summary and long rest found the following main-thread blocking work. None of it was measured, so this list is the source analysis, not profiler output.
+
+- **Audio session lock.** `NarrationAudioSession` held its one lock across `setCategory`, `setActive(true)`, `setActive(false)` and the speaker override. The background deactivation from *Faster exit after End* therefore still blocked the main thread, which takes the same lock for `isSessionActive` (every button tap), `activationToken` and `activate()` (long rest, music). The lock now guards only `activationRequests` and `isActive`. A separate `hardwareLock`, taken only on `sessionQueue` and the input worker's queue, orders the blocking calls. Deactivation compares its token under that lock, so an activation counted in between waits, finds the session inactive and reactivates it. `handleRouteChange()` now runs on `sessionQueue`, and the route-change configuration log reads the session off the main thread.
+- **Camera preview.** `TMBodyCameraPreview.updateUIView` requested a layout on every SwiftUI update, and the guided screen updates on every 50 ms tick and every frame. Each layout touched the preview connection, which waits while the capture session stops (summary) or reconfigures (fold towel's lens switch). It now relays out only when mirroring or the video mask changes; size, window and `isPreviewing` changes still request their own. Mirroring is set only when it differs.
+- **Finger listening engine.** `GuidanceAudioService.disableVoice()` stopped its `AVAudioEngine` and removed the tap on the main thread at a finger session's natural finish. The service now uses `AudioInputWorker`, as the guided and Balancing sessions do. The engine starts once in `enableVoice()`, and a restarted recognition only replaces the request its tap feeds.
+- **Finger cues.** `playCue` and `playNumber` built a new `AVAudioPlayer` on the main thread for every hold pop, set end, countdown number and hold second. They now play cached `PreparedAudioClip`s, which load and play off the main thread; `configure(language:)` preloads the effects and the first ten counts and countdowns.
+- **Rest shaders.** SwiftUI compiles a Metal shader the first time it is drawn, which stalled the first rest of each launch. `TMShaderWarmUp` (DesignSystem) draws the breathing circle and long-rest waves at 2 pt and 1% opacity beneath `TMLoadingOverlay`'s backdrop, so they compile while a session prepares. `Shader.compile(as:)` needs iOS 18 and is not used.
+- **Smaller costs.**
+  - The DEBUG `Thread.callStackSymbols` in `stopListening()` (every summary) is removed.
+  - Both `cancelSpeech()` methods call `stopSpeaking(at: .immediate)` only while the synthesizer is speaking. Every countdown number cancels first.
+  - `NarrationVoice.best(for:)` caches its choice per language, because `speechVoices()` is slow.
+  - `SessionAudioService.prepare()` returns early when its clips are already loaded for the language, so the long rest no longer reloads about 35 players.
+  - `ExerciseMusicPlayer.stop()` pauses and rewinds instead of releasing the player, so a session's end and the long rest neither tear it down nor reload it on the main thread.
+- **Not done.**
+  - The loading overlay was not added to the automatic finishes. Their teardown no longer blocks the main thread, and the overlay would flash over a summary that is already shown.
+  - `SessionSnapshot` is not made Equatable to skip redundant writes; whether to do so depends on device profiling.
+
+Verification: XcodeGen, then Debug and Release Simulator builds with IPHONEOS_DEPLOYMENT_TARGET=17.0 (both BUILD SUCCEEDED). Nothing was run in the Simulator or on the iPad. Pending on the M1 iPad, measured with Instruments Hangs and Time Profiler:
+- arm raise with two sets: set end, rest, Skip rest and a timed rest, summary, long rest;
+- the same path in a Balancing exercise;
+- a finger exercise: set end, rest, natural finish;
+- fold towel starting and ending;
+- the first rest's breathing circle appearing without a hitch;
+- narration not muted in the next session;
+- Stop/Go after a rest, and in a finger session after a recognition restart;
+- button clicks after a session;
+- finger cues, countdowns and hold seconds audible at their usual levels;
+- music restarting from the start of the track after a session;
+- preview mirroring in both orientations;
+- no `AVAudioSession … main thread` console warning.

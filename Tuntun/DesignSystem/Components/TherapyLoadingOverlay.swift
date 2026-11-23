@@ -33,6 +33,9 @@ struct TMLoadingOverlay: View {
 
     var body: some View {
         ZStack {
+            // Under the backdrop: compiles the rest shaders while the session prepares.
+            TMShaderWarmUp()
+
             TMFrostedBackdrop()
 
             VStack(spacing: 24) {
