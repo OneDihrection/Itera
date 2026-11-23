@@ -12,8 +12,6 @@ enum PracticePreferences {
     static let calmMode = "practice.calmMode"
     static let celebrationSounds = "practice.celebrationSounds"
     static let buttonSounds = "practice.buttonSounds"
-    /// How Home and Progress address the patient. Stored only on this device; empty means no name.
-    static let patientName = "practice.patientName"
     /// The earlier plan-wide training side; read only to carry it over to each exercise.
     static let dailyPlanSide = "practice.dailyPlanSide"
     /// Each exercise's training side (`RoutineSides`), keyed by its daily-plan item id.

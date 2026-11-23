@@ -24,8 +24,8 @@ enum HomeRoute: Hashable {
     }
 }
 
-/// A sheet presented over Beranda.
-enum HomeSheet: String, Identifiable {
+/// A panel floating over Beranda on a frosted backdrop, like History's exercise detail.
+enum HomePanel: String, Identifiable {
     case practicePreferences
 
     var id: Self {
@@ -62,7 +62,7 @@ struct PlanCover: Identifiable {
 @MainActor
 protocol HomeRouterProtocol: AnyObject {
     func openPracticePreferences()
-    func dismissSheet()
+    func dismissPanel()
 }
 
 /// The navigation today's plan drives while it runs.
@@ -87,7 +87,7 @@ protocol SessionRouterProtocol: AnyObject {
 
 // MARK: - Router
 
-/// Beranda's router: owns its stack path, its settings sheet and the full-screen cover the
+/// Beranda's router: owns its stack path, its Preferences panel and the full-screen cover the
 /// plan's sessions, rest and next intro share. Beranda's screen model forwards this state to its
 /// view; the settings page, the plan and the session pages each receive this router through their
 /// initializers as their own narrow protocol.
@@ -95,7 +95,7 @@ protocol SessionRouterProtocol: AnyObject {
 @Observable
 final class HomeRouter: HomeRouterProtocol, DailyPlanRouterProtocol, SessionRouterProtocol {
     var path: [HomeRoute] = []
-    var sheet: HomeSheet?
+    var panel: HomePanel?
     var cover: PlanCover?
 
     var isCoverPresented: Bool {
@@ -103,11 +103,11 @@ final class HomeRouter: HomeRouterProtocol, DailyPlanRouterProtocol, SessionRout
     }
 
     func openPracticePreferences() {
-        sheet = .practicePreferences
+        panel = .practicePreferences
     }
 
-    func dismissSheet() {
-        sheet = nil
+    func dismissPanel() {
+        panel = nil
     }
 
     func showIntro(itemID: String) {
@@ -130,7 +130,7 @@ final class HomeRouter: HomeRouterProtocol, DailyPlanRouterProtocol, SessionRout
 
     func endRun() {
         cover = nil
-        sheet = nil
+        panel = nil
         path.removeAll()
     }
 
