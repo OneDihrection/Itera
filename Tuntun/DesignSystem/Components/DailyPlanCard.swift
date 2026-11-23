@@ -31,6 +31,7 @@ struct TMDailyPlanCard: View {
     let duration: ClosedRange<Int>
     let state: TMDailyPlanCardState
     let isLast: Bool
+    var isInteractionEnabled = true
     let action: () -> Void
 
     var body: some View {
@@ -129,7 +130,7 @@ struct TMDailyPlanCard: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(TMTherapySoundButtonStyle())
-        .disabled(!state.isAvailable)
+        .disabled(!state.isAvailable || !isInteractionEnabled)
     }
 
     private var metrics: some View {
