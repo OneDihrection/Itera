@@ -6954,6 +6954,23 @@
         }
       }
     },
+    "home.dailyPlan.partial %lld %lld" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$lld of %2$lld exercises were completed that day"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$lld dari %2$lld latihan selesai pada hari tersebut"
+          }
+        }
+      }
+    },
     "home.dailyPlan.progress %lld %lld" : {
       "extractionState" : "manual",
       "localizations" : {

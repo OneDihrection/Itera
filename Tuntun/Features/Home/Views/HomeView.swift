@@ -134,7 +134,7 @@ struct TMHomeView<ViewModel: HomeViewModelProtocol, Builder: HomeContentBuildabl
             emptyState
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
 
-        case .completed, .missed, .current, .upcoming:
+        case .completed, .missed, .partial, .current, .upcoming:
             planList
         }
     }
@@ -197,6 +197,10 @@ struct TMHomeView<ViewModel: HomeViewModelProtocol, Builder: HomeContentBuildabl
             return Text("home.dailyPlan.completed")
         case .missed:
             return Text("home.dailyPlan.missed")
+        case .partial:
+            return Text(
+                "home.dailyPlan.partial \(viewModel.selectedCompletedItemIDs.count) \(viewModel.rows.count)"
+            )
         case .current:
             return Text("home.dailyPlan.progress \(viewModel.completedCount) \(viewModel.rows.count)")
         case .upcoming:
@@ -214,6 +218,10 @@ struct TMHomeView<ViewModel: HomeViewModelProtocol, Builder: HomeContentBuildabl
         switch viewModel.selectedDayState {
         case .completed:
             return .completed
+        case .partial:
+            return viewModel.selectedCompletedItemIDs.contains(row.id)
+                ? .completed
+                : .upcoming(step: index + 1)
         case .missed, .upcoming, .noSchedule:
             return .upcoming(step: index + 1)
         case .current:
@@ -267,6 +275,9 @@ struct TMHomeView<ViewModel: HomeViewModelProtocol, Builder: HomeContentBuildabl
             }
 
         case .missed:
+            returnToTodayButton
+
+        case .partial:
             returnToTodayButton
 
         case .current:
@@ -335,6 +346,7 @@ private final class MockHomeViewModel: HomeViewModelProtocol {
     let completedCount: Int
     let hasProgress: Bool
     let selectedDayState: HomeDayState
+    let selectedCompletedItemIDs: Set<String>
     var selectedDate: Date
     var visibleWeek: [Date]
 
@@ -356,6 +368,7 @@ private final class MockHomeViewModel: HomeViewModelProtocol {
                 status: index == 0 ? .done : (index == 1 ? .next : .upcoming)
             )
         }
+        selectedCompletedItemIDs = state == .partial ? [rows[0].id] : []
         isFinishedToday = state == .completed
         completedCount = state == .completed ? rows.count : 1
         hasProgress = completedCount > 0
@@ -403,6 +416,10 @@ private struct MockHomeBuilder: HomeContentBuildable {
 
 #Preview("Beranda — Tidak Latihan") {
     TMHomeView(viewModel: MockHomeViewModel(state: .missed), builder: MockHomeBuilder())
+}
+
+#Preview("Beranda — Sebagian Selesai") {
+    TMHomeView(viewModel: MockHomeViewModel(state: .partial), builder: MockHomeBuilder())
 }
 
 #Preview("Beranda — Besok") {
