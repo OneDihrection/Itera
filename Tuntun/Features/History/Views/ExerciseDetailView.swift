@@ -152,18 +152,22 @@ struct TMExerciseDetailView<ViewModel: ExerciseDetailViewModelProtocol>: View {
         }
     }
 
+    /// Each tile names its figure above the value and says, under a rule, what it measures, so
+    /// a number is never shown without its meaning.
     @ViewBuilder
     private func statTiles(_ progress: ExerciseProgress) -> some View {
         peakTile(progress)
 
         TMDetailStatTile(
             value: progress.averageDuration.map(ExerciseDetailFormat.seconds) ?? Text(verbatim: "–"),
-            caption: "exerciseDetail.stat.averageDuration"
+            caption: "exerciseDetail.stat.averageDuration",
+            lines: [Text("exerciseDetail.stat.averageDuration.meaning")]
         )
 
         TMDetailStatTile(
             value: ExerciseDetailFormat.duration(progress.activeSeconds),
-            caption: "exerciseDetail.stat.activeTime"
+            caption: "exerciseDetail.stat.activeTime",
+            lines: [Text("exerciseDetail.stat.activeTime.meaning")]
         )
     }
 
@@ -174,17 +178,20 @@ struct TMExerciseDetailView<ViewModel: ExerciseDetailViewModelProtocol>: View {
         case .angle:
             TMDetailStatTile(
                 value: ExerciseDetailFormat.value(progress.peak, measure: .angle),
-                caption: "exerciseDetail.stat.peakAngle"
+                caption: "exerciseDetail.stat.peakAngle",
+                lines: [Text(wording.angleScaleKey)]
             )
         case .range:
             TMDetailStatTile(
                 value: ExerciseDetailFormat.value(progress.peak, measure: .range),
-                caption: "exerciseDetail.stat.peakRange"
+                caption: "exerciseDetail.stat.peakRange",
+                lines: [Text("exerciseDetail.stat.peakRange.meaning")]
             )
         case .none:
             TMDetailStatTile(
                 value: Text(verbatim: "\(progress.repetitions)"),
-                caption: "exerciseDetail.stat.repetitions"
+                caption: "exerciseDetail.stat.repetitions",
+                lines: [Text(wording.repetitionMeaningKey)]
             )
         }
     }
@@ -223,6 +230,7 @@ private struct TMExerciseProgressSection<ViewModel: ExerciseDetailViewModelProto
             }
 
             trend
+                .padding(.top, 12)
         }
     }
 
@@ -238,27 +246,40 @@ private struct TMExerciseProgressSection<ViewModel: ExerciseDetailViewModelProto
         }
     }
 
+    /// "Dibandingkan dengan: Sesi pertama ⌃⌄". The prefix says the choice drives every
+    /// comparison below; the value uses `action` rather than the Figma's light blue for contrast.
     private var baselineMenu: some View {
         Menu {
             Picker("exerciseDetail.baseline.label", selection: $viewModel.baseline) {
                 ForEach(ProgressBaseline.allCases) { baseline in
-                    Text(LocalizedStringKey(baseline.titleKey))
+                    Text(legendKey(baseline))
                         .tag(baseline)
                 }
             }
         } label: {
             HStack(spacing: 6) {
-                Text(LocalizedStringKey(viewModel.baseline.titleKey))
+                Text("exerciseDetail.baseline.prefix")
+                    .foregroundStyle(TherapyPalette.muted)
+
+                Text(legendKey(viewModel.baseline))
+                    .fontWeight(.semibold)
+                    .foregroundStyle(TherapyPalette.action)
+
                 Image(systemName: "chevron.up.chevron.down")
                     .imageScale(.small)
+                    .foregroundStyle(TherapyPalette.action)
             }
             .typography(size: 20, weight: .regular, relativeTo: .body)
-            .foregroundStyle(TherapyPalette.guidanceBlue)
             .frame(minHeight: 44)
             .contentShape(Rectangle())
         }
         .accessibilityLabel(Text("exerciseDetail.baseline.label"))
-        .accessibilityValue(Text(LocalizedStringKey(viewModel.baseline.titleKey)))
+        .accessibilityValue(Text(legendKey(viewModel.baseline)))
+    }
+
+    /// "Sesi pertama", the baseline's short name, as the legend and trend marker use it.
+    private func legendKey(_ baseline: ProgressBaseline) -> LocalizedStringKey {
+        LocalizedStringKey("exerciseDetail.legend." + baseline.rawValue)
     }
 
     @ViewBuilder
@@ -268,16 +289,36 @@ private struct TMExerciseProgressSection<ViewModel: ExerciseDetailViewModelProto
            let currentFrame = current.rep.peakFrame {
             let baselineFrame = viewModel.baselinePeakRep?.rep.peakFrame
 
-            TMPoseComparison(
-                baseline: baselineFrame.map { pose(of: $0, recordsHand: current.recordsHand) },
-                current: pose(of: currentFrame, recordsHand: current.recordsHand),
-                figure: current.recordsHand ? HandSkeleton.figureShape : BodyJoint.figureShape,
-                aspectRatio: current.rep.aspectRatio,
-                alignmentJoint: current.recordsHand ? 0 : BodyJoint.neck.index,
-                emphasizedJoints: current.emphasizedJoints,
-                accessibilityLabel: Text("exerciseDetail.comparison.label")
-            )
+            VStack(alignment: .leading, spacing: 8) {
+                TMPoseComparison(
+                    baseline: baselineFrame.map { pose(of: $0, recordsHand: current.recordsHand) },
+                    current: pose(of: currentFrame, recordsHand: current.recordsHand),
+                    figure: current.recordsHand ? HandSkeleton.figureShape : BodyJoint.figureShape,
+                    aspectRatio: current.rep.aspectRatio,
+                    alignmentJoint: current.recordsHand ? 0 : BodyJoint.neck.index,
+                    emphasizedJoints: current.emphasizedJoints,
+                    accessibilityLabel: Text("exerciseDetail.comparison.label")
+                )
+
+                if baselineFrame != nil {
+                    pictureCaption
+                }
+            }
         }
+    }
+
+    /// "Biru samar: sesi pertama · Kuning: hari ini", so the two figures are named in words.
+    private var pictureCaption: some View {
+        let baselineName = String(
+            localized: String.LocalizationValue("exerciseDetail.legend." + viewModel.baseline.rawValue),
+            bundle: AppLanguage.selected.resourceBundle
+        )
+
+        return Text("exerciseDetail.comparison.caption \(baselineName)")
+            .typography(size: 17, weight: .regular, relativeTo: .footnote)
+            .foregroundStyle(TherapyPalette.muted)
+            .fixedSize(horizontal: false, vertical: true)
+            .accessibilityHidden(true)
     }
 
     private func pose(of frame: SkeletonFrame, recordsHand: Bool) -> TMSkeletonPose {
@@ -319,7 +360,8 @@ private struct TMExerciseProgressSection<ViewModel: ExerciseDetailViewModelProto
                 points: points.enumerated().map { index, point in
                     trendPoint(point, index: index)
                 },
-                unit: progress.measure == .range ? "%" : "°"
+                unit: progress.measure == .range ? "%" : "°",
+                caption: Text(wording.trendHintKey)
             )
         }
     }
@@ -364,33 +406,52 @@ private struct TMExerciseProgressSection<ViewModel: ExerciseDetailViewModelProto
         }
     }
 
+    /// Each row leads with the aspect it describes ("Tempo", "Kestabilan"), so the sentence's
+    /// number has a name.
     private func row(for insight: ExerciseInsight) -> TMInsightRow {
         switch insight {
         case .pace(let change):
             return TMInsightRow(
-                text: ExerciseDetailFormat.pace(change, trend: progress.trend(ofDuration: change))
+                text: ExerciseDetailFormat.pace(change, trend: progress.trend(ofDuration: change)),
+                title: Text("exerciseDetail.insight.title.pace")
             )
         case .consistency(let spread):
             let even = spread <= progress.steadyTolerance
 
             return TMInsightRow(
                 text: ExerciseDetailFormat.consistency(spread, measure: progress.measure, even: even),
-                tone: even ? .positive : .neutral
+                title: Text("exerciseDetail.insight.title.consistency"),
+                tone: even ? .positive : .negative
             )
         case .stamina(let change):
             let trend = progress.trend(of: change)
 
             return TMInsightRow(
                 text: ExerciseDetailFormat.stamina(change, measure: progress.measure, trend: trend),
-                tone: trend == .lower ? .attention : .positive
+                title: Text("exerciseDetail.insight.title.stamina"),
+                tone: trend == .lower ? .negative : .positive
             )
         case .volume(let repetitions, let change, let sessionsSince):
             return TMInsightRow(
                 text: ExerciseDetailFormat.volume(repetitions: repetitions, change: change),
+                title: Text("exerciseDetail.insight.title.volume"),
                 detail: ExerciseDetailFormat.sessionsSince(sessionsSince, baseline: viewModel.baseline),
-                tone: change > 0 ? .positive : .neutral
+                tone: volumeTone(change)
             )
         }
+    }
+
+    /// More repetitions than the baseline is green, fewer red, the same neutral.
+    private func volumeTone(_ change: Int) -> TMInsightRow.Tone {
+        if change > 0 {
+            return .positive
+        }
+
+        if change < 0 {
+            return .negative
+        }
+
+        return .neutral
     }
 
     private func comparison(change: Double, baselineSession: ExerciseSession) -> some View {
@@ -690,7 +751,8 @@ private struct TMExerciseRecordSection: View {
         }
     }
 
-    /// Against the baseline's best, coloured, then against the day's best.
+    /// Against the baseline's best, coloured, then whether it was the day's best. The day's best
+    /// value itself is not repeated: the first stat tile already shows it.
     private func reachLines(_ peak: Double) -> [Text] {
         var lines: [Text] = []
 
@@ -699,13 +761,8 @@ private struct TMExerciseRecordSection: View {
             lines.append(baselineLine(change: peak - baselinePeak))
         }
 
-        if let best = progress.peak {
-            if peak >= best {
-                lines.append(Text("exerciseDetail.todayBest.this"))
-            } else {
-                let value = ExerciseDetailFormat.plainValue(best, measure: progress.measure)
-                lines.append(Text("exerciseDetail.todayBest \(value)"))
-            }
+        if let best = progress.peak, peak >= best {
+            lines.append(Text("exerciseDetail.todayBest.this"))
         }
 
         return lines
@@ -749,9 +806,12 @@ private struct ExerciseWording {
     private let group: String?
     private let hasSide: Bool
     private let side: TherapySide?
+    /// Fold towel counts a repetition as four folds.
+    private let countsFolds: Bool
 
     init(exerciseID: String, side: TherapySide?) {
         self.side = side
+        countsFolds = exerciseID == TherapyKind.foldTowel.rawValue
 
         switch exerciseID {
         case "armRaise":
@@ -798,6 +858,43 @@ private struct ExerciseWording {
         return LocalizedStringKey("exerciseDetail.caption." + group)
     }
 
+    /// What the peak angle measures. Only arm raise and elbow bend, whose angles
+    /// `KeyRepRecorder` computes from known joints, say where 0° is; the Balancing engines'
+    /// own estimates keep the generic line.
+    var angleScaleKey: LocalizedStringKey {
+        switch group {
+        case "arm":
+            return "exerciseDetail.scale.arm"
+        case "elbow":
+            return "exerciseDetail.scale.elbow"
+        default:
+            return "exerciseDetail.scale.angle"
+        }
+    }
+
+    /// "Garis naik berarti lenganmu terangkat makin tinggi", under the trend's title.
+    var trendHintKey: LocalizedStringKey {
+        guard group != nil else {
+            return "exerciseDetail.trendHint.generic"
+        }
+
+        switch style {
+        case .lift:
+            return "exerciseDetail.trendHint.lift"
+        case .further:
+            return "exerciseDetail.trendHint.further"
+        case .straight:
+            return "exerciseDetail.trendHint.straight"
+        }
+    }
+
+    /// What one counted repetition is, for an exercise without a measure.
+    var repetitionMeaningKey: LocalizedStringKey {
+        countsFolds
+            ? "exerciseDetail.stat.repetitions.towel"
+            : "exerciseDetail.stat.repetitions.meaning"
+    }
+
     private var sideSuffix: String {
         guard hasSide, let side else {
             return "none"
@@ -834,13 +931,6 @@ private enum ExerciseDetailFormat {
         let unit = measure == .range ? "%" : "°"
 
         return Text(verbatim: "\(sign)\(abs(amount))\(unit)")
-    }
-
-    /// "112°" or "86%", for a value inside a sentence.
-    static func plainValue(_ value: Double, measure: ExerciseMeasure) -> String {
-        measure == .range
-            ? "\(Int((value * 100).rounded()))%"
-            : "\(Int(value.rounded()))°"
     }
 
     /// The change in the exercise's words: "28° lebih tinggi" or "12° lebih jauh" in green,

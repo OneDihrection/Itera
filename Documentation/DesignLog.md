@@ -1931,3 +1931,41 @@ Caregivers asked to remove a single recorded video from history without deleting
 - The unlinked session and finger report pages keep their replay sections unchanged.
 
 Verification: `xcodegen generate` and a Simulator build with `IPHONEOS_DEPLOYMENT_TARGET=17.0` succeeded. Pending: deleting guided and finger clips in the Simulator and on the baseline iPad in both languages, confirming the `.mp4` is removed while `.reps.json` remains.
+
+
+## Readable exercise detail figures (2026-11-23)
+
+Readers saw many numbers in the exercise detail panel without knowing what each one meant. An arm-raise panel with history showed about 18, and the day's best appeared four times under four names. Patients and clinicians are equal readers, so every figure stays. The Figma layout and section order are kept; only wording and small in-place additions changed.
+
+- **Stat tiles** use `TMDetailStatTile`'s existing caption-first mode: the caption names the figure ("Sudut tertinggi hari ini", "Lama satu repetisi (rata-rata)", "Waktu bergerak"), and the line under the rule says what it measures. Arm raise and elbow bend say where 0° is ("0° lengan di samping badan, 90° setinggi bahu, 180° lurus ke atas"; elbow bend reports flexion, "0° siku lurus"), taken from `KeyRepRecorder.angle(in:)`. The Balancing engines' own estimates (shoulder flexion, rotations, sit to stand) have no documented zero, so they keep a generic camera-estimate line. Finger ranges say that 100% is the farthest move at calibration; fold towel says that one repetition is four folds.
+- **Baseline menu** reads "Dibandingkan dengan: Sesi pertama", using the legend's short names. Its value uses `action` instead of the Figma's Secondary Blue, which resolves the 2.6:1 contrast question from *Exercise detail panel*.
+- **Pose picture** has a caption naming both figures ("Biru samar: sesi pertama · Kuning: hari ini"), so colour is not the only cue. The legend says "Hari ini" instead of "Saat ini".
+- **Insight rows** lead with their aspect in bold ("Tempo", "Kestabilan", "Daya tahan", "Jumlah") through `TMInsightRow.title`. The pace sentences drop "Tempomu", which the title now names.
+- **Trend** has a `TMTrendChart.caption` that says what a rising line means, in the exercise's change style.
+- **Practice record** no longer repeats the day's best value ("Terbaikmu hari ini: …"). It keeps "Ini hasil terbaikmu hari ini" when it applies. The call-out's duration caption reads "Lama gerakan ini".
+
+Verification: `xcodegen generate` and a Debug Simulator build with `IPHONEOS_DEPLOYMENT_TARGET=17.0` (iPad Pro 13-inch (M5)) succeeded. Pending: a visual check against the Figma frame with real history for arm raise, a finger exercise and fold towel, in both languages, with large text and VoiceOver, and on the baseline iPad.
+
+
+## Roomier trend chart (2026-11-23)
+
+The exercise detail panel's trend chart looked crowded: up to ten points in 160 pt, the current point's value and "Hari ini" marker running into the title, and a date under every point. Its position in the Figma layout is unchanged; only spacing in `TMTrendChart` changed.
+
+- The default height is now 220 pt, and the title block sits 16 pt above the plot instead of 10 pt. In the panel the chart gets 12 pt more space above it.
+- The y-domain is explicit: the values' span (at least 10 units, so a flat line isn't stretched) plus 35% above for the markers and 15% below.
+- The x-axis labels only the first, last, baseline and current sessions. Every point keeps its date for VoiceOver.
+- Gridlines are dashed, plain dots shrink from 60 to 40 so the baseline and current dots stand out, and the plot has 8 pt horizontal padding so the edge markers clear the axis.
+
+Verification: a Debug Simulator build with `IPHONEOS_DEPLOYMENT_TARGET=17.0` succeeded. Pending: the previews and the Progress tab with ten or more sessions, a flat run of values and large text, and the baseline iPad.
+
+
+## Coloured insight sentences (2026-11-23)
+
+At the user's request, the exercise detail panel's insight rows colour their sentence as well as the bullet: green when positive, red (`warning`) when negative. This replaces the earlier rule that the tone coloured only the bullet and that a decline was shown in yellow, never red. `TMInsightRow.Tone.attention` is now `.negative`. The bold title ("Tempo:") and the muted detail line keep their colours, and the words still carry the meaning, so colour is never the only cue.
+
+- Pace stays neutral, because quicker is not always better in therapy.
+- Consistency: even is green, varied is red.
+- Stamina: higher or steady is green, lower is red, and the sentence keeps "wajar jika mulai lelah".
+- Volume: more is green, fewer is red, and the same is neutral.
+
+Verification: a Debug Simulator build with `IPHONEOS_DEPLOYMENT_TARGET=17.0` succeeded. Pending: the previews and the Progress tab in light and dark mode, checking the contrast of `green` and `warning` on the `panel` card, and the baseline iPad.

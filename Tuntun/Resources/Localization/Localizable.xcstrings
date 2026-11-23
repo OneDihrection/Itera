@@ -3419,6 +3419,23 @@
         }
       }
     },
+    "exerciseDetail.baseline.prefix" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Compared with:"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dibandingkan dengan:"
+          }
+        }
+      }
+    },
     "exerciseDetail.baseline.previousSession" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -3476,13 +3493,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "How long it took"
+            "value" : "How long this move took"
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Lama gerakan"
+            "value" : "Lama gerakan ini"
           }
         }
       }
@@ -3929,6 +3946,23 @@
         }
       }
     },
+    "exerciseDetail.comparison.caption %@" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Faded blue: %@ · Yellow: today"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Biru samar: %@ · Kuning: hari ini"
+          }
+        }
+      }
+    },
     "exerciseDetail.comparison.label" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -4128,7 +4162,7 @@
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Tempomu %@ detik lebih cepat per repetisi"
+            "value" : "%@ detik lebih cepat per repetisi"
           }
         }
       }
@@ -4145,7 +4179,7 @@
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Tempomu %@ detik lebih pelan per repetisi"
+            "value" : "%@ detik lebih pelan per repetisi"
           }
         }
       }
@@ -4156,13 +4190,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Your pace is the same as before"
+            "value" : "The same as before"
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Tempomu sama seperti sebelumnya"
+            "value" : "Sama seperti sebelumnya"
           }
         }
       }
@@ -4299,6 +4333,74 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Repetisi terakhir tetap sejauh yang pertama"
+          }
+        }
+      }
+    },
+    "exerciseDetail.insight.title.consistency" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Consistency"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kestabilan"
+          }
+        }
+      }
+    },
+    "exerciseDetail.insight.title.pace" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pace"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tempo"
+          }
+        }
+      }
+    },
+    "exerciseDetail.insight.title.stamina" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Stamina"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Daya tahan"
+          }
+        }
+      }
+    },
+    "exerciseDetail.insight.title.volume" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Repetitions"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Jumlah"
           }
         }
       }
@@ -4836,13 +4938,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Now"
+            "value" : "Today"
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Saat ini"
+            "value" : "Hari ini"
           }
         }
       }
@@ -5136,6 +5238,57 @@
         }
       }
     },
+    "exerciseDetail.scale.angle" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A camera estimate; the larger, the farther you moved"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Perkiraan kamera; makin besar, makin jauh gerakanmu"
+          }
+        }
+      }
+    },
+    "exerciseDetail.scale.arm" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "0° is your arm at your side, 90° shoulder height, 180° straight up"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "0° lengan di samping badan, 90° setinggi bahu, 180° lurus ke atas"
+          }
+        }
+      }
+    },
+    "exerciseDetail.scale.elbow" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "0° is a straight elbow; the larger, the more it bends"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "0° siku lurus; makin besar, makin menekuk"
+          }
+        }
+      }
+    },
     "exerciseDetail.seconds %@" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -5261,13 +5414,30 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "time moving"
+            "value" : "Time moving"
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "waktu bergerak"
+            "value" : "Waktu bergerak"
+          }
+        }
+      }
+    },
+    "exerciseDetail.stat.activeTime.meaning" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Not counting pauses, rests or time the camera couldn't see you"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tanpa jeda, istirahat, atau saat kamera tidak melihatmu"
           }
         }
       }
@@ -5278,13 +5448,30 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "average per repetition"
+            "value" : "Time per repetition (average)"
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "rata-rata per repetisi"
+            "value" : "Lama satu repetisi (rata-rata)"
+          }
+        }
+      }
+    },
+    "exerciseDetail.stat.averageDuration.meaning" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "From starting the move until you are back at the start"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dari mulai bergerak sampai kembali ke posisi awal"
           }
         }
       }
@@ -5295,13 +5482,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "highest angle"
+            "value" : "Highest angle today"
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "sudut tertinggi"
+            "value" : "Sudut tertinggi hari ini"
           }
         }
       }
@@ -5312,13 +5499,30 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "best range"
+            "value" : "Best reach today"
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "jangkauan terbaik"
+            "value" : "Jangkauan terbaik hari ini"
+          }
+        }
+      }
+    },
+    "exerciseDetail.stat.peakRange.meaning" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "100% is your farthest move during calibration"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "100% sama dengan gerakan terjauhmu saat kalibrasi"
           }
         }
       }
@@ -5329,13 +5533,47 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "repetitions"
+            "value" : "Repetitions today"
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "repetisi"
+            "value" : "Repetisi hari ini"
+          }
+        }
+      }
+    },
+    "exerciseDetail.stat.repetitions.meaning" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Complete moves counted today"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gerakan lengkap yang terhitung hari ini"
+          }
+        }
+      }
+    },
+    "exerciseDetail.stat.repetitions.towel" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "One repetition is four towel folds"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Satu repetisi berisi empat lipatan handuk"
           }
         }
       }
@@ -5353,23 +5591,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "%1$@ %2$@"
-          }
-        }
-      }
-    },
-    "exerciseDetail.todayBest %@" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Your best today: %@"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Terbaikmu hari ini: %@"
           }
         }
       }
@@ -5404,6 +5625,74 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Hasil terbaik tiap sesi"
+          }
+        }
+      }
+    },
+    "exerciseDetail.trendHint.further" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A rising line means you moved farther"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Garis naik berarti gerakanmu makin jauh"
+          }
+        }
+      }
+    },
+    "exerciseDetail.trendHint.generic" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A rising line means you moved farther"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Garis naik berarti gerakanmu makin jauh"
+          }
+        }
+      }
+    },
+    "exerciseDetail.trendHint.lift" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A rising line means your arm lifted higher"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Garis naik berarti lenganmu terangkat makin tinggi"
+          }
+        }
+      }
+    },
+    "exerciseDetail.trendHint.straight" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A rising line means you stood straighter"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Garis naik berarti badanmu makin tegak"
           }
         }
       }

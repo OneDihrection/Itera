@@ -109,21 +109,32 @@ struct TMTrendPoint: Identifiable {
 
 /// A small line chart of one value across sessions, evenly spaced so irregular practice days do
 /// not stretch the line. Highlighted points carry a text marker; the current point also shows its
-/// value. The caller supplies values in its unit; the chart owns no measurement rules.
+/// value. The caller supplies values in its unit; the chart owns no measurement rules. An optional
+/// `caption` says how to read the line ("A rising line means your arm lifted higher").
 struct TMTrendChart: View {
     let title: LocalizedStringKey
     let points: [TMTrendPoint]
     /// Appended to axis labels and accessibility values, for example "°".
     let unit: String
-    var height: CGFloat = 160
+    var caption: Text? = nil
+    var height: CGFloat = 220
 
     @Environment(\.locale) private var locale
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Text(title)
-                .typography(size: 18, weight: .semiBold, relativeTo: .subheadline)
-                .foregroundStyle(TherapyPalette.muted)
+        VStack(alignment: .leading, spacing: 16) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                    .typography(size: 18, weight: .semiBold, relativeTo: .subheadline)
+                    .foregroundStyle(TherapyPalette.muted)
+
+                if let caption {
+                    caption
+                        .typography(size: 17, weight: .regular, relativeTo: .subheadline)
+                        .foregroundStyle(TherapyPalette.muted)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
 
             chart
         }
@@ -162,10 +173,10 @@ struct TMTrendChart: View {
             }
         }
         .chartXScale(domain: -0.4...(Double(max(points.count - 1, 1)) + 0.4))
-        .chartYScale(domain: .automatic(includesZero: false))
+        .chartYScale(domain: yDomain)
         .chartYAxis {
             AxisMarks(position: .leading, values: .automatic(desiredCount: 3)) { mark in
-                AxisGridLine()
+                AxisGridLine(stroke: StrokeStyle(lineWidth: 1, dash: [3, 4]))
                     .foregroundStyle(TherapyPalette.outline)
                 AxisValueLabel {
                     if let value = mark.as(Double.self) {
@@ -179,7 +190,8 @@ struct TMTrendChart: View {
             AxisMarks(values: points.map(\.id)) { mark in
                 AxisValueLabel {
                     if let index = mark.as(Int.self),
-                       let point = points.first(where: { $0.id == index }) {
+                       let point = points.first(where: { $0.id == index }),
+                       showsDate(point) {
                         Text(point.date, format: .dateTime.day().month(.abbreviated).locale(locale))
                             .typography(.caption)
                             .fixedSize()
@@ -187,7 +199,36 @@ struct TMTrendChart: View {
                 }
             }
         }
+        .chartPlotStyle { plot in
+            // Keeps the outer dots and their markers clear of the axis labels.
+            plot.padding(.horizontal, 8)
+        }
         .frame(height: height)
+    }
+
+    /// The values' span with headroom above for the current point's value and marker, and a
+    /// little room below, so labels never run into the title. A nearly flat line keeps a
+    /// minimum span instead of stretching small differences across the whole height.
+    private var yDomain: ClosedRange<Double> {
+        let values = points.map(\.value)
+
+        guard let low = values.min(), let high = values.max() else {
+            return 0...1
+        }
+
+        let minimumSpan = 10.0
+        let span = max(high - low, minimumSpan)
+        let middle = (low + high) / 2
+
+        return (middle - span / 2 - span * 0.15)...(middle + span / 2 + span * 0.35)
+    }
+
+    /// Only the first, last and highlighted sessions name their date, so up to ten points never
+    /// crowd the axis with labels; every point keeps its date for VoiceOver.
+    private func showsDate(_ point: TMTrendPoint) -> Bool {
+        point.highlight != .none
+            || point.id == points.first?.id
+            || point.id == points.last?.id
     }
 
     @ViewBuilder
@@ -229,7 +270,7 @@ struct TMTrendChart: View {
     private func symbolSize(_ highlight: TMTrendPoint.Highlight) -> CGFloat {
         switch highlight {
         case .none:
-            return 60
+            return 40
         case .baseline:
             return 140
         case .current:

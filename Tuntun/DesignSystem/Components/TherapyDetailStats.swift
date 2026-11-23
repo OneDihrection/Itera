@@ -149,18 +149,21 @@ struct TMHighlightCallout<Content: View>: View {
 }
 
 /// One short observation: a small coloured bullet beside a sentence, with an optional muted
-/// line beneath. The tone colours only the bullet; the sentence carries the meaning.
+/// line beneath. The tone colours the bullet and the sentence, green when positive and red when
+/// negative, so findings scan at a glance; the words still carry the meaning. An optional bold
+/// `title` names what the sentence is about ("Tempo") and keeps the ink colour.
 struct TMInsightRow: View {
     enum Tone {
         /// Something improved.
         case positive
         /// A neutral fact.
         case neutral
-        /// Worth a gentle look; never alarming, so it is yellow rather than red.
-        case attention
+        /// Something went down; the sentence should say so gently.
+        case negative
     }
 
     let text: Text
+    var title: Text? = nil
     var detail: Text? = nil
     var tone: Tone = .neutral
 
@@ -176,7 +179,7 @@ struct TMInsightRow: View {
                 .accessibilityHidden(true)
 
             VStack(alignment: .leading, spacing: 2) {
-                text
+                sentence
                     .typography(size: 19, weight: .medium, relativeTo: .body)
                     .foregroundStyle(TherapyPalette.ink)
 
@@ -192,14 +195,39 @@ struct TMInsightRow: View {
         .accessibilityElement(children: .combine)
     }
 
+    /// "Tempo: 1,2 detik lebih pelan per repetisi", or the sentence alone. Only the finding
+    /// takes the tone's colour.
+    private var sentence: Text {
+        let finding = text.foregroundStyle(textColor)
+
+        guard let title else {
+            return finding
+        }
+
+        return title.bold().foregroundStyle(TherapyPalette.ink)
+            + Text(verbatim: ": ").foregroundStyle(TherapyPalette.ink)
+            + finding
+    }
+
     private var tint: Color {
         switch tone {
         case .positive:
             return TherapyPalette.green
         case .neutral:
             return TherapyPalette.muted
-        case .attention:
-            return TherapyPalette.brandPressed
+        case .negative:
+            return TherapyPalette.warning
+        }
+    }
+
+    private var textColor: Color {
+        switch tone {
+        case .positive:
+            return TherapyPalette.green
+        case .neutral:
+            return TherapyPalette.ink
+        case .negative:
+            return TherapyPalette.warning
         }
     }
 }
@@ -269,7 +297,11 @@ struct TMInsightCard<Content: View>: View {
 #Preview("Detail stats") {
     VStack(alignment: .leading, spacing: 20) {
         HStack(spacing: 16) {
-            TMDetailStatTile(value: Text(verbatim: "112°"), caption: "exerciseDetail.stat.peakAngle")
+            TMDetailStatTile(
+                value: Text(verbatim: "≈ 112°"),
+                caption: "exerciseDetail.stat.peakAngle",
+                lines: [Text(verbatim: "Dari 0° (di samping badan) sampai 180° (lurus ke atas)")]
+            )
             TMDetailStatTile(value: Text(verbatim: "12,5 detik"), caption: "exerciseDetail.stat.averageDuration")
             TMDetailStatTile(value: Text(verbatim: "1 mnt 40 dtk"), caption: "exerciseDetail.stat.activeTime")
         }
@@ -295,10 +327,13 @@ struct TMInsightCard<Content: View>: View {
         )
 
         TMInsightCard {
-            TMInsightRow(text: Text(verbatim: "Tempomu 2,1 detik lebih cepat per repetisi"))
+            TMInsightRow(
+                text: Text(verbatim: "2,1 detik lebih cepat per repetisi"),
+                title: Text(verbatim: "Tempo")
+            )
             TMInsightRow(
                 text: Text(verbatim: "Repetisi terakhir 8° lebih rendah, wajar jika mulai lelah"),
-                tone: .attention
+                tone: .negative
             )
             TMInsightRow(
                 text: Text(verbatim: "10 repetisi hari ini, 4 lebih banyak"),
