@@ -6801,6 +6801,40 @@
         }
       }
     },
+    "home.calendar.nextWeek" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Show next week"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tampilkan minggu berikutnya"
+          }
+        }
+      }
+    },
+    "home.calendar.previousWeek" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Show previous week"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tampilkan minggu sebelumnya"
+          }
+        }
+      }
+    },
     "home.cameraDenied" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -6814,6 +6848,142 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Akses kamera nonaktif. Aktifkan di Pengaturan."
+          }
+        }
+      }
+    },
+    "home.dailyPlan.completed" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "All exercises are complete. Thank you for practicing!"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Semua latihan sudah dilakukan. Terima kasih sudah berlatih!"
+          }
+        }
+      }
+    },
+    "home.dailyPlan.duration %lld %lld" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$lld–%2$lld min"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$lld–%2$lld menit"
+          }
+        }
+      }
+    },
+    "home.dailyPlan.emptySubtitle" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ask your therapist about your exercise schedule"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Konsultasikan jadwal latihan ke terapismu"
+          }
+        }
+      }
+    },
+    "home.dailyPlan.emptyTitle" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No exercises are scheduled today"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Belum ada jadwal latihan hari ini"
+          }
+        }
+      }
+    },
+    "home.dailyPlan.noSchedule" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No exercises scheduled"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Belum ada jadwal latihan"
+          }
+        }
+      }
+    },
+    "home.dailyPlan.progress %lld %lld" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$lld of %2$lld exercises are complete. Let's continue!"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$lld dari %2$lld latihan sudah selesai. Yuk, lanjutkan!"
+          }
+        }
+      }
+    },
+    "home.dailyPlan.returnToday" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Return to today"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kembali ke hari ini"
+          }
+        }
+      }
+    },
+    "home.dailyPlan.upcoming" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This is tomorrow's exercise plan"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ini adalah rencana latihan untuk besok"
           }
         }
       }
@@ -19325,13 +19495,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Home"
+            "value" : "Today"
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Beranda"
+            "value" : "Hari ini"
           }
         }
       }

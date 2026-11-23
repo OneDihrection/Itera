@@ -16,11 +16,19 @@ protocol HomeViewModelProtocol: AnyObject, Observable {
     var rows: [DailyPlanRow] { get }
     var errorKey: String? { get }
     var isFinishedToday: Bool { get }
+    var completedCount: Int { get }
     /// Some of today's plan is done, or a finger session was saved for later.
     var hasProgress: Bool { get }
+    var selectedDate: Date { get }
+    var visibleWeek: [Date] { get }
+    var selectedDayState: HomeDayState { get }
 
     func refresh() async
     func openPracticePreferences()
+    func selectDate(_ date: Date)
+    func moveVisibleWeek(by offset: Int)
+    func synchronizeCalendarDay()
+    func returnToToday()
     /// Starts today's plan at the first undone item, or at `itemID` when a card was tapped.
     func begin(from itemID: String?)
 }
@@ -35,6 +43,9 @@ final class HomeScreenViewModel: HomeViewModelProtocol {
     @ObservationIgnored private let armRoutine: RoutineViewModel
     @ObservationIgnored private let taskRoutine: RoutineViewModel
     @ObservationIgnored private let router: HomeRouter
+    private(set) var selectedDate = Calendar.autoupdatingCurrent.startOfDay(for: .now)
+    private var visibleWeekAnchor = Calendar.autoupdatingCurrent.startOfDay(for: .now)
+    private var referenceToday = Calendar.autoupdatingCurrent.startOfDay(for: .now)
 
     init(
         fingers: FingerHomeViewModel,
@@ -95,11 +106,46 @@ final class HomeScreenViewModel: HomeViewModelProtocol {
         plan.isFinishedToday
     }
 
+    var completedCount: Int {
+        plan.completedCount
+    }
+
     var hasProgress: Bool {
         plan.completedCount > 0 || fingers.checkpoint != nil
     }
 
+    var visibleWeek: [Date] {
+        let calendar = Calendar.autoupdatingCurrent
+        let anchor = calendar.startOfDay(for: visibleWeekAnchor)
+        let weekday = calendar.component(.weekday, from: anchor)
+        let daysSinceMonday = (weekday + 5) % 7
+        let monday = calendar.date(byAdding: .day, value: -daysSinceMonday, to: anchor) ?? anchor
+
+        return (0..<7).compactMap { offset in
+            calendar.date(byAdding: .day, value: offset, to: monday)
+        }
+    }
+
+    var selectedDayState: HomeDayState {
+        let calendar = Calendar.autoupdatingCurrent
+        let today = calendar.startOfDay(for: .now)
+        let selected = calendar.startOfDay(for: selectedDate)
+        let offset = calendar.dateComponents([.day], from: today, to: selected).day ?? 0
+
+        switch offset {
+        case ..<0:
+            return .completed
+        case 0:
+            return plan.isFinishedToday ? .completed : .current
+        case 1:
+            return .upcoming
+        default:
+            return .noSchedule
+        }
+    }
+
     func refresh() async {
+        synchronizeCalendarDay()
         await fingers.refresh()
         await armRoutine.load()
         await taskRoutine.load()
@@ -108,6 +154,43 @@ final class HomeScreenViewModel: HomeViewModelProtocol {
 
     func openPracticePreferences() {
         router.openPracticePreferences()
+    }
+
+    func selectDate(_ date: Date) {
+        let date = Calendar.autoupdatingCurrent.startOfDay(for: date)
+        selectedDate = date
+        visibleWeekAnchor = date
+    }
+
+    func moveVisibleWeek(by offset: Int) {
+        guard offset != 0,
+              let movedDate = Calendar.autoupdatingCurrent.date(
+                byAdding: .day,
+                value: offset * 7,
+                to: visibleWeekAnchor
+              ) else {
+            return
+        }
+
+        visibleWeekAnchor = movedDate
+    }
+
+    /// Keeps the relative Today/Tomorrow/Past states correct when the device crosses midnight
+    /// or its date changes while the app is suspended.
+    func synchronizeCalendarDay() {
+        let calendar = Calendar.autoupdatingCurrent
+        let newToday = calendar.startOfDay(for: .now)
+
+        if calendar.isDate(selectedDate, inSameDayAs: referenceToday) {
+            selectedDate = newToday
+            visibleWeekAnchor = newToday
+        }
+
+        referenceToday = newToday
+    }
+
+    func returnToToday() {
+        selectDate(.now)
     }
 
     func begin(from itemID: String?) {
