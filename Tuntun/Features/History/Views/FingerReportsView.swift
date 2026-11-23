@@ -84,7 +84,7 @@ struct TMFingerReportsView<ViewModel: ReportsViewModelProtocol, Builder: History
             .frame(maxWidth: .infinity)
         }
         .foregroundStyle(TherapyPalette.ink)
-        .background(TherapyPalette.canvas)
+        .background(TherapyPalette.progressCanvas)
         .toolbar(.hidden, for: .navigationBar)
         .task { await viewModel.refresh() }
         .refreshable { await viewModel.refresh() }

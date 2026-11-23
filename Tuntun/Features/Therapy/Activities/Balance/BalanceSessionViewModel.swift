@@ -53,6 +53,7 @@ protocol BalanceSessionViewModelProtocol: AnyObject, Observable {
     func retryHistorySave()
     #if DEBUG
     func finishExerciseForDebug()
+    func skipRestForDebug()
     #endif
 }
 
@@ -404,6 +405,20 @@ final class BalanceSessionViewModel: BalanceSessionViewModelProtocol {
         clock.pause(at: Self.now)
         trackingService.stop()
         audioService.stopMusic()
+    }
+
+    /// Developer shortcut: ends the rest between sets now and starts the next set the way an
+    /// elapsed rest does. Cancelling the countdown task first makes its sleep throw, so it returns
+    /// without calling `startNextSet()` a second time. Ignored while paused, like the rest itself.
+    func skipRestForDebug() {
+        guard restRemaining != nil, !paused, !allSetsDone else {
+            return
+        }
+
+        restTask?.cancel()
+        restTask = nil
+        audioService.cancelSpeech()
+        startNextSet()
     }
     #endif
 

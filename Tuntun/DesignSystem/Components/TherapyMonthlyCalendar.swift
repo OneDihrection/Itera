@@ -45,7 +45,7 @@ struct TMMonthlyCalendar: View {
     )
 
     var body: some View {
-        TMTherapyCard(color: TherapyPalette.canvas, outlined: true, padding: 32) {
+        TMTherapyCard(color: TherapyPalette.canvas, padding: 32) {
             VStack(spacing: 24) {
                 monthHeader
 

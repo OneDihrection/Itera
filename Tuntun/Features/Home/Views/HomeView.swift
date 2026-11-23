@@ -85,6 +85,19 @@ struct TMHomeView<ViewModel: HomeViewModelProtocol, Builder: HomeContentBuildabl
         }
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
+            #if DEBUG
+            ToolbarItem(placement: .topBarLeading) {
+                TMDebugActionButton(title: "debug.trySitToStand", symbol: "figure.stand") {
+                    viewModel.begin(from: BalanceExercise.sitToStand.rawValue)
+                }
+                .disabled(!viewModel.rows.contains { $0.id == BalanceExercise.sitToStand.rawValue })
+            }
+
+            ToolbarItem(placement: .topBarLeading) {
+                debugStartMenu
+            }
+            #endif
+
             ToolbarItem(placement: .primaryAction) {
                 Button {
                     viewModel.openPracticePreferences()
@@ -105,6 +118,28 @@ struct TMHomeView<ViewModel: HomeViewModelProtocol, Builder: HomeContentBuildabl
             viewModel.synchronizeCalendarDay()
         }
     }
+
+    #if DEBUG
+    /// Debug builds only: opens any shown plan exercise's normal intro, whatever the earlier
+    /// items' state, through the same `begin(from:)` a tapped card uses. Hidden exercises are
+    /// not in `rows`, so they cannot be chosen.
+    private var debugStartMenu: some View {
+        TMDebugMenu(title: "debug.startAnyExercise", symbol: "list.number") {
+            ForEach(Array(viewModel.rows.enumerated()), id: \.element.id) { index, row in
+                Button {
+                    viewModel.begin(from: row.id)
+                } label: {
+                    Label {
+                        Text(verbatim: "\(index + 1). ") + Text(LocalizedStringKey(row.titleKey))
+                    } icon: {
+                        Image(systemName: row.status == .done ? "checkmark.circle.fill" : "circle")
+                    }
+                }
+            }
+        }
+        .disabled(viewModel.rows.isEmpty)
+    }
+    #endif
 
     private var header: some View {
         VStack(spacing: 8) {

@@ -1170,6 +1170,8 @@ struct SessionEngine {
         #if DEBUG
         case .debugFinish:
             finishActivityForDebug()
+        case .debugSkipRest:
+            skipRestForDebug()
         #endif
         }
     }
@@ -1202,6 +1204,27 @@ struct SessionEngine {
         enter(.rest(.init(deadline: now)))
         snapshot.instruction = "session.rest"
         snapshot.seconds = 0
+    }
+
+    /// Ends the current rest now. Both rest kinds become an elapsed timed rest, so the tick below
+    /// takes the same branch as a rest that ran out: the next set (recalibrating when the set's
+    /// feedback asked for it) or the next activity. The breathing narration is cut first, and the
+    /// scripted breathing is dropped with the old stage, so none of its steps announce later.
+    /// Ignored while paused or waiting for the camera, which only Resume lifts.
+    private mutating func skipRestForDebug() {
+        guard canProgress, case .rest(let rest) = stage else {
+            return
+        }
+
+        effects.append(.cancelSpeech)
+        snapshot.restBreath = nil
+
+        enter(.rest(.init(
+            deadline: now,
+            breathing: nil,
+            recalibrateBeforeNext: rest.recalibrateBeforeNext
+        )))
+        tick()
     }
     #endif
 

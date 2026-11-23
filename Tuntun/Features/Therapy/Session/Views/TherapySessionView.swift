@@ -98,6 +98,9 @@ struct TMTherapySessionView<ViewModel: TherapySessionViewModelProtocol>: View {
             lightDebugFinishButton
         }
         .overlay {
+            debugSkipRestButton
+        }
+        .overlay {
             if let celebrationStart, !reduceMotion, !calmMode {
                 TMSessionCelebration(start: celebrationStart).ignoresSafeArea()
             }
@@ -875,6 +878,26 @@ struct TMTherapySessionView<ViewModel: TherapySessionViewModelProtocol>: View {
         .listStyle(.insetGrouped)
         .scrollContentBackground(.hidden)
         .background(usesLightTheme ? TherapyPalette.canvas : Color.black)
+    }
+
+    // MARK: - Debug
+
+    /// Debug builds only: ends a running rest between sets or activities through the engine's
+    /// `debugSkipRest`, which moves on exactly as an elapsed rest does. Hidden while paused or
+    /// waiting for the camera, when the engine would ignore it.
+    @ViewBuilder
+    private var debugSkipRestButton: some View {
+        #if DEBUG
+        if model.snapshot.stage == .rest,
+           model.snapshot.summary == nil,
+           !model.snapshot.paused,
+           !model.snapshot.cameraWaiting,
+           !model.entryFailure {
+            TMDebugSkipRestButton {
+                model.command(.debugSkipRest)
+            }
+        }
+        #endif
     }
 
     // MARK: - Loading

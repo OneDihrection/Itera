@@ -114,6 +114,9 @@ struct TMFingerSessionView<Service: FingerSessionServiceProtocol>: View {
             debugFinishButton(model)
         }
         .overlay {
+            debugSkipRestButton(model)
+        }
+        .overlay {
             loadingOverlay(model)
         }
         .animation(
@@ -145,6 +148,21 @@ struct TMFingerSessionView<Service: FingerSessionServiceProtocol>: View {
             }
             .padding(.top, 12)
             .padding(.trailing, 20)
+        }
+        #endif
+    }
+
+    /// Debug builds only: on the breathing rest pages, which show no Skip of their own, ends the
+    /// rest through the session's existing `skipRest()`. The set and "next up" pages already offer
+    /// Skip during the rest.
+    @ViewBuilder
+    private func debugSkipRestButton(_ model: Service.Session) -> some View {
+        #if DEBUG
+        if model.activity.phase == .rest,
+           model.scriptedRest != nil || model.restBreath != nil,
+           !model.paused,
+           !model.hasFinished {
+            TMDebugSkipRestButton(action: model.skipRest)
         }
         #endif
     }

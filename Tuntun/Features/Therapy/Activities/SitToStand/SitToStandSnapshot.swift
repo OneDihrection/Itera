@@ -16,12 +16,12 @@ enum SitToStandStage: Equatable {
     case seated, rising, standing, lowering
 }
 
-/// The tracked trunk-and-thigh chain on the side facing the camera, in aspect-corrected image
-/// units. The camera frames the seated patient down to the knees, so no ankle is tracked.
+/// Current torso on the side facing the camera, in aspect-corrected image units.
+/// A visible knee is optional diagnostic evidence, never an inferred landmark.
 struct SitToStandJoints: Equatable {
     var shoulder: TherapyPoint
     var hip: TherapyPoint
-    var knee: TherapyPoint
+    var knee: TherapyPoint?
 }
 
 /// The arrow for the patient's next move, in aspect-corrected image units: it runs from `tail` to
