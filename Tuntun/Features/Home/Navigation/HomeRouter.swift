@@ -14,6 +14,14 @@ import Observation
 enum HomeRoute: Hashable {
     /// The intro page of one daily-plan item, by item id.
     case planIntro(String)
+
+    var isPlanIntro: Bool {
+        guard case .planIntro = self else {
+            return false
+        }
+
+        return true
+    }
 }
 
 /// A sheet presented over Beranda.

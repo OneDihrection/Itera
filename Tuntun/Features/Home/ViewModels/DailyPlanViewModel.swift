@@ -652,8 +652,20 @@ final class DailyPlanViewModel: DailyPlanSessionReporting {
             return
         }
 
-        guard await readiness.performAction(),
-              isRunning, self.currentIndex == currentIndex else {
+        var opened = await readiness.performAction()
+
+        // The intro has no Start button to tap a second time: when this attempt only asked for
+        // permissions (or recovered history) and readiness is now satisfied, open at once.
+        if !opened,
+           readiness.ready,
+           isRunning,
+           self.currentIndex == currentIndex {
+            opened = await readiness.performAction()
+        }
+
+        guard opened,
+              isRunning,
+              self.currentIndex == currentIndex else {
             return
         }
 

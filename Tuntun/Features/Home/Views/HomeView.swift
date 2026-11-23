@@ -87,13 +87,6 @@ struct TMHomeView<ViewModel: HomeViewModelProtocol, Builder: HomeContentBuildabl
         .toolbar {
             #if DEBUG
             ToolbarItem(placement: .topBarLeading) {
-                TMDebugActionButton(title: "debug.trySitToStand", symbol: "figure.stand") {
-                    viewModel.begin(from: BalanceExercise.sitToStand.rawValue)
-                }
-                .disabled(!viewModel.rows.contains { $0.id == BalanceExercise.sitToStand.rawValue })
-            }
-
-            ToolbarItem(placement: .topBarLeading) {
                 debugStartMenu
             }
             #endif

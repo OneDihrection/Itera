@@ -20,15 +20,22 @@ enum DailyPlanIntroDemonstration {
 protocol DailyPlanIntroViewModelProtocol: AnyObject, Observable {
     var itemID: String { get }
     var row: DailyPlanRow? { get }
-    var exerciseNumber: Int { get }
+    /// The sets and repetitions this exercise runs with now, Settings' choices included.
+    var counts: (sets: Int, repetitions: Int) { get }
+    /// About how long the exercise takes, in whole minutes (`DailyPlanDuration`).
+    var estimatedMinutes: ClosedRange<Int> { get }
     var demonstration: DailyPlanIntroDemonstration? { get }
-    /// Scripted intros read their recorded introduction and show sets first.
-    var usesScript: Bool { get }
-    /// Shown in place of Start when the plan opens this intro after a rest.
+    /// Shown when the plan opens this intro after a rest.
     var countdownSeconds: Int? { get }
-    var startTitleKey: String { get }
-    var startDisabled: Bool { get }
-    /// True while Start validates listening and opens the session.
+    /// Opened by the plan inside its full-screen cover after a rest, rather than pushed on
+    /// Beranda's stack, so it has no system back button and needs its own way out.
+    var isAfterRest: Bool { get }
+    /// The one control the page shows, and only when the intro cannot go on by itself:
+    /// "Lanjutkan" while the narration is paused, or the readiness action ("Buka Pengaturan",
+    /// "Coba lagi"…) when a missing permission or voice failure stopped the session opening.
+    var actionTitleKey: String? { get }
+    var actionDisabled: Bool { get }
+    /// True while readiness validates listening and opens the session.
     var isPreparingSession: Bool { get }
     /// Set only when something blocks the start, such as a missing permission.
     var readinessMessageKey: String? { get }
@@ -36,7 +43,10 @@ protocol DailyPlanIntroViewModelProtocol: AnyObject, Observable {
     func appear()
     func disappear()
     func pauseNarration()
-    func start()
+    /// The app is active again: resume a paused intro, or open the session if readiness was
+    /// what held it back and is now satisfied (for example after Settings).
+    func becameActive()
+    func performAction()
     func back()
 
     #if DEBUG
@@ -45,10 +55,11 @@ protocol DailyPlanIntroViewModelProtocol: AnyObject, Observable {
     #endif
 }
 
-/// The page before each daily-plan exercise. Start validates readiness once, as an explicit
-/// start requires, then opens the session. Every intro opened from Beranda reads its
-/// introduction first (the scripted brief, or the exercise's purpose) and then starts on its own;
-/// Start during the reading skips the rest of it.
+/// The page before each daily-plan exercise. Every intro opened from Beranda reads its
+/// introduction first (the scripted brief, or the exercise's purpose), then validates readiness
+/// and opens the session on its own; there is no Start button (2026-11-23). A control appears
+/// only when the intro cannot go on by itself: "Lanjutkan" after an interruption, or the
+/// readiness action when a permission or voice check blocks the session.
 @MainActor
 @Observable
 final class DailyPlanIntroViewModel: DailyPlanIntroViewModelProtocol {
@@ -63,7 +74,7 @@ final class DailyPlanIntroViewModel: DailyPlanIntroViewModelProtocol {
     private let narration: DailyPlanIntroNarration
 
     /// - Parameters:
-    ///   - countdownSeconds: shown in place of Start when the plan opens this intro after a rest.
+    ///   - countdownSeconds: shown when the plan opens this intro after a rest.
     ///   - automatic: the intro was opened by the plan, so its reading leads into the session.
     init(
         itemID: String,
@@ -89,11 +100,25 @@ final class DailyPlanIntroViewModel: DailyPlanIntroViewModelProtocol {
         plan.rows().first { $0.id == itemID }
     }
 
-    var exerciseNumber: Int {
-        plan.number(of: itemID)
+    var counts: (sets: Int, repetitions: Int) {
+        guard let item = row?.item else {
+            return (1, 1)
+        }
+
+        return plan.counts(for: item)
     }
 
-    var usesScript: Bool {
+    var estimatedMinutes: ClosedRange<Int> {
+        let counts = counts
+
+        return DailyPlanDuration.minutes(
+            sets: counts.sets,
+            repetitions: counts.repetitions,
+            restSeconds: plan.shortRestSeconds
+        )
+    }
+
+    private var usesScript: Bool {
         usesArmRaiseScript || plan.usesOppositionScript(itemID: itemID)
     }
 
@@ -101,14 +126,26 @@ final class DailyPlanIntroViewModel: DailyPlanIntroViewModelProtocol {
         usesScript ? nil : presetCountdown
     }
 
-    var startTitleKey: String {
-        narration.paused ? "session.resume" : "exercise.start"
+    var isAfterRest: Bool {
+        automatic || presetCountdown != nil
     }
 
-    /// Mulai Latihan stays enabled while the intro is read: tapping it skips the rest of the
-    /// narration and opens the session. While the intro is paused the same button reads
-    /// "Lanjutkan" and resumes it. It is disabled only while readiness is being validated.
-    var startDisabled: Bool {
+    var actionTitleKey: String? {
+        if narration.paused {
+            return "session.resume"
+        }
+
+        guard countdownSeconds == nil,
+              !narration.running,
+              !starting,
+              readinessMessageKey != nil else {
+            return nil
+        }
+
+        return readiness.action
+    }
+
+    var actionDisabled: Bool {
         starting
     }
 
@@ -166,7 +203,33 @@ final class DailyPlanIntroViewModel: DailyPlanIntroViewModelProtocol {
         narration.pause()
     }
 
-    func start() {
+    func becameActive() {
+        if narration.paused {
+            narration.resume()
+            return
+        }
+
+        guard !starting else {
+            return
+        }
+
+        readiness.refresh()
+
+        // The intro already finished but readiness held the session back; it can open now.
+        guard narration.finished, readiness.ready else {
+            return
+        }
+
+        start()
+    }
+
+    func performAction() {
+        start()
+    }
+
+    /// Reads the introduction, or, once it has been read, validates readiness and opens the
+    /// session. While the reading is paused it resumes instead; while it runs it is skipped.
+    private func start() {
         if narration.paused {
             narration.resume()
             return
@@ -206,6 +269,8 @@ final class DailyPlanIntroViewModel: DailyPlanIntroViewModelProtocol {
     }
     #endif
 
+    /// The after-rest intro's "Kembali" bar button. A pushed intro leaves through the system back
+    /// button instead, and Beranda's screen model ends the plan; `disappear()` stops the reading.
     func back() {
         narration.stop()
 

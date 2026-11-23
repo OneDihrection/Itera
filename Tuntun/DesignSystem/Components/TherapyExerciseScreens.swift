@@ -140,156 +140,256 @@ struct TMTherapyInstructionBubble: View {
     }
 }
 
-// MARK: - Back
-
-/// The dark "‹ Kembali" text action at the top of the intro.
-struct TMTherapyBackButton: View {
-    let title: LocalizedStringKey
-    let action: () -> Void
-
-    var body: some View {
-        Button(action: action) {
-            HStack(spacing: 10) {
-                Image(systemName: "chevron.left")
-                Text(title)
-            }
-            .typography(size: 24, weight: .semiBold, relativeTo: .title3)
-            .foregroundStyle(TherapyPalette.brandInk)
-            .frame(minHeight: 44)
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(TMTherapySoundButtonStyle())
-    }
-}
-
 // MARK: - Intro
 
-/// The page before an exercise: what it trains, the target, a safety note and Start.
-struct TMTherapyExerciseIntro<Media: View, Targets: View>: View {
+/// The page before an exercise, laid out like the product owner's mockup (2026-11-23): the
+/// exercise title and two columns. The left column is the exercise's own demonstration on a pale
+/// blue panel; the right column says what the exercise trains, shows the target as stat tiles, and
+/// ends with short notes. The panel and the notes end on one line.
+///
+/// It draws no back control: the caller shows it inside a navigation bar, whose system back
+/// button (or bar button) leaves the page. There is no Start button either: the caller opens the
+/// session itself. The bar's trailing side carries the one control a caller may need when it
+/// cannot go on by itself (resume, or a readiness action), or, after a rest, the countdown; a
+/// message explaining it is a small muted line under the title. At accessibility text sizes the
+/// columns stack.
+struct TMTherapyExerciseIntro<Media: View, Targets: View, Notes: View>: View {
     let heading: TMTherapyExerciseHeading
     let focusTitle: LocalizedStringKey
     let focus: Text
-    let targetTitle: LocalizedStringKey
-    let safetyNote: LocalizedStringKey
-    let startTitle: LocalizedStringKey
-    var startDisabled = false
     var message: Text? = nil
     var countdownSeconds: Int? = nil
-    let onBack: () -> Void
-    let onStart: () -> Void
+    /// Shown only when set, as a yellow capsule in the navigation bar's trailing side.
+    var actionTitle: LocalizedStringKey? = nil
+    var actionDisabled = false
+    var onAction: () -> Void = {}
     @ViewBuilder let media: Media
+    /// The stat tiles, laid out in one row of equal widths.
     @ViewBuilder let targets: Targets
+    /// The short notes under the targets, such as safety and voice control.
+    @ViewBuilder let notes: Notes
 
     @Environment(\.dynamicTypeSize) private var typeSize
 
     var body: some View {
-        ScrollView {
-            VStack(spacing: 28) {
-                HStack {
-                    TMTherapyBackButton(title: "action.back", action: onBack)
-                    Spacer()
+        GeometryReader { proxy in
+            let metrics = IntroMetrics(size: proxy.size)
+
+            ScrollView {
+                Group {
+                    if typeSize.isAccessibilitySize {
+                        stackedPage(metrics)
+                    } else {
+                        columnsPage(metrics)
+                    }
                 }
-
-                heading
-
-                content
-
-                safety
-
-                if let message {
-                    message
-                        .typography(.footnote)
-                        .foregroundStyle(TherapyPalette.muted)
-                        .multilineTextAlignment(.center)
-                }
-
-                if let countdownSeconds {
-                    Text(verbatim: Duration.seconds(countdownSeconds).formatted(.time(pattern: .minuteSecond(padMinuteToLength: 2))))
-                        .typography(size: 44, weight: .bold, relativeTo: .largeTitle)
-                        .monospacedDigit()
-                        .foregroundStyle(TherapyPalette.onBrand)
-                        .padding(.horizontal, 24)
-                        .frame(minHeight: 88)
-                        .background(TherapyPalette.brand, in: Capsule())
-                        .accessibilityLabel("calibration.countdown")
-                        .accessibilityValue(Text(countdownSeconds, format: .number))
-                } else {
-                    TMTherapyButton(
-                        title: startTitle,
-                        symbol: "play.fill",
-                        disabled: startDisabled,
-                        prominent: true,
-                        action: onStart
-                    )
-                }
+                .padding(.horizontal, metrics.horizontalPadding)
+                .padding(.top, metrics.topPadding)
+                .padding(.bottom, metrics.bottomPadding)
             }
-            .padding(.horizontal, 48)
-            .padding(.vertical, 24)
+            .scrollBounceBehavior(.basedOnSize)
         }
-        .background(TherapyPalette.canvas)
+        .background(TherapyPalette.progressCanvas)
+        .toolbar {
+            // The mockup leaves the top right empty; it holds a control only when needed, and
+            // being in the bar it never pushes the page below the screen.
+            ToolbarItem(placement: .topBarTrailing) {
+                actionRow
+            }
+        }
     }
 
-    @ViewBuilder
-    private var content: some View {
-        let layout = typeSize.isAccessibilitySize
-            ? AnyLayout(VStackLayout(spacing: 32))
-            : AnyLayout(HStackLayout(alignment: .center, spacing: 56))
+    // MARK: - Layouts
 
-        layout {
-            TherapyPalette.planPanel
+    /// Landscape at ordinary text sizes, spaced as in the mockup.
+    private func columnsPage(_ metrics: IntroMetrics) -> some View {
+        VStack(alignment: .leading, spacing: 0) {
+            titleBlock
+                .padding(.bottom, metrics.titleToContent)
+
+            HStack(alignment: .top, spacing: metrics.columnGap) {
+                mediaPanel
+                    .frame(width: metrics.mediaWidth)
+                    .frame(minHeight: metrics.mediaMinHeight, maxHeight: .infinity)
+
+                VStack(alignment: .leading, spacing: 0) {
+                    focusSection(metrics)
+                        .padding(.bottom, metrics.focusToTargets)
+
+                    targetRow
+
+                    Spacer(minLength: metrics.targetsToNotes)
+
+                    notesStack
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+            }
+            // Both columns take the taller one's height, so the panel ends with the notes.
+            .fixedSize(horizontal: false, vertical: true)
+        }
+    }
+
+    /// Accessibility text sizes: one scrolling column, so nothing is clipped.
+    private func stackedPage(_ metrics: IntroMetrics) -> some View {
+        VStack(alignment: .leading, spacing: 28) {
+            titleBlock
+
+            mediaPanel
                 .aspectRatio(1, contentMode: .fit)
                 .frame(maxWidth: 400)
-                .overlay {
-                    media
-                        .environment(\.therapyDemoCaptionHidden, true)
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                }
-                .clipShape(RoundedRectangle(cornerRadius: 32))
                 .frame(maxWidth: .infinity)
 
-            details
+            focusSection(metrics)
+
+            targetRow
+
+            notesStack
         }
     }
 
-    private var details: some View {
-        VStack(alignment: .leading, spacing: 20) {
+    // MARK: - Sections
+
+    /// The title, with the caller's message under it only when there is one.
+    private var titleBlock: some View {
+        VStack(spacing: 8) {
+            heading
+
+            if let message {
+                message
+                    .typography(.footnote)
+                    .foregroundStyle(TherapyPalette.muted)
+                    .multilineTextAlignment(.center)
+                    .frame(maxWidth: .infinity)
+            }
+        }
+    }
+
+    private var mediaPanel: some View {
+        TherapyPalette.historyCard
+            .overlay {
+                media
+                    .environment(\.therapyDemoCaptionHidden, true)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            }
+            .clipShape(RoundedRectangle(cornerRadius: 32, style: .continuous))
+    }
+
+    private func focusSection(_ metrics: IntroMetrics) -> some View {
+        VStack(alignment: .leading, spacing: metrics.focusTitleToText) {
             Text(focusTitle)
-                .typography(size: 30, weight: .bold, relativeTo: .title2)
+                .typography(size: 32, weight: .bold, relativeTo: .title2)
                 .accessibilityAddTraits(.isHeader)
 
             focus
                 .typography(size: 26, weight: .regular, relativeTo: .title3)
                 .fixedSize(horizontal: false, vertical: true)
-
-            Rectangle()
-                .fill(TherapyPalette.outline)
-                .frame(height: 1)
-                .padding(.vertical, 8)
-
-            Text(targetTitle)
-                .typography(size: 22, weight: .semiBold, relativeTo: .headline)
-                .foregroundStyle(TherapyPalette.muted)
-
-            targets
         }
         .foregroundStyle(TherapyPalette.ink)
-        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
-    private var safety: some View {
-        HStack(spacing: 12) {
-            Image(systemName: "info.circle")
-                .foregroundStyle(TherapyPalette.brand)
-            Text(safetyNote)
-                .foregroundStyle(TherapyPalette.muted)
+    private var targetRow: some View {
+        HStack(alignment: .top, spacing: 16) {
+            targets
         }
-        .typography(size: 20, weight: .regular, relativeTo: .callout)
-        .padding(.vertical, 14)
-        .padding(.horizontal, 24)
-        .frame(maxWidth: .infinity)
-        .background(TherapyPalette.planCard, in: RoundedRectangle(cornerRadius: 16))
-        .accessibilityElement(children: .combine)
     }
+
+    private var notesStack: some View {
+        VStack(spacing: 16) {
+            notes
+        }
+    }
+
+    /// The countdown after a rest, or the caller's action. Nothing at all when there is
+    /// neither, so the page matches the mockup.
+    @ViewBuilder
+    private var actionRow: some View {
+        if let countdownSeconds {
+            countdownCapsule(countdownSeconds)
+        } else if let actionTitle {
+            actionButton(actionTitle)
+        }
+    }
+
+    /// A yellow capsule sized for the navigation bar.
+    private func actionButton(_ title: LocalizedStringKey) -> some View {
+        Button(action: onAction) {
+            Text(title)
+                .typography(size: 18, weight: .semiBold, relativeTo: .headline)
+                .foregroundStyle(TherapyPalette.onBrand)
+                .padding(.horizontal, 18)
+                .frame(minHeight: 40)
+                .background(TherapyPalette.brand, in: Capsule())
+                .fixedSize()
+                .contentShape(Capsule())
+        }
+        .buttonStyle(TMTherapySoundButtonStyle())
+        .disabled(actionDisabled)
+        .opacity(actionDisabled ? 0.5 : 1)
+    }
+
+    private func countdownCapsule(_ seconds: Int) -> some View {
+        Text(
+            verbatim: Duration
+                .seconds(seconds)
+                .formatted(.time(pattern: .minuteSecond(padMinuteToLength: 2)))
+        )
+        .typography(size: 24, weight: .bold, relativeTo: .title2)
+        .monospacedDigit()
+        .foregroundStyle(TherapyPalette.onBrand)
+        .padding(.horizontal, 18)
+        .frame(minHeight: 40)
+        .background(TherapyPalette.brand, in: Capsule())
+        .accessibilityLabel("calibration.countdown")
+        .accessibilityValue(Text(seconds, format: .number))
+    }
+}
+
+/// The intro's gaps, measured on the product owner's 1366 × 1024 pt mockup (a 12.9-inch iPad)
+/// and scaled to the screen: horizontal ones by width, vertical ones by the smaller ratio so
+/// they never outgrow a shorter screen. Type sizes stay fixed for legibility.
+private struct IntroMetrics {
+    private static let reference = CGSize(width: 1366, height: 1024)
+    /// Where the status bar and an inline navigation bar end, which the mockup's measurements
+    /// include but the safe area does not.
+    private static let navigationBarBottom: CGFloat = 74
+
+    let width: CGFloat
+    let scale: CGFloat
+
+    init(size: CGSize) {
+        width = size.width
+        scale = min(
+            size.width / Self.reference.width,
+            size.height / Self.reference.height
+        )
+    }
+
+    private func horizontal(_ value: CGFloat) -> CGFloat {
+        width * value / Self.reference.width
+    }
+
+    private func vertical(_ value: CGFloat) -> CGFloat {
+        value * scale
+    }
+
+    /// Page margin to the panel's left edge and from the right column's right edge (80 pt).
+    var horizontalPadding: CGFloat { horizontal(80) }
+    /// The panel width (501 pt) and the gap to the right column (61 pt).
+    var mediaWidth: CGFloat { horizontal(501) }
+    var columnGap: CGFloat { horizontal(61) }
+    /// The panel's height before the column decides (577 pt tall at 501 wide).
+    var mediaMinHeight: CGFloat { mediaWidth * 577 / 501 * 0.85 }
+
+    /// The title's top (about 135 pt on screen), below the navigation bar, which ends 74 pt down
+    /// (a 24 pt status bar and a 50 pt bar) where the mockup drew its back circle.
+    var topPadding: CGFloat { vertical(135 - Self.navigationBarBottom) }
+    /// Title baseline area to the panel and "Fokus Latihan" (about 80 pt).
+    var titleToContent: CGFloat { vertical(78) }
+    var focusTitleToText: CGFloat { vertical(16) }
+    var focusToTargets: CGFloat { vertical(42) }
+    var targetsToNotes: CGFloat { vertical(78) }
+    var cardGap: CGFloat { 16 }
+    var bottomPadding: CGFloat { vertical(40) }
 }
 
 // MARK: - Live practice
