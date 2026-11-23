@@ -50,7 +50,9 @@ final class GuidanceAudioService: NSObject, AVSpeechSynthesizerDelegate {
     /// Loaded once per file: building an `AVAudioPlayer` on the main thread for every cue stalled
     /// set ends, countdowns and hold seconds. `PreparedAudioClip` loads and plays off the main thread.
     private var cueClips: [URL: PreparedAudioClip] = [:]
-    private var buttonPlayer: AVAudioPlayer?
+    /// Plays off the main thread like the cues: preparing or playing an `AVAudioPlayer` on the
+    /// main thread calls into the audio session and warned about UI unresponsiveness.
+    private var buttonClip: PreparedAudioClip?
     private var lastButtonSound = 0.0
     private var interruption: NSObjectProtocol?
     private var routeObserver: NSObjectProtocol?
@@ -319,18 +321,12 @@ final class GuidanceAudioService: NSObject, AVSpeechSynthesizerDelegate {
     }
 
     private func playButtonSound() {
-        do {
-            if buttonPlayer == nil, let url = Bundle.main.url(forResource: "button-click", withExtension: "wav") {
-                buttonPlayer = try AVAudioPlayer(contentsOf: url)
-                buttonPlayer?.volume = 0.18
-                buttonPlayer?.prepareToPlay()
-            }
-            buttonPlayer?.currentTime = 0
-            buttonPlayer?.play()
-        } catch {
-            // Optional touch reinforcement must not disable an action or interrupt narration.
-            buttonPlayer = nil
+        if buttonClip == nil, let url = Bundle.main.url(forResource: "button-click", withExtension: "wav") {
+            buttonClip = try? PreparedAudioClip(url: url)
         }
+
+        // Optional touch reinforcement must not disable an action or interrupt narration.
+        _ = buttonClip?.play(id: UUID(), volume: 0.18) { _, _ in }
     }
 
     func playCue(_ cue: GuidanceSound) {
@@ -621,7 +617,7 @@ final class GuidanceAudioService: NSObject, AVSpeechSynthesizerDelegate {
     func stop() {
         suspend()
         music.stop()
-        buttonPlayer?.stop()
+        buttonClip?.stop()
         NarrationAudioSession.deactivateInBackground()
     }
 

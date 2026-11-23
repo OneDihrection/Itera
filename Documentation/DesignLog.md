@@ -2018,6 +2018,16 @@ The console still showed `AVAudioSession_iOS.mm:978 This method can lead to UI u
 
 Verification: Debug Simulator build. Pending on the M1 iPad: no main-thread warning when tapping buttons after a guided, finger and Balancing session and at launch, and the click still plays (the first tap after a session slightly later).
 
+## Music and button click off the main thread (2026-11-23)
+
+The console still showed `AVAudioSession_iOS.mm:978 This method can lead to UI unresponsiveness if called on the main thread` at `ExerciseMusicPlayer.refresh()` (`AVAudioPlayer(contentsOf:)`/`prepareToPlay()`) and `GuidanceAudioService.playButtonSound()` (`prepareToPlay()`/`play()`). Checking `NarrationAudioSession.isSessionActive` (*Button click after another owner deactivates*) is not enough: the player still calls into the audio session when it loads, prepares and plays, and a deactivation can land between the check and the call. `refresh()` also runs on every `UserDefaults` change. Cues, counts and narration never warned because `PreparedAudioClip` already runs its player on its own queue.
+
+- **Button click.** `GuidanceAudioService` plays `button-click.wav` through a `PreparedAudioClip` at volume 0.18; the clip rewinds on each play as the old player did.
+- **Music.** `ExerciseMusicPlayer` keeps its main-actor state and API. Every `AVAudioPlayer` call (load, prepare, loop, play, pause, rewind, ducking fade) runs on a private `MusicWorker` serial queue, in the order requested. A failed load clears the track on the main actor, so the next refresh retries, as before. The 500 ms startup check calls the worker's play-if-stopped, so a playing track is never restarted.
+- **Not changed.** The activation gate before the first click and music's awaited activation stay. `SessionAudioService` and `GuidanceAudioService` use the music player as before.
+
+Verification: Debug Simulator build with `IPHONEOS_DEPLOYMENT_TARGET=17.0`. Pending on the M1 iPad: no main-thread warning for button taps at launch and after each session type, music start in a finger, guided and Balancing session and the long rest, and a track change in Settings. Music should loop, duck under narration, resume at its position and never start after Stop, and the click should still play.
+
 ## Exercise detail demonstration and forgiving consistency (2026-11-23)
 
 At the user's request, the exercise detail panel changes in three places.
