@@ -2164,6 +2164,7 @@
       }
     },
     "balance.secondsUnit" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -2922,24 +2923,6 @@
         }
       }
     },
-    "debug.trySitToStand" : {
-      "comment" : "Debug builds only: opens the sit-to-stand intro without completing earlier plan exercises.",
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Try Sit to Stand"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Coba Berdiri dari Duduk"
-          }
-        }
-      }
-    },
     "demo.extensionSequence" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -3392,6 +3375,7 @@
       }
     },
     "exercise.safetyNote" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -6954,6 +6938,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Belum sempat latihan? Yuk, coba lagi di sesi berikutnya!"
+          }
+        }
+      }
+    },
+    "home.dailyPlan.partial" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Oh no, some exercises were missed! Let's try again in the next session!"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Yah, ada beberapa latihan yang terlewatkan! yuk coba lagi pada sesi berikutnya!"
           }
         }
       }
@@ -11149,6 +11150,159 @@
         }
       }
     },
+    "plan.intro.minutesUnit" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "minutes"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "menit"
+          }
+        }
+      }
+    },
+    "plan.intro.repetitionsUnit" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "repetitions"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "repetisi"
+          }
+        }
+      }
+    },
+    "plan.intro.repetitionUnit" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "repetition"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "repetisi"
+          }
+        }
+      }
+    },
+    "plan.intro.safety.message" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Stop if it hurts."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Berhenti jika terasa nyeri."
+          }
+        }
+      }
+    },
+    "plan.intro.safety.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Move within your comfort."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bergerak sesuai kemampuan."
+          }
+        }
+      }
+    },
+    "plan.intro.setsUnit" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "sets"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "set"
+          }
+        }
+      }
+    },
+    "plan.intro.setUnit" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "set"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "set"
+          }
+        }
+      }
+    },
+    "plan.intro.voice.message" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Say “**Stop**” to pause and “**Go**” to continue."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ucapkan “**Stop**” untuk jeda dan “**Go**” untuk lanjut."
+          }
+        }
+      }
+    },
+    "plan.intro.voice.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Control by voice during the exercise."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kontrol dengan suara selama latihan."
+          }
+        }
+      }
+    },
     "plan.nextContinue" : {
       "localizations" : {
         "en" : {
@@ -11641,6 +11795,7 @@
       }
     },
     "plan.targetTitle" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {

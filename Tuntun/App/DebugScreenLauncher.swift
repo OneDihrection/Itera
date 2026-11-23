@@ -11,7 +11,7 @@ import SwiftUI
 /// Debug-only launch argument for checking screens on the Simulator without touch:
 ///
 ///     -TuntunScreen intro:<plan item id>     opens that plan item's intro through the plan
-///     -TuntunScreen gallery:<screen>         shows live, pause, rest, setDone or allDone with sample values
+///     -TuntunScreen gallery:<screen>         shows live, pause, rest, longRest, setDone or allDone with sample values
 ///     -TuntunScreen settings                 opens the Settings sheet on Beranda
 ///
 /// Release builds never compile this file.
@@ -85,6 +85,22 @@ struct TMDebugScreenGallery: View {
             }
         case "rest":
             rest
+                .overlay {
+                    TMDebugSkipRestButton {}
+                }
+        case "longRest":
+            TMTherapyLongRest(
+                cue: Text("rest.long.inhale"),
+                cueID: "rest.long.inhale",
+                counter: nil,
+                intensity: 0.6,
+                paused: false,
+                togglePause: {},
+                stop: {}
+            )
+            .overlay {
+                TMDebugSkipRestButton {}
+            }
         case "setDone":
             TMTherapySetSummary(
                 heading: heading,

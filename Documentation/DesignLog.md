@@ -2268,3 +2268,25 @@ Verification: XcodeGen, then Debug and Release Simulator builds with IPHONEOS_DE
 - music restarting from the start of the track after a session;
 - preview mirroring in both orientations;
 - no `AVAudioSession … main thread` console warning.
+
+
+## Partial daily-plan history on Beranda (2026-11-23)
+
+The product owner clarified that a yellow dashed marker means an exercise is currently actionable, while a yellow checklist means its required repetitions and completion goal were actually reached. Beranda now preserves that distinction across the day boundary.
+
+- `HomeDayState.partial` represents a past day with at least one, but not every, planned exercise ID in `DailyPlanProgress.completed`. No completion is `missed`; every planned ID completed is `completed`.
+- On today's plan, the first unfinished exercise remains dashed and actionable. Leaving its session before the goal calls `finish(completed: false)`, so its ID is not inserted and the same item stays next.
+- On a past partial day, completed item IDs retain their yellow checklist. Unfinished items are grey and disabled because the past day cannot be resumed; a dashed marker is never used for a disabled item.
+- The partial subtitle is "Yah, ada beberapa latihan yang terlewatkan! yuk coba lagi pada sesi berikutnya!" in Indonesian and "Oh no, some exercises were missed! Let's try again in the next session!" in English. Today's current state continues to show the completed-item count.
+
+Verification: `xcodegen generate` and an iOS Simulator build succeeded before the branch was updated from `main`. After the base update, generation, the Simulator build, String Catalog parsing and the final diff were repeated. Physical-device behaviour remains pending: complete one exercise, leave the next before its goal, cross midnight, and confirm the completed checklist, disabled unfinished rows, partial subtitle and return-to-today action.
+
+## Merge: plan intro redesign and partial history (2026-11-23)
+
+`main` (PR #43 *fix/beranda-partial-history-state*, PR #44 *Fixing-Berdiri-dari-Duduk*) was merged into `feat/adjustment` again. The code merged cleanly. The conflicts were in SYSTEM_DESIGN.md, the DesignSystem README and this log, where both sides had rewritten the same paragraphs. Both sides' rules are kept:
+
+- **From `main`:** the redesigned `TMTherapyExerciseIntro` with no Start or back control, readiness that starts on its own when the narration ends, native navigation-bar back, and *Partial daily-plan history on Beranda* (new §8 bullet). §5 *Loading* now starts at the intro's automatic start, not at a Start button.
+- **From `feat/adjustment`:** *Set list under the demonstration* (the aspect-fill preview in §5 *One preview*, the live layout and `TMTherapySetProgress` in the README) and *One history card per session* (§8 *Key repetitions* and *Progress tab*). The README no longer lists the deleted `TMTherapyProgressStat`.
+- **Open:** `main`'s §5 *Readiness* cites the log entries *Plan intro redesign*, *Plan intro without Start* and *Native back on the plan intro*. Those entries are missing from `main` as well, so these references stay dangling until the authors add them.
+
+Verification: after the merge, `xcodegen generate` and a Debug iOS Simulator build with `IPHONEOS_DEPLOYMENT_TARGET=17.0` succeeded. Nothing was run in the Simulator or on the iPad. Pending on the baseline iPad: the intro starts by itself, with the bar control and back button; the live set list; Beranda's partial past day.
