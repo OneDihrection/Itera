@@ -29,6 +29,8 @@ enum SessionStage: Equatable {
             case calibrationIntro
             /// The Indonesian arm-raise script's positioning line, then its start line.
             case scriptedPosition
+            /// The revised left script waits here for the body before its calibration starts.
+            case scriptedBodyCheck
             case scriptedStart
             case card(index: Int, demonstration: Bool)
             /// "Try the movement" before a target is captured; practice follows its deadline.

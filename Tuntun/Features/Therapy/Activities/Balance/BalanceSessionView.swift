@@ -43,10 +43,10 @@ struct TMBalanceSessionView<ViewModel: BalanceSessionViewModelProtocol>: View {
             if model.allSetsDone {
                 allDonePage
                     .zIndex(2)
-            } else if let breath = model.restBreath {
+            } else if let cue = model.restCueKey {
                 TMTherapyBreathingRest(
-                    cue: LocalizedStringKey(breath.phase.key),
-                    intensity: breath.intensity,
+                    cue: LocalizedStringKey(cue),
+                    intensity: model.restIntensity,
                     animationDuration: 1,
                     paused: model.paused,
                     pause: model.pause,
@@ -142,7 +142,7 @@ struct TMBalanceSessionView<ViewModel: BalanceSessionViewModelProtocol>: View {
     @ViewBuilder
     private var debugSkipRestButton: some View {
         #if DEBUG
-        if model.restBreath != nil, !model.paused, !model.allSetsDone {
+        if model.restCueKey != nil, !model.paused, !model.allSetsDone {
             TMDebugSkipRestButton {
                 model.skipRestForDebug()
             }
@@ -414,6 +414,7 @@ struct TMBalanceSessionView<ViewModel: BalanceSessionViewModelProtocol>: View {
                 return
             }
 
+            plan.markBalanceScriptRest(model.usesScript)
             plan.finish(completed: completed)
         }
     }

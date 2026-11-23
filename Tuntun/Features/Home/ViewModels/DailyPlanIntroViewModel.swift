@@ -119,7 +119,7 @@ final class DailyPlanIntroViewModel: DailyPlanIntroViewModelProtocol {
     }
 
     private var usesScript: Bool {
-        usesArmRaiseScript || plan.usesOppositionScript(itemID: itemID)
+        usesArmRaiseScript || plan.usesFingerScript(itemID: itemID) || plan.usesBalanceScript(itemID: itemID)
     }
 
     var countdownSeconds: Int? {
@@ -310,9 +310,9 @@ final class DailyPlanIntroViewModel: DailyPlanIntroViewModelProtocol {
         usesScript || presetCountdown == nil
     }
 
-    private var introductionLines: [String] {
+    private var introductionLines: [NarrationLine] {
         guard usesScript else {
-            return ["plan.purpose." + itemID]
+            return [NarrationLine(key: "plan.purpose." + itemID)]
         }
 
         return scriptIntroduction
@@ -323,9 +323,13 @@ final class DailyPlanIntroViewModel: DailyPlanIntroViewModelProtocol {
     }
 
     /// The scripted intro for this item's side and counts.
-    private var scriptIntroduction: [String] {
+    private var scriptIntroduction: [NarrationLine] {
+        if plan.usesBalanceScript(itemID: itemID) {
+            return plan.balanceIntroductionLines(itemID: itemID)
+        }
+
         guard usesArmRaiseScript else {
-            return plan.oppositionIntroductionKeys()
+            return plan.fingerIntroductionLines(itemID: itemID)
         }
 
         let activity = plan.routineExercise(for: .armRaise).activities.first

@@ -39,7 +39,7 @@ struct FingerSessionEngine {
             kind: routine.exercises[index],
             routine: routine,
             restAfterFinalSet: index < routine.exercises.count - 1,
-            scriptedGuidance: scriptedOpposition && OppositionGuidance.applies(to: routine.exercises[index])
+            scriptedGuidance: scriptedOpposition && FingerScriptGuidance.isScripted(routine.exercises[index], side: routine.side)
         )
         if let prior {
             activity.restore(prior)
@@ -155,7 +155,7 @@ struct FingerSessionEngine {
             kind: kind,
             routine: summary.routine,
             restAfterFinalSet: summary.exerciseIndex < summary.routine.exercises.count - 1,
-            scriptedGuidance: scriptedOpposition && OppositionGuidance.applies(to: kind)
+            scriptedGuidance: scriptedOpposition && FingerScriptGuidance.isScripted(kind, side: summary.routine.side)
         )
     }
 

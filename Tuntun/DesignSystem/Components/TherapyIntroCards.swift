@@ -46,9 +46,10 @@ struct TMTherapyStatTile: View {
 
 /// A short note on a soft rounded card: a tinted icon beside a bold line and a regular line.
 /// The message may use Markdown emphasis from the String Catalog, such as **Stop**.
+/// The icon is the mockup's green (`success`, Figma Success/Normal) unless a caller overrides it.
 struct TMTherapyInfoCard: View {
     let symbol: String
-    let tint: Color
+    var tint: Color = TherapyPalette.success
     let title: Text
     let message: Text
     var fill: Color = TherapyPalette.canvas
@@ -92,7 +93,6 @@ struct TMTherapyInfoCard: View {
 
         TMTherapyInfoCard(
             symbol: "info.circle",
-            tint: TherapyPalette.warning,
             title: Text(verbatim: "Bergerak sesuai kemampuan."),
             message: Text(verbatim: "Berhenti jika terasa nyeri.")
         )

@@ -51,8 +51,10 @@ final class DailyPlanViewModel: DailyPlanSessionReporting {
     private(set) var currentIndex: Int?
     private(set) var isRunning = false
     private(set) var restingBeforeNext = false
-    private(set) var oppositionRestSide: HandSide?
+    private(set) var fingerScriptRestSide: HandSide?
     private(set) var armRaiseRestSide: TherapySide?
+    /// The finished Balancing session was narrated by a 2026-11-23 script.
+    private(set) var balanceScriptRest = false
     /// The second side of an item that runs one session per side (the scripted arm raise, a
     /// finger exercise on both hands), waiting behind its long rest. `nil` starts at the first
     /// side. The plan item is marked done only after its last side.
@@ -69,7 +71,7 @@ final class DailyPlanViewModel: DailyPlanSessionReporting {
     private(set) var longRestBreaths: Int
 
     var usesScriptedLongRest: Bool {
-        oppositionRestSide != nil || armRaiseRestSide != nil
+        fingerScriptRestSide != nil || armRaiseRestSide != nil || balanceScriptRest
     }
     private(set) var errorKey: String?
 
@@ -455,22 +457,39 @@ final class DailyPlanViewModel: DailyPlanSessionReporting {
         return side(of: .finger(exercise)) == .right ? .right : .left
     }
 
-    func usesOppositionScript(itemID: String) -> Bool {
+    /// Whether the item's finger exercise runs an Indonesian hand script: a 2026-11-23 left-hand
+    /// script, or the right hand's approved thumb-opposition script.
+    func usesFingerScript(itemID: String) -> Bool {
         guard AppLanguage.selected == .indonesian,
-              let item = items.first(where: { $0.id == itemID }),
-              case .finger(let exercise) = item.exercise else {
+              let exercise = fingerExercise(itemID: itemID) else {
             return false
         }
-        return OppositionGuidance.applies(to: exercise)
+        return FingerScriptGuidance.isScripted(exercise, side: fingerSide(for: exercise))
     }
 
-    /// The opposition intro for this plan's side and counts; it names goals only when they
-    /// match the recording.
-    func oppositionIntroductionKeys() -> [String] {
-        OppositionGuidance.introductionKeys(
-            for: fingerSide(for: .opposition),
-            routine: fingerRoutine(for: .opposition)
-        )
+    /// The scripted intro for this item's side and counts; it names goals only when a
+    /// recording states them truthfully.
+    func fingerIntroductionLines(itemID: String) -> [NarrationLine] {
+        guard let exercise = fingerExercise(itemID: itemID) else {
+            return []
+        }
+
+        let side = fingerSide(for: exercise)
+        let routine = fingerRoutine(for: exercise)
+        if let script = FingerScriptGuidance.script(for: exercise, side: side) {
+            return FingerScriptGuidance.introduction(script, sets: routine.sets, repetitions: routine.repetitions)
+        }
+
+        return OppositionGuidance.introductionKeys(for: side, routine: routine)
+            .map { NarrationLine(key: $0) }
+    }
+
+    private func fingerExercise(itemID: String) -> FingerExercise? {
+        guard let item = items.first(where: { $0.id == itemID }),
+              case .finger(let exercise) = item.exercise else {
+            return nil
+        }
+        return exercise
     }
 
     /// The category's saved finger routine with this exercise's custom counts, if any.
@@ -486,17 +505,56 @@ final class DailyPlanViewModel: DailyPlanSessionReporting {
     }
 
     /// Freeze the finished side before the plan selects a different item.
-    func markOppositionRest(_ side: HandSide?) {
-        oppositionRestSide = side
+    func markFingerScriptRest(_ side: HandSide?) {
+        fingerScriptRestSide = side
+    }
+
+    func markBalanceScriptRest(_ scripted: Bool) {
+        balanceScriptRest = scripted
+    }
+
+    /// Whether the item's Balancing exercise runs a 2026-11-23 script: sit to stand, or a left-arm
+    /// exercise in an Indonesian plan.
+    func usesBalanceScript(itemID: String) -> Bool {
+        balanceScript(itemID: itemID) != nil
+    }
+
+    /// The scripted intro for this item's counts; it names goals only when a recording states
+    /// them truthfully.
+    func balanceIntroductionLines(itemID: String) -> [NarrationLine] {
+        guard let exercise = balanceExercise(itemID: itemID),
+              let script = balanceScript(itemID: itemID) else {
+            return []
+        }
+
+        let settings = balanceSettings(for: exercise)
+        return BalanceScriptGuidance.introduction(script, sets: settings.sets, repetitions: settings.repetitions)
+    }
+
+    private func balanceScript(itemID: String) -> BalanceScript? {
+        guard AppLanguage.selected == .indonesian,
+              let exercise = balanceExercise(itemID: itemID) else {
+            return nil
+        }
+
+        return BalanceScriptGuidance.script(for: exercise, arms: balanceSettings(for: exercise).armSelection)
+    }
+
+    private func balanceExercise(itemID: String) -> BalanceExercise? {
+        guard let item = items.first(where: { $0.id == itemID }),
+              case .balance(let exercise) = item.exercise else {
+            return nil
+        }
+        return exercise
     }
 
     /// The recorded long-rest set for the finished scripted exercise.
     ///
-    /// Both thumb-opposition briefs approve the same long-rest wording, but only the right-hand
-    /// generator rendered it. The left hand therefore shares those Marizka clips instead of
-    /// falling back to the older generic `rest.long.*` recordings.
+    /// Every hand script approves the same long-rest wording, but only the right-hand opposition
+    /// generator rendered it. The other hand scripts therefore share those Marizka clips instead
+    /// of falling back to the older generic `rest.long.*` recordings.
     var longRestNarrationPrefix: String? {
-        if oppositionRestSide != nil {
+        if fingerScriptRestSide != nil || balanceScriptRest {
             return "opposition.right.longRest."
         }
         return armRaiseRestSide.map { ArmRaiseGuidance.prefix(for: $0) + "longRest." }
@@ -738,8 +796,9 @@ final class DailyPlanViewModel: DailyPlanSessionReporting {
         replacingRest: Bool = false
     ) {
         currentIndex = index
-        oppositionRestSide = nil
+        fingerScriptRestSide = nil
         armRaiseRestSide = nil
+        balanceScriptRest = false
         let route: PlanCoverRoute
 
         switch items[index].exercise {

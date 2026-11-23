@@ -251,7 +251,7 @@ struct TMTherapySessionView<ViewModel: TherapySessionViewModelProtocol>: View {
         if model.snapshot.stage == .rest, let breath = model.snapshot.guidedSetBreathing,
            !model.cameraDenied, model.voiceReady {
             TMTherapyBreathingRest(
-                cue: LocalizedStringKey(breath.cueKey(prefix: model.snapshot.armRaiseNarrationPrefix)),
+                cue: LocalizedStringKey(breath.cueKey(prefix: model.snapshot.armRaiseRestPrefix)),
                 intensity: breath.intensity,
                 paused: model.snapshot.paused,
                 pause: { model.command(.pause) },

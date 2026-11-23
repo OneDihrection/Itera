@@ -27,6 +27,11 @@ protocol BalanceSessionViewModelProtocol: AnyObject, Observable {
     var setResults: [Int] { get }
     var restRemaining: Int? { get }
     var restBreath: RestBreath? { get }
+    /// The rest page's cue and breathing intensity: the scripted rest's line, or the timed rhythm.
+    var restCueKey: String? { get }
+    var restIntensity: Double { get }
+    /// Whether an Indonesian 2026-11-23 script narrates this session.
+    var usesScript: Bool { get }
     var allSetsDone: Bool { get }
     var historySaveFailed: Bool { get }
     var elapsedSeconds: Int { get }
@@ -100,7 +105,7 @@ final class BalanceSessionViewModel: BalanceSessionViewModelProtocol {
     }
 
     var countdownOverlaySeconds: Int? {
-        openingCue == .countdown ? 3 : practiceCountdown
+        openingCue == .countdown ? practiceCountdownLength : practiceCountdown
     }
 
     // MARK: Sets
@@ -136,6 +141,55 @@ final class BalanceSessionViewModel: BalanceSessionViewModelProtocol {
     /// Practice time shown on the pause dialog; explicit pauses do not count.
     @ObservationIgnored private var clock = SessionDurationClock()
     @ObservationIgnored private var restTask: Task<Void, Never>?
+
+    // MARK: Script
+
+    /// The exercise's 2026-11-23 script in an Indonesian session, or nil.
+    @ObservationIgnored private let script: BalanceScript?
+    /// Lines still to follow the one being spoken, and what runs after the last.
+    @ObservationIgnored private var scriptQueue: [NarrationLine] = []
+    @ObservationIgnored private var scriptLineID: UUID?
+    @ObservationIgnored private var scriptCompletion: (() -> Void)?
+    /// The script cue already spoken, so each is said once.
+    @ObservationIgnored private var spokenScriptCue: String?
+    @ObservationIgnored private var spokenHoldSecond: String?
+    /// The latest frame shows the joints the script asks the camera to see.
+    @ObservationIgnored private var bodyInView = false
+    @ObservationIgnored private var bodyReminderAt: Double?
+    /// The scripted short rest between sets: opening, three breaths and closing.
+    private(set) var scriptedRest: BreathingRest?
+    /// Seconds between the "Pastikan … terlihat di kamera" reminders while the body is not in view.
+    private static let bodyReminderSeconds = 8.0
+
+    var usesScript: Bool {
+        script != nil
+    }
+
+    var restCueKey: String? {
+        guard restRemaining != nil else {
+            return nil
+        }
+
+        guard script != nil else {
+            return restBreath?.phase.key
+        }
+
+        // While the summary is spoken the page already shows the rest's opening line.
+        return scriptedRest?.cueKey(prefix: "scripted.") ?? "scripted.rest.opening.1"
+    }
+
+    var restIntensity: Double {
+        guard script != nil else {
+            return restBreath?.intensity ?? 0
+        }
+
+        return scriptedRest?.intensity ?? 0
+    }
+
+    /// The scripts count three seconds before later sets as "Set selanjutnya … 5, 4, 3, 2, 1".
+    private var practiceCountdownLength: Int {
+        script != nil && setNumber > 1 ? 5 : 3
+    }
 
     // MARK: History
 
@@ -180,6 +234,9 @@ final class BalanceSessionViewModel: BalanceSessionViewModelProtocol {
         self.exercise = exercise
         totalSets = settings.sets
         restSeconds = settings.restSeconds
+        script = AppLanguage.selected == .indonesian
+            ? BalanceScriptGuidance.script(for: exercise, arms: armSelection)
+            : nil
         switch exercise {
         case .crossMidline:
             engine = CrossMidlineBalanceEngine(
@@ -225,6 +282,9 @@ final class BalanceSessionViewModel: BalanceSessionViewModelProtocol {
             .sink { [weak self] frame in
                 guard let self else { return }
 
+                if let script = self.script {
+                    self.bodyInView = BalanceScriptGuidance.bodyVisible(frame, script: script)
+                }
                 guard self.advanceOpeningIfReady(at: frame.timestamp) else {
                     if self.paused {
                         self.engine.consume(frame, scoringEnabled: false)
@@ -315,16 +375,32 @@ final class BalanceSessionViewModel: BalanceSessionViewModelProtocol {
     private func finishSet() {
         setResults.append(snapshot.metrics.completedTouches)
         recordSet(outcome: .completed, completedWork: snapshot.metrics.completedTouches)
+        let summary = ScriptedSummary.lines(
+            completedSets: setResults.count,
+            sets: totalSets,
+            goal: settings.repetitions
+        )
 
         guard !allSetsDone else {
             finishLog(stopped: false)
             clock.pause(at: Self.now)
             trackingService.stop()
             audioService.stopMusic()
+            if script != nil {
+                speakScript(summary, chime: true)
+            }
             return
         }
 
         restRemaining = restSeconds
+        if script != nil {
+            // The summary first, then the scripted rest; the page shows the rest meanwhile.
+            restTask?.cancel()
+            speakScript(summary, chime: true) { [weak self] in
+                self?.beginScriptedRest()
+            }
+            return
+        }
         speakRestBreath()
         restTask?.cancel()
         restTask = Task { [weak self] in
@@ -356,11 +432,104 @@ final class BalanceSessionViewModel: BalanceSessionViewModelProtocol {
     }
 
     private func speakRestBreath() {
+        guard script == nil else {
+            speakScriptedRestStep()
+            return
+        }
         guard !paused, let phase = restBreath?.phase else {
             return
         }
         audioService.handOffSpeech()
         audioService.speak(id: UUID(), key: phase.key)
+    }
+
+    // MARK: - Scripted rest
+
+    private func beginScriptedRest() {
+        guard restRemaining != nil, !allSetsDone else {
+            return
+        }
+
+        scriptedRest = BreathingRest(openingAfterSet: setResults.count, minimumSeconds: Double(restSeconds))
+        speakScriptedRestStep()
+        restTask?.cancel()
+        restTask = Task { [weak self] in
+            await self?.runScriptedRest()
+        }
+    }
+
+    /// Each step waits for its line and its minimum time; a pause earns no time.
+    private func runScriptedRest() async {
+        while let rest = scriptedRest, !rest.finished {
+            do {
+                try await Task.sleep(for: .milliseconds(250))
+            } catch {
+                return
+            }
+
+            guard var current = scriptedRest else {
+                return
+            }
+            let step = current.step
+            current.tick(Self.now, ready: !paused)
+            scriptedRest = current
+            if current.step != step, !current.finished {
+                speakScriptedRestStep()
+            }
+        }
+
+        scriptedRest = nil
+        startNextSet()
+    }
+
+    /// Speaks the scripted rest's current line; the quiet step speaks nothing.
+    private func speakScriptedRestStep() {
+        guard !paused, let key = scriptedRest?.key else {
+            return
+        }
+
+        speakScript([NarrationLine(key: "scripted." + key)]) { [weak self] in
+            self?.scriptedRest?.guidanceCompleted()
+        }
+    }
+
+    // MARK: - Script lines
+
+    /// Speaks `lines` one after another, replacing any script lines still queued, then runs
+    /// `completion`. `chime` leads the first line with the repetition sound.
+    private func speakScript(_ lines: [NarrationLine], chime: Bool = false, completion: (() -> Void)? = nil) {
+        scriptQueue = lines
+        scriptCompletion = completion
+        audioService.handOffSpeech()
+        if chime {
+            audioService.play(id: UUID(), cue: .target)
+        }
+        speakNextScriptLine()
+    }
+
+    private func speakNextScriptLine() {
+        guard !scriptQueue.isEmpty else {
+            scriptLineID = nil
+            let completion = scriptCompletion
+            scriptCompletion = nil
+            completion?()
+            return
+        }
+
+        let line = scriptQueue.removeFirst()
+        let id = UUID()
+        scriptLineID = id
+        if line.isNumber, let number = line.argument {
+            audioService.play(id: id, cue: .count(number))
+        } else {
+            audioService.speak(id: id, key: line.key, argument: line.argument)
+        }
+    }
+
+    private func clearScriptLines() {
+        scriptQueue = []
+        scriptLineID = nil
+        scriptCompletion = nil
     }
 
     /// Keeps the calibration: the patient starts the next set from the usual return to start.
@@ -370,6 +539,8 @@ final class BalanceSessionViewModel: BalanceSessionViewModelProtocol {
         }
 
         restRemaining = nil
+        scriptedRest = nil
+        spokenScriptCue = nil
         audioService.handOffSpeech()
         setNumber += 1
         lastSpokenCountdown = nil
@@ -417,6 +588,8 @@ final class BalanceSessionViewModel: BalanceSessionViewModelProtocol {
 
         restTask?.cancel()
         restTask = nil
+        clearScriptLines()
+        scriptedRest = nil
         audioService.cancelSpeech()
         startNextSet()
     }
@@ -458,6 +631,9 @@ final class BalanceSessionViewModel: BalanceSessionViewModelProtocol {
         restTask?.cancel()
         restTask = nil
         restRemaining = nil
+        scriptedRest = nil
+        clearScriptLines()
+        spokenScriptCue = nil
         setNumber = 1
         setResults = []
         clock = SessionDurationClock()
@@ -485,8 +661,11 @@ final class BalanceSessionViewModel: BalanceSessionViewModelProtocol {
         clock.pause(at: Self.now)
         audioService.pauseMusic()
         interruptOpening()
+        clearScriptLines()
         audioService.cancelSpeech()
         lastSpokenCountdown = nil
+        // The interrupted cue is spoken again on resume.
+        spokenScriptCue = nil
     }
 
     func resume() {
@@ -494,6 +673,11 @@ final class BalanceSessionViewModel: BalanceSessionViewModelProtocol {
         paused = false
         clock.resume(at: Self.now)
         audioService.resumeMusic()
+        if script != nil, restRemaining != nil, scriptedRest == nil {
+            // A pause cut the summary before its rest began.
+            beginScriptedRest()
+            return
+        }
         speakRestBreath()
     }
 
@@ -597,6 +781,8 @@ final class BalanceSessionViewModel: BalanceSessionViewModelProtocol {
         case .completed(let id, _):
             if openingGate?.id == id {
                 completeOpeningCue()
+            } else if scriptLineID == id {
+                speakNextScriptLine()
             }
         case .cancelled, .feedbackUnavailable, .command:
             break
@@ -615,9 +801,13 @@ final class BalanceSessionViewModel: BalanceSessionViewModelProtocol {
                 audioService.cancelSpeech()
                 completeOpeningCue()
             } else if openingGate == nil {
-                let gate = GuidanceGate(startedAt: timestamp, watchdog: 8)
-                openingGate = gate
-                audioService.speak(id: gate.id, key: openingCue.rawValue)
+                if let script {
+                    speakScriptOpening(openingCue, script: script, at: timestamp)
+                } else {
+                    let gate = GuidanceGate(startedAt: timestamp, watchdog: 8)
+                    openingGate = gate
+                    audioService.speak(id: gate.id, key: openingCue.rawValue)
+                }
             }
             return false
         }
@@ -626,20 +816,64 @@ final class BalanceSessionViewModel: BalanceSessionViewModelProtocol {
             return true
         }
 
-        let deadline = countdownDeadline ?? timestamp + 3
+        let deadline = countdownDeadline ?? timestamp + Double(practiceCountdownLength)
         countdownDeadline = deadline
         let remaining = Int(ceil(deadline - timestamp))
         guard remaining > 0 else {
             practiceCountdown = nil
             countdownDeadline = nil
             lastSpokenCountdown = nil
-            audioService.speak(id: UUID(), key: snapshot.instructionKey)
+            // A script speaks the first repetition from the next frame's phase instead.
+            if script == nil {
+                audioService.speak(id: UUID(), key: snapshot.instructionKey)
+            }
             return true
         }
 
         practiceCountdown = remaining
         speakCountdown(remaining)
         return false
+    }
+
+    /// The scripted opening cues: setup, the body check and phase 2's opening, the calibration
+    /// ending and the countdown title. Waiting for the body speaks a reminder every 8 s.
+    private func speakScriptOpening(_ cue: OpeningCue, script: BalanceScript, at timestamp: Double) {
+        let lines: [String]
+        switch cue {
+        case .intro:
+            lines = script.setup
+        case .tryMovement:
+            guard bodyInView else {
+                remindBodyNotVisible(script: script, at: timestamp)
+                return
+            }
+            bodyReminderAt = nil
+            lines = script.detected
+        case .complete:
+            lines = script.calibrationEnding
+        case .countdown:
+            lines = [setNumber == 1 ? "calibration.countdown" : "scripted.countdown.next"]
+        }
+
+        let gate = GuidanceGate(startedAt: timestamp, watchdog: 8 * Double(max(1, lines.count)) + 4)
+        openingGate = gate
+        speakScript(lines.map { NarrationLine(key: $0) }) { [weak self] in
+            self?.completeOpeningCue()
+        }
+    }
+
+    private func remindBodyNotVisible(script: BalanceScript, at timestamp: Double) {
+        guard let since = bodyReminderAt else {
+            bodyReminderAt = timestamp
+            return
+        }
+
+        guard timestamp - since >= Self.bodyReminderSeconds, scriptLineID == nil else {
+            return
+        }
+
+        bodyReminderAt = timestamp
+        speakScript([NarrationLine(key: script.notVisible)])
     }
 
     /// Shows the live skeleton while spoken guidance or the countdown holds practice back, so the
@@ -699,7 +933,7 @@ final class BalanceSessionViewModel: BalanceSessionViewModelProtocol {
         case .countdown:
             openingCue = nil
             if !exercise.isSitToStand {
-                practiceCountdown = 3
+                practiceCountdown = practiceCountdownLength
             }
         case .tryMovement, nil:
             openingCue = nil
@@ -707,12 +941,18 @@ final class BalanceSessionViewModel: BalanceSessionViewModelProtocol {
     }
 
     private func interruptOpening() {
+        // Only an opening cue's own lines stop here; the summary and rest keep their place.
+        if script != nil, openingGate != nil {
+            clearScriptLines()
+        }
         openingGate = nil
         countdownDeadline = nil
     }
 
     private func resetOpening() {
         interruptOpening()
+        spokenScriptCue = nil
+        bodyReminderAt = nil
         openingCue = .intro
         calibrationFinished = false
         practiceCountdown = nil
@@ -727,6 +967,11 @@ final class BalanceSessionViewModel: BalanceSessionViewModelProtocol {
     }
 
     private func updateAudio(from previous: BalanceSnapshot, to current: BalanceSnapshot) {
+        if let script {
+            updateScriptAudio(from: previous, to: current, script: script)
+            return
+        }
+
         if exercise.isSitToStand {
             updateSitToStandAudio(from: previous, to: current)
             return
@@ -767,6 +1012,82 @@ final class BalanceSessionViewModel: BalanceSessionViewModelProtocol {
         // Holds are not counted aloud, during calibration or practice: the bubble and its
         // timer show the seconds, and the voice stays for instructions.
         lastSpokenCountdown = nil
+    }
+
+    /// The script's line for the current moment: calibration poses, then each repetition's way
+    /// back and target with the previous repetition's praise. Hold seconds are Marizka numbers,
+    /// as the scripts' "Tahan 3.. 2.. 1.." say.
+    private func updateScriptAudio(from previous: BalanceSnapshot, to current: BalanceSnapshot, script: BalanceScript) {
+        guard !paused, !cameraWaiting else {
+            return
+        }
+
+        if exercise.isSitToStand,
+           let completions = current.overlay?.completions,
+           completions > previous.overlay?.completions ?? completions {
+            audioService.play(id: UUID(), cue: .holdPopped)
+        }
+
+        // Sit to stand's own countdown before practice is counted aloud.
+        if exercise.isSitToStand, let remaining = current.calibrationCountdown, current.instructionKey == "session.countdown" {
+            speakCountdown(remaining)
+            return
+        }
+
+        if let cue = scriptCue(for: current, script: script), cue.identity != spokenScriptCue {
+            spokenScriptCue = cue.identity
+            spokenHoldSecond = nil
+            speakScript(cue.lines, chime: cue.chime)
+            return
+        }
+
+        speakHoldSecondIfNeeded(current)
+    }
+
+    private func scriptCue(for current: BalanceSnapshot, script: BalanceScript) -> BalanceScriptCue? {
+        guard calibrationFinished else {
+            return BalanceScriptGuidance.calibrationCue(for: current.phase, script: script)
+        }
+
+        guard current.phase != .complete else {
+            return nil
+        }
+
+        let count = current.metrics.completedTouches
+        if exercise.isSitToStand {
+            return BalanceScriptGuidance.sitToStandCue(
+                phase: current.phase,
+                instruction: current.instructionKey,
+                count: count,
+                set: setNumber,
+                goal: settings.repetitions,
+                script: script
+            )
+        }
+
+        return BalanceScriptGuidance.armCue(
+            phase: current.phase,
+            count: count,
+            set: setNumber,
+            goal: settings.repetitions,
+            script: script
+        )
+    }
+
+    /// The last three seconds of a hold, as Marizka numbers, while no line is speaking.
+    private func speakHoldSecondIfNeeded(_ current: BalanceSnapshot) {
+        let remaining = current.calibrationCountdown ?? current.overlay?.holdSecondsRemaining
+        guard scriptLineID == nil, let remaining, (1...3).contains(remaining) else {
+            return
+        }
+
+        let identity = "\(current.phase)-\(current.metrics.completedTouches)-\(setNumber)-\(remaining)"
+        guard identity != spokenHoldSecond else {
+            return
+        }
+
+        spokenHoldSecond = identity
+        audioService.play(id: UUID(), cue: .holdSecond(remaining))
     }
 
     /// Reads each new instruction aloud and counts the calibration and countdown seconds, so the

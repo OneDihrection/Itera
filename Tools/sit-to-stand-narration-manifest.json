@@ -1,0 +1,22 @@
+{
+  "narration-id-sitToStand.firstSet.rep.1.start": "749d3f37714c5bcdf2e7cbb7b2a5e51046567530afc4fbed6a7e1b080f6d9930",
+  "narration-id-sitToStand.firstSet.rep.1.target": "0dc8b7d09db315390aba0ec7342167cbe6f1d9e2b2f7cdd179861bffd2861fd4",
+  "narration-id-sitToStand.firstSet.rep.2.return": "d4a4b7095b24ba310cefefc46bb91225dd82be133bac37e5dcba96ac75072af5",
+  "narration-id-sitToStand.firstSet.rep.2.target": "55ad4aed7caff39792a797e8538a5a387ff3655594993242d41520e74de25a92",
+  "narration-id-sitToStand.firstSet.rep.3.return": "a29f68100943cb93a0c5d953f17e13a7306d5961030c76f3f5959476d50617a8",
+  "narration-id-sitToStand.firstSet.rep.3.target": "7beace3b3552070146584ee22d1330e725042691a9089596d1bd8d22f9d5f723",
+  "narration-id-sitToStand.firstSet.rep.4.target": "18074a70bc875ee9bded4038115506fa28e4750b98800c41494fcfe19d8cd13a",
+  "narration-id-sitToStand.firstSet.rep.5.target": "0535e6b788f961b5b85cab7f7200070e8948f776b66fac5137b3cbd47d3a6384",
+  "narration-id-sitToStand.intro.camera": "3093c46d00807e0058b464c471256c35e39d28d907177d2b8bfcbac44abefc32",
+  "narration-id-sitToStand.intro.chair": "e17b37b3a12c5f2715650645b9bf4476018be184d9261133a06bccfd76e4fee1",
+  "narration-id-sitToStand.intro.purpose": "693f440b78a01481b6b2117348805076b6a74c8efc587c8b9cf695ddbfae8a25",
+  "narration-id-sitToStand.intro.title": "b2045536cc0eb3887644f82f878e002d4897fbedcf61b455e5a6a2c143bcc6b8",
+  "narration-id-sitToStand.laterSet.rep.1.start": "377d9ef079de5a2cc84740ef7220fb622c21d979dfaf38b22e72e9925e703a97",
+  "narration-id-sitToStand.prep.hands": "df94a11a352dad219f60cdf94194074321d2618c68f542a12d5b77c36b0e8e96",
+  "narration-id-sitToStand.prep.intro": "f436dae05ace3b57d87c723cef40d7ad0435217e9339e8d03d5d4bf4bd4654c3",
+  "narration-id-sitToStand.prep.return": "35ca3ecc43ec4b23d73e9add1b5fb3d707eff0fa15172d6acfc6c1be1b20838b",
+  "narration-id-sitToStand.prep.sit": "f8b613b3d0c299210b8294bc36b41456041c35fcb097558f72555212e0206884",
+  "narration-id-sitToStand.prep.start": "af03820683fb146bf3e7f490e5daf845caab0b435f863cb93034c2b7b58405ab",
+  "narration-id-sitToStand.prep.target": "649de9b993d8018c30aaea765d46c21384d2bca259b1c901b0f22902bf0c9c83",
+  "narration-id-sitToStand.prep.visible": "b81092c3e21b0e31decd07002ae65dcbdb13d4d65214cb80cfe506e23407af40"
+}
