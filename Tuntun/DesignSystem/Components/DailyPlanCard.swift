@@ -60,7 +60,7 @@ struct TMDailyPlanCard: View {
         switch state {
         case .completed:
             Circle()
-                .fill(TherapyPalette.success)
+                .fill(TherapyPalette.planMarker)
                 .overlay {
                     Image(systemName: "checkmark")
                         .typography(size: 28, weight: .bold, relativeTo: .title2)
@@ -152,7 +152,7 @@ struct TMDailyPlanCard: View {
     }
 
     private var connectorColor: Color {
-        state == .completed ? TherapyPalette.success : TherapyPalette.actionMuted
+        state == .completed ? TherapyPalette.planMarker : TherapyPalette.actionMuted
     }
 
     private var contentColor: Color {
