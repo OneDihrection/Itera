@@ -59,6 +59,20 @@ struct FingerActivity {
     private(set) var rangeTooSmall = false
     /// The patient held the start position through the ready countdown, so sweeping can begin.
     private(set) var rangeReady = false
+
+    /// Whether observations currently move calibration or practice. False while narration holds
+    /// a stage back (the range sweep is measured during its own instruction) and through the
+    /// demonstration, countdown, feedback and rests.
+    var actsOnMovement: Bool {
+        switch phase {
+        case .baseline, .target, .active:
+            return narrationFinished
+        case .range:
+            return narrationFinished || rangeReady
+        case .rangeResult, .demonstration, .countdown, .feedback, .rest, .finished:
+            return false
+        }
+    }
     private var rangeLow: Double?
     private var rangeHigh: Double?
     private var rangeCandidate: Double?

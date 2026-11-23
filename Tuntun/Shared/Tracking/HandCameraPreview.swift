@@ -16,7 +16,7 @@ struct TMHandCameraPreview: UIViewRepresentable {
     func makeUIView(context: Context) -> TMCameraPreviewView {
         let view = TMCameraPreviewView()
         view.preview.session = cameraService.session
-        view.preview.videoGravity = .resizeAspect
+        view.preview.videoGravity = .resizeAspectFill
         view.cameraService = cameraService
         view.ready = ready
         view.videoBoundsChanged = videoBoundsChanged
@@ -162,14 +162,15 @@ final class TMCameraPreviewView: UIView {
 }
 
 extension AVCaptureVideoPreviewLayer {
-    /// Masks the actual aspect-fit image and returns its bounds for the caption.
+    /// Masks the visible image and returns its bounds. The preview fills its frame
+    /// (aspect-fill), so these are the view's bounds.
     func applyRoundedVideoMask(_ videoMask: CAShapeLayer) -> CGRect? {
         guard isPreviewing else {
             mask = nil
             return nil
         }
 
-        // Convert the full image so the corners follow the video inside its letterbox margins.
+        // Convert the full image and keep the part inside the view, so the corners follow it.
         let imageRect = layerRectConverted(
             fromMetadataOutputRect: CGRect(x: 0, y: 0, width: 1, height: 1)
         ).intersection(bounds)

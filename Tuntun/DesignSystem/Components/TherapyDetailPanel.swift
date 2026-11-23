@@ -12,9 +12,15 @@ import SwiftUI
 /// backdrop or the close circle calls `onClose`; the caller owns whether the panel is shown and
 /// fades it in and out with its own transition. The card itself settles in with a short spring,
 /// a plain fade under Reduce Motion.
+///
+/// `scrollsContent: false` gives the card the full available height and places content that
+/// scrolls itself, such as a `Form` in a `NavigationStack`, directly in it, without padding.
+/// `showsCloseButton: false` leaves closing to the content's own action and the backdrop.
 struct TMDetailPanel<Content: View>: View {
     let closeTitle: LocalizedStringKey
     var maxWidth: CGFloat = 820
+    var scrollsContent = true
+    var showsCloseButton = true
     let onClose: () -> Void
     @ViewBuilder let content: Content
 
@@ -32,8 +38,13 @@ struct TMDetailPanel<Content: View>: View {
 
                 card
                     .frame(maxWidth: maxWidth)
-                    .frame(maxHeight: max(proxy.size.height - 64, 320))
-                    .fixedSize(horizontal: false, vertical: true)
+                    .frame(
+                        maxHeight: scrollsContent ? max(proxy.size.height - 64, 320) : nil
+                    )
+                    .frame(
+                        height: scrollsContent ? nil : max(proxy.size.height - 64, 320)
+                    )
+                    .fixedSize(horizontal: false, vertical: scrollsContent)
                     .padding(.horizontal, 32)
                     .scaleEffect(settled || reduceMotion ? 1 : 0.94)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -56,20 +67,38 @@ struct TMDetailPanel<Content: View>: View {
     }
 
     private var card: some View {
-        ScrollView {
+        cardContent
+            .background(
+                TherapyPalette.surface,
+                in: RoundedRectangle(cornerRadius: Self.cornerRadius, style: .continuous)
+            )
+            .clipShape(RoundedRectangle(cornerRadius: Self.cornerRadius, style: .continuous))
+            .overlay(alignment: .topTrailing) {
+                closeButton
+            }
+            .shadow(color: .black.opacity(0.18), radius: 30, y: 12)
+    }
+
+    @ViewBuilder
+    private var cardContent: some View {
+        if scrollsContent {
+            ScrollView {
+                content
+                    .padding(.horizontal, 36)
+                    .padding(.top, 40)
+                    .padding(.bottom, 36)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            .scrollBounceBehavior(.basedOnSize)
+        } else {
             content
-                .padding(.horizontal, 36)
-                .padding(.top, 40)
-                .padding(.bottom, 36)
-                .frame(maxWidth: .infinity, alignment: .leading)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
-        .scrollBounceBehavior(.basedOnSize)
-        .background(
-            TherapyPalette.surface,
-            in: RoundedRectangle(cornerRadius: Self.cornerRadius, style: .continuous)
-        )
-        .clipShape(RoundedRectangle(cornerRadius: Self.cornerRadius, style: .continuous))
-        .overlay(alignment: .topTrailing) {
+    }
+
+    @ViewBuilder
+    private var closeButton: some View {
+        if showsCloseButton {
             TMTherapyIconButton(
                 title: closeTitle,
                 symbol: "xmark",
@@ -80,7 +109,6 @@ struct TMDetailPanel<Content: View>: View {
             )
             .padding(12)
         }
-        .shadow(color: .black.opacity(0.18), radius: 30, y: 12)
     }
 }
 
@@ -101,6 +129,31 @@ struct TMDetailPanel<Content: View>: View {
                     Text(verbatim: "Row \(index)")
                         .typography(.body)
                 }
+            }
+        }
+    }
+}
+
+#Preview("Detail panel with a form") {
+    ZStack {
+        TherapyPalette.canvas
+            .ignoresSafeArea()
+
+        TMDetailPanel(
+            closeTitle: "action.close",
+            maxWidth: 720,
+            scrollsContent: false,
+            showsCloseButton: false,
+            onClose: {}
+        ) {
+            NavigationStack {
+                Form {
+                    ForEach(0..<20) { index in
+                        Text(verbatim: "Row \(index)")
+                    }
+                }
+                .navigationTitle(Text(verbatim: "Preferensi"))
+                .navigationBarTitleDisplayMode(.inline)
             }
         }
     }

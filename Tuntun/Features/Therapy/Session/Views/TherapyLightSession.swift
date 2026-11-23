@@ -18,15 +18,8 @@ extension TMTherapySessionView {
     /// Heading, the camera with its cue bubble, the demonstration, counters, Pause and End.
     var lightLayout: some View {
         TMTherapyExerciseLiveLayout(
-            heading: showsCalibrationHeading
-                ? TMTherapyExerciseHeading(
-                    eyebrow: plan.currentNumber.map { Text("plan.exerciseNumber \($0)") },
-                    title: Text(LocalizedStringKey(model.snapshot.usesArmRaiseScript
-                        ? model.snapshot.armRaiseNarrationPrefix + "calibration.title" : "stage.calibration"))
-                )
-                : lightHeading,
+            heading: showsCalibrationHeading ? .calibration : lightHeading,
             cuePlacement: .video(videoBounds),
-            demoTitle: LocalizedStringKey(model.demoTitleKey),
             repetitions: (model.snapshot.presentation?.count ?? 0, model.snapshot.activity?.goal ?? 0),
             sets: (model.snapshot.setNumber, model.snapshot.activity?.sets ?? 1),
             pauseTitle: "session.pauseAction",
@@ -307,12 +300,14 @@ extension TMTherapySessionView {
                 heading: lightHeading,
                 headline: lastSet && lastActivity
                     ? Text("session.allDoneTitle")
-                    : Text("session.setDone \(model.snapshot.setNumber)"),
+                    : Text("session.setDoneCheer \(model.snapshot.setNumber)"),
+                total: lastSet
+                    ? model.sessionLanguage.attributedString("session.total \(done)")
+                    : model.sessionLanguage.attributedString(
+                        "session.totalOfCheer \(done) \(activity.goal * activity.sets)"
+                    ),
                 message: lightSetMessage(lastSet: lastSet, lastActivity: lastActivity),
                 results: results,
-                total: lastSet
-                    ? Text("session.total \(done)")
-                    : Text("session.totalOf \(done) \(activity.goal * activity.sets)"),
                 footer: lightRestLine(lastSet: lastSet)
             ) {
                 lightStageControls
@@ -320,7 +315,9 @@ extension TMTherapySessionView {
         }
     }
 
-    private func lightSetMessage(lastSet: Bool, lastActivity: Bool) -> Text {
+    /// The scripted arm-raise summary, or what comes after the last set. Between sets the total
+    /// and the rest line say enough.
+    private func lightSetMessage(lastSet: Bool, lastActivity: Bool) -> Text? {
         if model.snapshot.usesArmRaiseScript, let key = model.snapshot.armRaiseSummaryKey {
             return Text(LocalizedStringKey(key))
         }
@@ -332,7 +329,7 @@ extension TMTherapySessionView {
             return Text("session.nextSideRest")
         }
 
-        return Text("session.setRest \(model.snapshot.setNumber + 1)")
+        return nil
     }
 
     /// The rest countdown, once the rest has begun.
@@ -342,10 +339,10 @@ extension TMTherapySessionView {
         }
 
         if lastSet {
-            return Text("session.nextSideIn \(model.snapshot.seconds)")
+            return Text("session.restBeforeSide \(model.snapshot.seconds)")
         }
 
-        return Text("session.nextSetIn \(model.snapshot.setNumber + 1) \(model.snapshot.seconds)")
+        return Text("session.restBeforeSet \(model.snapshot.seconds) \(model.snapshot.setNumber + 1)")
     }
 
     /// After the session: every set of every side, and the way on.
@@ -365,9 +362,11 @@ extension TMTherapySessionView {
             headline: finished
                 ? Text("session.allDoneTitle")
                 : Text(summary.interrupted ? "session.interrupted" : "session.stopped"),
+            total: model.sessionLanguage.attributedString(
+                "session.total \(results.reduce(0) { $0 + $1.done })"
+            ),
             message: finished ? Text("session.allDoneMessage") : Text("session.stoppedMessage"),
-            results: results,
-            total: Text("session.total \(results.reduce(0) { $0 + $1.done })")
+            results: results
         ) {
             if automaticallyRests(after: summary) {
                 if model.saving {
@@ -425,29 +424,24 @@ extension TMTherapySessionView {
 
     // MARK: Controls
 
-    /// Pause and End stay reachable on every stage page.
+    /// Pause and End stay reachable on every stage page: Pause as plain text over the red End pill.
     private var lightStageControls: some View {
         VStack(spacing: 12) {
-            let layout = dynamicTypeSize.isAccessibilitySize
-                ? AnyLayout(VStackLayout(spacing: 12))
-                : AnyLayout(HStackLayout(spacing: 16))
-
-            layout {
+            VStack(spacing: 8) {
                 TMTherapyButton(
                     title: "session.pauseAction",
                     symbol: "pause.fill",
                     disabled: model.snapshot.paused,
-                    pill: true,
-                    brand: true
+                    plain: true
                 ) {
                     model.command(.pause)
                 }
 
-                TMTherapyButton(title: "session.endAction", symbol: "stop.fill", secondary: true, pill: true) {
+                TMTherapyButton(title: "session.endAction", symbol: "stop.fill", destructive: true, pill: true) {
                     requestEnd()
                 }
             }
-            .frame(maxWidth: 760)
+            .frame(maxWidth: 460)
 
             if let failure = model.failure, !model.snapshot.paused {
                 Text(verbatim: failure)

@@ -29,12 +29,10 @@ struct TMFingerSetSummaryPage<Model: FingerSessionViewModelProtocol>: View {
             ),
             headline: allSetsDone
                 ? Text("session.allDoneTitle")
-                : Text("session.setDone \(model.activity.completedSets)"),
+                : Text("session.setDoneCheer \(model.activity.completedSets)"),
+            total: total,
             message: message,
             results: results,
-            total: allSetsDone
-                ? Text("session.total \(repetitionsDone)")
-                : Text("session.totalOf \(repetitionsDone) \(model.routine.repetitions * model.routine.sets)"),
             footer: restLine
         ) {
             actions
@@ -68,9 +66,19 @@ struct TMFingerSetSummaryPage<Model: FingerSessionViewModelProtocol>: View {
         model.activity.completedSets * model.routine.repetitions
     }
 
-    private var message: Text {
+    private var total: AttributedString {
         guard allSetsDone else {
-            return Text("session.setRest \(model.activity.completedSets + 1)")
+            let goal = model.routine.repetitions * model.routine.sets
+            return model.sessionLanguage.attributedString("session.totalOfCheer \(repetitionsDone) \(goal)")
+        }
+
+        return model.sessionLanguage.attributedString("session.total \(repetitionsDone)")
+    }
+
+    /// Between sets the total says enough; after the last set, what comes next.
+    private var message: Text? {
+        guard allSetsDone else {
+            return nil
         }
 
         return moreMovements ? Text("session.nextMovementRest") : Text("session.allDoneMessage")
@@ -84,21 +92,21 @@ struct TMFingerSetSummaryPage<Model: FingerSessionViewModelProtocol>: View {
         let seconds = Int(model.activity.remaining.rounded(.up))
 
         guard !allSetsDone else {
-            return Text("session.nextMovementIn \(seconds)")
+            return Text("session.restBeforeMovement \(seconds)")
         }
 
-        return Text("session.nextSetIn \(model.activity.completedSets + 1) \(seconds)")
+        return Text("session.restBeforeSet \(seconds) \(model.activity.completedSets + 1)")
     }
 
     /// Pause stays reachable by touch; during the rest the caregiver may also skip it.
     private var actions: some View {
         HStack(spacing: 16) {
-            TMTherapyButton(title: "session.pauseAction", symbol: "pause.fill", pill: true, brand: true) {
+            TMTherapyButton(title: "session.pauseAction", symbol: "pause.fill", plain: true) {
                 model.handleCommand(.pause)
             }
 
             if model.activity.phase == .rest {
-                TMTherapyButton(title: "rest.skip", symbol: "forward.fill", secondary: true, pill: true, action: model.skipRest)
+                TMTherapyButton(title: "rest.skip", symbol: "forward.fill", plain: true, action: model.skipRest)
             }
         }
         .frame(maxWidth: 640)

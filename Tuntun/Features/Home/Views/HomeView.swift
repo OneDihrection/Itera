@@ -8,7 +8,7 @@
 import SwiftUI
 
 /// Beranda is one page whose reusable header, calendar, plan rows and floating action change
-/// with the selected date. It owns the Home tab's stack, settings sheet and plan cover.
+/// with the selected date. It owns the Home tab's stack, Preferences panel and plan cover.
 struct TMHomeView<ViewModel: HomeViewModelProtocol, Builder: HomeContentBuildable>: View {
     @State private var viewModel: ViewModel
     private let builder: Builder
@@ -38,12 +38,12 @@ struct TMHomeView<ViewModel: HomeViewModelProtocol, Builder: HomeContentBuildabl
                     destination(route)
                 }
         }
-        .sheet(item: $viewModel.sheet) { sheet in
-            NavigationStack {
-                sheetContent(sheet)
-            }
-            .modalEnvironment(buttonFeedback: buttonFeedback)
+        // Preferences floats over the whole stack on a frosted backdrop, like History's
+        // exercise detail. A system sheet cannot frost what lies behind it.
+        .overlay {
+            panel
         }
+        .animation(.easeInOut(duration: 0.25), value: viewModel.panel)
         .fullScreenCover(item: $viewModel.cover) { cover in
             TMPlanCoverHost(route: cover.route, builder: builder)
                 .modalEnvironment(buttonFeedback: buttonFeedback)
@@ -65,8 +65,27 @@ struct TMHomeView<ViewModel: HomeViewModelProtocol, Builder: HomeContentBuildabl
     }
 
     @ViewBuilder
-    private func sheetContent(_ sheet: HomeSheet) -> some View {
-        switch sheet {
+    private var panel: some View {
+        if let panel = viewModel.panel {
+            TMDetailPanel(
+                closeTitle: "action.close",
+                maxWidth: 720,
+                scrollsContent: false,
+                showsCloseButton: false
+            ) {
+                viewModel.panel = nil
+            } content: {
+                NavigationStack {
+                    panelContent(panel)
+                }
+            }
+            .transition(.opacity)
+        }
+    }
+
+    @ViewBuilder
+    private func panelContent(_ panel: HomePanel) -> some View {
+        switch panel {
         case .practicePreferences:
             builder.buildPracticePreferences()
         }
@@ -536,7 +555,7 @@ struct TMHomeView<ViewModel: HomeViewModelProtocol, Builder: HomeContentBuildabl
 @Observable
 private final class MockHomeViewModel: HomeViewModelProtocol {
     var path: [HomeRoute] = []
-    var sheet: HomeSheet?
+    var panel: HomePanel?
     var cover: PlanCover?
     let rows: [DailyPlanRow]
     let errorKey: String? = nil

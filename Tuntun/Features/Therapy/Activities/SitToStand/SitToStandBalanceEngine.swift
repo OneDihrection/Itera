@@ -63,6 +63,13 @@ struct SitToStandBalanceEngine: BalanceMovementEngine {
         present(activity.presentation)
     }
 
+    /// Follows only whether the torso is visible, so the tracking chip stays live while a cue
+    /// plays. Unscored frames would suspend the activity (restarting its holds and countdown),
+    /// so the activity sees nothing and the overlay is left as it is.
+    mutating func preview(_ frame: TrackingObservation) {
+        snapshot.trackingLost = !activity.hasTorsoEvidence(in: frame)
+    }
+
     mutating func invalidateCalibration() {
         activity.recalibrate()
         snapshot.phase = .findingBody

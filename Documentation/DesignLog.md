@@ -2009,6 +2009,34 @@ Users asked for a way to delete an exercise's record, for example a session reco
 
 Verification: a Debug Simulator build with `IPHONEOS_DEPLOYMENT_TARGET=17.0` succeeded. Pending, because recording sessions needs the camera: on the baseline iPad, in both languages, delete a plan arm-raise record and a finger record. Then check that the panel closes, the card leaves, the calendar status changes, the session files and `daily-plan-progress.json` entry are gone, Beranda shows the item as not done, Cancel keeps everything, and an emptied day shows its empty message.
 
+## Button click after another owner deactivates (2026-11-23)
+
+The console still showed `AVAudioSession_iOS.mm:978 This method can lead to UI unresponsiveness if called on the main thread` at `GuidanceAudioService.playButtonSound()` (`prepareToPlay()`/`play()`). The click checked a flag on `GuidanceAudioService` that only that service set and cleared. `SessionAudioService.stop()` deactivates the shared session through `AudioInputWorker.stop(deactivate: true)` without clearing it, so after a guided session the flag still read active, the click skipped the awaited activation, and `AVAudioPlayer` activated the session synchronously on the main thread.
+
+- **Shared state.** `NarrationAudioSession.isSessionActive` reads the session's real state under its lock. `playButtonClick()` checks it in place of the removed per-service flag, so the first tap after any owner's deactivation waits for `activate()`.
+- **Not changed.** Cue and count players run only inside a finger session after `configure(language:)` awaited activation, and nothing else deactivates during it.
+
+Verification: Debug Simulator build. Pending on the M1 iPad: no main-thread warning when tapping buttons after a guided, finger and Balancing session and at launch, and the click still plays (the first tap after a session slightly later).
+
+## Music and button click off the main thread (2026-11-23)
+
+The console still showed `AVAudioSession_iOS.mm:978 This method can lead to UI unresponsiveness if called on the main thread` at `ExerciseMusicPlayer.refresh()` (`AVAudioPlayer(contentsOf:)`/`prepareToPlay()`) and `GuidanceAudioService.playButtonSound()` (`prepareToPlay()`/`play()`). Checking `NarrationAudioSession.isSessionActive` (*Button click after another owner deactivates*) is not enough: the player still calls into the audio session when it loads, prepares and plays, and a deactivation can land between the check and the call. `refresh()` also runs on every `UserDefaults` change. Cues, counts and narration never warned because `PreparedAudioClip` already runs its player on its own queue.
+
+- **Button click.** `GuidanceAudioService` plays `button-click.wav` through a `PreparedAudioClip` at volume 0.18; the clip rewinds on each play as the old player did.
+- **Music.** `ExerciseMusicPlayer` keeps its main-actor state and API. Every `AVAudioPlayer` call (load, prepare, loop, play, pause, rewind, ducking fade) runs on a private `MusicWorker` serial queue, in the order requested. A failed load clears the track on the main actor, so the next refresh retries, as before. The 500 ms startup check calls the worker's play-if-stopped, so a playing track is never restarted.
+- **Not changed.** The activation gate before the first click and music's awaited activation stay. `SessionAudioService` and `GuidanceAudioService` use the music player as before.
+
+Verification: Debug Simulator build with `IPHONEOS_DEPLOYMENT_TARGET=17.0`. Pending on the M1 iPad: no main-thread warning for button taps at launch and after each session type, music start in a finger, guided and Balancing session and the long rest, and a track change in Settings. Music should loop, duck under narration, resume at its position and never start after Stop, and the click should still play.
+
+## Exercise detail demonstration and forgiving consistency (2026-11-23)
+
+At the user's request, the exercise detail panel changes in three places.
+
+- **Demonstration in "Perkembangan gerakanmu".** The two key-repetition poses (baseline in faint blue, today in yellow, with their caption) are replaced by the exercise's own demonstration, the same clip or animation the plan intro shows, always looping. The panel shows it for every exercise, fold towel included. Body arm clips are reflected when the day practised the right side and shown as recorded for the left or both sides. Finger exercises use the practised hand. Reduce Motion still holds the target pose, as the players do everywhere. `TMExerciseDetailDemonstration` (History/Views) maps the exercise ID to the existing demonstration views, because History cannot use Home's `DailyPlanIntroDemonstration`. `currentPeakRep` and `baselinePeakRep` were removed from `ExerciseDetailViewModelProtocol`. `TMPoseComparison` stays in DesignSystem.
+- **Kestabilan.** Supersedes "even within the 5° or 5% steady tolerance, otherwise varied". `ExerciseProgress.consistencyLevel(of:)` compares the rounded spread the row shows. Up to 10° (or 10 points of range) is even and green. 11–15 is fair and neutral, with the new wording "Jangkauanmu cukup stabil, selisih hingga …". Beyond 15 is varied and red. The 5° or 5% steady tolerance still applies to trend, stamina and the headline.
+- **"Catatan latihan".** The panel shows only the day's hardest repetition, `keyRep(for: .hardest)`. The first, hardest and last chips and their "Ini gerakan pertamamu/terakhirmu hari ini" call-outs are removed. `KeyRepRecorder` still records the first, hardest and last repetition of every set, and the skeleton switch and "Hapus video" are unchanged.
+
+Verification: a Debug Simulator build with `IPHONEOS_DEPLOYMENT_TARGET=17.0` succeeded. Pending: the previews and, on the baseline iPad, demonstration playback and side reflection in the panel for a body exercise on each side, a finger exercise, forearm rotation, a Balancing exercise and fold towel; Reduce Motion; and the three Kestabilan tones in both languages.
 
 ## Rest pages without visible controls (2026-11-23)
 
@@ -2180,13 +2208,76 @@ At the user's request, the camera preview shows a white chip in its top-left cor
 Verification: XcodeGen and a Debug iOS Simulator build with `IPHONEOS_DEPLOYMENT_TARGET=17.0` succeeded. Nothing was run in the Simulator or on the iPad. Pending on the M1 iPad: in each session type, both languages and both landscape orientations, check that stepping out of frame turns the chip red after about 1 s and back to green on return. Also check that it never covers the bubbles or the finger recovery actions, and that it reads well with large text.
 
 
-## Debug Beranda state preview (2026-11-23)
+## Set list under the demonstration (2026-11-23)
 
-At the product owner's request, the existing Debug-only Beranda menu now adds a presentation-state preview below its start-any-exercise shortcuts. The four choices are named after the source states: `.missed`, `.current`, `.partial` and `.completed`. The preview supplies deterministic card markers and a matching completed count so every design can be reviewed without waiting for a date boundary or completing exercises. "Gunakan data asli" clears the override.
+At the user's request, the live exercise screen (`TMTherapyExerciseLiveLayout`, shared by finger, Balancing and light guided sessions) was reworked:
 
-The override is local `@State` in `TMHomeView`, compiled only under `#if DEBUG`. It does not change `HomeScreenViewModel`, `DailyPlanProgress`, persisted history, or the plan's real row statuses. To keep date-dependent actions representative, `.missed`, `.partial` and `.completed` select yesterday, while `.current` and "Gunakan data asli" select today. Starting an exercise still uses the existing `begin(from:)` route, and returning to today clears the preview. Release builds keep the ordinary repository-derived state only.
+- **Set list.** The "Repetisi 3 / 8 | Set 1 / 2" counters under the camera were removed (`TMTherapyProgressStat` had no other caller and was deleted). The side column now shows the demonstration, then `TMTherapySetProgress`, then Pause and End. The set list is "Set N" over one circle per repetition for every set, top-aligned. Each row draws exactly its goal's circles, spread with space between them at the size twelve would need. Done repetitions are green with a check and the rest grey. Earlier sets are drawn full, since a set advances only on its goal. It stays hidden, with its space kept, during calibration.
+- **Text removed.** The live screen no longer shows the "Ikuti gerakan ini" / step title above the demonstration, or the "Latihan N" eyebrow over the exercise title. Intro, summary and rest pages keep "Latihan N". A new demonstration step still highlights the panel and is announced to VoiceOver.
+- **Camera fills.** The camera takes the whole left column. Both previews use `.resizeAspectFill`, and the overlay mappings switched together from fit to fill scale: `CameraDisplayGeometry` (bubbles, guide arrows, fold towel), `fixedBubbleRadius` (acceptance stays the drawn bubble) and `TMFingerLandmarkOverlay`. The image's cropped sides are tracked but not shown.
+- **Settings ranges.** Settings' sets are 0–3 and repetitions 0–12 (`DailyPlanOverrides.setsRange`, `repetitionsRange`). A 0 hides the exercise from Beranda and the day's count (`DailyPlanOverrides.hidesExercise`), and Settings marks it Hidden while its controls stay open, so raising it to 1 shows it again. While a plan runs, the visible items update after `end()`. Every plan session clamps its counts to 1–3 and 1–12 (`playableSets`, `playableRepetitions`), including a program's own values and the arm-raise script. Stored routine and history validation (1–5, 1–20) is unchanged, so saved files stay readable.
 
-Verification: XcodeGen and Debug and Release Simulator builds with `IPHONEOS_DEPLOYMENT_TARGET=17.0` succeeded. The three preview strings/symbols occur in the Debug product and not in the Release product. Pending on the iPad: open every state from the menu, return to live data, and confirm that relaunching keeps the saved plan unchanged.
+Verification: XcodeGen and a Debug iOS Simulator build with `IPHONEOS_DEPLOYMENT_TARGET=17.0` succeeded. Nothing was run in the Simulator or on the iPad. Pending on the M1 iPad:
+- a three-set session in a guided exercise, a Balancing exercise and a finger exercise, with circles filling per repetition and the next set starting its row;
+- Pause and End reachable on the smallest iPad and with large text;
+- bubbles, arrows, fingertip circles and the fold-towel zones still on the joints with the filled preview, in both orientations;
+- reach left/right, cross midline and bilateral arm raise targets staying on screen despite the crop;
+- Settings 0 hiding and restoring an exercise.
+
+
+## One history card per session (2026-11-23)
+
+At the user's request, an exercise practised more than once on a day now shows once per session in the day's history list. Before this, the list showed one card per exercise. Every run was already saved as its own session (a fresh UUID each), but `PracticeHistory` kept only the first session per exercise and the detail panel joined them all. This supersedes "one `TMHistoryCard` per practised exercise" and the whole-day scope of the panel and its delete (logs: *Progress calendar and day pages*, *Exercise detail panel*, *Delete an exercise's day record*).
+
+- **List.** `PracticedExercise` names its exercise as `exerciseID`, and its `id` is the exercise and session together. `PracticeHistory.day` dedupes on that pair, so one session's several sets of an exercise stay one card. A plan item completed without a saved session keeps a single card.
+- **Card.** Cards stay title and number only. A start time under the title was tried and dropped at the user's request, so `TMHistoryCard` is unchanged.
+- **Panel.** `ExerciseProgress` takes an optional `focus` report. With one, the day's figures, key repetitions and trend point are that session's, and the baselines and trend read every session before it, that day's earlier runs included. "Sesi sebelumnya" on a second run therefore compares it with the first. A plan-only card keeps the whole-day view.
+- **Delete.** "Hapus catatan latihan ini" deletes the shown session only. The plan's done mark is removed only when no other session of that exercise is left on the day.
+
+Verification: XcodeGen and a Debug iOS Simulator build with `IPHONEOS_DEPLOYMENT_TARGET=17.0` succeeded. Nothing was run in the Simulator or on the iPad. Pending: practise arm raise and a finger exercise twice each on one day, then check four numbered cards, each panel showing its own run, the previous-session comparison, and deleting one run keeping the other card and the done mark.
+
+## Merge: demonstration panel per session (2026-11-23)
+
+`main` was merged into `feat/adjustment`. Both branches had rewritten the exercise detail panel. Each side's SYSTEM_DESIGN.md text covered only its own changes, so §8 now describes both. This supersedes both one-sided descriptions.
+
+- **Kept from `feat/adjustment`** (*Exercise detail demonstration and forgiving consistency*): the looping demonstration in place of the two poses, only the hardest key repetition shown, and Kestabilan at 10/15.
+- **Kept from `main`** (*One history card per session*, *Exercise detail insights at full width*, *Neutral history card and calendar surfaces*): one card and panel per session, deleting only the shown session, insights at full width under the demonstration and headline, and the Progress surfaces.
+- **Code.** In the narrow layout of `TMExerciseProgressSection`, the demonstration (at most 340 points wide) now sits above `change`. The insights card follows at full width, because `main` removed `summary`.
+
+Verification: a Debug Simulator build after the merge. Pending on the baseline iPad: the panel checks listed under both source entries.
+
+## Freeze at set end and rest end (2026-11-23)
+
+The user reported that the screen still froze for a moment when an exercise or a rest finished, with or without the Debug Skip rest. The fix in *Faster exit after End* (commit b5a61912) is still in place, but it only traced Pause → End. A source trace of the automatic set end, rest start and end, summary and long rest found the following main-thread blocking work. None of it was measured, so this list is the source analysis, not profiler output.
+
+- **Audio session lock.** `NarrationAudioSession` held its one lock across `setCategory`, `setActive(true)`, `setActive(false)` and the speaker override. The background deactivation from *Faster exit after End* therefore still blocked the main thread, which takes the same lock for `isSessionActive` (every button tap), `activationToken` and `activate()` (long rest, music). The lock now guards only `activationRequests` and `isActive`. A separate `hardwareLock`, taken only on `sessionQueue` and the input worker's queue, orders the blocking calls. Deactivation compares its token under that lock, so an activation counted in between waits, finds the session inactive and reactivates it. `handleRouteChange()` now runs on `sessionQueue`, and the route-change configuration log reads the session off the main thread.
+- **Camera preview.** `TMBodyCameraPreview.updateUIView` requested a layout on every SwiftUI update, and the guided screen updates on every 50 ms tick and every frame. Each layout touched the preview connection, which waits while the capture session stops (summary) or reconfigures (fold towel's lens switch). It now relays out only when mirroring or the video mask changes; size, window and `isPreviewing` changes still request their own. Mirroring is set only when it differs.
+- **Finger listening engine.** `GuidanceAudioService.disableVoice()` stopped its `AVAudioEngine` and removed the tap on the main thread at a finger session's natural finish. The service now uses `AudioInputWorker`, as the guided and Balancing sessions do. The engine starts once in `enableVoice()`, and a restarted recognition only replaces the request its tap feeds.
+- **Finger cues.** `playCue` and `playNumber` built a new `AVAudioPlayer` on the main thread for every hold pop, set end, countdown number and hold second. They now play cached `PreparedAudioClip`s, which load and play off the main thread; `configure(language:)` preloads the effects and the first ten counts and countdowns.
+- **Rest shaders.** SwiftUI compiles a Metal shader the first time it is drawn, which stalled the first rest of each launch. `TMShaderWarmUp` (DesignSystem) draws the breathing circle and long-rest waves at 2 pt and 1% opacity beneath `TMLoadingOverlay`'s backdrop, so they compile while a session prepares. `Shader.compile(as:)` needs iOS 18 and is not used.
+- **Smaller costs.**
+  - The DEBUG `Thread.callStackSymbols` in `stopListening()` (every summary) is removed.
+  - Both `cancelSpeech()` methods call `stopSpeaking(at: .immediate)` only while the synthesizer is speaking. Every countdown number cancels first.
+  - `NarrationVoice.best(for:)` caches its choice per language, because `speechVoices()` is slow.
+  - `SessionAudioService.prepare()` returns early when its clips are already loaded for the language, so the long rest no longer reloads about 35 players.
+  - `ExerciseMusicPlayer.stop()` pauses and rewinds instead of releasing the player, so a session's end and the long rest neither tear it down nor reload it on the main thread.
+- **Not done.**
+  - The loading overlay was not added to the automatic finishes. Their teardown no longer blocks the main thread, and the overlay would flash over a summary that is already shown.
+  - `SessionSnapshot` is not made Equatable to skip redundant writes; whether to do so depends on device profiling.
+
+Verification: XcodeGen, then Debug and Release Simulator builds with IPHONEOS_DEPLOYMENT_TARGET=17.0 (both BUILD SUCCEEDED). Nothing was run in the Simulator or on the iPad. Pending on the M1 iPad, measured with Instruments Hangs and Time Profiler:
+- arm raise with two sets: set end, rest, Skip rest and a timed rest, summary, long rest;
+- the same path in a Balancing exercise;
+- a finger exercise: set end, rest, natural finish;
+- fold towel starting and ending;
+- the first rest's breathing circle appearing without a hitch;
+- narration not muted in the next session;
+- Stop/Go after a rest, and in a finger session after a recognition restart;
+- button clicks after a session;
+- finger cues, countdowns and hold seconds audible at their usual levels;
+- music restarting from the start of the track after a session;
+- preview mirroring in both orientations;
+- no `AVAudioSession … main thread` console warning.
 
 
 ## Partial daily-plan history on Beranda (2026-11-23)
@@ -2200,11 +2291,83 @@ The product owner clarified that a yellow dashed marker means an exercise is cur
 
 Verification: `xcodegen generate` and an iOS Simulator build succeeded before the branch was updated from `main`. After the base update, generation, the Simulator build, String Catalog parsing and the final diff were repeated. Physical-device behaviour remains pending: complete one exercise, leave the next before its goal, cross midnight, and confirm the completed checklist, disabled unfinished rows, partial subtitle and return-to-today action.
 
+## Merge: plan intro redesign and partial history (2026-11-23)
+
+`main` (PR #43 *fix/beranda-partial-history-state*, PR #44 *Fixing-Berdiri-dari-Duduk*) was merged into `feat/adjustment` again. The code merged cleanly. The conflicts were in SYSTEM_DESIGN.md, the DesignSystem README and this log, where both sides had rewritten the same paragraphs. Both sides' rules are kept:
+
+- **From `main`:** the redesigned `TMTherapyExerciseIntro` with no Start or back control, readiness that starts on its own when the narration ends, native navigation-bar back, and *Partial daily-plan history on Beranda* (new §8 bullet). §5 *Loading* now starts at the intro's automatic start, not at a Start button.
+- **From `feat/adjustment`:** *Set list under the demonstration* (the aspect-fill preview in §5 *One preview*, the live layout and `TMTherapySetProgress` in the README) and *One history card per session* (§8 *Key repetitions* and *Progress tab*). The README no longer lists the deleted `TMTherapyProgressStat`.
+- **Open:** `main`'s §5 *Readiness* cites the log entries *Plan intro redesign*, *Plan intro without Start* and *Native back on the plan intro*. Those entries are missing from `main` as well, so these references stay dangling until the authors add them.
+
+Verification: after the merge, `xcodegen generate` and a Debug iOS Simulator build with `IPHONEOS_DEPLOYMENT_TARGET=17.0` succeeded. Nothing was run in the Simulator or on the iPad. Pending on the baseline iPad: the intro starts by itself, with the bar control and back button; the live set list; Beranda's partial past day.
+
+## In-session buttons, rests and set summary restyle (2026-11-23)
+
+The product owner supplied mockups for the buttons during therapy, the calibration heading and the set-done page.
+
+- **Buttons.** On the live layout and the stage pages, Pause ("Jeda latihan") is plain text with its icon and no fill (`TMTherapyButton(plain:)`, muted), above a red End pill ("Akhiri latihan", `destructive: true, pill: true`). The finger set page's Pause and Skip are plain too.
+- **Rests.** The short rest (`TMTherapyBreathingRest`) and long rest (`TMTherapyLongRest`) no longer pause on a tap anywhere. Each shows Pause and End as plain, underlined text at the bottom (`underlined:`, `onBrand` on the long rest's waves), raised clear of the debug Skip rest control. The short rest's Pause opens the session's pause dialog and is disabled while paused; the long rest's reads "Lanjutkan latihan" while paused and resumes. Skip stays an accessibility action. Pause and Stop remain available by touch at every stage.
+- **Calibration heading.** Every exercise's live heading while calibrating is "Persiapan Gerakan" over a muted "Belum termasuk latihan" (`TMTherapyExerciseHeading.calibration`, new `subtitle`). It replaces "Kalibrasi" and the scripted per-side titles ("Kalibrasi Lengan Kiri", "Kalibrasi Tangan Kanan") on the live screen; the side is still narrated. Those older keys stay in the catalog and the registry.
+- **Set summary.** `TMTherapySetSummary` shows a green `success` check, the headline (between sets "Hebat! Kamu sudah menyelesaikan set N", `session.setDoneCheer`), the total under it with its bold figures in `green` ("Total **24 dari 36 repetisi** diselesaikan. Teruskan!", `session.totalOfCheer`, passed as an `AttributedString` through `AppLanguage.attributedString` in the session's language), an optional message (scripted arm-raise summaries, the last set's next step, all-done and stopped messages), the sets on the pale blue `historyCard` panel with done sets in green and no total inside, and a clock-led rest line ("Istirahat 45 detik sebelum lanjut ke set 3", `session.restBeforeSet`, with `restBeforeSide` and `restBeforeMovement`). Between sets the former "Setelah ini istirahat sebentar…" message is dropped; the rest line says it. The finger completion view model exposes `sessionLanguage` instead of `sessionLocale`.
+
+None of the new keys is narrated, so the narration registry and audio are unchanged.
+
+Verification: `xcodegen generate` and an iOS Simulator build with `IPHONEOS_DEPLOYMENT_TARGET=17.0` succeeded. The debug galleries (`-TuntunScreen gallery:live|setDone|rest|longRest`) were checked on the iPad (A16) Simulator in Indonesian. Pending on the baseline iPad: the calibration heading during live tracking in every exercise, both rests' Pause/End by touch (no pause on a background tap), the set summary's rest line counting down, English wording and accessibility text sizes.
+
+## Tracking chip live through narration (2026-11-23)
+
+The product owner noted that the tracking-status chip depends on vision tracking, so tracking must stay on while narration plays, in every exercise, and asked for the chip to look slightly muted while repetitions are not being counted. They chose to keep it at full strength whenever movement is acted on (calibration holds and practice) and mute it only while movement is ignored.
+
+- **Cause.** The chip read tracking state that only scored frames refreshed. While a cue held evidence back, `MovementActivity` and `DirectionalReachActivity` moved their guide on previews but left `trackingMessage` frozen, `FoldTowelActivity` ignored previews, and Balancing skipped sit-to-stand frames entirely, so `trackingLost` went stale.
+- **Live status.** Movement and reach previews now run the same 1 s loss / 0.5 s recovery debounce. Movement remembers its last preview with the limb found, so the first tick after a cue does not date a loss from the last scored frame. Fold towel follows the exercised hand on previews with its 0.1 s bridge, without touching grip, cursor or fold sequence. `BalanceMovementEngine` gains `preview(_:)`: the arm engines keep consuming unscored frames, and sit to stand sets `trackingLost` from shoulder-and-hip evidence on either side (`SitToStandActivity.hasTorsoEvidence`), never suspending its activity, which would restart its holds and countdown. Finger sessions already tracked every sample.
+- **Muted chip.** `TMTrackingStatusChip(isMuted:)` / `.trackingStatusChip(_:muted:videoBounds:)` fades to 0.55 opacity with the same colours and wording. The guided session mutes it in the instruction, demonstration and preparation stages and while its presentation counts down. Balancing mutes it while `advanceOpeningIfReady` holds practice back. Finger sessions mute it during the calibration intro and whenever `FingerActivity.actsOnMovement` is false (a stage waiting for its narration, except the range sweep, which measures during its instruction, and the demonstration). Full-screen countdowns still hide it.
+
+Verification: `xcodegen generate` and an iOS Simulator build with `IPHONEOS_DEPLOYMENT_TARGET=17.0` succeeded. Nothing was run in the Simulator or on the iPad. Pending on the baseline iPad: in arm raise, directional reach, fold towel, sit to stand, a Balancing arm exercise and a finger exercise, step out of view and back during the opening narration and see the muted chip change within about 1 s and 0.5 s; confirm full strength once calibration starts; confirm no "Posisi belum pas" flash when a cue ends while in position; confirm frames during narration still credit nothing.
+
+## Smooth thumb-opposition circles (2026-11-23)
+
+In Sentuh jempol ke jari (thumb opposition), the thumb and target circles moved less smoothly than the other exercises' indicators. The data filter was already the same as theirs: every finger exercise draws from `HandOverlaySmoother` (median of three, outlier hold, `OneEuroFilter.handOverlay`). The difference was on screen. `TMTherapyMergingGuide`'s `glide` worked only for a single circle (*Whole-hand circle follows the grip*), so the two-circle opposition guide animated only `merge`. Its centres jumped once per 30 Hz camera frame, and its diameter changed in 4 pt steps.
+- **Design system.** `glide` now also applies to the two-circle form. A private animatable layer interpolates both centres and both diameters outside the merging layer, so callers without `glide` (fold towel, body bubbles) are unchanged. Reduce Motion still places them at once.
+- **Overlay.** `TMFingerLandmarkOverlay` passes the whole-hand circle's 0.15 s spring without bounce (`circleGlide`) to the opposition guide, and sizes the pair without the 4 pt rounding. The separate fingertip bubbles keep their stepped sizes. The merge thresholds, `merge` spring and scoring are unchanged; this is presentation only.
+
+Verification: XcodeGen and a Debug Simulator build with IPHONEOS_DEPLOYMENT_TARGET=17.0. Pending on the M1 iPad: in thumb opposition the circles follow the fingertips smoothly, with no per-frame stepping and no visible lag; they still become one circle at a 0.45-palm touch and part as the tips separate; the arc, pop and acknowledgment work; Reduce Motion places them at once; full fist, hook fist and forearm rotation are unchanged; the overlay keeps 30 fps.
+
+## Preferences sheet redesign (2026-11-23)
+
+At the product owner's request, the settings sheet opened from Beranda's gear was restyled to match the current look, renamed and shortened.
+- **Title.** `cognitive.settings` reads "Preferensi" / "Preferences" (formerly "Kenyamanan" / "Comfort"). The gear button's label uses the same key.
+- **Patient name removed.** The "Nama pasien" field is gone. Nothing read it, so `PracticePreferences.patientName` and the strings `settings.patientName`, `settings.patientNameTitle` and `settings.patientNameHelp` were removed. A value saved by an earlier install stays in UserDefaults unread.
+- **Look.** The sheet is still a native `Form` with the same controls and order. It now has white rows (`progressCanvas`) on the `canvas` grey page. Each section has a `TMSettingsSectionHeader` (new: a yellow `brand` icon tile beside a bold Plus Jakarta title, with an optional trailing action that holds Arrange). Display ("Tampilan") and Sound ("Suara") gained headers. Switches use `brand` yellow; checkmarks, chevrons and text actions use `brandInk`, because yellow on white is about 1.8:1. Footers are muted footnotes.
+- **Shorter copy.** The footers for exercises, arrange, rest, voice, recording, calm display and sound were cut to one short sentence or two. The stepper labels drop "Istirahat", which the header already says. The video footer keeps the hand-exercise caveat (only detected faces are blurred). None of these keys is narrated.
+
+Verification: `xcodegen generate` and an iOS Simulator build with `IPHONEOS_DEPLOYMENT_TARGET=17.0` succeeded. `-TuntunScreen settings` on the iPad (A16) Simulator in Indonesian showed the "Preferensi" title, the Exercises header with Arrange and the white rows; the lower sections were not scrolled to. Pending on the M1 iPad: the sheet in both languages, light and dark, and at accessibility text sizes; Arrange and the steppers; each recording level's footer.
+
+## Preferences as a floating panel (2026-11-23)
+
+At the product owner's request, Preferences now opens over a frosted Beranda, like History's exercise detail, instead of as a system form sheet, which can only dim the page grey.
+- **Presentation.** `TMHomeView` shows the Preferences `Form` (still in its own `NavigationStack`, with the "Preferensi" bar and Selesai) in `TMDetailPanel` as an overlay over its whole stack, at most 720 pt wide, fading in and out over 0.25 s. Tapping the frosted backdrop closes it, like Selesai. The overlay inherits Beranda's environment, so `modalEnvironment` is not applied; covers still use it. The top tab bar stays above the backdrop, as it does over History's detail.
+- **Design system.** `TMDetailPanel` gains `scrollsContent` (false: the card takes the full available height and holds content that scrolls itself, without padding) and `showsCloseButton`. Both default to the earlier behaviour, so History is unchanged.
+- **Naming.** The router state is no longer a sheet: `HomeSheet` → `HomePanel`, `sheet` → `panel`, `dismissSheet()` → `dismissPanel()`. `.presentationDetents` was dropped from the view.
+
+Verification: `xcodegen generate` and an iOS Simulator build with `IPHONEOS_DEPLOYMENT_TARGET=17.0` succeeded. `-TuntunScreen settings` on the iPad (A16) Simulator showed the card centred over the frosted Beranda. Closing by Selesai and the backdrop was not exercised. Pending on the M1 iPad: both close paths, Arrange drag inside the panel, VoiceOver staying inside the panel, dark mode, landscape on both sides, and History's detail panel unchanged.
+
+
+## Fold towel inside the filled preview (2026-11-23)
+
+After the camera previews switched to aspect-fill (*Set list under the demonstration*), the fold towel's grab and goal zones (x 0.2 / 0.8, y 0.2 / 0.8 of the image) and its 0.6-wide towel fell partly into the image's cropped sides, so the indicator was cut off. The demonstration, which reuses `TMTowelWorkspaceView`, was cropped the same way.
+
+- **Workspace is the visible preview.** `CameraDisplayGeometry.visibleRect` gives the part of the image the fill preview shows, in normalized image coordinates. `FoldTowelActivity` maps the filtered palm cursor into it (`workspacePoint`), so the sequence, the snapshot's hand position and acceptance all use workspace coordinates whose 0…1 spans exactly the visible view. `HandCursorFilter` still runs in image coordinates, keeping its tuning. Without a viewport yet the workspace is the whole image; a viewport change already suspends the sequence.
+- **Drawing.** `TMTowelWorkspaceView` maps workspace points straight onto its own frame (`TowelBoard.screen`) and sizes the towel and zones from the frame, not the overflowing image rect. The demonstration now fills its panel.
+- **Tradeoff.** The fixed path keeps its fractions of the visible view, so on a cropped column the physical reach is shorter in proportion to the crop (a 16:9 image in a column about 1.2 wide: the 0.6 reach is about 0.4 of the image width). Keeping the whole path on screen requires it.
+
+Verification: `xcodegen generate` and a Debug iOS Simulator build with `IPHONEOS_DEPLOYMENT_TARGET=17.0` succeeded. Nothing was run in the Simulator or on the iPad. Pending on the M1 iPad: in both orientations and on both sides, the towel, chevrons and both zones fully visible for horizontal and vertical folds; the hand circle staying on the palm and joining the zone where it is drawn; four folds completing; the demonstration uncropped.
+
+## Debug Beranda state preview (2026-11-23)
+
+The Debug-only Beranda menu can preview `.missed`, `.current`, `.partial` and `.completed` without waiting for another calendar day. History previews select yesterday, while `.current` and "Gunakan data asli" select today so the date-dependent controls remain representative. The override is local view state and never writes daily-plan progress or history. Release builds do not contain these controls.
 
 ## Completed daily plan locks until tomorrow (2026-11-23)
 
-The product owner confirmed the team's decision that a patient cannot repeat an exercise after every item in today's daily plan is complete. On today's `.completed` state, every card keeps its yellow completion mark but is disabled, and the start/continue floating action is absent. The plan becomes available again only when the calendar day changes and `DailyPlanProgress.current(on:)` resets it for the new day.
+The product owner confirmed that a patient cannot repeat exercises after every item in today's daily plan is complete. On today's `.completed` state, every card keeps its yellow checklist but is disabled, and the start/continue floating action is absent. The plan becomes available again only when the calendar day changes and `DailyPlanProgress.current(on:)` resets it for the new day.
 
 A completed historical date is also read-only and shows "Kembali ke hari ini". `TMDailyPlanCard` therefore accepts an interaction-enabled value independently from its visual state: a yellow completed marker can stay visible without making its button actionable. `TMHomeView` enables plan-card interaction only for `.current`; `.missed`, `.partial`, `.completed`, `.upcoming` and `.noSchedule` are read-only.
-
-Verification: XcodeGen, Debug and Release Simulator builds with `IPHONEOS_DEPLOYMENT_TARGET=17.0`, String Catalog JSON parsing, and a signed Debug build for the connected iPad succeeded. Pending on the iPad: verify today-completed, past-completed and the next-day reset in the running UI.

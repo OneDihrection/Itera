@@ -60,7 +60,6 @@ struct TMFingerSessionView<Service: FingerSessionServiceProtocol>: View {
         TMTherapyExerciseLiveLayout(
             heading: heading(model),
             cuePlacement: .video(videoBounds),
-            demoTitle: LocalizedStringKey(model.demoTitleKey),
             repetitions: (model.activity.repetitions, model.routine.repetitions),
             sets: (model.activity.set, model.routine.sets),
             pauseTitle: "session.pauseAction",
@@ -168,13 +167,13 @@ struct TMFingerSessionView<Service: FingerSessionServiceProtocol>: View {
     }
 
     private func heading(_ model: Service.Session) -> TMTherapyExerciseHeading {
-        TMTherapyExerciseHeading(
+        guard !model.isCalibrating else {
+            return .calibration
+        }
+
+        return TMTherapyExerciseHeading(
             eyebrow: plan.currentNumber.map { Text("plan.exerciseNumber \($0)") },
-            title: model.isCalibrating
-                ? Text(LocalizedStringKey(model.usesOppositionScript
-                    ? OppositionGuidance.prefix(for: model.routine.side) + "calibration.title"
-                    : "stage.calibration"))
-                : Text(verbatim: model.exerciseTitle)
+            title: Text(verbatim: model.exerciseTitle)
         )
     }
 
@@ -270,6 +269,13 @@ struct TMFingerSessionView<Service: FingerSessionServiceProtocol>: View {
         }
     }
 
+    /// Whether the chip is muted: tracking is shown but the hand is not being acted on, while
+    /// narration or the demonstration holds the exercise back.
+    private func trackingMuted(_ model: Service.Session) -> Bool {
+        model.calibrationMessage == "calibration.intro"
+            || !model.activity.actsOnMovement
+    }
+
     private func cameraPreview(_ model: Service.Session) -> some View {
         ZStack(alignment: .bottomLeading) {
             TherapyPalette.canvas
@@ -295,7 +301,11 @@ struct TMFingerSessionView<Service: FingerSessionServiceProtocol>: View {
                 .animation(.easeOut(duration: 0.35), value: model.activity.phase == .countdown)
             }
         }
-        .trackingStatusChip(trackingPositioned(model), videoBounds: videoBounds)
+        .trackingStatusChip(
+            trackingPositioned(model),
+            muted: trackingMuted(model),
+            videoBounds: videoBounds
+        )
     }
 
     @ViewBuilder

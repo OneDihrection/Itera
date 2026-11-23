@@ -41,9 +41,11 @@ struct TMFingerSessionCompleteView<ViewModel: FingerSessionCompleteViewModelProt
                 title: Text(verbatim: viewModel.exerciseTitle)
             ),
             headline: Text(completed ? "session.allDoneTitle" : "done.titlePartial"),
+            total: viewModel.sessionLanguage.attributedString(
+                "session.total \(summary?.totalRepetitions ?? 0)"
+            ),
             message: Text(completed ? "session.allDoneMessage" : "done.messagePartial"),
-            results: results,
-            total: Text("session.total \(summary?.totalRepetitions ?? 0)")
+            results: results
         ) {
             closingAction
         }
@@ -54,7 +56,7 @@ struct TMFingerSessionCompleteView<ViewModel: FingerSessionCompleteViewModelProt
         }
         .animation(reduceMotion ? nil : .easeInOut(duration: 0.2), value: savingFinished)
         .environment(\.colorScheme, .light)
-        .environment(\.locale, viewModel.sessionLocale)
+        .environment(\.locale, viewModel.sessionLanguage.locale)
         .interactiveDismissDisabled()
         .task { await viewModel.save() }
         .task(id: savingFinished && scenePhase == .active && automaticallyRests) {
@@ -137,7 +139,7 @@ private final class MockFingerSessionCompleteViewModel: FingerSessionCompleteVie
         exerciseIndex: 0
     )
     let exerciseTitle = "Sentuh Jempol ke Jari"
-    let sessionLocale = AppLanguage.selected.locale
+    let sessionLanguage = AppLanguage.selected
     let exerciseNumber: Int? = 1
     let isPlanRunning = true
     let completed = true
