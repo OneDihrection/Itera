@@ -11,6 +11,8 @@ import Foundation
 enum HomeDayState: Equatable {
     /// A previous or current plan whose exercises are all complete.
     case completed
+    /// A previous day when none of its prescribed exercises were completed.
+    case missed
     /// Today's plan, which can be started or continued.
     case current
     /// Tomorrow's prescribed plan, visible now but not startable yet.

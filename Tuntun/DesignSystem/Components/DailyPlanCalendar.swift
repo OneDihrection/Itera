@@ -31,6 +31,7 @@ struct TMDailyPlanCalendar: View {
         }
         .scrollIndicators(.hidden)
         .scrollTargetBehavior(.paging)
+        .defaultScrollAnchor(.center)
         .scrollPosition(id: $visiblePage)
         .frame(height: 112)
         .foregroundStyle(TherapyPalette.brandInk)

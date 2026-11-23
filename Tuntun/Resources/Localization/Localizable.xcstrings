@@ -6937,6 +6937,23 @@
         }
       }
     },
+    "home.dailyPlan.missed" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Didn't get a chance to exercise? Let's try again in the next session!"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Belum sempat latihan? Yuk, coba lagi di sesi berikutnya!"
+          }
+        }
+      }
+    },
     "home.dailyPlan.progress %lld %lld" : {
       "extractionState" : "manual",
       "localizations" : {

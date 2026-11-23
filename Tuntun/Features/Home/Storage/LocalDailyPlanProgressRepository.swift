@@ -64,6 +64,16 @@ actor LocalDailyPlanProgressRepository: DailyPlanProgressRepository, DailyPlanHi
         )
     }
 
+    func history() throws -> [DailyPlanProgress] {
+        (try loadDays() ?? []).map { record in
+            DailyPlanProgress(
+                day: record.day,
+                completed: Set(record.completed),
+                planned: record.planned
+            )
+        }
+    }
+
     /// Replaces the entry for the progress's day and keeps every other day.
     func save(_ progress: DailyPlanProgress) throws {
         // Never overwrite an unreadable or unsupported file with new progress.

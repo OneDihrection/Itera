@@ -134,7 +134,7 @@ struct TMHomeView<ViewModel: HomeViewModelProtocol, Builder: HomeContentBuildabl
             emptyState
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
 
-        case .completed, .current, .upcoming:
+        case .completed, .missed, .current, .upcoming:
             planList
         }
     }
@@ -195,6 +195,8 @@ struct TMHomeView<ViewModel: HomeViewModelProtocol, Builder: HomeContentBuildabl
         switch viewModel.selectedDayState {
         case .completed:
             return Text("home.dailyPlan.completed")
+        case .missed:
+            return Text("home.dailyPlan.missed")
         case .current:
             return Text("home.dailyPlan.progress \(viewModel.completedCount) \(viewModel.rows.count)")
         case .upcoming:
@@ -212,7 +214,7 @@ struct TMHomeView<ViewModel: HomeViewModelProtocol, Builder: HomeContentBuildabl
         switch viewModel.selectedDayState {
         case .completed:
             return .completed
-        case .upcoming, .noSchedule:
+        case .missed, .upcoming, .noSchedule:
             return .upcoming(step: index + 1)
         case .current:
             switch row.status {
@@ -263,6 +265,9 @@ struct TMHomeView<ViewModel: HomeViewModelProtocol, Builder: HomeContentBuildabl
             if isViewingPastDate {
                 returnToTodayButton
             }
+
+        case .missed:
+            returnToTodayButton
 
         case .current:
             TMHomeFloatingButton(
@@ -394,6 +399,10 @@ private struct MockHomeBuilder: HomeContentBuildable {
 
 #Preview("Beranda — Hari Ini") {
     TMHomeView(viewModel: MockHomeViewModel(state: .current), builder: MockHomeBuilder())
+}
+
+#Preview("Beranda — Tidak Latihan") {
+    TMHomeView(viewModel: MockHomeViewModel(state: .missed), builder: MockHomeBuilder())
 }
 
 #Preview("Beranda — Besok") {
