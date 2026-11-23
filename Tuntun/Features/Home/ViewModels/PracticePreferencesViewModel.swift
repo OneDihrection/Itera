@@ -183,7 +183,7 @@ final class PracticePreferencesViewModel: PracticePreferencesViewModelProtocol {
     }
 
     func done() {
-        router.dismissSheet()
+        router.dismissPanel()
     }
 
     // MARK: - Voice control

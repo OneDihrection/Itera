@@ -2331,3 +2331,22 @@ In Sentuh jempol ke jari (thumb opposition), the thumb and target circles moved 
 - **Overlay.** `TMFingerLandmarkOverlay` passes the whole-hand circle's 0.15 s spring without bounce (`circleGlide`) to the opposition guide, and sizes the pair without the 4 pt rounding. The separate fingertip bubbles keep their stepped sizes. The merge thresholds, `merge` spring and scoring are unchanged; this is presentation only.
 
 Verification: XcodeGen and a Debug Simulator build with IPHONEOS_DEPLOYMENT_TARGET=17.0. Pending on the M1 iPad: in thumb opposition the circles follow the fingertips smoothly, with no per-frame stepping and no visible lag; they still become one circle at a 0.45-palm touch and part as the tips separate; the arc, pop and acknowledgment work; Reduce Motion places them at once; full fist, hook fist and forearm rotation are unchanged; the overlay keeps 30 fps.
+
+## Preferences sheet redesign (2026-11-23)
+
+At the product owner's request, the settings sheet opened from Beranda's gear was restyled to match the current look, renamed and shortened.
+- **Title.** `cognitive.settings` reads "Preferensi" / "Preferences" (formerly "Kenyamanan" / "Comfort"). The gear button's label uses the same key.
+- **Patient name removed.** The "Nama pasien" field is gone. Nothing read it, so `PracticePreferences.patientName` and the strings `settings.patientName`, `settings.patientNameTitle` and `settings.patientNameHelp` were removed. A value saved by an earlier install stays in UserDefaults unread.
+- **Look.** The sheet is still a native `Form` with the same controls and order. It now has white rows (`progressCanvas`) on the `canvas` grey page. Each section has a `TMSettingsSectionHeader` (new: a yellow `brand` icon tile beside a bold Plus Jakarta title, with an optional trailing action that holds Arrange). Display ("Tampilan") and Sound ("Suara") gained headers. Switches use `brand` yellow; checkmarks, chevrons and text actions use `brandInk`, because yellow on white is about 1.8:1. Footers are muted footnotes.
+- **Shorter copy.** The footers for exercises, arrange, rest, voice, recording, calm display and sound were cut to one short sentence or two. The stepper labels drop "Istirahat", which the header already says. The video footer keeps the hand-exercise caveat (only detected faces are blurred). None of these keys is narrated.
+
+Verification: `xcodegen generate` and an iOS Simulator build with `IPHONEOS_DEPLOYMENT_TARGET=17.0` succeeded. `-TuntunScreen settings` on the iPad (A16) Simulator in Indonesian showed the "Preferensi" title, the Exercises header with Arrange and the white rows; the lower sections were not scrolled to. Pending on the M1 iPad: the sheet in both languages, light and dark, and at accessibility text sizes; Arrange and the steppers; each recording level's footer.
+
+## Preferences as a floating panel (2026-11-23)
+
+At the product owner's request, Preferences now opens over a frosted Beranda, like History's exercise detail, instead of as a system form sheet, which can only dim the page grey.
+- **Presentation.** `TMHomeView` shows the Preferences `Form` (still in its own `NavigationStack`, with the "Preferensi" bar and Selesai) in `TMDetailPanel` as an overlay over its whole stack, at most 720 pt wide, fading in and out over 0.25 s. Tapping the frosted backdrop closes it, like Selesai. The overlay inherits Beranda's environment, so `modalEnvironment` is not applied; covers still use it. The top tab bar stays above the backdrop, as it does over History's detail.
+- **Design system.** `TMDetailPanel` gains `scrollsContent` (false: the card takes the full available height and holds content that scrolls itself, without padding) and `showsCloseButton`. Both default to the earlier behaviour, so History is unchanged.
+- **Naming.** The router state is no longer a sheet: `HomeSheet` → `HomePanel`, `sheet` → `panel`, `dismissSheet()` → `dismissPanel()`. `.presentationDetents` was dropped from the view.
+
+Verification: `xcodegen generate` and an iOS Simulator build with `IPHONEOS_DEPLOYMENT_TARGET=17.0` succeeded. `-TuntunScreen settings` on the iPad (A16) Simulator showed the card centred over the frosted Beranda. Closing by Selesai and the backdrop was not exercised. Pending on the M1 iPad: both close paths, Arrange drag inside the panel, VoiceOver staying inside the panel, dark mode, landscape on both sides, and History's detail panel unchanged.

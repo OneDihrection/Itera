@@ -11,7 +11,7 @@ import Observation
 @MainActor
 protocol HomeViewModelProtocol: AnyObject, Observable {
     var path: [HomeRoute] { get set }
-    var sheet: HomeSheet? { get set }
+    var panel: HomePanel? { get set }
     var cover: PlanCover? { get set }
     var rows: [DailyPlanRow] { get }
     var errorKey: String? { get }
@@ -35,7 +35,7 @@ protocol HomeViewModelProtocol: AnyObject, Observable {
     func begin(from itemID: String?)
 }
 
-/// Beranda: exposes `HomeRouter`'s navigation stack, sheet and the full-screen cover that runs
+/// Beranda: exposes `HomeRouter`'s navigation stack, Preferences panel and the full-screen cover that runs
 /// today's plan.
 @MainActor
 @Observable
@@ -90,12 +90,12 @@ final class HomeScreenViewModel: HomeViewModelProtocol {
         }
     }
 
-    var sheet: HomeSheet? {
+    var panel: HomePanel? {
         get {
-            router.sheet
+            router.panel
         }
         set {
-            router.sheet = newValue
+            router.panel = newValue
         }
     }
 
