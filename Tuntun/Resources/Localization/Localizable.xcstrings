@@ -7026,6 +7026,23 @@
         }
       }
     },
+    "home.dailyPlan.partial" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Oh no, some exercises were missed! Let's try again in the next session!"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Yah, ada beberapa latihan yang terlewatkan! yuk coba lagi pada sesi berikutnya!"
+          }
+        }
+      }
+    },
     "home.dailyPlan.progress %lld %lld" : {
       "extractionState" : "manual",
       "localizations" : {

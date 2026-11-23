@@ -22,6 +22,8 @@ protocol HomeViewModelProtocol: AnyObject, Observable {
     var selectedDate: Date { get }
     var visibleWeek: [Date] { get }
     var selectedDayState: HomeDayState { get }
+    /// Exercise IDs completed on the selected historical date.
+    var selectedCompletedItemIDs: Set<String> { get }
 
     func refresh() async
     func openPracticePreferences()
@@ -138,15 +140,24 @@ final class HomeScreenViewModel: HomeViewModelProtocol {
 
         switch offset {
         case ..<0:
-            guard let historicalProgress else {
+            guard historicalProgress != nil else {
                 return .completed
             }
 
-            let progress = historicalProgress.first {
-                calendar.isDate($0.day, inSameDayAs: selected)
+            guard let progress = historicalProgress(on: selected) else {
+                return .missed
             }
 
-            return progress?.completed.isEmpty == false ? .completed : .missed
+            let plannedItemIDs = progress.planned.isEmpty
+                ? Set(rows.map(\.id))
+                : Set(progress.planned)
+            let completedItemIDs = progress.completed.intersection(plannedItemIDs)
+
+            if completedItemIDs.isEmpty {
+                return .missed
+            }
+
+            return plannedItemIDs.isSubset(of: completedItemIDs) ? .completed : .partial
         case 0:
             return plan.isFinishedToday ? .completed : .current
         case 1:
@@ -154,6 +165,11 @@ final class HomeScreenViewModel: HomeViewModelProtocol {
         default:
             return .noSchedule
         }
+    }
+
+    var selectedCompletedItemIDs: Set<String> {
+        let visibleItemIDs = Set(rows.map(\.id))
+        return historicalProgress(on: selectedDate)?.completed.intersection(visibleItemIDs) ?? []
     }
 
     func refresh() async {
@@ -216,6 +232,12 @@ final class HomeScreenViewModel: HomeViewModelProtocol {
         } catch {
             // Keep the previous completed-day fallback when history cannot be read safely.
             historicalProgress = nil
+        }
+    }
+
+    private func historicalProgress(on date: Date) -> DailyPlanProgress? {
+        historicalProgress?.first {
+            Calendar.autoupdatingCurrent.isDate($0.day, inSameDayAs: date)
         }
     }
 }
