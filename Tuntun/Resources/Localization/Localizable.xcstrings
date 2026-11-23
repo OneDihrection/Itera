@@ -15595,6 +15595,38 @@
         }
       }
     },
+    "session.positionGood" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "In position"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Posisi sudah pas"
+          }
+        }
+      }
+    },
+    "session.positionPoor" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Not in position yet"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Posisi belum pas"
+          }
+        }
+      }
+    },
     "session.practice" : {
       "extractionState" : "manual",
       "localizations" : {

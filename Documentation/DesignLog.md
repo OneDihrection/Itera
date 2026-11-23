@@ -2165,3 +2165,16 @@ The user reported that the exercise detail panel's "Waktu bergerak" (time moving
 - The guided session summary now shows elapsed seconds for a movement or towel set with practice time but no repetition, as it already did for reach.
 
 Verification: XcodeGen and a Debug iOS Simulator build with `IPHONEOS_DEPLOYMENT_TARGET=17.0` succeeded. Nothing was run in the Simulator or on the iPad. Pending on the M1 iPad: arm raise, elbow bend (one side and both), fold towel and one Balancing exercise, each showing a nonzero time moving close to the active practice time; a pause and a tracking loss mid-set not adding time; a multi-set session crediting each set separately; and a day recorded before the change showing the backfilled figure.
+
+
+## Tracking status chip (2026-11-23)
+
+At the user's request, the camera preview shows a white chip in its top-left corner while an exercise runs. It reads "Posisi sudah pas" / "In position" with a green dot (`success`) while tracking is good, and "Posisi belum pas" / "Not in position yet" with a red dot (`warning`) while it is not. The wording also changes between the two states, so colour is never the only signal.
+
+- **Component.** `TMTrackingStatusChip` and the `.trackingStatusChip(_:videoBounds:)` modifier (DesignSystem/Components/TherapySessionStatus.swift) take values only. The chip sits 20 pt inside the visible video, so it never lands in a letterbox margin. It stays light in dark mode, takes no taps and crossfades over 0.25 s, with no animation under Reduce Motion.
+- **Guided light sessions** (arm raise, elbow bend, directional reach, fold towel). Good means the presentation has no `trackingMessage`, which the activities already debounce: lost after 1 s, found after 0.5 s. The chip shows where the body indicator does: the opening cues, calibration and practice. It is hidden during full-screen stages, pauses and camera waits.
+- **Balancing.** `BalanceSnapshot.trackingLost` is set by each engine on its existing missing-body paths. `BalanceSessionViewModel.trackingPositioned` debounces it with the same 1 s / 0.5 s timings. The chip is hidden while preparing, paused, waiting for the camera, resting, counting down, after the last set and on a capture failure.
+- **Finger and forearm sessions.** Good means `trackingReady`, which `FingerTrackingRecovery` already settles. The chip is hidden during the countdown, feedback, rest and finished phases, and also while paused, waiting for the camera or showing a recovery error.
+- The chip is status, not instruction text, so the rule against instruction text over the camera stands.
+
+Verification: XcodeGen and a Debug iOS Simulator build with `IPHONEOS_DEPLOYMENT_TARGET=17.0` succeeded. Nothing was run in the Simulator or on the iPad. Pending on the M1 iPad: in each session type, both languages and both landscape orientations, check that stepping out of frame turns the chip red after about 1 s and back to green on return. Also check that it never covers the bubbles or the finger recovery actions, and that it reads well with large text.

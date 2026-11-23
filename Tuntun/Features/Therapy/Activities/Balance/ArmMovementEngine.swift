@@ -288,6 +288,7 @@ struct ArmMovementEngine: BalanceMovementEngine {
         }
         resumeAfterDropout(at: frame.timestamp)
         lastGeometryTime = frame.timestamp
+        snapshot.trackingLost = false
         if !scoringEnabled {
             publishOverlay(geometry, frame: frame)
             clearTransientEvidence()
@@ -320,6 +321,7 @@ struct ArmMovementEngine: BalanceMovementEngine {
         poseLostSince = nil
         capture = nil
         resetRange()
+        snapshot.trackingLost = true
         snapshot.calibrationCountdown = nil
         snapshot.phase = torso == nil ? .findingBody : snapshot.phase
         snapshot.instructionKey = exercise.key(armOutOfView(in: frame) ? "armOutOfView" : "tracking")
@@ -416,6 +418,7 @@ struct ArmMovementEngine: BalanceMovementEngine {
         smoother.reset()
         snapshot.phase = .findingBody
         snapshot.instructionKey = exercise.key("tracking")
+        snapshot.trackingLost = true
         snapshot.calibrationProgress = 0
         snapshot.overlay = nil
         lastOverlayTimestamp = nil

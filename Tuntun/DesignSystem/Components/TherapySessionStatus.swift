@@ -43,3 +43,69 @@ struct TMTherapyFeedbackPill: View {
             .accessibilityAddTraits(.updatesFrequently)
     }
 }
+
+// MARK: - Tracking status chip
+
+/// A white capsule in the camera's corner saying whether the patient is in position: a green
+/// dot with "Posisi sudah pas" while tracking is good, a red one with "Posisi belum pas" while
+/// it is not. The wording differs too, so the colour is never the only signal. The caller
+/// decides what counts as positioned and when the chip shows.
+struct TMTrackingStatusChip: View {
+    let isPositioned: Bool
+
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    private var tint: Color {
+        isPositioned ? TherapyPalette.success : TherapyPalette.warning
+    }
+
+    private var title: LocalizedStringKey {
+        isPositioned ? "session.positionGood" : "session.positionPoor"
+    }
+
+    var body: some View {
+        HStack(spacing: 12) {
+            Circle()
+                .fill(tint)
+                .frame(width: 12, height: 12)
+
+            Text(title)
+                .typography(size: 24, weight: .semiBold, relativeTo: .title3)
+                .foregroundStyle(tint)
+                .contentTransition(.opacity)
+        }
+        .padding(.horizontal, 20)
+        .padding(.vertical, 12)
+        .background(Color.white, in: Capsule())
+        // The chip is always white over the video, so its colours keep their light values.
+        .environment(\.colorScheme, .light)
+        .animation(reduceMotion ? nil : .easeInOut(duration: 0.25), value: isPositioned)
+        .allowsHitTesting(false)
+        .accessibilityElement(children: .combine)
+        .accessibilityAddTraits(.updatesFrequently)
+    }
+}
+
+extension View {
+    /// Overlays `TMTrackingStatusChip` on a camera preview's top-left corner, inside the visible
+    /// video when its bounds are known so it never sits in a letterbox margin. Nil hides it.
+    func trackingStatusChip(_ isPositioned: Bool?, videoBounds: CGRect? = nil) -> some View {
+        overlay(alignment: .topLeading) {
+            if let isPositioned {
+                TMTrackingStatusChip(isPositioned: isPositioned)
+                    .padding(.leading, (videoBounds?.minX ?? 0) + 20)
+                    .padding(.top, (videoBounds?.minY ?? 0) + 20)
+                    .transition(.opacity)
+            }
+        }
+    }
+}
+
+#Preview("Tracking status chip") {
+    VStack(spacing: 24) {
+        TMTrackingStatusChip(isPositioned: true)
+        TMTrackingStatusChip(isPositioned: false)
+    }
+    .padding(40)
+    .background(Color.gray)
+}

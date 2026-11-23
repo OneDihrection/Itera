@@ -98,6 +98,8 @@ Top-level navigation uses the system `TabView` (a top tab bar on iPadOS 18, a bo
 
 `TMSessionGuideArrows` (Controls/SessionGuideArrows.swift) draws the body guidance arrows under those circles, unchanged from the former overlay: one solid blue curved arrow from the joint to the active bubble, following the limb's turn around `SessionBubbleGuide.pivot` (or bowing away from the image centre without one), fading over the last 60 pt and hidden once the joint arrives or a hold begins; the calibration cue (`SessionMovementCue`) along a fixed path from the limb's start, its passed stretch at 0.2 strength, lengthened to at least about 160 pt and faded in and out over 0.25 s; and the reach direction (`SessionReachArrow`), kept visible at the image edge. A brighter stretch travels toward each open chevron every 1.5 s (still under Reduce Motion). Shafts are 6 pt over an 11 pt `calmUnderlay`, chevron arms about 16 pt back and 28 pt across. `TMSessionBubbleOverlay` takes `movementCue` and `reachArrow` and draws it.
 
+`TMTrackingStatusChip` (Components/TherapySessionStatus.swift) is a white capsule showing whether the patient is in position: a green `success` dot and "Posisi sudah pas", or a red `warning` dot and "Posisi belum pas". It stays light in dark mode, takes no taps, and crossfades over 0.25 s, with no animation under Reduce Motion. `.trackingStatusChip(_:videoBounds:)` places it 20 pt inside the visible video's top-left corner; nil hides it. The caller decides what counts as positioned (2026-11-23).
+
 `TMTherapyProgressDots` (Components/TherapyProgressDots.swift) shows repetition progress as one soft dot per repetition, falling back to a thin bar beyond twelve. It displays supplied counts and a VoiceOver label only.
 
 ## Light session layout

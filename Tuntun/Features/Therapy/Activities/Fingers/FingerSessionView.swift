@@ -250,6 +250,26 @@ struct TMFingerSessionView<Service: FingerSessionServiceProtocol>: View {
             }
     }
 
+    /// Whether the hand is in position, for the chip over the camera; nil hides it.
+    /// `trackingReady` is already settled by `FingerTrackingRecovery`, so it does not flicker
+    /// on a dropped frame.
+    private func trackingPositioned(_ model: Service.Session) -> Bool? {
+        guard !model.isPreparing,
+              !model.isFinishing,
+              !model.paused,
+              !model.waitingForCamera,
+              model.errorKey == nil else {
+            return nil
+        }
+
+        switch model.activity.phase {
+        case .countdown, .feedback, .rest, .finished:
+            return nil
+        default:
+            return model.trackingReady
+        }
+    }
+
     private func cameraPreview(_ model: Service.Session) -> some View {
         ZStack(alignment: .bottomLeading) {
             TherapyPalette.canvas
@@ -275,6 +295,7 @@ struct TMFingerSessionView<Service: FingerSessionServiceProtocol>: View {
                 .animation(.easeOut(duration: 0.35), value: model.activity.phase == .countdown)
             }
         }
+        .trackingStatusChip(trackingPositioned(model), videoBounds: videoBounds)
     }
 
     @ViewBuilder

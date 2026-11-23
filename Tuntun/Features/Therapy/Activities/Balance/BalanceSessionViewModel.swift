@@ -22,6 +22,8 @@ protocol BalanceSessionViewModelProtocol: AnyObject, Observable {
     /// True once calibration finishes: practice shows the demonstration's target pose still.
     var demoHoldsPeak: Bool { get }
     var countdownOverlaySeconds: Int? { get }
+    /// Whether the patient is in position, for the camera's tracking-status chip; nil hides it.
+    var trackingPositioned: Bool? { get }
     var setNumber: Int { get }
     var totalSets: Int { get }
     var setResults: [Int] { get }
@@ -101,6 +103,34 @@ final class BalanceSessionViewModel: BalanceSessionViewModelProtocol {
 
     var countdownOverlaySeconds: Int? {
         openingCue == .countdown ? 3 : practiceCountdown
+    }
+
+    // MARK: Tracking status
+
+    /// Losing the body shows after 1 s and finding it again after 0.5 s, as in the guided
+    /// movement exercises, so a dropped frame does not flicker the chip.
+    private static let trackingLostDelay = 1.0
+    private static let trackingFoundDelay = 0.5
+
+    /// The debounced in-position state; written only when it changes.
+    private(set) var trackingSettled = false
+    /// When the engine's state began to differ from `trackingSettled`.
+    @ObservationIgnored private var trackingChangeSince: Double?
+
+    var trackingPositioned: Bool? {
+        guard !isPreparing,
+              !isFinishing,
+              !permissionDenied,
+              failure == nil,
+              !cameraWaiting,
+              !paused,
+              restRemaining == nil,
+              !allSetsDone,
+              countdownOverlaySeconds == nil else {
+            return nil
+        }
+
+        return trackingSettled
     }
 
     // MARK: Sets
@@ -234,11 +264,13 @@ final class BalanceSessionViewModel: BalanceSessionViewModelProtocol {
                     } else if !self.cameraWaiting {
                         self.showSkeletonWhileGated(frame)
                     }
+                    self.updateTrackingStatus(at: frame.timestamp)
                     return
                 }
                 let previous = self.snapshot
                 self.engine.consume(frame, scoringEnabled: !self.paused)
                 self.snapshot = self.engine.snapshot
+                self.updateTrackingStatus(at: frame.timestamp)
                 self.record(frame, previous: previous)
                 if self.updateCalibrationTransition(frame) {
                     return
@@ -643,6 +675,27 @@ final class BalanceSessionViewModel: BalanceSessionViewModelProtocol {
         practiceCountdown = remaining
         speakCountdown(remaining)
         return false
+    }
+
+    /// Follows the engine's tracking state into `trackingSettled` once it has held for its delay.
+    private func updateTrackingStatus(at time: Double) {
+        let positioned = !engine.snapshot.trackingLost
+
+        guard positioned != trackingSettled else {
+            trackingChangeSince = nil
+            return
+        }
+
+        let since = trackingChangeSince ?? time
+        trackingChangeSince = since
+
+        let delay = positioned ? Self.trackingFoundDelay : Self.trackingLostDelay
+        guard time - since >= delay else {
+            return
+        }
+
+        trackingSettled = positioned
+        trackingChangeSince = nil
     }
 
     /// Shows the live skeleton while spoken guidance or the countdown holds practice back, so the

@@ -237,6 +237,28 @@ struct TMTherapySessionView<ViewModel: TherapySessionViewModelProtocol>: View {
         }
     }
 
+    /// Whether the patient is in position, for the chip over the camera; nil hides it. The
+    /// activities already debounce `trackingMessage` (shown after 1 s of loss, cleared after
+    /// 0.5 s), so the chip does not flicker on a single dropped frame.
+    private var trackingPositioned: Bool? {
+        guard usesLightLayout,
+              showsBodyIndicator,
+              !hasFullScreenPresentation else {
+            return nil
+        }
+
+        switch model.snapshot.presentation {
+        case .movement(let value):
+            return value.trackingMessage == nil
+        case .reach(let value):
+            return value.trackingMessage == nil
+        case .towel(let value):
+            return value.trackingMessage == nil
+        default:
+            return nil
+        }
+    }
+
     /// Completed calibration captures, so each one pops its capture circle.
     private var captureCompletions: Int {
         guard case .movement(let movement) = model.snapshot.presentation else {
@@ -592,6 +614,7 @@ struct TMTherapySessionView<ViewModel: TherapySessionViewModelProtocol>: View {
                     .allowsHitTesting(false)
                 }
             }
+            .trackingStatusChip(trackingPositioned, videoBounds: videoBounds)
             .background(usesLightLayout ? TherapyPalette.canvas : Color.black)
             .clipShape(RoundedRectangle(cornerRadius: usesLightLayout ? 28 : 36))
             .onAppear { model.viewport(width: geometry.size.width, height: geometry.size.height) }
