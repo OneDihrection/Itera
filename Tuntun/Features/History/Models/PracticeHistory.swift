@@ -30,19 +30,36 @@ enum PracticeDayStatus: Equatable {
     case completed
 }
 
-/// One exercise practised on a day, as the day's progress page lists it.
+/// One session's practice of an exercise on a day, as the day's progress page lists it. An
+/// exercise practised in several sessions that day has one entry per session.
 struct PracticedExercise: Identifiable, Hashable {
     /// Where the exercise's saved report is.
     enum Report: Hashable {
         case finger(UUID)
         case session(UUID)
+
+        var sessionID: UUID {
+            switch self {
+            case .finger(let id), .session(let id):
+                return id
+            }
+        }
     }
 
     /// The exercise's raw value, the same ID the daily plan uses.
-    let id: String
+    let exerciseID: String
     let titleKey: String
-    /// The first session that practised it that day; `nil` when only the plan recorded it.
+    /// The session that practised it; `nil` when only the plan recorded it.
     let report: Report?
+
+    /// Unique within a day: the exercise and its session.
+    var id: String {
+        guard let report else {
+            return exerciseID
+        }
+
+        return "\(exerciseID)-\(report.sessionID.uuidString)"
+    }
 }
 
 /// Practice per calendar day, joined from finger sessions, guided and Balancing sessions and the
@@ -163,25 +180,32 @@ struct PracticeHistory {
         return (finger + guided).sorted { $0.date < $1.date }
     }
 
-    /// Exercises in the order first practised, then plan items recorded without a saved session.
+    /// One entry per session of each exercise, in practice order (a session's several sets of
+    /// one exercise stay one entry), then plan items recorded without a saved session.
     private static func day(events: [PracticeEvent], plan: DailyPlanDay?) -> Day {
         var exercises: [PracticedExercise] = []
-        var seen: Set<String> = []
+        var seen: Set<PracticedExercise.ID> = []
+        var practised: Set<String> = []
 
-        for event in events where seen.insert(event.exerciseID).inserted {
-            exercises.append(
-                PracticedExercise(
-                    id: event.exerciseID,
-                    titleKey: titleKey(for: event.exerciseID),
-                    report: event.report
-                )
+        for event in events {
+            let exercise = PracticedExercise(
+                exerciseID: event.exerciseID,
+                titleKey: titleKey(for: event.exerciseID),
+                report: event.report
             )
+
+            guard seen.insert(exercise.id).inserted else {
+                continue
+            }
+
+            practised.insert(event.exerciseID)
+            exercises.append(exercise)
         }
 
-        for id in (plan?.completed ?? []).sorted() where seen.insert(id).inserted {
+        for id in (plan?.completed ?? []).sorted() where practised.insert(id).inserted {
             exercises.append(
                 PracticedExercise(
-                    id: id,
+                    exerciseID: id,
                     titleKey: titleKey(for: id),
                     report: nil
                 )

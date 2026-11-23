@@ -105,15 +105,19 @@ struct ExerciseProgress {
 
     /// Start of the day shown.
     let day: Date
-    /// Sessions practising the exercise on `day`, oldest first.
+    /// Sessions practising the exercise on `day`, oldest first; only the focused one when the
+    /// progress describes a single session.
     let sessionsOnDay: [ExerciseSession]
-    /// Sessions before `day`, oldest first.
+    /// Sessions before `day`, or before the focused session (that day's earlier runs included),
+    /// oldest first.
     private let earlier: [ExerciseSession]
     private let calendar: Calendar
 
+    /// - Parameter focus: The one session of the day to describe; nil joins every session of it.
     init(
         sessions: [ExerciseSession],
         day: Date,
+        focus: PracticedExercise.Report? = nil,
         calendar: Calendar = .current
     ) {
         let start = calendar.startOfDay(for: day)
@@ -121,8 +125,18 @@ struct ExerciseProgress {
 
         self.day = start
         self.calendar = calendar
-        sessionsOnDay = sorted.filter { calendar.isDate($0.date, inSameDayAs: start) }
-        earlier = sorted.filter { $0.date < start }
+
+        guard
+            let focus,
+            let focused = sorted.first(where: { $0.report == focus })
+        else {
+            sessionsOnDay = sorted.filter { calendar.isDate($0.date, inSameDayAs: start) }
+            earlier = sorted.filter { $0.date < start }
+            return
+        }
+
+        sessionsOnDay = [focused]
+        earlier = sorted.filter { $0.date < focused.date }
     }
 
     // MARK: - The day

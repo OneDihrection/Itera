@@ -2195,3 +2195,15 @@ Verification: XcodeGen and a Debug iOS Simulator build with `IPHONEOS_DEPLOYMENT
 - bubbles, arrows, fingertip circles and the fold-towel zones still on the joints with the filled preview, in both orientations;
 - reach left/right, cross midline and bilateral arm raise targets staying on screen despite the crop;
 - Settings 0 hiding and restoring an exercise.
+
+
+## One history card per session (2026-11-23)
+
+At the user's request, an exercise practised more than once on a day now shows once per session in the day's history list. Before this, the list showed one card per exercise. Every run was already saved as its own session (a fresh UUID each), but `PracticeHistory` kept only the first session per exercise and the detail panel joined them all. This supersedes "one `TMHistoryCard` per practised exercise" and the whole-day scope of the panel and its delete (logs: *Progress calendar and day pages*, *Exercise detail panel*, *Delete an exercise's day record*).
+
+- **List.** `PracticedExercise` names its exercise as `exerciseID`, and its `id` is the exercise and session together. `PracticeHistory.day` dedupes on that pair, so one session's several sets of an exercise stay one card. A plan item completed without a saved session keeps a single card.
+- **Card.** Cards stay title and number only. A start time under the title was tried and dropped at the user's request, so `TMHistoryCard` is unchanged.
+- **Panel.** `ExerciseProgress` takes an optional `focus` report. With one, the day's figures, key repetitions and trend point are that session's, and the baselines and trend read every session before it, that day's earlier runs included. "Sesi sebelumnya" on a second run therefore compares it with the first. A plan-only card keeps the whole-day view.
+- **Delete.** "Hapus catatan latihan ini" deletes the shown session only. The plan's done mark is removed only when no other session of that exercise is left on the day.
+
+Verification: XcodeGen and a Debug iOS Simulator build with `IPHONEOS_DEPLOYMENT_TARGET=17.0` succeeded. Nothing was run in the Simulator or on the iPad. Pending: practise arm raise and a finger exercise twice each on one day, then check four numbered cards, each panel showing its own run, the previous-session comparison, and deleting one run keeping the other card and the done mark.
