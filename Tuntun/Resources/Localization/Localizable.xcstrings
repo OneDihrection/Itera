@@ -2850,6 +2850,60 @@
         }
       }
     },
+    "debug.skipCountdown" : {
+      "comment" : "Debug builds only: ends the countdown after the plan's long rest and opens the next exercise.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Skip countdown"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lewati hitung mundur"
+          }
+        }
+      }
+    },
+    "debug.skipRest" : {
+      "comment" : "Debug builds only: ends the current rest at once, as if it had run out.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Skip rest"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lewati istirahat"
+          }
+        }
+      }
+    },
+    "debug.startAnyExercise" : {
+      "comment" : "Debug builds only: menu that opens any plan exercise's intro, whatever the earlier exercises' state.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Start any exercise"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mulai latihan mana pun"
+          }
+        }
+      }
+    },
     "debug.startExercise" : {
       "comment" : "Debug builds only: skips the plan intro narration and opens the exercise at once.",
       "extractionState" : "manual",
@@ -2864,6 +2918,24 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Mulai tanpa narasi"
+          }
+        }
+      }
+    },
+    "debug.trySitToStand" : {
+      "comment" : "Debug builds only: opens the sit-to-stand intro without completing earlier plan exercises.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Try Sit to Stand"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Coba Berdiri dari Duduk"
           }
         }
       }
@@ -7056,6 +7128,7 @@
       }
     },
     "home.greetingName %@" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -7072,6 +7145,7 @@
       }
     },
     "home.hello" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -7322,6 +7396,7 @@
       }
     },
     "home.wellWishes" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -11065,6 +11140,7 @@
       }
     },
     "plan.doneToday" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -11130,6 +11206,7 @@
       }
     },
     "plan.holdSeconds %lld" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "variations" : {
@@ -15535,6 +15612,38 @@
         }
       }
     },
+    "session.positionGood" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "In position"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Posisi sudah pas"
+          }
+        }
+      }
+    },
+    "session.positionPoor" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Not in position yet"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Posisi belum pas"
+          }
+        }
+      }
+    },
     "session.practice" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -17442,13 +17551,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Live camera with the shoulder, hip, knee, and ankle outline"
+            "value" : "Live camera with a circle on the hip that follows you as you sit and stand"
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Kamera langsung dengan garis bahu, pinggul, lutut, dan pergelangan kaki"
+            "value" : "Kamera langsung dengan lingkaran di pinggul yang mengikuti gerakan duduk dan berdiri"
           }
         }
       }
@@ -17629,13 +17738,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Sit sideways to the camera with shoulder, hip, and knee in view."
+            "value" : "Sit sideways to the camera with your shoulder and hip in view. Your feet do not need to be in view."
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Duduk menyamping ke kamera dengan bahu, pinggul, dan lutut terlihat."
+            "value" : "Duduk menyamping ke kamera dengan bahu dan pinggul terlihat. Kaki tidak perlu terlihat."
           }
         }
       }

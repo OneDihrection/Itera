@@ -114,6 +114,9 @@ struct TMFingerSessionView<Service: FingerSessionServiceProtocol>: View {
             debugFinishButton(model)
         }
         .overlay {
+            debugSkipRestButton(model)
+        }
+        .overlay {
             loadingOverlay(model)
         }
         .animation(
@@ -145,6 +148,21 @@ struct TMFingerSessionView<Service: FingerSessionServiceProtocol>: View {
             }
             .padding(.top, 12)
             .padding(.trailing, 20)
+        }
+        #endif
+    }
+
+    /// Debug builds only: on the breathing rest pages, which show no Skip of their own, ends the
+    /// rest through the session's existing `skipRest()`. The set and "next up" pages already offer
+    /// Skip during the rest.
+    @ViewBuilder
+    private func debugSkipRestButton(_ model: Service.Session) -> some View {
+        #if DEBUG
+        if model.activity.phase == .rest,
+           model.scriptedRest != nil || model.restBreath != nil,
+           !model.paused,
+           !model.hasFinished {
+            TMDebugSkipRestButton(action: model.skipRest)
         }
         #endif
     }
@@ -232,6 +250,26 @@ struct TMFingerSessionView<Service: FingerSessionServiceProtocol>: View {
             }
     }
 
+    /// Whether the hand is in position, for the chip over the camera; nil hides it.
+    /// `trackingReady` is already settled by `FingerTrackingRecovery`, so it does not flicker
+    /// on a dropped frame.
+    private func trackingPositioned(_ model: Service.Session) -> Bool? {
+        guard !model.isPreparing,
+              !model.isFinishing,
+              !model.paused,
+              !model.waitingForCamera,
+              model.errorKey == nil else {
+            return nil
+        }
+
+        switch model.activity.phase {
+        case .countdown, .feedback, .rest, .finished:
+            return nil
+        default:
+            return model.trackingReady
+        }
+    }
+
     private func cameraPreview(_ model: Service.Session) -> some View {
         ZStack(alignment: .bottomLeading) {
             TherapyPalette.canvas
@@ -257,6 +295,7 @@ struct TMFingerSessionView<Service: FingerSessionServiceProtocol>: View {
                 .animation(.easeOut(duration: 0.35), value: model.activity.phase == .countdown)
             }
         }
+        .trackingStatusChip(trackingPositioned(model), videoBounds: videoBounds)
     }
 
     @ViewBuilder

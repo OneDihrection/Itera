@@ -67,6 +67,7 @@ struct SitToStandBalanceEngine: BalanceMovementEngine {
         activity.recalibrate()
         snapshot.phase = .findingBody
         snapshot.overlay = nil
+        snapshot.trackingLost = true
         snapshot.calibrationProgress = 0
         snapshot.calibrationCountdown = nil
         snapshot.instructionKey = "sitToStand.tracking"
@@ -91,6 +92,7 @@ struct SitToStandBalanceEngine: BalanceMovementEngine {
         snapshot.hipAngle = value.hipAngle
         snapshot.trunkLean = value.trunkLean
         snapshot.instructionKey = value.trackingMessage ?? value.cue ?? value.instruction
+        snapshot.trackingLost = value.trackingMessage != nil || value.joints == nil
 
         if value.count >= goal {
             snapshot.phase = .complete

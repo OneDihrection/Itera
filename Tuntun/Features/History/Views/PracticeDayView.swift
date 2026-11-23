@@ -33,7 +33,7 @@ struct TMPracticeDayView<ViewModel: PracticeDayViewModelProtocol>: View {
             .padding(.bottom, 32)
             .frame(maxWidth: .infinity)
         }
-        .background(TherapyPalette.canvas)
+        .background(TherapyPalette.progressCanvas)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .principal) {

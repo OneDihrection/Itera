@@ -8,7 +8,7 @@
 import SwiftUI
 
 /// One exercise on a day's progress page: its name on the left and the numbered progress badge
-/// on the right, on a pale blue card.
+/// on the right, on the neutral canvas surface.
 ///
 /// With an action the card is a button (for example to open that exercise's report); without
 /// one it is plain text. It takes values only.
@@ -48,7 +48,7 @@ struct TMHistoryCard: View {
         .padding(.vertical, 24)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(
-            TherapyPalette.historyCard,
+            TherapyPalette.canvas,
             in: RoundedRectangle(cornerRadius: 20, style: .continuous)
         )
         .contentShape(RoundedRectangle(cornerRadius: 20, style: .continuous))

@@ -64,6 +64,7 @@ struct FoldTowelActivity: TherapyActivity {
         case .nextSet:
             sequence = TowelFoldSequence()
             snapshot.count = 0
+            snapshot.practiceSeconds = 0
             setPhase(.countdown)
         case .viewport(let value):
             if let viewport, viewport != value {
@@ -94,11 +95,13 @@ struct FoldTowelActivity: TherapyActivity {
 
     private mutating func restart() {
         let count = sequence.repetitions
+        let practiceSeconds = snapshot.practiceSeconds
         generation = nil
         cursorFilter.reset()
         sequence.suspend()
         snapshot = TowelSnapshot()
         snapshot.count = count
+        snapshot.practiceSeconds = practiceSeconds
         loseTracking()
     }
 
@@ -126,7 +129,8 @@ struct FoldTowelActivity: TherapyActivity {
             restart()
         }
         generation = frame.generation
-        if last.map({ frame.timestamp - $0 > 0.15 }) == true {
+        let gap = last.map { frame.timestamp - $0 } ?? 0
+        if gap > 0.15 {
             loseTracking()
         }
         last = frame.timestamp
@@ -165,6 +169,9 @@ struct FoldTowelActivity: TherapyActivity {
         )
         snapshot.handPosition = position
         if snapshot.phase == .practice {
+            // Practice time follows reach's rule: each measured frame credits at most 0.2 s, and
+            // a gap over 0.3 s credits nothing.
+            snapshot.practiceSeconds += gap > 0 && gap <= 0.3 ? min(0.2, gap) : 0
             sequence.consume(position: position, grip: snapshot.grip, timestamp: frame.timestamp)
         }
     }
