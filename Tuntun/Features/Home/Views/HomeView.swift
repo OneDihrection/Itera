@@ -262,7 +262,9 @@ struct TMHomeView<ViewModel: HomeViewModelProtocol, Builder: HomeContentBuildabl
     private var floatingAction: some View {
         switch viewModel.selectedDayState {
         case .completed:
-            EmptyView()
+            if isViewingPastDate {
+                returnToTodayButton
+            }
 
         case .current:
             TMHomeFloatingButton(
@@ -282,14 +284,26 @@ struct TMHomeView<ViewModel: HomeViewModelProtocol, Builder: HomeContentBuildabl
             )
 
         case .noSchedule:
-            TMHomeFloatingButton(
-                title: "home.dailyPlan.returnToday",
-                symbol: "arrow.uturn.backward",
-                style: .outlined
-            ) {
-                withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.2)) {
-                    viewModel.returnToToday()
-                }
+            returnToTodayButton
+        }
+    }
+
+    private var isViewingPastDate: Bool {
+        let calendar = Calendar.autoupdatingCurrent
+        let selectedDate = calendar.startOfDay(for: viewModel.selectedDate)
+        let today = calendar.startOfDay(for: .now)
+
+        return selectedDate < today
+    }
+
+    private var returnToTodayButton: some View {
+        TMHomeFloatingButton(
+            title: "home.dailyPlan.returnToday",
+            symbol: "arrow.uturn.backward",
+            style: .outlined
+        ) {
+            withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.2)) {
+                viewModel.returnToToday()
             }
         }
     }
