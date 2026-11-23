@@ -7022,6 +7022,7 @@
       }
     },
     "home.greetingName %@" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -7038,6 +7039,7 @@
       }
     },
     "home.hello" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -7288,6 +7290,7 @@
       }
     },
     "home.wellWishes" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -11031,6 +11034,7 @@
       }
     },
     "plan.doneToday" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -11096,6 +11100,7 @@
       }
     },
     "plan.holdSeconds %lld" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "variations" : {

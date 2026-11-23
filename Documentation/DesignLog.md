@@ -1995,3 +1995,22 @@ This replaces the rule that rest pages always show their buttons. Skip has no vi
 
 Verification: a Mac Catalyst build is the only check so far. Pending: the debug rest screens and a real session on the baseline iPad, in both languages and with VoiceOver, checking that a tap pauses and resumes, End is reachable from the short rest's pause menu and through VoiceOver on the long rest, and the circle and waves animate as before.
 
+
+## Exercise detail insights at full width (2026-11-23)
+
+At the user's request, "Perkembangan gerakanmu" moves its insight card (`TMInsightCard`) out of the column beside the pose picture. The picture now sits beside the headline, since line and legend only, and the insight card spans the full width under both, before the trend chart. With long wording, especially in English, the column beside the 340 pt picture had grown much taller than the picture and left empty space under it. The stacked fallback keeps the same order: picture, change, insights, trend. This supersedes the "Perkembangan gerakanmu" bullet's column contents in *Exercise detail figure and layout*; the explicit ideal width on the side-by-side row stays.
+
+Verification: XcodeGen and a Debug iOS Simulator build succeeded. Pending: the preview canvases and, on the baseline iPad, both languages, large text, and an exercise without a measure (fold towel).
+
+
+## Skinned demonstration clips and blends (2026-11-23)
+
+At the user's request, all body and finger demonstration clips were re-rendered with one natural skin texture and the project blends were replaced.
+
+- **Look.** Both rigs use the PNG textures in `ArtSource/Textures` (`skin_albedo.png`, `skin_height.png`, relative paths), matched in texel density and exposure. Body and hand now share one style.
+- **Motion and framing.** The right hand grips with the arm (open when reaching, a loose hold for the other clips). Each body clip has a `Cam_<clip>` camera in the blend, following the waist-up rule; sit to stand is turned slightly to the side.
+- **Blends.** `BodyDemonstrations_ConnectedMotion.blend` and `RiggedFingerDemonstrations.blend` hold the skinned scenes. `author_body_demonstrations.py` keys the grip and prefers the stored camera; `render_rigged_hand_demonstrations.py` now writes 768 × 768 MP4 clips through FFmpeg.
+- **App.** The five finger clips are `*_demonstration.mp4` in `Resources/Animations` (the old `Fingers/*.mov` are removed). `FingerDemonstrationView` loads them through `FingerExercise.demonstrationResourceName`. Clip lengths match the old ones, so the 4 s and 16 s timing is unchanged.
+
+Verification: ffprobe confirmed 768 × 768, 24 FPS, yuv420p and the expected frame counts; both blends reopen with textures resolved; the authoring tool rendered two clips from the new blend. Pending: an XcodeGen and Simulator build, playback on the baseline iPad, and the `hand-*` catalog thumbnails, which were not re-rendered.
+
