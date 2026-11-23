@@ -197,7 +197,11 @@ struct TMBalanceSessionView<ViewModel: BalanceSessionViewModelProtocol>: View {
 
             cameraStatus
         }
-        .trackingStatusChip(model.trackingPositioned, videoBounds: videoBounds)
+        .trackingStatusChip(
+            model.trackingPositioned,
+            muted: model.trackingMuted,
+            videoBounds: videoBounds
+        )
         .background(TherapyPalette.canvas)
         .background {
             GeometryReader { proxy in

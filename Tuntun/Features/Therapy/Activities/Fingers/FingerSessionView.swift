@@ -269,6 +269,13 @@ struct TMFingerSessionView<Service: FingerSessionServiceProtocol>: View {
         }
     }
 
+    /// Whether the chip is muted: tracking is shown but the hand is not being acted on, while
+    /// narration or the demonstration holds the exercise back.
+    private func trackingMuted(_ model: Service.Session) -> Bool {
+        model.calibrationMessage == "calibration.intro"
+            || !model.activity.actsOnMovement
+    }
+
     private func cameraPreview(_ model: Service.Session) -> some View {
         ZStack(alignment: .bottomLeading) {
             TherapyPalette.canvas
@@ -294,7 +301,11 @@ struct TMFingerSessionView<Service: FingerSessionServiceProtocol>: View {
                 .animation(.easeOut(duration: 0.35), value: model.activity.phase == .countdown)
             }
         }
-        .trackingStatusChip(trackingPositioned(model), videoBounds: videoBounds)
+        .trackingStatusChip(
+            trackingPositioned(model),
+            muted: trackingMuted(model),
+            videoBounds: videoBounds
+        )
     }
 
     @ViewBuilder

@@ -259,6 +259,20 @@ struct TMTherapySessionView<ViewModel: TherapySessionViewModelProtocol>: View {
         }
     }
 
+    /// Whether the chip is muted: tracking is shown but the session is not acting on movement,
+    /// because an opening cue, the preparation or the countdown holds evidence back. Calibration
+    /// and practice keep it at full strength.
+    private var trackingMuted: Bool {
+        switch model.snapshot.stage {
+        case .instruction, .demonstration, .preparationWait:
+            return true
+        case .activity:
+            return model.snapshot.presentation?.countdownLength != nil
+        case .preparing, .feedback, .rest, .summary:
+            return false
+        }
+    }
+
     /// Completed calibration captures, so each one pops its capture circle.
     private var captureCompletions: Int {
         guard case .movement(let movement) = model.snapshot.presentation else {
@@ -614,7 +628,11 @@ struct TMTherapySessionView<ViewModel: TherapySessionViewModelProtocol>: View {
                     .allowsHitTesting(false)
                 }
             }
-            .trackingStatusChip(trackingPositioned, videoBounds: videoBounds)
+            .trackingStatusChip(
+                trackingPositioned,
+                muted: trackingMuted,
+                videoBounds: videoBounds
+            )
             .background(usesLightLayout ? TherapyPalette.canvas : Color.black)
             .clipShape(RoundedRectangle(cornerRadius: usesLightLayout ? 28 : 36))
             .onAppear { model.viewport(width: geometry.size.width, height: geometry.size.height) }

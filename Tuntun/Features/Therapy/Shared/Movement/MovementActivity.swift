@@ -40,6 +40,9 @@ struct MovementActivity: TherapyActivity {
     private var recoveringSince: Double?
     /// When display-only frames lost the limb, so the drawn guide survives a brief dropout.
     private var previewMissingSince: Double?
+    /// The last preview frame that found the limb, so the first tick after a cue does not date
+    /// a tracking loss from the last scored frame before it.
+    private var lastPreviewSeen: Double?
 
     /// Confidence floor for the hip and shoulders.
     private static let jointConfidence: Float = 0.3
@@ -171,7 +174,11 @@ struct MovementActivity: TherapyActivity {
             if let lastValid, time - lastValid > 0.5 {
                 phase = 0
                 // Without frames the loss began when evidence was last good.
-                noteTrackingLoss(at: time, since: lastValid, reason: "noFrames")
+                noteTrackingLoss(
+                    at: time,
+                    since: max(lastValid, lastPreviewSeen ?? lastValid),
+                    reason: "noFrames"
+                )
 
                 if !holdSurvivesLoss(at: time) {
                     dwell.reset()
@@ -241,6 +248,7 @@ struct MovementActivity: TherapyActivity {
         calibrationCueVisible = true
         missingSince = nil
         recoveringSince = nil
+        lastPreviewSeen = nil
         if scriptedGuidance {
             snapshot.instruction = target == nil ? "session.holdStart" : "session.returnStart"
         }
@@ -601,9 +609,11 @@ struct MovementActivity: TherapyActivity {
     private mutating func preview(_ frame: TrackingObservation) {
         let time = frame.timestamp
 
+        // The tracking status follows previews too, so the chip stays live while a cue plays.
         guard let joints = limbJoints(in: frame) else {
             let since = previewMissingSince ?? time
             previewMissingSince = since
+            noteTrackingLoss(at: time, reason: "preview")
 
             if time - since > Self.dwellTrackingGrace {
                 snapshot.guide = nil
@@ -616,8 +626,12 @@ struct MovementActivity: TherapyActivity {
         let scale = (reference - anchor).length
 
         guard scale > 0.03 else {
+            noteTrackingLoss(at: time, reason: "preview")
             return
         }
+
+        lastPreviewSeen = time
+        noteTrackingRecovery(at: time)
 
         guard let start, let target else {
             let calibrationTip = snapshot.guide?.calibrationTip

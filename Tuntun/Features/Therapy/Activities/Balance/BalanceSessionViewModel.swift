@@ -24,6 +24,8 @@ protocol BalanceSessionViewModelProtocol: AnyObject, Observable {
     var countdownOverlaySeconds: Int? { get }
     /// Whether the patient is in position, for the camera's tracking-status chip; nil hides it.
     var trackingPositioned: Bool? { get }
+    /// Whether the chip is muted because a cue or the countdown holds movement back.
+    var trackingMuted: Bool { get }
     var setNumber: Int { get }
     var totalSets: Int { get }
     var setResults: [Int] { get }
@@ -114,6 +116,8 @@ final class BalanceSessionViewModel: BalanceSessionViewModelProtocol {
 
     /// The debounced in-position state; written only when it changes.
     private(set) var trackingSettled = false
+    /// True while spoken guidance or the countdown holds practice back; written only when it changes.
+    private(set) var trackingMuted = false
     /// When the engine's state began to differ from `trackingSettled`.
     @ObservationIgnored private var trackingChangeSince: Double?
 
@@ -259,6 +263,7 @@ final class BalanceSessionViewModel: BalanceSessionViewModelProtocol {
                 guard let self else { return }
 
                 guard self.advanceOpeningIfReady(at: frame.timestamp) else {
+                    self.setTrackingMuted(true)
                     if self.paused {
                         self.engine.consume(frame, scoringEnabled: false)
                     } else if !self.cameraWaiting {
@@ -267,6 +272,7 @@ final class BalanceSessionViewModel: BalanceSessionViewModelProtocol {
                     self.updateTrackingStatus(at: frame.timestamp)
                     return
                 }
+                self.setTrackingMuted(false)
                 let previous = self.snapshot
                 self.engine.consume(frame, scoringEnabled: !self.paused)
                 self.snapshot = self.engine.snapshot
@@ -698,15 +704,24 @@ final class BalanceSessionViewModel: BalanceSessionViewModelProtocol {
         trackingChangeSince = nil
     }
 
+    private func setTrackingMuted(_ muted: Bool) {
+        guard trackingMuted != muted else {
+            return
+        }
+
+        trackingMuted = muted
+    }
+
     /// Shows the live skeleton while spoken guidance or the countdown holds practice back, so the
     /// patient sees tracking at once. Scoring stays off, so calibration and holds do not advance.
     private func showSkeletonWhileGated(_ frame: TrackingObservation) {
-        // Sit-to-stand suspends its activity on unscored frames and draws no overlay from them.
+        engine.preview(frame)
+
+        // Sit-to-stand draws no overlay from previews; only its tracking state follows them.
         guard !exercise.isSitToStand else {
             return
         }
 
-        engine.consume(frame, scoringEnabled: false)
         snapshot.overlay = engine.snapshot.overlay
     }
 

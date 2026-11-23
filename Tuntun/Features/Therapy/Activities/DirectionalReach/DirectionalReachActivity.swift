@@ -695,9 +695,11 @@ struct DirectionalReachActivity: TherapyActivity {
         let time = frame.timestamp
         let left = configuration.side == .left
 
+        // The tracking status follows previews too, so the chip stays live while a cue plays.
         guard let wrist = frame.point(left ? .leftWrist : .rightWrist) else {
             let since = previewMissingSince ?? time
             previewMissingSince = since
+            noteTrackingLoss(at: time)
 
             if time - since > Self.dwellTrackingGrace {
                 snapshot.guide = nil
@@ -706,6 +708,7 @@ struct DirectionalReachActivity: TherapyActivity {
         }
 
         previewMissingSince = nil
+        noteTrackingRecovery(at: time)
 
         // Before the start is held its bubble sits on the wrist, as the start hold draws it.
         guard phase != .start else {

@@ -236,6 +236,13 @@ struct SitToStandActivity {
 
     // MARK: - Joint metrics
 
+    /// Whether the frame holds the minimum torso evidence (a shoulder and hip on one side), for
+    /// tracking status on frames that are not scored.
+    func hasTorsoEvidence(in frame: TrackingObservation) -> Bool {
+        chain(in: frame, left: true) != nil
+            || chain(in: frame, left: false) != nil
+    }
+
     /// One side’s visible torso and optional knee; confidence selection uses the torso only.
     private func chain(
         in frame: TrackingObservation,
