@@ -26,6 +26,8 @@ protocol FingerSessionRepository: FingerHistoryReading {
     func saveRepClips(_ clips: [Int: [RepClipFrame]], for keyReps: FingerKeyReps, sessionID: UUID) async throws
     /// Saved clip files by exercise, set number and repetition number; empty when none exist.
     func repClipURLs(sessionID: UUID) async -> [FingerRepClipKey: URL]
+    /// Removes one saved clip, keeping its skeleton; does nothing when the clip is absent.
+    func deleteRepClip(sessionID: UUID, key: FingerRepClipKey) async throws
 }
 
 /// Identifies one saved finger clip.

@@ -31,4 +31,6 @@ protocol SessionRepository: Sendable {
     func saveRepClips(_ clips: [Int: [RepClipFrame]], for keyReps: ActivityKeyReps, sessionID: UUID) async throws
     /// Saved clip files by set execution identity and repetition number; empty when none exist.
     func repClipURLs(sessionID: UUID) async -> [UUID: [Int: URL]]
+    /// Removes one saved clip, keeping its skeleton; does nothing when the clip is absent.
+    func deleteRepClip(sessionID: UUID, executionID: UUID, repNumber: Int) async throws
 }

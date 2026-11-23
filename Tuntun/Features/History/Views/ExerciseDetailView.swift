@@ -97,7 +97,9 @@ struct TMExerciseDetailView<ViewModel: ExerciseDetailViewModelProtocol>: View {
                     baseline: viewModel.baseline,
                     baselineSession: viewModel.baselineSession,
                     wording: wording,
-                    namesSet: viewModel.recordsSeveralSets
+                    namesSet: viewModel.recordsSeveralSets,
+                    deleteErrorKey: viewModel.clipDeleteErrorKey,
+                    onDeleteClip: deleteClip
                 )
             }
         }
@@ -123,6 +125,12 @@ struct TMExerciseDetailView<ViewModel: ExerciseDetailViewModelProtocol>: View {
         }
 
         return reps
+    }
+
+    private func deleteClip(of rep: RecordedRep) {
+        Task {
+            await viewModel.deleteClip(of: rep)
+        }
     }
 
     /// Fold towel has no measure to compare, but still has pace and volume rows.
@@ -451,10 +459,14 @@ private struct TMExerciseRecordSection: View {
     let wording: ExerciseWording
     /// The day recorded more than one set, so the heading names the repetition's set.
     let namesSet: Bool
+    /// Set when the last clip deletion failed.
+    let deleteErrorKey: String?
+    let onDeleteClip: (RecordedRep) -> Void
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var role = KeyRepRole.hardest
     @State private var showsSkeleton = false
+    @State private var confirmingDelete = false
 
     var body: some View {
         if let rep {
@@ -462,6 +474,7 @@ private struct TMExerciseRecordSection: View {
                 header(rep)
                 roleChoice
                 media(rep)
+                clipActions(rep)
                 callout(rep)
             }
         }
@@ -568,6 +581,41 @@ private struct TMExerciseRecordSection: View {
             )
             .id("\(role.rawValue)-\(metrics.repNumber)-skeleton")
             .transition(.opacity)
+        }
+    }
+
+    // MARK: Clip deletion
+
+    /// "Hapus video" under a shown clip, confirmed first; the skeleton and figures stay.
+    @ViewBuilder
+    private func clipActions(_ rep: RecordedRep) -> some View {
+        if rep.clipURL != nil, !showsSkeleton {
+            TMTherapyButton(
+                title: "exerciseDetail.record.deleteClip",
+                symbol: "trash",
+                destructive: true,
+                pill: true
+            ) {
+                confirmingDelete = true
+            }
+            .fixedSize()
+            .confirmationDialog(
+                "exerciseDetail.record.deleteClip.title",
+                isPresented: $confirmingDelete,
+                titleVisibility: .visible
+            ) {
+                Button("exerciseDetail.record.deleteClip.confirm", role: .destructive) {
+                    onDeleteClip(rep)
+                }
+
+                Button("exerciseDetail.record.deleteClip.cancel", role: .cancel) {}
+            } message: {
+                Text("exerciseDetail.record.deleteClip.message")
+            }
+        }
+
+        if let deleteErrorKey {
+            TMTherapyError(key: deleteErrorKey)
         }
     }
 
@@ -972,6 +1020,7 @@ private final class MockExerciseDetailViewModel: ExerciseDetailViewModelProtocol
     let exerciseID = "armRaise"
     let titleKey = "session.armRaise"
     let recordsSeveralSets = false
+    let clipDeleteErrorKey: String? = nil
     let titleSide: TherapySide? = .left
     let day = Calendar.current.startOfDay(for: .now)
     let loading = false
@@ -1024,6 +1073,7 @@ private final class MockExerciseDetailViewModel: ExerciseDetailViewModelProtocol
     }
 
     func load() async {}
+    func deleteClip(of rep: RecordedRep) async {}
     func close() {}
 }
 

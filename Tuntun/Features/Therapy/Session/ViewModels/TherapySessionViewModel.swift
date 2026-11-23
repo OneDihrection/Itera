@@ -646,6 +646,7 @@ private actor PresentationFixtureRepository: SessionRepository {
     func keyReps(sessionID: UUID) -> [ActivityKeyReps] { [] }
     func saveRepClips(_ clips: [Int: [RepClipFrame]], for keyReps: ActivityKeyReps, sessionID: UUID) {}
     func repClipURLs(sessionID: UUID) -> [UUID: [Int: URL]] { [:] }
+    func deleteRepClip(sessionID: UUID, executionID: UUID, repNumber: Int) {}
 }
 #endif
 

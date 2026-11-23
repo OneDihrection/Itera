@@ -14,13 +14,29 @@ struct RecordedRep: Equatable {
     let rep: KeyRep
     /// The set the repetition belongs to, within its session.
     let setNumber: Int
-    let clipURL: URL?
+    /// The saved clip; nil when none was recorded or it was deleted.
+    var clip: RepClip?
     /// Joint indices of the moving limb, in the skeleton drawn for the repetition.
     let emphasizedJoints: Set<Int>
+
+    var clipURL: URL? {
+        clip?.url
+    }
 
     var recordsHand: Bool {
         rep.frames.contains { $0.hand != nil }
     }
+}
+
+/// One saved key-repetition clip and where its repository keeps it.
+struct RepClip: Equatable {
+    enum Reference: Equatable {
+        case session(id: UUID, executionID: UUID, repNumber: Int)
+        case finger(id: UUID, key: FingerRepClipKey)
+    }
+
+    let url: URL
+    let reference: Reference
 }
 
 @MainActor
@@ -47,7 +63,11 @@ protocol ExerciseDetailViewModelProtocol: AnyObject, Observable {
     func keyRep(for role: KeyRepRole) -> RecordedRep?
     /// The day's recorded repetitions span more than one set, so a repetition names its set.
     var recordsSeveralSets: Bool { get }
+    /// Set when the last clip deletion failed.
+    var clipDeleteErrorKey: String? { get }
     func load() async
+    /// Deletes the repetition's clip, keeping its skeleton and figures.
+    func deleteClip(of rep: RecordedRep) async
     func close()
 }
 
@@ -63,6 +83,7 @@ final class ExerciseDetailViewModel: ExerciseDetailViewModelProtocol {
     let day: Date
     private(set) var loading = false
     private(set) var errorKey: String?
+    private(set) var clipDeleteErrorKey: String?
     private(set) var progress: ExerciseProgress?
 
     var baseline: ProgressBaseline = .firstSession {
@@ -221,6 +242,54 @@ final class ExerciseDetailViewModel: ExerciseDetailViewModelProtocol {
         router.dismissExerciseDetail()
     }
 
+    // MARK: - Deleting clips
+
+    func deleteClip(of rep: RecordedRep) async {
+        guard let clip = rep.clip else {
+            return
+        }
+
+        clipDeleteErrorKey = nil
+
+        do {
+            switch clip.reference {
+            case .session(let id, let executionID, let repNumber):
+                try await sessions.deleteRepClip(
+                    sessionID: id,
+                    executionID: executionID,
+                    repNumber: repNumber
+                )
+            case .finger(let id, let key):
+                try await fingerReplayRepository.deleteRepClip(sessionID: id, key: key)
+            }
+        } catch {
+            clipDeleteErrorKey = "exerciseDetail.record.deleteClip.error"
+            LogManager.shared.error("Key-repetition clip not deleted", error: error, category: .storage)
+            return
+        }
+
+        removeClip(clip)
+    }
+
+    /// Drops the deleted clip from the loaded repetitions, so the record shows the skeleton.
+    private func removeClip(_ clip: RepClip) {
+        for (report, reps) in recordedReps {
+            guard reps.contains(where: { $0.clip == clip }) else {
+                continue
+            }
+
+            recordedReps[report] = reps.map { candidate in
+                guard candidate.clip == clip else {
+                    return candidate
+                }
+
+                var cleared = candidate
+                cleared.clip = nil
+                return cleared
+            }
+        }
+    }
+
     private func loadBaselineReps() async {
         guard let baselineSession else {
             return
@@ -350,10 +419,22 @@ final class ExerciseDetailViewModel: ExerciseDetailViewModelProtocol {
                 set.reps
                     .sorted { $0.metrics.repNumber < $1.metrics.repNumber }
                     .map { rep in
-                        RecordedRep(
+                        let repNumber = rep.metrics.repNumber
+                        let clip = clips[set.executionID]?[repNumber].map { url in
+                            RepClip(
+                                url: url,
+                                reference: .session(
+                                    id: sessionID,
+                                    executionID: set.executionID,
+                                    repNumber: repNumber
+                                )
+                            )
+                        }
+
+                        return RecordedRep(
                             rep: rep,
                             setNumber: set.setNumber,
-                            clipURL: clips[set.executionID]?[rep.metrics.repNumber],
+                            clip: clip,
                             emphasizedJoints: set.activity.kind == .foldTowel
                                 ? HandSkeleton.towelEmphasis
                                 : BodyJoint.movingChain(for: set.activity, side: rep.metrics.side)
@@ -382,7 +463,9 @@ final class ExerciseDetailViewModel: ExerciseDetailViewModelProtocol {
                         return RecordedRep(
                             rep: rep,
                             setNumber: set.setNumber,
-                            clipURL: clips[key],
+                            clip: clips[key].map { url in
+                                RepClip(url: url, reference: .finger(id: sessionID, key: key))
+                            },
                             emphasizedJoints: HandSkeleton.emphasis(for: set.exercise)
                         )
                     }

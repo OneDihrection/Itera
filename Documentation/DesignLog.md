@@ -1919,3 +1919,15 @@ The product owner asked for a calmer figure in which every joint stays clear. Th
 
 Verification: a Debug Simulator build succeeded, and synthetic arm-raise and hand poses were rendered through a temporary debug gallery (removed) on the iPad Pro 13-inch (M5) Simulator. Pending on the baseline iPad: real recordings, dark mode.
 
+
+## Delete a key-repetition clip (2026-11-23)
+
+Caregivers asked to remove a single recorded video from history without deleting the whole session.
+
+- The exercise detail panel's practice record shows a destructive "Hapus video" pill under a shown clip. A confirmation dialog states that the skeleton and practice figures are kept; confirming deletes only that repetition's `.mp4`.
+- `SessionRepository.deleteRepClip(sessionID:executionID:repNumber:)` and `FingerSessionRepository.deleteRepClip(sessionID:key:)` remove one clip file and do nothing when it is absent. Clip naming now lives in one helper per repository, shared with saving.
+- `RecordedRep` carries a `RepClip` (URL plus its repository reference). After a deletion the panel drops the clip from its loaded repetitions, so the record falls back to the skeleton and the switch disappears; a failure shows an error under the clip and is logged.
+- The panel lists only clips already moved into place, so a clip still encoding in the background is not offered for deletion until it has landed.
+- The unlinked session and finger report pages keep their replay sections unchanged.
+
+Verification: `xcodegen generate` and a Simulator build with `IPHONEOS_DEPLOYMENT_TARGET=17.0` succeeded. Pending: deleting guided and finger clips in the Simulator and on the baseline iPad in both languages, confirming the `.mp4` is removed while `.reps.json` remains.

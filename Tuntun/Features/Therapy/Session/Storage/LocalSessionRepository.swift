@@ -165,8 +165,10 @@ actor LocalSessionRepository: SessionRepository {
                 continue
             }
 
-            let url = folder.appendingPathComponent(
-                "\(keyReps.executionID.uuidString)-r\(rep.metrics.repNumber).mp4"
+            let url = clipURL(
+                sessionID: sessionID,
+                executionID: keyReps.executionID,
+                repNumber: rep.metrics.repNumber
             )
             try await RepClipWriter.write(frames, to: url)
         }
@@ -193,6 +195,21 @@ actor LocalSessionRepository: SessionRepository {
         }
 
         return result
+    }
+
+    func deleteRepClip(sessionID: UUID, executionID: UUID, repNumber: Int) throws {
+        let url = clipURL(sessionID: sessionID, executionID: executionID, repNumber: repNumber)
+
+        guard FileManager.default.fileExists(atPath: url.path) else {
+            return
+        }
+
+        try FileManager.default.removeItem(at: url)
+    }
+
+    nonisolated private func clipURL(sessionID: UUID, executionID: UUID, repNumber: Int) -> URL {
+        clipsDirectory(for: sessionID)
+            .appendingPathComponent("\(executionID.uuidString)-r\(repNumber).mp4")
     }
 
     nonisolated private func clipsDirectory(for id: UUID) -> URL {

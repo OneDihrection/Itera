@@ -166,8 +166,12 @@ actor LocalFingerSessionRepository: FingerSessionRepository {
                 continue
             }
 
-            let name = "\(keyReps.exercise.rawValue)-s\(keyReps.setNumber)-r\(rep.metrics.repNumber).mp4"
-            try await RepClipWriter.write(frames, to: directory.appendingPathComponent(name))
+            let key = FingerRepClipKey(
+                exercise: keyReps.exercise,
+                setNumber: keyReps.setNumber,
+                repNumber: rep.metrics.repNumber
+            )
+            try await RepClipWriter.write(frames, to: clipURL(sessionID: sessionID, key: key))
         }
     }
 
@@ -195,6 +199,15 @@ actor LocalFingerSessionRepository: FingerSessionRepository {
         }
 
         return result
+    }
+
+    func deleteRepClip(sessionID: UUID, key: FingerRepClipKey) throws {
+        try removeIfPresent(clipURL(sessionID: sessionID, key: key))
+    }
+
+    nonisolated private func clipURL(sessionID: UUID, key: FingerRepClipKey) -> URL {
+        clipsDirectory(for: sessionID)
+            .appendingPathComponent("\(key.exercise.rawValue)-s\(key.setNumber)-r\(key.repNumber).mp4")
     }
 
     private func keyRepsURL(for id: UUID) -> URL {
