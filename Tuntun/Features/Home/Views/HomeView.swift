@@ -7,18 +7,15 @@
 
 import SwiftUI
 
-/// Beranda shows today's plan as a timeline. The start button floats at the bottom
-/// once the inline button scrolls away. It owns the Home tab's stack, its settings sheet and
-/// the full-screen cover that runs today's plan.
+/// Beranda is one page whose reusable header, calendar, plan rows and floating action change
+/// with the selected date. It owns the Home tab's stack, settings sheet and plan cover.
 struct TMHomeView<ViewModel: HomeViewModelProtocol, Builder: HomeContentBuildable>: View {
     @State private var viewModel: ViewModel
     private let builder: Builder
+
     @Environment(\.buttonFeedback) private var buttonFeedback
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @AppStorage(PracticePreferences.patientName) private var patientName = ""
-
-    /// True once the inline start button has scrolled under the top edge.
-    @State private var startButtonHidden = false
+    @Environment(\.scenePhase) private var scenePhase
 
     init(viewModel: ViewModel, builder: Builder) {
         _viewModel = State(initialValue: viewModel)
@@ -66,26 +63,26 @@ struct TMHomeView<ViewModel: HomeViewModelProtocol, Builder: HomeContentBuildabl
         }
     }
 
-    // MARK: - Content
+    // MARK: - Page
 
     private var content: some View {
-        ScrollView {
-            VStack(spacing: 56) {
-                header
-                timeline
-            }
-            .frame(maxWidth: 1000)
-            .frame(maxWidth: .infinity)
-            .scenePadding(.horizontal)
-            .padding(.top, 16)
-            .padding(.bottom, 180)
+        VStack(spacing: 0) {
+            header
+
+            calendar
+                .padding(.top, 21)
+
+            dayContent
+                .padding(.top, 21)
         }
-        .coordinateSpace(name: Self.scrollSpace)
-        .overlay(alignment: .bottom) {
-            floatingStart
-        }
+        .frame(maxWidth: 1142)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        .padding(.top, 26)
         .foregroundStyle(TherapyPalette.ink)
         .background(TherapyPalette.canvas)
+        .overlay(alignment: .bottom) {
+            floatingAction
+        }
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
@@ -97,151 +94,212 @@ struct TMHomeView<ViewModel: HomeViewModelProtocol, Builder: HomeContentBuildabl
             }
         }
         .task {
-            await refresh()
+            await viewModel.refresh()
+        }
+        .onChange(of: scenePhase) { _, phase in
+            if phase == .active {
+                viewModel.synchronizeCalendarDay()
+            }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .NSCalendarDayChanged)) { _ in
+            viewModel.synchronizeCalendarDay()
         }
     }
-
-    private static var scrollSpace: String { "home.scroll" }
-
-    private func refresh() async {
-        await viewModel.refresh()
-    }
-
-    // MARK: - Header
 
     private var header: some View {
-        VStack(spacing: 12) {
-            greetingTitle
-                .typography(size: 44, weight: .bold, relativeTo: .largeTitle)
-                .accessibilityAddTraits(.isHeader)
-
-            Text("home.wellWishes")
-                .typography(size: 26, weight: .regular, relativeTo: .title3)
-
-            startButton
-                .padding(.top, 24)
-                .onGeometryChange(for: Bool.self) { proxy in
-                    proxy.frame(in: .named(Self.scrollSpace)).maxY < 0
-                } action: { hidden in
-                    withAnimation(reduceMotion ? nil : .easeOut(duration: 0.25)) {
-                        startButtonHidden = hidden
-                    }
-                }
-
-            statusMessages
+        VStack(spacing: 0) {
+            TMHomeHeaderTitle(text: dateTitle)
+            TMHomeHeaderSubtitle(text: headerSubtitle)
         }
-        .multilineTextAlignment(.center)
-        .frame(maxWidth: .infinity)
+        .frame(maxWidth: 1010, minHeight: 90, alignment: .top)
     }
 
-    /// "Halo, Bu Yuli!" when a name is set in Settings, otherwise "Halo!".
-    private var greetingTitle: Text {
-        let name = patientName.trimmingCharacters(in: .whitespacesAndNewlines)
-
-        guard !name.isEmpty else {
-            return Text("home.hello")
-        }
-
-        return Text("home.greetingName \(name)")
-    }
-
-    @ViewBuilder
-    private var statusMessages: some View {
-        if let error = viewModel.errorKey {
-            TMTherapyError(key: error)
-        }
-
-    }
-
-    // MARK: - Start
-
-    private var startButton: some View {
-        TMTherapyButton(
-            title: startTitle,
-            symbol: viewModel.isFinishedToday ? "checkmark" : "play.fill",
-            prominent: true
-        ) {
-            startPlan(from: nil)
-        }
-    }
-
-    private var startTitle: LocalizedStringKey {
-        if viewModel.isFinishedToday {
-            return "plan.doneToday"
-        }
-
-        if viewModel.hasProgress {
-            return "plan.continue"
-        }
-
-        return "home.startExercise"
-    }
-
-    @ViewBuilder
-    private var floatingStart: some View {
-        if startButtonHidden {
-            TMTherapyFloatingActionDock {
-                startButton
+    private var calendar: some View {
+        TMDailyPlanCalendar(
+            dates: viewModel.visibleWeek,
+            selectedDate: viewModel.selectedDate
+        ) { date in
+            withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.2)) {
+                viewModel.selectDate(date)
             }
-            .transition(reduceMotion ? .opacity : .move(edge: .bottom).combined(with: .opacity))
+        } onMoveWeek: { offset in
+            withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.25)) {
+                viewModel.moveVisibleWeek(by: offset)
+            }
         }
     }
 
-    /// Opens the intro of the next exercise (or the tapped one); the intro's own Start is the
-    /// explicit start that validates permissions and listening.
-    private func startPlan(from itemID: String?) {
-        viewModel.begin(from: itemID)
+    @ViewBuilder
+    private var dayContent: some View {
+        switch viewModel.selectedDayState {
+        case .noSchedule:
+            emptyState
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+
+        case .completed, .current, .upcoming:
+            planList
+        }
     }
 
-    // MARK: - Timeline
+    private var planList: some View {
+        ScrollView {
+            LazyVStack(spacing: 0) {
+                let rows = displayedRows
 
-    private var timeline: some View {
-        let rows = viewModel.rows
+                ForEach(rows.indices, id: \.self) { index in
+                    let row = rows[index]
 
-        return VStack(spacing: 0) {
-            ForEach(rows.indices, id: \.self) { index in
-                let row = rows[index]
-
-                TMTherapyTimelineRow(
-                    state: Self.timelineState(row.status),
-                    previousIsDone: index > rows.startIndex && rows[index - 1].status == .done,
-                    isFirst: index == rows.startIndex,
-                    isLast: index == rows.index(before: rows.endIndex)
-                ) {
-                    TMTherapyPlanCard(
+                    TMDailyPlanCard(
                         title: LocalizedStringKey(row.titleKey),
-                        details: row.details.map(Self.planDetail),
-                        artwork: row.item.artwork,
-                        fallbackArtwork: row.item.fallbackArtwork,
-                        state: Self.timelineState(row.status)
+                        sets: sets(in: row),
+                        repetitions: repetitions(in: row),
+                        duration: estimatedDuration(at: index),
+                        state: cardState(for: row, index: index),
+                        isLast: index == rows.index(before: rows.endIndex)
                     ) {
                         startPlan(from: row.id)
                     }
                 }
             }
+            .frame(maxWidth: 1041)
+            .frame(maxWidth: .infinity)
+            .padding(.top, 48)
+            .padding(.bottom, viewModel.selectedDayState == .completed ? 48 : 188)
         }
+        .scrollIndicators(.hidden)
     }
 
-    private static func timelineState(_ status: DailyPlanRow.Status) -> TherapyTimelineState {
-        switch status {
-        case .done:
-            return .done
-        case .next:
-            return .current
+    private var emptyState: some View {
+        VStack(spacing: 0) {
+            TMHomeHeaderTitle(text: Text("home.dailyPlan.emptyTitle"))
+            TMHomeHeaderSubtitle(
+                text: Text("home.dailyPlan.emptySubtitle"),
+                color: TherapyPalette.planMutedInk
+            )
+        }
+        .padding(.bottom, 120)
+    }
+
+    // MARK: - Presentation
+
+    private var dateTitle: Text {
+        Text(
+            viewModel.selectedDate,
+            format: .dateTime
+                .weekday(.wide)
+                .day()
+                .month(.wide)
+                .year()
+        )
+    }
+
+    private var headerSubtitle: Text {
+        switch viewModel.selectedDayState {
+        case .completed:
+            return Text("home.dailyPlan.completed")
+        case .current:
+            return Text("home.dailyPlan.progress \(viewModel.completedCount) \(viewModel.rows.count)")
         case .upcoming:
-            return .upcoming
+            return Text("home.dailyPlan.upcoming")
+        case .noSchedule:
+            return Text("home.dailyPlan.noSchedule")
         }
     }
 
-    static func planDetail(_ detail: DailyPlanRow.Detail) -> TherapyPlanDetail {
-        switch detail {
-        case .sets(let count):
-            return TherapyPlanDetail(symbol: "rectangle.stack", text: "plan.sets \(count)")
-        case .repetitions(let count):
-            return TherapyPlanDetail(symbol: "arrow.triangle.2.circlepath", text: "plan.repetitions \(count)")
-        case .holdSeconds(let seconds):
-            return TherapyPlanDetail(symbol: "timer", text: "plan.holdSeconds \(seconds)")
+    private var displayedRows: [DailyPlanRow] {
+        viewModel.rows
+    }
+
+    private func cardState(for row: DailyPlanRow, index: Int) -> TMDailyPlanCardState {
+        switch viewModel.selectedDayState {
+        case .completed:
+            return .completed
+        case .upcoming, .noSchedule:
+            return .upcoming(step: index + 1)
+        case .current:
+            switch row.status {
+            case .done:
+                return .completed
+            case .next:
+                return .current(step: index + 1)
+            case .upcoming:
+                return .upcoming(step: index + 1)
+            }
         }
+    }
+
+    private func sets(in row: DailyPlanRow) -> Int {
+        for detail in row.details {
+            if case .sets(let count) = detail {
+                return count
+            }
+        }
+
+        return 1
+    }
+
+    private func repetitions(in row: DailyPlanRow) -> Int {
+        for detail in row.details {
+            if case .repetitions(let count) = detail {
+                return count
+            }
+        }
+
+        return 1
+    }
+
+    private func estimatedDuration(at index: Int) -> ClosedRange<Int> {
+        if viewModel.selectedDayState == .current, index < 2 {
+            return 10...15
+        }
+
+        return 4...6
+    }
+
+    // MARK: - Actions
+
+    @ViewBuilder
+    private var floatingAction: some View {
+        switch viewModel.selectedDayState {
+        case .completed:
+            EmptyView()
+
+        case .current:
+            TMHomeFloatingButton(
+                title: viewModel.hasProgress ? "plan.continue" : "home.startExercise",
+                symbol: "play.fill",
+                style: .prominent
+            ) {
+                startPlan(from: nil)
+            }
+
+        case .upcoming:
+            TMHomeFloatingButton(
+                title: "home.startExercise",
+                symbol: "lock.fill",
+                style: .disabled,
+                action: {}
+            )
+
+        case .noSchedule:
+            TMHomeFloatingButton(
+                title: "home.dailyPlan.returnToday",
+                symbol: "arrow.uturn.backward",
+                style: .outlined
+            ) {
+                withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.2)) {
+                    viewModel.returnToToday()
+                }
+            }
+        }
+    }
+
+    private func startPlan(from itemID: String?) {
+        guard viewModel.selectedDayState == .current else {
+            return
+        }
+
+        viewModel.begin(from: itemID)
     }
 }
 
@@ -254,13 +312,48 @@ private final class MockHomeViewModel: HomeViewModelProtocol {
     var path: [HomeRoute] = []
     var sheet: HomeSheet?
     var cover: PlanCover?
-    let rows: [DailyPlanRow] = []
+    let rows: [DailyPlanRow]
     let errorKey: String? = nil
-    let isFinishedToday = false
-    let hasProgress = false
+    let isFinishedToday: Bool
+    let completedCount: Int
+    let hasProgress: Bool
+    let selectedDayState: HomeDayState
+    var selectedDate: Date
+    var visibleWeek: [Date]
+
+    init(state: HomeDayState) {
+        selectedDayState = state
+        let calendar = Calendar.autoupdatingCurrent
+        let today = calendar.startOfDay(for: .now)
+        let weekday = calendar.component(.weekday, from: today)
+        let monday = calendar.date(byAdding: .day, value: -((weekday + 5) % 7), to: today) ?? today
+        visibleWeek = (0..<7).compactMap { calendar.date(byAdding: .day, value: $0, to: monday) }
+        selectedDate = today
+
+        let items = Array(DailyPlan.standard.prefix(4))
+        rows = items.enumerated().map { index, item in
+            DailyPlanRow(
+                item: item,
+                titleKey: DailyPlanViewModel.titleKey(for: item.exercise),
+                details: [.sets(3), .repetitions(8)],
+                status: index == 0 ? .done : (index == 1 ? .next : .upcoming)
+            )
+        }
+        isFinishedToday = state == .completed
+        completedCount = state == .completed ? rows.count : 1
+        hasProgress = completedCount > 0
+    }
 
     func refresh() async {}
     func openPracticePreferences() {}
+    func selectDate(_ date: Date) { selectedDate = date }
+    func moveVisibleWeek(by offset: Int) {
+        visibleWeek = visibleWeek.compactMap {
+            Calendar.autoupdatingCurrent.date(byAdding: .day, value: offset * 7, to: $0)
+        }
+    }
+    func synchronizeCalendarDay() {}
+    func returnToToday() { selectedDate = .now }
     func begin(from itemID: String?) {}
 }
 
@@ -283,7 +376,19 @@ private struct MockHomeBuilder: HomeContentBuildable {
     }
 }
 
-#Preview("Beranda") {
-    TMHomeView(viewModel: MockHomeViewModel(), builder: MockHomeBuilder())
+#Preview("Beranda — Selesai") {
+    TMHomeView(viewModel: MockHomeViewModel(state: .completed), builder: MockHomeBuilder())
+}
+
+#Preview("Beranda — Hari Ini") {
+    TMHomeView(viewModel: MockHomeViewModel(state: .current), builder: MockHomeBuilder())
+}
+
+#Preview("Beranda — Besok") {
+    TMHomeView(viewModel: MockHomeViewModel(state: .upcoming), builder: MockHomeBuilder())
+}
+
+#Preview("Beranda — Tanpa Jadwal") {
+    TMHomeView(viewModel: MockHomeViewModel(state: .noSchedule), builder: MockHomeBuilder())
 }
 #endif
