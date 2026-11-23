@@ -35,6 +35,10 @@ struct TMTherapyProgressRing: View {
 /// A breathing cue driven by the rest clock. The session owns narration and timing.
 /// `animationDuration` is how long the circle eases toward each `intensity` sample; `paused`
 /// stops its idle motion.
+///
+/// The page shows only the cue, a comfort line and the circle. Like the practice countdown, a tap
+/// anywhere pauses (the pause menu offers End), and End and Skip stay available as accessibility
+/// actions.
 struct TMTherapyBreathingRest: View {
     let cue: LocalizedStringKey
     let intensity: Double
@@ -45,45 +49,54 @@ struct TMTherapyBreathingRest: View {
     var skip: (() -> Void)? = nil
 
     var body: some View {
-        VStack(spacing: 20) {
-            Spacer(minLength: 0)
+        Button(action: pause) {
+            VStack(spacing: 0) {
+                heading
 
-            VStack(spacing: 8) {
-                Text(cue)
-                    .typography(size: 40, weight: .bold, relativeTo: .largeTitle)
-                    .accessibilityAddTraits(.isHeader)
-                Text("rest.breath.comfort")
-                    .typography(size: 24, weight: .regular, relativeTo: .title3)
-                    .foregroundStyle(TherapyPalette.muted)
+                TMTherapyBreathingCircle(
+                    intensity: intensity,
+                    paused: paused,
+                    smoothing: animationDuration
+                )
+                .aspectRatio(1, contentMode: .fit)
+                .frame(maxWidth: 240, maxHeight: 240)
+                .padding(.top, 56)
             }
-            .multilineTextAlignment(.center)
-
-            TMTherapyBreathingCircle(
-                intensity: intensity,
-                paused: paused,
-                smoothing: animationDuration
-            )
-            .aspectRatio(1, contentMode: .fit)
-            .frame(maxWidth: 460, maxHeight: 460)
-
-            Spacer(minLength: 0)
-
-            HStack(spacing: 20) {
-                TMTherapyTextButton(title: "session.pauseAction", symbol: "pause.fill", action: pause)
-                if let skip {
-                    TMTherapyTextButton(title: "rest.skip", symbol: "forward.end", action: skip)
-                }
-                TMTherapyTextButton(title: "session.endAction", symbol: "stop.fill", action: stop)
+            .padding(24)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .foregroundStyle(TherapyPalette.ink)
+        .background(TherapyPalette.canvas.ignoresSafeArea())
+        .accessibilityHint("countdown.pauseHint")
+        .accessibilityAction(named: Text("action.end"), stop)
+        .accessibilityActions {
+            if let skip {
+                Button("rest.skip", action: skip)
             }
         }
-        .padding(24)
-        .foregroundStyle(TherapyPalette.ink)
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(TherapyPalette.canvas.ignoresSafeArea())
+    }
+
+    private var heading: some View {
+        VStack(spacing: 8) {
+            Text(cue)
+                .typography(size: 40, weight: .bold, relativeTo: .largeTitle)
+                .accessibilityAddTraits(.isHeader)
+
+            Text("rest.breath.comfort")
+                .typography(size: 24, weight: .regular, relativeTo: .title3)
+                .foregroundStyle(TherapyPalette.muted)
+        }
+        .multilineTextAlignment(.center)
     }
 }
 
 /// Full-screen rest waves. The caller supplies the breathing cue and animation progress.
+///
+/// The page shows only the centred cue and a comfort line over the waves, with no buttons: a tap
+/// anywhere pauses or resumes, and paused the cue reads "Paused". End is an accessibility action.
+/// `counter` (breaths remaining) is read to VoiceOver instead of drawn.
 struct TMTherapyLongRest: View {
     let cue: Text
     let cueID: String
@@ -100,36 +113,39 @@ struct TMTherapyLongRest: View {
             TMTherapyLongRestWaves(intensity: intensity, paused: paused)
                 .ignoresSafeArea()
 
-            VStack(spacing: 16) {
-                if let counter {
-                    counter.typography(.title3)
-                }
-                ZStack {
-                    (paused ? Text("session.paused") : cue)
-                        .typography(size: 40, weight: .bold, relativeTo: .largeTitle)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.5)
-                        .id(paused ? "session.paused" : cueID)
-                        .transition(reduceMotion ? .identity : .opacity.combined(with: .offset(y: 8)))
-                }
-                .animation(reduceMotion ? nil : .easeInOut(duration: 0.28), value: cueID)
+            Button(action: togglePause) {
+                heading
+                    .padding(24)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .contentShape(Rectangle())
             }
-            .accessibilityElement(children: .combine)
-            .accessibilityAddTraits(.isHeader)
-            .multilineTextAlignment(.center)
-            .padding(24)
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-
-            HStack(spacing: 24) {
-                Button(paused ? "session.resume" : "session.pause", action: togglePause)
-                Button("session.endAction", action: stop)
-            }
-            .typography(.headline)
-            .buttonStyle(.bordered)
-            .tint(TherapyPalette.onBrand)
-            .padding(24)
+            .buttonStyle(.plain)
+            .accessibilityHint(paused ? Text("session.resume") : Text("session.pause"))
+            .accessibilityAction(named: Text("action.end"), stop)
         }
         .foregroundStyle(TherapyPalette.onBrand)
+        .animation(reduceMotion ? nil : .easeInOut(duration: 0.2), value: paused)
+    }
+
+    private var heading: some View {
+        VStack(spacing: 8) {
+            ZStack {
+                (paused ? Text("session.paused") : cue)
+                    .typography(size: 40, weight: .bold, relativeTo: .largeTitle)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.5)
+                    .id(paused ? "session.paused" : cueID)
+                    .transition(reduceMotion ? .identity : .opacity.combined(with: .offset(y: 8)))
+            }
+            .animation(reduceMotion ? nil : .easeInOut(duration: 0.28), value: cueID)
+
+            Text("rest.breath.comfort")
+                .typography(size: 24, weight: .regular, relativeTo: .title3)
+        }
+        .multilineTextAlignment(.center)
+        .accessibilityElement(children: .combine)
+        .accessibilityAddTraits(.isHeader)
+        .accessibilityValue(counter ?? Text(verbatim: ""))
     }
 }
 

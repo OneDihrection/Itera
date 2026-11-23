@@ -98,6 +98,9 @@ struct TMTherapySessionView<ViewModel: TherapySessionViewModelProtocol>: View {
             lightDebugFinishButton
         }
         .overlay {
+            debugSkipRestButton
+        }
+        .overlay {
             if let celebrationStart, !reduceMotion, !calmMode {
                 TMSessionCelebration(start: celebrationStart).ignoresSafeArea()
             }
@@ -231,6 +234,28 @@ struct TMTherapySessionView<ViewModel: TherapySessionViewModelProtocol>: View {
             return true
         case .preparing, .feedback, .rest, .summary:
             return false
+        }
+    }
+
+    /// Whether the patient is in position, for the chip over the camera; nil hides it. The
+    /// activities already debounce `trackingMessage` (shown after 1 s of loss, cleared after
+    /// 0.5 s), so the chip does not flicker on a single dropped frame.
+    private var trackingPositioned: Bool? {
+        guard usesLightLayout,
+              showsBodyIndicator,
+              !hasFullScreenPresentation else {
+            return nil
+        }
+
+        switch model.snapshot.presentation {
+        case .movement(let value):
+            return value.trackingMessage == nil
+        case .reach(let value):
+            return value.trackingMessage == nil
+        case .towel(let value):
+            return value.trackingMessage == nil
+        default:
+            return nil
         }
     }
 
@@ -589,6 +614,7 @@ struct TMTherapySessionView<ViewModel: TherapySessionViewModelProtocol>: View {
                     .allowsHitTesting(false)
                 }
             }
+            .trackingStatusChip(trackingPositioned, videoBounds: videoBounds)
             .background(usesLightLayout ? TherapyPalette.canvas : Color.black)
             .clipShape(RoundedRectangle(cornerRadius: usesLightLayout ? 28 : 36))
             .onAppear { model.viewport(width: geometry.size.width, height: geometry.size.height) }
@@ -875,6 +901,26 @@ struct TMTherapySessionView<ViewModel: TherapySessionViewModelProtocol>: View {
         .listStyle(.insetGrouped)
         .scrollContentBackground(.hidden)
         .background(usesLightTheme ? TherapyPalette.canvas : Color.black)
+    }
+
+    // MARK: - Debug
+
+    /// Debug builds only: ends a running rest between sets or activities through the engine's
+    /// `debugSkipRest`, which moves on exactly as an elapsed rest does. Hidden while paused or
+    /// waiting for the camera, when the engine would ignore it.
+    @ViewBuilder
+    private var debugSkipRestButton: some View {
+        #if DEBUG
+        if model.snapshot.stage == .rest,
+           model.snapshot.summary == nil,
+           !model.snapshot.paused,
+           !model.snapshot.cameraWaiting,
+           !model.entryFailure {
+            TMDebugSkipRestButton {
+                model.command(.debugSkipRest)
+            }
+        }
+        #endif
     }
 
     // MARK: - Loading

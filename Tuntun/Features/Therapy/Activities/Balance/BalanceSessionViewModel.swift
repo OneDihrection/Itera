@@ -22,6 +22,8 @@ protocol BalanceSessionViewModelProtocol: AnyObject, Observable {
     /// True once calibration finishes: practice shows the demonstration's target pose still.
     var demoHoldsPeak: Bool { get }
     var countdownOverlaySeconds: Int? { get }
+    /// Whether the patient is in position, for the camera's tracking-status chip; nil hides it.
+    var trackingPositioned: Bool? { get }
     var setNumber: Int { get }
     var totalSets: Int { get }
     var setResults: [Int] { get }
@@ -53,6 +55,7 @@ protocol BalanceSessionViewModelProtocol: AnyObject, Observable {
     func retryHistorySave()
     #if DEBUG
     func finishExerciseForDebug()
+    func skipRestForDebug()
     #endif
 }
 
@@ -102,6 +105,34 @@ final class BalanceSessionViewModel: BalanceSessionViewModelProtocol {
         openingCue == .countdown ? 3 : practiceCountdown
     }
 
+    // MARK: Tracking status
+
+    /// Losing the body shows after 1 s and finding it again after 0.5 s, as in the guided
+    /// movement exercises, so a dropped frame does not flicker the chip.
+    private static let trackingLostDelay = 1.0
+    private static let trackingFoundDelay = 0.5
+
+    /// The debounced in-position state; written only when it changes.
+    private(set) var trackingSettled = false
+    /// When the engine's state began to differ from `trackingSettled`.
+    @ObservationIgnored private var trackingChangeSince: Double?
+
+    var trackingPositioned: Bool? {
+        guard !isPreparing,
+              !isFinishing,
+              !permissionDenied,
+              failure == nil,
+              !cameraWaiting,
+              !paused,
+              restRemaining == nil,
+              !allSetsDone,
+              countdownOverlaySeconds == nil else {
+            return nil
+        }
+
+        return trackingSettled
+    }
+
     // MARK: Sets
 
     /// The set being practiced, from 1.
@@ -145,6 +176,9 @@ final class BalanceSessionViewModel: BalanceSessionViewModelProtocol {
     @ObservationIgnored private var log: BalanceSessionLog
     /// Per-repetition metrics and key-repetition skeletons for the current set.
     @ObservationIgnored private var recorder: KeyRepRecorder
+    /// Seconds of the current set credited from counted, tracked frames; saved with the set.
+    @ObservationIgnored private var practiceSeconds = 0.0
+    @ObservationIgnored private var lastRecordedFrame: Double?
     @ObservationIgnored private var pendingSaves: [PendingSave] = []
     @ObservationIgnored private var saving = false
     @ObservationIgnored private var recovered = false
@@ -230,11 +264,13 @@ final class BalanceSessionViewModel: BalanceSessionViewModelProtocol {
                     } else if !self.cameraWaiting {
                         self.showSkeletonWhileGated(frame)
                     }
+                    self.updateTrackingStatus(at: frame.timestamp)
                     return
                 }
                 let previous = self.snapshot
                 self.engine.consume(frame, scoringEnabled: !self.paused)
                 self.snapshot = self.engine.snapshot
+                self.updateTrackingStatus(at: frame.timestamp)
                 self.record(frame, previous: previous)
                 if self.updateCalibrationTransition(frame) {
                     return
@@ -404,6 +440,20 @@ final class BalanceSessionViewModel: BalanceSessionViewModelProtocol {
         clock.pause(at: Self.now)
         trackingService.stop()
         audioService.stopMusic()
+    }
+
+    /// Developer shortcut: ends the rest between sets now and starts the next set the way an
+    /// elapsed rest does. Cancelling the countdown task first makes its sleep throw, so it returns
+    /// without calling `startNextSet()` a second time. Ignored while paused, like the rest itself.
+    func skipRestForDebug() {
+        guard restRemaining != nil, !paused, !allSetsDone else {
+            return
+        }
+
+        restTask?.cancel()
+        restTask = nil
+        audioService.cancelSpeech()
+        startNextSet()
     }
     #endif
 
@@ -625,6 +675,27 @@ final class BalanceSessionViewModel: BalanceSessionViewModelProtocol {
         practiceCountdown = remaining
         speakCountdown(remaining)
         return false
+    }
+
+    /// Follows the engine's tracking state into `trackingSettled` once it has held for its delay.
+    private func updateTrackingStatus(at time: Double) {
+        let positioned = !engine.snapshot.trackingLost
+
+        guard positioned != trackingSettled else {
+            trackingChangeSince = nil
+            return
+        }
+
+        let since = trackingChangeSince ?? time
+        trackingChangeSince = since
+
+        let delay = positioned ? Self.trackingFoundDelay : Self.trackingLostDelay
+        guard time - since >= delay else {
+            return
+        }
+
+        trackingSettled = positioned
+        trackingChangeSince = nil
     }
 
     /// Shows the live skeleton while spoken guidance or the countdown holds practice back, so the
@@ -879,6 +950,15 @@ final class BalanceSessionViewModel: BalanceSessionViewModelProtocol {
             && !paused
         let tracked = snapshot.overlay != nil
 
+        // Practice time follows the guided rule: each counted, tracked frame credits at most
+        // 0.2 s, and a gap over 0.3 s credits nothing.
+        let gap = lastRecordedFrame.map { frame.timestamp - $0 } ?? 0
+        lastRecordedFrame = frame.timestamp
+
+        if counted, tracked, gap > 0, gap <= 0.3 {
+            practiceSeconds += min(0.2, gap)
+        }
+
         let clip = recorder.observe(
             frame,
             counted: counted,
@@ -921,8 +1001,10 @@ final class BalanceSessionViewModel: BalanceSessionViewModelProtocol {
             number: setNumber,
             completedWork: completedWork,
             outcome: outcome,
+            practiceSeconds: practiceSeconds,
             repMetrics: metrics.isEmpty ? nil : metrics
         )
+        practiceSeconds = 0
 
         // The numbers above are kept at every privacy level; the replay only when allowed.
         if replayRecording.savesSkeletons,

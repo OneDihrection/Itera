@@ -7,8 +7,8 @@
 
 import SwiftUI
 
-/// "Perkembangan latihanmu": the exercises practised on one day, one `TMHistoryCard` each,
-/// numbered in the order they were practised. A card opens the exercise's detail panel.
+/// "Perkembangan latihanmu": the exercises practised on one day, one `TMHistoryCard` per session
+/// of each, numbered in the order they were practised. A card opens the exercise's detail panel.
 struct TMPracticeDayView<ViewModel: PracticeDayViewModelProtocol>: View {
     @State private var viewModel: ViewModel
 
@@ -33,7 +33,7 @@ struct TMPracticeDayView<ViewModel: PracticeDayViewModelProtocol>: View {
             .padding(.bottom, 32)
             .frame(maxWidth: .infinity)
         }
-        .background(TherapyPalette.canvas)
+        .background(TherapyPalette.progressCanvas)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .principal) {
@@ -103,7 +103,7 @@ private let previewExercises: [PracticedExercise] = [
     "forearmRotation", "elbowBend", "directionalReach", "crossMidline", "sitToStand", "foldTowel",
 ].map { id in
     PracticedExercise(
-        id: id,
+        exerciseID: id,
         titleKey: PracticeHistory.titleKey(for: id),
         report: .session(UUID())
     )

@@ -137,6 +137,9 @@ struct BalanceSnapshot: Equatable {
 
     var phase: Phase = .findingBody
     var instructionKey = "balance.tracking"
+    /// True while the latest frames give the engine no usable body, for the camera's
+    /// tracking-status chip. It starts true until the body is first found.
+    var trackingLost = true
     var calibrationProgress = 0.0
     /// Seconds left of the end-pose hold during calibration; `nil` until the patient holds still.
     var calibrationCountdown: Int?

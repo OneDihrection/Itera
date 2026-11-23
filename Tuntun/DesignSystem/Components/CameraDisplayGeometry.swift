@@ -8,13 +8,15 @@
 import Foundation
 import CoreGraphics
 
-/// The image rectangle used by an aspect-fit camera preview, excluding letterbox margins.
+/// The image rectangle of an aspect-fill camera preview: the whole image scaled to cover the
+/// viewport, centred, so it overflows on the cropped sides. Overlays map normalized points
+/// through it, so they stay on the joints the preview shows.
 struct CameraDisplayGeometry {
     let imageRect: CGRect
 
     init(aspect: Double, viewport: CGSize) {
         let aspect = aspect.isFinite && aspect > 0 ? aspect : 1
-        let height = min(viewport.height, viewport.width / aspect)
+        let height = max(viewport.height, viewport.width / aspect)
         let size = CGSize(width: height * aspect, height: height)
         imageRect = CGRect(
             x: (viewport.width - size.width) / 2,

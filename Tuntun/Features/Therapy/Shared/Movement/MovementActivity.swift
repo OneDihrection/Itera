@@ -104,6 +104,7 @@ struct MovementActivity: TherapyActivity {
         case .nextSet:
             setNumber += 1
             snapshot.count = 0
+            snapshot.practiceSeconds = 0
             interrupt()
             landmarkSmoother.reset()
             snapshot.countingDown = true
@@ -170,7 +171,7 @@ struct MovementActivity: TherapyActivity {
             if let lastValid, time - lastValid > 0.5 {
                 phase = 0
                 // Without frames the loss began when evidence was last good.
-                noteTrackingLoss(at: time, since: lastValid)
+                noteTrackingLoss(at: time, since: lastValid, reason: "noFrames")
 
                 if !holdSurvivesLoss(at: time) {
                     dwell.reset()
@@ -247,14 +248,21 @@ struct MovementActivity: TherapyActivity {
 
     /// Shows the tracking message only after evidence has been missing for
     /// `trackingMessageDelay`, so a single weak frame never swaps the cue text.
-    private mutating func noteTrackingLoss(at time: Double, since start: Double? = nil) {
+    private mutating func noteTrackingLoss(at time: Double, since start: Double? = nil, reason: String) {
         recoveringSince = nil
         let since = missingSince ?? start ?? time
         missingSince = since
 
-        if time - since >= Self.trackingMessageDelay {
-            snapshot.trackingMessage = "session.movementTrackingLost"
+        guard time - since >= Self.trackingMessageDelay,
+              snapshot.trackingMessage == nil else {
+            return
         }
+
+        snapshot.trackingMessage = "session.movementTrackingLost"
+        LogManager.shared.info(
+            "Movement tracking lost side=\(configuration.side.rawValue) reason=\(reason)",
+            category: .tracking
+        )
     }
 
     /// Hides the tracking message only after evidence has stayed good for a moment.
@@ -272,6 +280,10 @@ struct MovementActivity: TherapyActivity {
         if time - since >= Self.trackingRecoveryDelay {
             snapshot.trackingMessage = nil
             recoveringSince = nil
+            LogManager.shared.info(
+                "Movement tracking recovered side=\(configuration.side.rawValue)",
+                category: .tracking
+            )
         }
     }
 
@@ -303,9 +315,9 @@ struct MovementActivity: TherapyActivity {
         return dwell.isHolding && time - lastValid <= Self.dwellTrackingGrace
     }
 
-    private mutating func loseTracking(at time: Double) {
+    private mutating func loseTracking(at time: Double, reason: String) {
         dwell.interrupt(at: time, grace: Self.dwellTrackingGrace)
-        noteTrackingLoss(at: time)
+        noteTrackingLoss(at: time, reason: reason)
 
         if lastValid.map({ time - $0 > 0.5 }) == true {
             phase = 0
@@ -346,13 +358,13 @@ struct MovementActivity: TherapyActivity {
         last = time
         let left = configuration.side == .left
         guard let joints = limbJoints(in: frame) else {
-            loseTracking(at: time)
+            loseTracking(at: time, reason: frame.joints.isEmpty ? "noSubject" : "limbJointsMissing")
             return
         }
         let (reference, anchor, tracked) = joints
         let scale = (reference - anchor).length
         guard scale > 0.03 else {
-            loseTracking(at: time)
+            loseTracking(at: time, reason: "shortReferenceSegment")
             return
         }
         guard (tracked - anchor).length > 0.03 else {
@@ -478,6 +490,13 @@ struct MovementActivity: TherapyActivity {
             )
             return
         }
+
+        // Practice time follows reach's rule: each fresh frame credits at most 0.2 s, and a gap
+        // over 0.3 s credits nothing. The return before the first countdown is not practice.
+        if !returningBeforePractice {
+            snapshot.practiceSeconds += gap > 0 && gap <= 0.3 ? min(0.2, gap) : 0
+        }
+
         let startCenter = anchor + start.scaled(scale)
         let targetCenter = anchor + target.scaled(scale)
         let radius = zoneRadius(aspect: frame.aspect)

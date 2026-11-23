@@ -74,6 +74,8 @@ enum TherapyPalette {
             ? UIColor.systemBackground.resolvedColor(with: traits)
             : uiColor(neutralBackground)
     })
+    /// White page surface behind the neutral Progress calendar and history cards.
+    static let progressCanvas = Color(uiColor: .systemBackground)
     /// High-contrast hero and program cards: black in light mode, a raised grey in dark mode.
     static let heroCard = Color(uiColor: UIColor { traits in
         traits.userInterfaceStyle == .dark
@@ -145,6 +147,16 @@ enum TherapyPalette {
     static let planTrack = Color(uiColor: .systemGray4)
     /// Slightly deeper warm grey behind demo media and the set results panel.
     static let planPanel = adaptive(light: (0.937, 0.918, 0.894), dark: (0.20, 0.185, 0.17))
+    /// Secondary text in Beranda's date and plan states.
+    static let planMutedInk = fixed(rgb(0x797877))
+    /// Step numbers inside Beranda's timeline markers.
+    static let planStepInk = fixed(rgb(0x6C6363))
+    /// Divider between Beranda's daily-plan rows.
+    static let planDivider = fixed(rgb(0xB3AEAE))
+    /// Illustration tile for a locked daily-plan row.
+    static let planDisabledTile = fixed(rgb(0xF1F0F0))
+    /// Illustration tile for an available daily-plan row.
+    static let planAvailableTile = fixed(rgb(0xFFF8E6))
 
     // MARK: - Progress palette
 

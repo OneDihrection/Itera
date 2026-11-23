@@ -12,7 +12,8 @@ import Foundation
 /// The patient sits facing the iPad and stays in roughly one place, while bystanders walk
 /// through. Selection prefers, in order:
 /// 1. **Continuity**: the person whose torso is nearest the patient's recently tracked torso,
-///    at a similar size, and still near the patient's usual place.
+///    at a similar size, and, when several people are in view, still near the patient's usual
+///    place. A sole person is followed by continuity alone, so standing up keeps the lock.
 /// 2. **Usual place**: after a longer loss (someone walked in front), only a person back at
 ///    the remembered seat and size is picked up again, never simply the largest person. When
 ///    only one person is in view, a wider size range is accepted, so leaning toward the iPad
@@ -38,6 +39,17 @@ struct BodySubjectSelector {
         var centerOffset: Double = 0.5
     }
 
+    /// Which rule settled the latest frame, for diagnostics.
+    enum Decision: String {
+        case continuity
+        case anchored
+        case initial
+        /// Someone could be followed, but no rule picked them.
+        case ambiguous
+        /// Nobody in view had a confident torso.
+        case noTrackable
+    }
+
     /// How long a lost patient remains the preferred subject. Matches the exercise hold grace.
     static let continuityWindow = 1.5
     /// How long the patient's usual place is remembered after tracking is lost. Afterwards the
@@ -52,6 +64,13 @@ struct BodySubjectSelector {
     /// Wider size match when the only person in view sits at the usual place: leaning toward the
     /// iPad to reach grows the shoulders, while someone hiding the patient is much nearer.
     private static let soleCandidateSizeRange = 0.6...1.8
+    /// Shoulder-width difference, in image heights, that is always treated as landmark jitter
+    /// (about 5 cm at 1 m). Only decides between small sizes, such as a side view.
+    private static let sizeNoise = 0.03
+    /// The capture rate the continuity gate is defined for.
+    private static let nominalFrameRate = 30.0
+    /// The most camera frames the continuity gate widens for, so a long gap is not a free pass.
+    private static let maximumGateFrames = 3.0
     /// How quickly the usual place follows the tracked patient. Slow, so reaching across the
     /// body during an exercise does not drag the remembered seat with the arm.
     private static let anchorFollowRate = 0.05
@@ -67,6 +86,14 @@ struct BodySubjectSelector {
     /// Increments whenever the subject is picked without frame-to-frame continuity (first pick
     /// or pick-up at the usual place), so landmark smoothing never blends two people.
     private(set) var epoch = 0
+
+    /// The rule that settled the latest `select` call.
+    private(set) var lastDecision = Decision.noTrackable
+
+    /// Seconds since the usual place was last refreshed, or nil when none is remembered.
+    func anchorAge(at time: Double) -> Double? {
+        anchorTime.map { time - $0 }
+    }
 
     /// Forgets the patient. A new camera generation (restart, camera or orientation change)
     /// means positions are no longer comparable.
@@ -93,16 +120,28 @@ struct BodySubjectSelector {
         }
 
         guard !trackable.isEmpty else {
+            lastDecision = .noTrackable
             return nil
         }
 
         if let continuing = continuingIndex(in: candidates, among: trackable, at: time) {
+            lastDecision = .continuity
             remember(candidates[continuing], at: time)
             return continuing
         }
 
-        let found = anchoredIndex(in: candidates, among: trackable, at: time)
-            ?? initialIndex(in: candidates, among: trackable, at: time)
+        let found: Int?
+
+        if let anchored = anchoredIndex(in: candidates, among: trackable, at: time) {
+            lastDecision = .anchored
+            found = anchored
+        } else if let initial = initialIndex(in: candidates, among: trackable, at: time) {
+            lastDecision = .initial
+            found = initial
+        } else {
+            lastDecision = .ambiguous
+            found = nil
+        }
 
         guard let index = found else {
             return nil
@@ -124,12 +163,23 @@ struct BodySubjectSelector {
         }
 
         // A seated patient's torso moves well under half a body-size between tracked frames.
-        let gate = max(0.08, lastSize * 0.5)
+        // The gate is per camera frame (1/30 s): after skipped inference frames the patient may
+        // have moved further, so it widens with the elapsed frames, up to three.
+        let elapsedFrames = min(
+            Self.maximumGateFrames,
+            max(1, (time - lastTime) * Self.nominalFrameRate)
+        )
+        let gate = max(0.08, lastSize * 0.5) * elapsedFrames
+
+        // The usual place only decides between several people. With one person in view,
+        // frame-to-frame continuity alone keeps the lock, so standing up (the torso rises about
+        // a trunk length, faster than the slow anchor follows) does not drop the patient.
+        let arbitratesByPlace = trackable.count > 1
 
         let nearest = trackable
             .filter { Self.sizeMatches(candidates[$0].size, reference: lastSize, range: Self.sizeRange) }
             .filter { matchesAnchorSize(candidates[$0], range: Self.anchorSizeRange, at: time) }
-            .filter { isNearAnchor(candidates[$0], at: time, gateScale: 1.5) }
+            .filter { !arbitratesByPlace || isNearAnchor(candidates[$0], at: time, gateScale: 1.5) }
             .map { (index: $0, distance: (candidates[$0].torso - lastTorso).length) }
             .min { $0.distance < $1.distance }
 
@@ -198,9 +248,18 @@ struct BodySubjectSelector {
         return time - anchorTime <= Self.relockTimeout
     }
 
-    /// True when either size is unknown or the sizes are within `range` of each other.
+    /// True when either size is unknown, the sizes differ by no more than landmark noise, or they
+    /// are within `range` of each other.
+    ///
+    /// The absolute slack matters only for small shoulder widths: seen from the side (sit to
+    /// stand), the two shoulders nearly overlap, so a few thousandths of jitter changed the ratio
+    /// by half and dropped the patient. A nearer bystander differs by far more than the slack.
     private static func sizeMatches(_ size: Double, reference: Double, range: ClosedRange<Double>) -> Bool {
         guard size > 0, reference > 0 else {
+            return true
+        }
+
+        guard abs(size - reference) > sizeNoise else {
             return true
         }
 

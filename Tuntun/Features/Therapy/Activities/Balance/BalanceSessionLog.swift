@@ -50,6 +50,7 @@ struct BalanceSessionLog {
         number: Int,
         completedWork: Int,
         outcome: ActivityOutcome,
+        practiceSeconds: Double,
         repMetrics: [RepMetrics]?
     ) -> UUID {
         let executionID = UUID()
@@ -60,6 +61,7 @@ struct BalanceSessionLog {
                 activity: activity,
                 outcome: outcome,
                 completedWork: max(0, completedWork),
+                practiceSeconds: max(0, practiceSeconds),
                 setNumber: number,
                 repMetrics: repMetrics
             )

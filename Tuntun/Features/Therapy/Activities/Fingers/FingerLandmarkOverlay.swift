@@ -60,7 +60,8 @@ struct TMFingerLandmarkOverlay: View {
 
     var body: some View {
         GeometryReader { geometry in
-            let scale = min(geometry.size.width / evidence.width, geometry.size.height / evidence.height)
+            // The preview fills its frame (aspect-fill), so the image covers it and overflows the sides.
+            let scale = max(geometry.size.width / evidence.width, geometry.size.height / evidence.height)
             let width = evidence.width * scale
             let height = evidence.height * scale
             let origin = CGPoint(x: (geometry.size.width - width) / 2, y: (geometry.size.height - height) / 2)

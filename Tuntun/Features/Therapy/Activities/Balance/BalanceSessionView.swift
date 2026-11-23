@@ -70,6 +70,9 @@ struct TMBalanceSessionView<ViewModel: BalanceSessionViewModelProtocol>: View {
             debugFinishButton
                 .zIndex(4)
 
+            debugSkipRestButton
+                .zIndex(4)
+
             loadingOverlay
                 .zIndex(5)
         }
@@ -135,6 +138,18 @@ struct TMBalanceSessionView<ViewModel: BalanceSessionViewModelProtocol>: View {
         #endif
     }
 
+    /// Debug builds only: ends the running rest between sets and starts the next set's countdown.
+    @ViewBuilder
+    private var debugSkipRestButton: some View {
+        #if DEBUG
+        if model.restBreath != nil, !model.paused, !model.allSetsDone {
+            TMDebugSkipRestButton {
+                model.skipRestForDebug()
+            }
+        }
+        #endif
+    }
+
     // MARK: - Live
 
     private var live: some View {
@@ -143,7 +158,6 @@ struct TMBalanceSessionView<ViewModel: BalanceSessionViewModelProtocol>: View {
                 ? heading
                 : TMTherapyExerciseHeading(eyebrow: eyebrow, title: Text("stage.calibration")),
             cuePlacement: .video(videoBounds),
-            demoTitle: "session.followMovement",
             repetitions: (model.snapshot.metrics.completedTouches, model.snapshot.goal),
             sets: (model.setNumber, model.totalSets),
             pauseTitle: "session.pauseAction",
@@ -185,6 +199,7 @@ struct TMBalanceSessionView<ViewModel: BalanceSessionViewModelProtocol>: View {
 
             cameraStatus
         }
+        .trackingStatusChip(model.trackingPositioned, videoBounds: videoBounds)
         .background(TherapyPalette.canvas)
         .background {
             GeometryReader { proxy in

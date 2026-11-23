@@ -64,15 +64,26 @@ struct DailyPlanItem: Identifiable, Hashable {
 }
 
 /// Sets and repetitions chosen for one exercise in Settings; `nil` keeps the program's own.
+/// Zero sets or repetitions hides the exercise from the plan.
 struct DailyPlanOverrides: Equatable {
-    static let setsRange = 1...5
-    static let repetitionsRange = 1...20
+    /// What Settings offers; 0 hides the exercise.
+    static let setsRange = 0...3
+    static let repetitionsRange = 0...12
+
+    /// What a plan session runs with, so the live set list never exceeds three rows of twelve.
+    static let playableSets = 1...3
+    static let playableRepetitions = 1...12
 
     var sets: Int?
     var repetitions: Int?
 
     static func clamped(_ value: Int, to range: ClosedRange<Int>) -> Int {
         min(range.upperBound, max(range.lowerBound, value))
+    }
+
+    /// True when Settings set the sets or repetitions to 0, which hides the exercise.
+    var hidesExercise: Bool {
+        sets == 0 || repetitions == 0
     }
 }
 
