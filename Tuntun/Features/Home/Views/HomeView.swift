@@ -198,9 +198,7 @@ struct TMHomeView<ViewModel: HomeViewModelProtocol, Builder: HomeContentBuildabl
         case .missed:
             return Text("home.dailyPlan.missed")
         case .partial:
-            return Text(
-                "home.dailyPlan.partial \(viewModel.selectedCompletedItemIDs.count) \(viewModel.rows.count)"
-            )
+            return Text("home.dailyPlan.partial")
         case .current:
             return Text("home.dailyPlan.progress \(viewModel.completedCount) \(viewModel.rows.count)")
         case .upcoming:

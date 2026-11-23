@@ -6954,19 +6954,19 @@
         }
       }
     },
-    "home.dailyPlan.partial %lld %lld" : {
+    "home.dailyPlan.partial" : {
       "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%1$lld of %2$lld exercises were completed that day"
+            "value" : "Oh no, some exercises were missed! Let's try again in the next session!"
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%1$lld dari %2$lld latihan selesai pada hari tersebut"
+            "value" : "Yah, ada beberapa latihan yang terlewatkan! yuk coba lagi pada sesi berikutnya!"
           }
         }
       }
