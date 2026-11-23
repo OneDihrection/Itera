@@ -15,17 +15,19 @@ protocol HistoryDependency {
     var sessions: any SessionRepository { get }
     /// Reads any finger or forearm session's key-repetition replays.
     var fingerReplayRepository: any FingerSessionRepository { get }
+    /// The daily plan's saved days, for the calendar's completed days.
+    var planHistoryRepository: any DailyPlanHistoryRepository { get }
 }
 
-/// What the reports list builds inside itself: its rows, and the pages it pushes.
+/// The pages the Progress tab pushes onto its stack.
 protocol HistoryContentBuildable {
-    associatedtype CellContent: View
     associatedtype FingerReportScreen: View
     associatedtype SessionReportScreen: View
+    associatedtype PracticeDayScreen: View
 
     @ViewBuilder @MainActor func buildFingerReport(id: UUID) -> FingerReportScreen
     @ViewBuilder @MainActor func buildSessionReport(id: UUID) -> SessionReportScreen
-    @ViewBuilder @MainActor func buildCell(entry: HistoryEntry) -> CellContent
+    @ViewBuilder @MainActor func buildPracticeDay(_ day: Date) -> PracticeDayScreen
 }
 
 @MainActor
@@ -39,6 +41,7 @@ final class HistoryBuilder: HistoryContentBuildable {
     private lazy var reportsViewModel = ReportsViewModel(
         home: dependency.fingers,
         armReports: TaskReportsViewModel(repository: dependency.sessions),
+        planHistoryRepository: dependency.planHistoryRepository,
         router: router
     )
 
@@ -77,13 +80,14 @@ final class HistoryBuilder: HistoryContentBuildable {
             .environment(\.locale, AppLanguage.selected.locale)
     }
 
-    /// No tap closure: the router is injected, so the row handles navigation itself.
-    @ViewBuilder func buildCell(entry: HistoryEntry) -> some View {
-        let viewModel: some HistoryCellViewModelProtocol = HistoryCellViewModel(
-            entry: entry,
+    /// The day's exercises come from the history the Progress tab already loaded.
+    @ViewBuilder func buildPracticeDay(_ day: Date) -> some View {
+        let viewModel: some PracticeDayViewModelProtocol = PracticeDayViewModel(
+            day: day,
+            exercises: reportsViewModel.practiceHistory.exercises(on: day),
             router: router
         )
 
-        TMHistoryCellView(viewModel: viewModel)
+        TMPracticeDayView(viewModel: viewModel)
     }
 }

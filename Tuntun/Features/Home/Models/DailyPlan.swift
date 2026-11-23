@@ -126,6 +126,9 @@ struct DailyPlanProgress: Equatable {
     /// Start of the day this progress belongs to.
     var day: Date
     var completed: Set<String>
+    /// The items the plan showed that day, so the Progress calendar can tell a fully completed
+    /// day from a partial one after the layout changes. Empty in progress saved before 21/11/2026.
+    var planned: [String] = []
 
     static func empty(on date: Date, calendar: Calendar = .current) -> DailyPlanProgress {
         DailyPlanProgress(day: calendar.startOfDay(for: date), completed: [])
