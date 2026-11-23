@@ -83,7 +83,7 @@ struct TMDailyPlanCard: View {
 
             Circle()
                 .strokeBorder(
-                    dashed ? TherapyPalette.success : TherapyPalette.actionMuted,
+                    dashed ? TherapyPalette.planMarker : TherapyPalette.actionMuted,
                     style: StrokeStyle(
                         lineWidth: 4,
                         lineCap: .round,
