@@ -3504,23 +3504,6 @@
         }
       }
     },
-    "exerciseDetail.callout.first" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "your first move"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "gerakan pertamamu"
-          }
-        }
-      }
-    },
     "exerciseDetail.callout.hardest.lead" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -3572,23 +3555,6 @@
         }
       }
     },
-    "exerciseDetail.callout.last" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "your last move"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "gerakan terakhirmu"
-          }
-        }
-      }
-    },
     "exerciseDetail.callout.set %lld" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -3602,40 +3568,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : " (set %lld)"
-          }
-        }
-      }
-    },
-    "exerciseDetail.callout.this" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "This is "
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ini "
-          }
-        }
-      }
-    },
-    "exerciseDetail.callout.today" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : " today."
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : " hari ini."
           }
         }
       }
@@ -3946,40 +3878,6 @@
         }
       }
     },
-    "exerciseDetail.comparison.caption %@" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Faded blue: %@ · Yellow: today"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Biru samar: %@ · Kuning: hari ini"
-          }
-        }
-      }
-    },
-    "exerciseDetail.comparison.label" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Drawing of your movement: the earlier session faded, today highlighted"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Gambar gerakanmu: sesi sebelumnya samar, hari ini disorot"
-          }
-        }
-      }
-    },
     "exerciseDetail.deleteRecord" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -4248,6 +4146,40 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Semua repetisi stabil, selisih hanya %lld%%"
+          }
+        }
+      }
+    },
+    "exerciseDetail.insight.fairAngle %lld" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Your reach was fairly steady, up to %lld° apart"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Jangkauanmu cukup stabil, selisih hingga %lld°"
+          }
+        }
+      }
+    },
+    "exerciseDetail.insight.fairRange %lld" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Your reach was fairly steady, up to %lld%% apart"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Jangkauanmu cukup stabil, selisih hingga %lld%%"
           }
         }
       }

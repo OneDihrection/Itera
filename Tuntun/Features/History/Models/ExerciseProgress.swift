@@ -54,6 +54,13 @@ enum ExerciseInsight: Equatable {
     case volume(repetitions: Int, change: Int, sessionsSince: Int)
 }
 
+/// How even the day's repetition peaks were, from the spread between the best and lowest.
+enum ConsistencyLevel: Equatable {
+    case even
+    case fair
+    case varied
+}
+
 /// One session on the progress trend: its best repetition in the day's measure.
 struct ExerciseTrendPoint: Equatable {
     let date: Date
@@ -100,6 +107,11 @@ struct ExerciseProgress {
     static let steadyAngleDegrees = 5.0
     static let steadyRangeFraction = 0.05
     static let steadyDurationSeconds = 0.5
+    /// Spreads of the day's peaks up to these read as even, up to the fair limits as fair, and
+    /// beyond as varied: whole degrees, or whole percentage points of the calibrated range.
+    /// More forgiving than `steadyTolerance`, since repetitions naturally differ within a day.
+    static let evenConsistencyAmount = 10
+    static let fairConsistencyAmount = 15
     /// Sessions the trend chart shows at most, the day included.
     static let trendLimit = 10
 
@@ -249,9 +261,26 @@ struct ExerciseProgress {
         return .steady
     }
 
-    /// The day's spread of peaks within this reads as even.
+    /// A change within this reads as steady.
     var steadyTolerance: Double {
         measure == .range ? Self.steadyRangeFraction : Self.steadyAngleDegrees
+    }
+
+    /// Compares the rounded amount the panel shows, so "10°" is even and "11°" fair.
+    func consistencyLevel(of spread: Double) -> ConsistencyLevel {
+        let amount = measure == .range
+            ? Int((spread * 100).rounded())
+            : Int(spread.rounded())
+
+        if amount <= Self.evenConsistencyAmount {
+            return .even
+        }
+
+        if amount <= Self.fairConsistencyAmount {
+            return .fair
+        }
+
+        return .varied
     }
 
     // MARK: - Trend

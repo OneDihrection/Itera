@@ -1991,3 +1991,13 @@ The console still showed `AVAudioSession_iOS.mm:978 This method can lead to UI u
 - **Not changed.** Cue and count players run only inside a finger session after `configure(language:)` awaited activation, and nothing else deactivates during it.
 
 Verification: Debug Simulator build. Pending on the M1 iPad: no main-thread warning when tapping buttons after a guided, finger and Balancing session and at launch, and the click still plays (the first tap after a session slightly later).
+
+## Exercise detail demonstration and forgiving consistency (2026-11-23)
+
+At the user's request, the exercise detail panel changes in three places.
+
+- **Demonstration in "Perkembangan gerakanmu".** The two key-repetition poses (baseline in faint blue, today in yellow, with their caption) are replaced by the exercise's own demonstration, the same clip or animation the plan intro shows, always looping. The panel shows it for every exercise, fold towel included. Body arm clips are reflected when the day practised the right side and shown as recorded for the left or both sides. Finger exercises use the practised hand. Reduce Motion still holds the target pose, as the players do everywhere. `TMExerciseDetailDemonstration` (History/Views) maps the exercise ID to the existing demonstration views, because History cannot use Home's `DailyPlanIntroDemonstration`. `currentPeakRep` and `baselinePeakRep` were removed from `ExerciseDetailViewModelProtocol`. `TMPoseComparison` stays in DesignSystem.
+- **Kestabilan.** Supersedes "even within the 5° or 5% steady tolerance, otherwise varied". `ExerciseProgress.consistencyLevel(of:)` compares the rounded spread the row shows. Up to 10° (or 10 points of range) is even and green. 11–15 is fair and neutral, with the new wording "Jangkauanmu cukup stabil, selisih hingga …". Beyond 15 is varied and red. The 5° or 5% steady tolerance still applies to trend, stamina and the headline.
+- **"Catatan latihan".** The panel shows only the day's hardest repetition, `keyRep(for: .hardest)`. The first, hardest and last chips and their "Ini gerakan pertamamu/terakhirmu hari ini" call-outs are removed. `KeyRepRecorder` still records the first, hardest and last repetition of every set, and the skeleton switch and "Hapus video" are unchanged.
+
+Verification: a Debug Simulator build with `IPHONEOS_DEPLOYMENT_TARGET=17.0` succeeded. Pending: the previews and, on the baseline iPad, demonstration playback and side reflection in the panel for a body exercise on each side, a finger exercise, forearm rotation, a Balancing exercise and fold towel; Reduce Motion; and the three Kestabilan tones in both languages.

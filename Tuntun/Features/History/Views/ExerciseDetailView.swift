@@ -8,7 +8,8 @@
 import SwiftUI
 
 /// The content of an exercise's detail panel, opened from a card on a day's progress page:
-/// the day's three figures, its best repetition against an earlier session, the hardest
+/// the day's three figures, its best repetition against an earlier session beside the
+/// exercise's demonstration, the hardest
 /// repetition's recording and the camera-estimate note. `TMDetailPanel` draws the card around it.
 struct TMExerciseDetailView<ViewModel: ExerciseDetailViewModelProtocol>: View {
     @State private var viewModel: ViewModel
@@ -99,10 +100,10 @@ struct TMExerciseDetailView<ViewModel: ExerciseDetailViewModelProtocol>: View {
                 )
             }
 
-            if !keyReps.isEmpty {
+            if let hardestRep = viewModel.keyRep(for: .hardest) {
                 TMDashedDivider()
                 TMExerciseRecordSection(
-                    reps: keyReps,
+                    rep: hardestRep,
                     progress: progress,
                     baseline: viewModel.baseline,
                     baselineSession: viewModel.baselineSession,
@@ -181,17 +182,6 @@ struct TMExerciseDetailView<ViewModel: ExerciseDetailViewModelProtocol>: View {
         ExerciseWording(exerciseID: viewModel.exerciseID, side: viewModel.titleSide)
     }
 
-    /// The day's first, hardest and last recorded repetitions; empty when none was recorded.
-    private var keyReps: [KeyRepRole: RecordedRep] {
-        var reps: [KeyRepRole: RecordedRep] = [:]
-
-        for role in KeyRepRole.allCases {
-            reps[role] = viewModel.keyRep(for: role)
-        }
-
-        return reps
-    }
-
     private func deleteClip(of rep: RecordedRep) {
         Task {
             await viewModel.deleteClip(of: rep)
@@ -264,8 +254,8 @@ struct TMExerciseDetailView<ViewModel: ExerciseDetailViewModelProtocol>: View {
 
 // MARK: - Progress
 
-/// "Perkembangan gerakanmu": the baseline menu, the two poses beside the change in the
-/// exercise's own words, the best result of each session, and the insight rows.
+/// "Perkembangan gerakanmu": the baseline menu, the exercise's looping demonstration beside the
+/// change in the exercise's own words, the best result of each session, and the insight rows.
 private struct TMExerciseProgressSection<ViewModel: ExerciseDetailViewModelProtocol>: View {
     @Bindable var viewModel: ViewModel
     let progress: ExerciseProgress
@@ -290,6 +280,8 @@ private struct TMExerciseProgressSection<ViewModel: ExerciseDetailViewModelProto
 
                 VStack(alignment: .leading, spacing: 20) {
                     picture
+                        .frame(maxWidth: 340)
+
                     summary
                 }
             }
@@ -347,47 +339,16 @@ private struct TMExerciseProgressSection<ViewModel: ExerciseDetailViewModelProto
         LocalizedStringKey("exerciseDetail.legend." + baseline.rawValue)
     }
 
-    @ViewBuilder
+    /// The exercise's own demonstration, looping so the reader sees the whole movement.
     private var picture: some View {
-        if progress.measure != .none,
-           let current = viewModel.currentPeakRep,
-           let currentFrame = current.rep.peakFrame {
-            let baselineFrame = viewModel.baselinePeakRep?.rep.peakFrame
-
-            VStack(alignment: .leading, spacing: 8) {
-                TMPoseComparison(
-                    baseline: baselineFrame.map { pose(of: $0, recordsHand: current.recordsHand) },
-                    current: pose(of: currentFrame, recordsHand: current.recordsHand),
-                    figure: current.recordsHand ? HandSkeleton.figureShape : BodyJoint.figureShape,
-                    aspectRatio: current.rep.aspectRatio,
-                    alignmentJoint: current.recordsHand ? 0 : BodyJoint.neck.index,
-                    emphasizedJoints: current.emphasizedJoints,
-                    accessibilityLabel: Text("exerciseDetail.comparison.label")
-                )
-
-                if baselineFrame != nil {
-                    pictureCaption
-                }
-            }
+        TMTherapyMediaPanel(padding: 12) {
+            TMExerciseDetailDemonstration(
+                exerciseID: viewModel.exerciseID,
+                side: viewModel.titleSide
+            )
+            .clipShape(RoundedRectangle(cornerRadius: 24))
         }
-    }
-
-    /// "Biru samar: sesi pertama · Kuning: hari ini", so the two figures are named in words.
-    private var pictureCaption: some View {
-        let baselineName = String(
-            localized: String.LocalizationValue("exerciseDetail.legend." + viewModel.baseline.rawValue),
-            bundle: AppLanguage.selected.resourceBundle
-        )
-
-        return Text("exerciseDetail.comparison.caption \(baselineName)")
-            .typography(size: 17, weight: .regular, relativeTo: .footnote)
-            .foregroundStyle(TherapyPalette.muted)
-            .fixedSize(horizontal: false, vertical: true)
-            .accessibilityHidden(true)
-    }
-
-    private func pose(of frame: SkeletonFrame, recordsHand: Bool) -> TMSkeletonPose {
-        recordsHand ? frame.handPose : frame.bodyPose
+        .aspectRatio(1, contentMode: .fit)
     }
 
     /// The headline, since line and legend, then the insights card.
@@ -481,12 +442,12 @@ private struct TMExerciseProgressSection<ViewModel: ExerciseDetailViewModelProto
                 title: Text("exerciseDetail.insight.title.pace")
             )
         case .consistency(let spread):
-            let even = spread <= progress.steadyTolerance
+            let level = progress.consistencyLevel(of: spread)
 
             return TMInsightRow(
-                text: ExerciseDetailFormat.consistency(spread, measure: progress.measure, even: even),
+                text: ExerciseDetailFormat.consistency(spread, measure: progress.measure, level: level),
                 title: Text("exerciseDetail.insight.title.consistency"),
-                tone: even ? .positive : .negative
+                tone: consistencyTone(level)
             )
         case .stamina(let change):
             let trend = progress.trend(of: change)
@@ -503,6 +464,18 @@ private struct TMExerciseProgressSection<ViewModel: ExerciseDetailViewModelProto
                 detail: ExerciseDetailFormat.sessionsSince(sessionsSince, baseline: viewModel.baseline),
                 tone: volumeTone(change)
             )
+        }
+    }
+
+    /// Even peaks are green, a fair spread neutral, a wide one red.
+    private func consistencyTone(_ level: ConsistencyLevel) -> TMInsightRow.Tone {
+        switch level {
+        case .even:
+            return .positive
+        case .fair:
+            return .neutral
+        case .varied:
+            return .negative
         }
     }
 
@@ -572,13 +545,80 @@ private struct TMExerciseProgressSection<ViewModel: ExerciseDetailViewModelProto
     }
 }
 
+// MARK: - Demonstration
+
+/// The exercise's demonstration, as the plan intro shows it, always looping (Reduce Motion
+/// holds the target pose, as the players do everywhere). Arm clips follow the day's side;
+/// with both sides practised they play as recorded.
+private struct TMExerciseDetailDemonstration: View {
+    let exerciseID: String
+    let side: TherapySide?
+
+    var body: some View {
+        if let exercise = FingerExercise(rawValue: exerciseID) {
+            TMFingerExampleView(
+                exercise: exercise,
+                phase: .demonstration,
+                returning: false,
+                finger: 0,
+                side: side == .right ? .right : .left,
+                paused: false
+            )
+        } else if let exercise = BalanceExercise(rawValue: exerciseID) {
+            TMBalanceExerciseDemonstrationView(
+                exercise: exercise,
+                paused: false,
+                arm: crossingArm
+            )
+        } else if let kind = TherapyKind(rawValue: exerciseID) {
+            therapyDemonstration(kind)
+        }
+    }
+
+    @ViewBuilder
+    private func therapyDemonstration(_ kind: TherapyKind) -> some View {
+        switch kind {
+        case .foldTowel:
+            TMTowelDemonstrationView()
+        case .armRaise:
+            movement(.armRaise)
+        case .elbowBend:
+            movement(.elbowBend)
+        case .directionalReach:
+            movement(.directionalReach)
+        default:
+            EmptyView()
+        }
+    }
+
+    private func movement(_ asset: ExerciseAnimationAsset) -> some View {
+        TMExerciseExample(
+            asset: asset,
+            mirrored: side == .right,
+            mode: .looping
+        )
+    }
+
+    private var crossingArm: CrossingArm? {
+        switch side {
+        case .left:
+            return .left
+        case .right:
+            return .right
+        case nil:
+            return nil
+        }
+    }
+}
+
 // MARK: - Practice record
 
-/// "Catatan latihan": the day's first, hardest or last repetition, as its clip or, by a switch,
-/// its skeleton, with how long it took and how far it reached against the baseline.
+/// "Catatan latihan": the day's hardest repetition, as its clip or, by a switch, its skeleton,
+/// with how long it took and how far it reached against the baseline. The first and last
+/// repetitions are still recorded, but not shown here.
 private struct TMExerciseRecordSection: View {
-    /// The day's key repetitions by role; never empty.
-    let reps: [KeyRepRole: RecordedRep]
+    /// The day's hardest recorded repetition.
+    let rep: RecordedRep
     let progress: ExerciseProgress
     let baseline: ProgressBaseline
     let baselineSession: ExerciseSession?
@@ -590,39 +630,19 @@ private struct TMExerciseRecordSection: View {
     let onDeleteClip: (RecordedRep) -> Void
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @State private var role = KeyRepRole.hardest
     @State private var showsSkeleton = false
     @State private var confirmingDelete = false
 
     var body: some View {
-        if let rep {
-            VStack(alignment: .leading, spacing: 20) {
-                header(rep)
-                roleChoice
-                media(rep)
-                clipActions(rep)
-                callout(rep)
-            }
+        VStack(alignment: .leading, spacing: 20) {
+            header(rep)
+            media(rep)
+            clipActions(rep)
+            callout(rep)
         }
     }
 
-    // MARK: Selection
-
-    /// The chosen role's repetition, falling back to any recorded one.
-    private var rep: RecordedRep? {
-        reps[role] ?? reps[.hardest] ?? reps.values.first
-    }
-
-    /// Roles that name different repetitions; one repetition can be first, hardest and last.
-    private var distinctRepCount: Int {
-        var distinct: [RecordedRep] = []
-
-        for rep in reps.values where !distinct.contains(rep) {
-            distinct.append(rep)
-        }
-
-        return distinct.count
-    }
+    // MARK: Header
 
     private func header(_ rep: RecordedRep) -> some View {
         HStack(alignment: .center, spacing: 16) {
@@ -657,22 +677,6 @@ private struct TMExerciseRecordSection: View {
         )
     }
 
-    @ViewBuilder
-    private var roleChoice: some View {
-        if distinctRepCount > 1 {
-            TMChoiceChips(
-                options: KeyRepRole.allCases.map { role in
-                    TMChoiceChips.Option(value: role, title: LocalizedStringKey(role.titleKey))
-                },
-                selection: $role
-            )
-        } else {
-            Text("history.report.singleRep")
-                .typography(.subheadline)
-                .foregroundStyle(TherapyPalette.muted)
-        }
-    }
-
     private func callout(_ rep: RecordedRep) -> some View {
         TMHighlightCallout(heading: heading(rep)) {
             // Always one row; text wraps inside each tile and both keep the taller height.
@@ -705,7 +709,7 @@ private struct TMExerciseRecordSection: View {
                 figure: rep.recordsHand ? HandSkeleton.figureShape : BodyJoint.figureShape,
                 accessibilityLabel: label
             )
-            .id("\(role.rawValue)-\(metrics.repNumber)-skeleton")
+            .id("\(metrics.repNumber)-skeleton")
             .transition(.opacity)
         }
     }
@@ -747,34 +751,18 @@ private struct TMExerciseRecordSection: View {
 
     // MARK: Callout
 
-    /// Plain words for a non-medical reader. Hardest: "Di gerakan ke-5, gerakanmu sedikit
-    /// berbeda. Yuk kita lihat!", the move in red. First and last: "Ini gerakan pertamamu hari
-    /// ini." The set is named only when the day had more than one.
+    /// Plain words for a non-medical reader: "Di gerakan ke-5, gerakanmu sedikit berbeda. Yuk
+    /// kita lihat!", the move in red. The set is named only when the day had more than one.
     private func heading(_ rep: RecordedRep) -> Text {
         let set = namesSet
             ? Text("exerciseDetail.callout.set \(rep.setNumber)")
             : Text(verbatim: "")
 
-        switch role {
-        case .hardest:
-            return Text("exerciseDetail.callout.hardest.lead")
-                + Text("exerciseDetail.callout.hardest.rep \(rep.rep.metrics.repNumber)")
-                    .foregroundStyle(TherapyPalette.warning)
-                + set
-                + Text("exerciseDetail.callout.hardest.tail")
-        case .first:
-            return Text("exerciseDetail.callout.this")
-                + Text("exerciseDetail.callout.first")
-                    .foregroundStyle(TherapyPalette.brandInk)
-                + set
-                + Text("exerciseDetail.callout.today")
-        case .last:
-            return Text("exerciseDetail.callout.this")
-                + Text("exerciseDetail.callout.last")
-                    .foregroundStyle(TherapyPalette.brandInk)
-                + set
-                + Text("exerciseDetail.callout.today")
-        }
+        return Text("exerciseDetail.callout.hardest.lead")
+            + Text("exerciseDetail.callout.hardest.rep \(rep.rep.metrics.repNumber)")
+                .foregroundStyle(TherapyPalette.warning)
+            + set
+            + Text("exerciseDetail.callout.hardest.tail")
     }
 
     @ViewBuilder
@@ -1067,17 +1055,21 @@ private enum ExerciseDetailFormat {
         }
     }
 
-    static func consistency(_ spread: Double, measure: ExerciseMeasure, even: Bool) -> Text {
+    static func consistency(_ spread: Double, measure: ExerciseMeasure, level: ConsistencyLevel) -> Text {
         let amount = whole(spread, measure: measure)
 
-        switch (even, measure) {
-        case (true, .range):
+        switch (level, measure) {
+        case (.even, .range):
             return Text("exerciseDetail.insight.evenRange \(amount)")
-        case (true, _):
+        case (.even, _):
             return Text("exerciseDetail.insight.evenAngle \(amount)")
-        case (false, .range):
+        case (.fair, .range):
+            return Text("exerciseDetail.insight.fairRange \(amount)")
+        case (.fair, _):
+            return Text("exerciseDetail.insight.fairAngle \(amount)")
+        case (.varied, .range):
             return Text("exerciseDetail.insight.variedRange \(amount)")
-        case (false, _):
+        case (.varied, _):
             return Text("exerciseDetail.insight.variedAngle \(amount)")
         }
     }
@@ -1182,8 +1174,6 @@ private final class MockExerciseDetailViewModel: ExerciseDetailViewModelProtocol
     let errorKey: String? = nil
     let progress: ExerciseProgress?
     var baseline: ProgressBaseline = .firstSession
-    let currentPeakRep: RecordedRep? = nil
-    let baselinePeakRep: RecordedRep? = nil
 
     func keyRep(for role: KeyRepRole) -> RecordedRep? {
         nil

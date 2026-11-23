@@ -55,11 +55,8 @@ protocol ExerciseDetailViewModelProtocol: AnyObject, Observable {
     var baseline: ProgressBaseline { get set }
     /// The session `baseline` names; nil when the exercise was not practised then.
     var baselineSession: ExerciseSession? { get }
-    /// The day's best recorded repetition, drawn over the baseline's.
-    var currentPeakRep: RecordedRep? { get }
-    var baselinePeakRep: RecordedRep? { get }
-    /// The day's first, hardest or last key repetition for the practice record; nil when the
-    /// day recorded none.
+    /// The day's first, hardest or last key repetition; nil when the day recorded none. The
+    /// practice record shows only the hardest; first and last are still recorded.
     func keyRep(for role: KeyRepRole) -> RecordedRep?
     /// The day's recorded repetitions span more than one set, so a repetition names its set.
     var recordsSeveralSets: Bool { get }
@@ -81,7 +78,7 @@ protocol ExerciseDetailViewModelProtocol: AnyObject, Observable {
 }
 
 /// The floating detail panel for one exercise on one day: the day's figures, its best
-/// repetition against an earlier session, and its first, hardest or last repetition's recording.
+/// repetition against an earlier session, and its hardest repetition's recording.
 ///
 /// It reads the guided session history once, takes finger history from `FingerHomeViewModel`
 /// (already loaded by the Progress tab), and reads key repetitions only for the day's sessions
@@ -157,22 +154,6 @@ final class ExerciseDetailViewModel: ExerciseDetailViewModelProtocol {
 
     var baselineSession: ExerciseSession? {
         progress?.baselineSession(baseline)
-    }
-
-    var currentPeakRep: RecordedRep? {
-        guard let progress else {
-            return nil
-        }
-
-        return peakRep(in: progress.sessionsOnDay.flatMap(reps(of:)), measure: progress.measure)
-    }
-
-    var baselinePeakRep: RecordedRep? {
-        guard let progress, let baselineSession else {
-            return nil
-        }
-
-        return peakRep(in: reps(of: baselineSession), measure: progress.measure)
     }
 
     /// Day-level key repetitions, over the day's recorded reps in practice order (sessions oldest
@@ -558,18 +539,6 @@ final class ExerciseDetailViewModel: ExerciseDetailViewModelProtocol {
 
     private func reps(of session: ExerciseSession) -> [RecordedRep] {
         recordedReps[session.report] ?? []
-    }
-
-    /// The repetition that reached furthest; the last one when the exercise has no measure.
-    private func peakRep(in reps: [RecordedRep], measure: ExerciseMeasure) -> RecordedRep? {
-        guard measure != .none else {
-            return reps.last
-        }
-
-        return reps.max { first, second in
-            (Self.peak(of: first.rep.metrics, measure: measure) ?? -.infinity)
-                < (Self.peak(of: second.rep.metrics, measure: measure) ?? -.infinity)
-        }
     }
 
     static func peak(of metrics: RepMetrics, measure: ExerciseMeasure) -> Double? {
