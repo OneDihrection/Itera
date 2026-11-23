@@ -2287,7 +2287,7 @@ The product owner clarified that a yellow dashed marker means an exercise is cur
 - `HomeDayState.partial` represents a past day with at least one, but not every, planned exercise ID in `DailyPlanProgress.completed`. No completion is `missed`; every planned ID completed is `completed`.
 - On today's plan, the first unfinished exercise remains dashed and actionable. Leaving its session before the goal calls `finish(completed: false)`, so its ID is not inserted and the same item stays next.
 - On a past partial day, completed item IDs retain their yellow checklist. Unfinished items are grey and disabled because the past day cannot be resumed; a dashed marker is never used for a disabled item.
-- The partial subtitle is "Yah, ada beberapa latihan yang terlewatkan! yuk coba lagi pada sesi berikutnya!" in Indonesian and "Oh no, some exercises were missed! Let's try again in the next session!" in English. Today's current state continues to show the completed-item count.
+- The partial subtitle is "Ada beberapa latihan yang terlewatkan, coba lagi di sesi berikutnya!" in Indonesian and "Some exercises were missed. Try again in the next session!" in English. Today's current state continues to show the completed-item count.
 
 Verification: `xcodegen generate` and an iOS Simulator build succeeded before the branch was updated from `main`. After the base update, generation, the Simulator build, String Catalog parsing and the final diff were repeated. Physical-device behaviour remains pending: complete one exercise, leave the next before its goal, cross midnight, and confirm the completed checklist, disabled unfinished rows, partial subtitle and return-to-today action.
 
@@ -2361,3 +2361,13 @@ After the camera previews switched to aspect-fill (*Set list under the demonstra
 - **Tradeoff.** The fixed path keeps its fractions of the visible view, so on a cropped column the physical reach is shorter in proportion to the crop (a 16:9 image in a column about 1.2 wide: the 0.6 reach is about 0.4 of the image width). Keeping the whole path on screen requires it.
 
 Verification: `xcodegen generate` and a Debug iOS Simulator build with `IPHONEOS_DEPLOYMENT_TARGET=17.0` succeeded. Nothing was run in the Simulator or on the iPad. Pending on the M1 iPad: in both orientations and on both sides, the towel, chevrons and both zones fully visible for horizontal and vertical folds; the hand circle staying on the palm and joining the zone where it is drawn; four folds completing; the demonstration uncropped.
+
+## Debug Beranda state preview (2026-11-23)
+
+The Debug-only Beranda menu can preview `.missed`, `.current`, `.partial` and `.completed` without waiting for another calendar day. History previews select yesterday, while `.current` and "Gunakan data asli" select today so the date-dependent controls remain representative. The override is local view state and never writes daily-plan progress or history. Release builds do not contain these controls.
+
+## Completed daily plan locks until tomorrow (2026-11-23)
+
+The product owner confirmed that a patient cannot repeat exercises after every item in today's daily plan is complete. On today's `.completed` state, every card keeps its yellow checklist but is disabled, and the start/continue floating action is absent. The plan becomes available again only when the calendar day changes and `DailyPlanProgress.current(on:)` resets it for the new day.
+
+A completed historical date is also read-only and shows "Kembali ke hari ini". `TMDailyPlanCard` therefore accepts an interaction-enabled value independently from its visual state: a yellow completed marker can stay visible without making its button actionable. `TMHomeView` enables plan-card interaction only for `.current`; `.missed`, `.partial`, `.completed`, `.upcoming` and `.noSchedule` are read-only.

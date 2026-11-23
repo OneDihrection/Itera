@@ -13,6 +13,11 @@ struct TMHomeView<ViewModel: HomeViewModelProtocol, Builder: HomeContentBuildabl
     @State private var viewModel: ViewModel
     private let builder: Builder
 
+    #if DEBUG
+    /// Presentation-only override for reviewing Beranda states without changing saved progress.
+    @State private var debugDayStateOverride: HomeDayState?
+    #endif
+
     @Environment(\.buttonFeedback) private var buttonFeedback
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.scenePhase) private var scenePhase
@@ -20,6 +25,10 @@ struct TMHomeView<ViewModel: HomeViewModelProtocol, Builder: HomeContentBuildabl
     init(viewModel: ViewModel, builder: Builder) {
         _viewModel = State(initialValue: viewModel)
         self.builder = builder
+
+        #if DEBUG
+        _debugDayStateOverride = State(initialValue: nil)
+        #endif
     }
 
     var body: some View {
@@ -132,9 +141,8 @@ struct TMHomeView<ViewModel: HomeViewModelProtocol, Builder: HomeContentBuildabl
     }
 
     #if DEBUG
-    /// Debug builds only: opens any shown plan exercise's normal intro, whatever the earlier
-    /// items' state, through the same `begin(from:)` a tapped card uses. Hidden exercises are
-    /// not in `rows`, so they cannot be chosen.
+    /// Debug builds only: opens any shown plan exercise's normal intro or previews Beranda's
+    /// date states without changing the saved daily-plan progress.
     private var debugStartMenu: some View {
         TMDebugMenu(title: "debug.startAnyExercise", symbol: "list.number") {
             ForEach(Array(viewModel.rows.enumerated()), id: \.element.id) { index, row in
@@ -148,8 +156,85 @@ struct TMHomeView<ViewModel: HomeViewModelProtocol, Builder: HomeContentBuildabl
                     }
                 }
             }
+
+            Divider()
+
+            Section {
+                debugDayStateButton(.missed, title: ".missed")
+                debugDayStateButton(.current, title: ".current")
+                debugDayStateButton(.partial, title: ".partial")
+                debugDayStateButton(.completed, title: ".completed")
+            } header: {
+                Text(verbatim: "Preview state Beranda")
+            }
+
+            Divider()
+
+            Button {
+                clearDebugDayState()
+            } label: {
+                Label {
+                    Text(verbatim: "Gunakan data asli")
+                } icon: {
+                    Image(
+                        systemName: debugDayStateOverride == nil
+                            ? "checkmark"
+                            : "arrow.counterclockwise"
+                    )
+                }
+            }
         }
         .disabled(viewModel.rows.isEmpty)
+    }
+
+    private func debugDayStateButton(
+        _ state: HomeDayState,
+        title: String
+    ) -> some View {
+        Button {
+            setDebugDayState(state)
+        } label: {
+            Label {
+                Text(verbatim: title)
+            } icon: {
+                Image(systemName: debugDayStateOverride == state ? "checkmark" : "circle")
+            }
+        }
+    }
+
+    private func setDebugDayState(_ state: HomeDayState?) {
+        withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.2)) {
+            debugDayStateOverride = state
+
+            guard let state else {
+                viewModel.returnToToday()
+                return
+            }
+
+            switch state {
+            case .current:
+                viewModel.returnToToday()
+            case .missed, .partial, .completed:
+                selectYesterdayForDebugPreview()
+            case .upcoming, .noSchedule:
+                break
+            }
+        }
+    }
+
+    private func clearDebugDayState() {
+        setDebugDayState(nil)
+    }
+
+    private func selectYesterdayForDebugPreview() {
+        let calendar = Calendar.autoupdatingCurrent
+        let today = calendar.startOfDay(for: .now)
+
+        guard let yesterday = calendar.date(byAdding: .day, value: -1, to: today) else {
+            return
+        }
+
+        viewModel.selectDate(yesterday)
     }
     #endif
 
@@ -176,7 +261,7 @@ struct TMHomeView<ViewModel: HomeViewModelProtocol, Builder: HomeContentBuildabl
 
     @ViewBuilder
     private var dayContent: some View {
-        switch viewModel.selectedDayState {
+        switch presentedDayState {
         case .noSchedule:
             emptyState
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -200,7 +285,8 @@ struct TMHomeView<ViewModel: HomeViewModelProtocol, Builder: HomeContentBuildabl
                         repetitions: repetitions(in: row),
                         duration: estimatedDuration(at: index),
                         state: cardState(for: row, index: index),
-                        isLast: index == rows.index(before: rows.endIndex)
+                        isLast: index == rows.index(before: rows.endIndex),
+                        isInteractionEnabled: canInteractWithCards
                     ) {
                         startPlan(from: row.id)
                     }
@@ -209,7 +295,7 @@ struct TMHomeView<ViewModel: HomeViewModelProtocol, Builder: HomeContentBuildabl
             .frame(maxWidth: 1041)
             .frame(maxWidth: .infinity)
             .padding(.top, 48)
-            .padding(.bottom, viewModel.selectedDayState == .completed ? 48 : 188)
+            .padding(.bottom, presentedDayState == .completed ? 48 : 188)
         }
         .scrollIndicators(.hidden)
     }
@@ -239,7 +325,7 @@ struct TMHomeView<ViewModel: HomeViewModelProtocol, Builder: HomeContentBuildabl
     }
 
     private var headerSubtitle: Text {
-        switch viewModel.selectedDayState {
+        switch presentedDayState {
         case .completed:
             return Text("home.dailyPlan.completed")
         case .missed:
@@ -247,7 +333,7 @@ struct TMHomeView<ViewModel: HomeViewModelProtocol, Builder: HomeContentBuildabl
         case .partial:
             return Text("home.dailyPlan.partial")
         case .current:
-            return Text("home.dailyPlan.progress \(viewModel.completedCount) \(viewModel.rows.count)")
+            return Text("home.dailyPlan.progress \(presentedCompletedCount) \(viewModel.rows.count)")
         case .upcoming:
             return Text("home.dailyPlan.upcoming")
         case .noSchedule:
@@ -259,8 +345,60 @@ struct TMHomeView<ViewModel: HomeViewModelProtocol, Builder: HomeContentBuildabl
         viewModel.rows
     }
 
+    private var presentedDayState: HomeDayState {
+        #if DEBUG
+        if let debugDayStateOverride {
+            return debugDayStateOverride
+        }
+        #endif
+
+        return viewModel.selectedDayState
+    }
+
+    private var presentedCompletedCount: Int {
+        #if DEBUG
+        if let debugDayStateOverride {
+            switch debugDayStateOverride {
+            case .missed, .upcoming, .noSchedule:
+                return 0
+            case .current, .partial:
+                return min(1, viewModel.rows.count)
+            case .completed:
+                return viewModel.rows.count
+            }
+        }
+        #endif
+
+        return viewModel.completedCount
+    }
+
+    private var presentedHasProgress: Bool {
+        #if DEBUG
+        if debugDayStateOverride != nil {
+            return presentedCompletedCount > 0
+        }
+        #endif
+
+        return viewModel.hasProgress
+    }
+
+    private var canInteractWithCards: Bool {
+        switch presentedDayState {
+        case .current:
+            return true
+        case .completed, .missed, .partial, .upcoming, .noSchedule:
+            return false
+        }
+    }
+
     private func cardState(for row: DailyPlanRow, index: Int) -> TMDailyPlanCardState {
-        switch viewModel.selectedDayState {
+        #if DEBUG
+        if let debugDayStateOverride {
+            return debugCardState(for: debugDayStateOverride, index: index)
+        }
+        #endif
+
+        switch presentedDayState {
         case .completed:
             return .completed
         case .partial:
@@ -280,6 +418,36 @@ struct TMHomeView<ViewModel: HomeViewModelProtocol, Builder: HomeContentBuildabl
             }
         }
     }
+
+    #if DEBUG
+    private func debugCardState(
+        for state: HomeDayState,
+        index: Int
+    ) -> TMDailyPlanCardState {
+        switch state {
+        case .completed:
+            return .completed
+        case .partial:
+            return index == 0 ? .completed : .upcoming(step: index + 1)
+        case .missed, .upcoming, .noSchedule:
+            return .upcoming(step: index + 1)
+        case .current:
+            if viewModel.rows.count == 1 {
+                return .current(step: 1)
+            }
+
+            if index == 0 {
+                return .completed
+            }
+
+            if index == 1 {
+                return .current(step: index + 1)
+            }
+
+            return .upcoming(step: index + 1)
+        }
+    }
+    #endif
 
     private func sets(in row: DailyPlanRow) -> Int {
         for detail in row.details {
@@ -302,7 +470,7 @@ struct TMHomeView<ViewModel: HomeViewModelProtocol, Builder: HomeContentBuildabl
     }
 
     private func estimatedDuration(at index: Int) -> ClosedRange<Int> {
-        if viewModel.selectedDayState == .current, index < 2 {
+        if presentedDayState == .current, index < 2 {
             return 10...15
         }
 
@@ -313,7 +481,7 @@ struct TMHomeView<ViewModel: HomeViewModelProtocol, Builder: HomeContentBuildabl
 
     @ViewBuilder
     private var floatingAction: some View {
-        switch viewModel.selectedDayState {
+        switch presentedDayState {
         case .completed:
             if isViewingPastDate {
                 returnToTodayButton
@@ -327,7 +495,7 @@ struct TMHomeView<ViewModel: HomeViewModelProtocol, Builder: HomeContentBuildabl
 
         case .current:
             TMHomeFloatingButton(
-                title: viewModel.hasProgress ? "plan.continue" : "home.startExercise",
+                title: presentedHasProgress ? "plan.continue" : "home.startExercise",
                 symbol: "play.fill",
                 style: .prominent
             ) {
@@ -362,13 +530,17 @@ struct TMHomeView<ViewModel: HomeViewModelProtocol, Builder: HomeContentBuildabl
             style: .outlined
         ) {
             withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.2)) {
+                #if DEBUG
+                debugDayStateOverride = nil
+                #endif
+
                 viewModel.returnToToday()
             }
         }
     }
 
     private func startPlan(from itemID: String?) {
-        guard viewModel.selectedDayState == .current else {
+        guard presentedDayState == .current else {
             return
         }
 
