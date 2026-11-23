@@ -63,12 +63,18 @@ struct TMDailyPlanCalendar: View {
 
     private func dayButton(_ date: Date) -> some View {
         let isSelected = calendar.isDate(date, inSameDayAs: selectedDate)
+        let isToday = calendar.isDateInToday(date)
 
         return Button {
             onSelect(date)
         } label: {
             Text(date, format: .dateTime.day())
                 .typography(size: 20, weight: .bold, relativeTo: .body)
+                .foregroundStyle(
+                    isToday && !isSelected
+                        ? TherapyPalette.planMarker
+                        : TherapyPalette.brandInk
+                )
                 .frame(width: 48, height: 48)
                 .background(isSelected ? TherapyPalette.brand : .clear, in: Circle())
                 .contentShape(Circle())

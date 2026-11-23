@@ -93,7 +93,7 @@ struct TMDailyPlanCard: View {
 
             Text(step, format: .number)
                 .typography(size: 28, weight: .semiBold, relativeTo: .title2)
-                .foregroundStyle(dashed ? TherapyPalette.planMarker : TherapyPalette.planStepInk)
+                .foregroundStyle(TherapyPalette.planStepInk)
         }
         .frame(width: 64, height: 64)
     }
