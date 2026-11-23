@@ -27,7 +27,7 @@ struct TMFingerDemonstrationView: UIViewRepresentable {
         } else {
             displayedPhase = phase
         }
-        view.configure(asset: exercise.rawValue, phase: displayedPhase,
+        view.configure(asset: exercise.demonstrationResourceName, phase: displayedPhase,
                        returning: returning, finger: exercise.isSequential ? finger : 0,
                        mirrored: side == .left, paused: paused || reduceMotion)
     }
@@ -95,7 +95,7 @@ final class TMHandMovieView: UIView {
         if assetName != asset {
             releasePlayer()
             assetName = asset
-            guard let url = Bundle.main.url(forResource: asset, withExtension: "mov") else {
+            guard let url = Bundle.main.url(forResource: asset, withExtension: "mp4") else {
                 fallback.isHidden = false
                 return
             }
@@ -131,7 +131,7 @@ final class TMHandMovieView: UIView {
         case .demonstration:
             start = 0
             position = 0
-            end = (asset == "opposition" || asset == "extensionSequence") ? 16 : 4
+            end = (asset == "opposition_demonstration" || asset == "extension_sequence_demonstration") ? 16 : 4
             shouldPlay = !paused
         case .active:
             position = offset + (returning ? 2 : 0)

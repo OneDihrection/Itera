@@ -12,7 +12,9 @@ Each clip is a short list of key poses written as a few readable parameters
 `solve` turns every sampled frame into absolute bone orientations, and couples the joints
 that move with the arm: shoulder blade lift and protraction, chest extension for overhead
 reach, a smaller follow-through in the neck and head, and an ankle-pinned leg solve when the
-pelvis drops. Rigify's drivers stay untouched; only FK controls are keyed.
+pelvis drops. Rigify's drivers stay untouched; only FK controls are keyed. `author_grip` then keys
+a natural finger grip that follows the arm's movement, and the clip is rendered from the scene's
+`Cam_<clip>` camera.
 """
 
 import math
@@ -230,6 +232,119 @@ def reset(rig):
         pose_bone.rotation_euler = (0, 0, 0)
 
 
+# MARK: - Hand grip
+
+# Reaching clips open the hand as the arm elevates; the others close it into a loose hold at
+# the peak of the movement. Sit to stand keeps the relaxed hand. Angles are degrees of finger
+# curl about each bone's local X axis (positive curls toward the palm), as knuckle, middle and
+# end joint.
+GRIP_REACH_CLIPS = {
+    "arm_raise_demonstration",
+    "shoulder_flexion_right_demonstration",
+    "directional_reach_demonstration",
+}
+GRIP_HOLD_CLIPS = {
+    "cross_midline_right_demonstration",
+    "elbow_bend_demonstration",
+    "shoulder_external_rotation_right_demonstration",
+    "shoulder_internal_rotation_right_demonstration",
+}
+GRIP_RELAXED = {
+    "f_index": (14, 24, 14),
+    "f_middle": (18, 28, 17),
+    "f_ring": (22, 32, 19),
+    "f_pinky": (27, 36, 22),
+}
+
+# Frames each finger trails the index finger, so the fingers curl in a small cascade.
+GRIP_LAG = {"f_index": 0, "f_middle": 1, "f_ring": 2, "f_pinky": 3}
+GRIP_THUMB_RELAXED = (3, 5, 4)
+GRIP_OPEN_FRACTION = 0.65
+GRIP_CLOSE_GAIN = 1.3
+GRIP_THUMB_OPEN_FRACTION = 0.5
+GRIP_THUMB_CLOSE_GAIN = 1.6
+GRIP_KEY_STEP = 3
+GRIP_SMOOTHING = 7
+
+
+def grip_effort(rig, start, end):
+    """How far the right hand has travelled from its first position, 0 to 1, smoothed per frame."""
+    scene = bpy.context.scene
+    positions = []
+
+    for frame in range(start, end + 1):
+        scene.frame_set(frame)
+        positions.append(rig.matrix_world @ rig.pose.bones["DEF-hand.R"].head)
+
+    distances = [(position - positions[0]).length for position in positions]
+    largest = max(max(distances), 1e-6)
+    normalized = [distance / largest for distance in distances]
+    half = GRIP_SMOOTHING // 2
+    padded = [normalized[0]] * half + normalized + [normalized[-1]] * half
+
+    return [
+        sum(padded[index:index + GRIP_SMOOTHING]) / GRIP_SMOOTHING
+        for index in range(len(normalized))
+    ]
+
+
+def key_curl(rig, bone, frame, degrees):
+    pose_bone = rig.pose.bones[bone]
+    pose_bone.rotation_mode = "QUATERNION"
+    pose_bone.rotation_quaternion = Quaternion((1, 0, 0), math.radians(degrees))
+    pose_bone.keyframe_insert("rotation_quaternion", frame=frame, group=bone)
+
+
+def author_grip(rig, clip_name, start, end):
+    """Keys a natural grip on the finger controls of the clip's action.
+
+    The right hand follows the arm's movement: it opens as a reaching arm elevates and closes
+    into a loose hold at the peak of the other clips, each finger a frame behind the last. The
+    left hand stays relaxed. Must run after the arm motion is keyed, since the effort comes from it.
+    """
+    effort = grip_effort(rig, start, end)
+
+    def at(frame):
+        position = min(max(frame - start, 0), len(effort) - 1)
+        return effort[position]
+
+    reaching = clip_name in GRIP_REACH_CLIPS
+    holding = clip_name in GRIP_HOLD_CLIPS
+    frames = sorted(set(range(start, end + 1, GRIP_KEY_STEP)) | {end})
+
+    def curl(base, amount, open_fraction, close_gain):
+        if reaching:
+            return base * (1 - open_fraction * amount)
+
+        if holding:
+            return base * (1 + close_gain * amount)
+
+        return base
+
+    for finger, joints in GRIP_RELAXED.items():
+        for index, base in enumerate(joints):
+            right = f"{finger}.0{index + 1}.R"
+
+            for frame in frames:
+                lagged = frame - GRIP_LAG[finger] - index
+                key_curl(rig, right, frame, curl(base, at(lagged), GRIP_OPEN_FRACTION, GRIP_CLOSE_GAIN))
+
+            for frame in (start, end):
+                key_curl(rig, f"{finger}.0{index + 1}.L", frame, base)
+
+    for index, base in enumerate(GRIP_THUMB_RELAXED):
+        for frame in frames:
+            key_curl(
+                rig,
+                f"thumb.0{index + 1}.R",
+                frame,
+                curl(base, at(frame - index), GRIP_THUMB_OPEN_FRACTION, GRIP_THUMB_CLOSE_GAIN),
+            )
+
+        for frame in (start, end):
+            key_curl(rig, f"thumb.0{index + 1}.L", frame, base)
+
+
 def author(clip_name, clips=None):
     clips = clips or CLIPS
     config = clips[clip_name]
@@ -281,6 +396,7 @@ def author(clip_name, clips=None):
         bpy.data.actions.remove(stale)
     action.name = clip_name
     action.use_fake_user = True
+    author_grip(rig, clip_name, start, end)
     scene.frame_start, scene.frame_end = start, end
     scene.frame_set(start)
     return action
@@ -485,13 +601,28 @@ def frame_torso(start, end):
     camera.data.shift_y = (TORSO_BOTTOM + scale / 2) / scale
 
 
+def clip_camera_name(clip_name):
+    """The camera the scene stores for a clip, `Cam_arm_raise` for `arm_raise_demonstration`.
+
+    Those cameras hold each clip's final framing (waist-up for the seated clips, a turned
+    full-body view for sit to stand). A scene without one is framed by `frame_camera`.
+    """
+    return "Cam_" + clip_name.removesuffix("_demonstration")
+
+
 def render_frames(clip_name, directory):
     """Authors the clip, then renders transparent 768 x 768 PNG frames at 24 FPS."""
     config = CLIPS[clip_name]
     action = author(clip_name)
-    frame_camera(config.get("camera", "front"))
-    if clip_name in TORSO_CLIPS:
-        frame_torso(*action.frame_range)
+    clip_camera = bpy.data.objects.get(clip_camera_name(clip_name))
+
+    if clip_camera is not None:
+        bpy.context.scene.camera = clip_camera
+    else:
+        frame_camera(config.get("camera", "front"))
+
+        if clip_name in TORSO_CLIPS:
+            frame_torso(*action.frame_range)
 
     scene = bpy.context.scene
     render = scene.render
