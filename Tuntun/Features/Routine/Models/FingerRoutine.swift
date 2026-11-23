@@ -40,6 +40,17 @@ enum FingerExercise: String, CaseIterable, Identifiable {
     var calibratesRange: Bool { false }
     /// The static hand picture in the asset catalog, named `hand-<exercise>`.
     var artwork: String { "hand-" + rawValue }
+    /// The bundled demonstration clip, `<snake_case>_demonstration.mp4` in Resources/Animations.
+    var demonstrationResourceName: String {
+        switch self {
+        case .fullFist: return "full_fist_demonstration"
+        case .hookFist: return "hook_fist_demonstration"
+        case .opposition: return "opposition_demonstration"
+        case .spreading: return "spreading_demonstration"
+        case .extensionSequence: return "extension_sequence_demonstration"
+        case .forearmRotation: return rawValue
+        }
+    }
 }
 
 /// A group of exercises that shares the finger-session flow but has its own plan, settings,

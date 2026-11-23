@@ -2131,3 +2131,22 @@ The team tests on an iPad and asked for faster debugging: "add more debug featur
 Rest skipping changes no timing, threshold, saved result or narration in normal use; Release keeps the earlier `task` id (`paused || scenePhase != .active`).
 
 Verification: XcodeGen generation, Debug and Release Simulator builds with `IPHONEOS_DEPLOYMENT_TARGET=17.0` (both BUILD SUCCEEDED), String Catalog JSON parsing and `git diff --check` passed. The Debug app's `Tuntun.debug.dylib` contains `TMDebugSkipRestButton` and `skipRestForDebug`; no file of the Release app does. Source review traced each skip into the same end-of-rest code an elapsed rest runs. Nothing was run in the Simulator or on the iPad. Pending on the M1 iPad: the start-any-exercise menu opening each plan item and the plan continuing to the following items; Skip rest in a guided body session (timed breathing, a recalibrating next set, the next bilateral side), during the Indonesian arm-raise and opposition breaths, in Balancing and in a finger session; the long-rest skip and the countdown skip, including between the two sides of a one-side-per-session exercise and before a scripted next intro; that no breath line or countdown number plays after a skip; and both languages.
+
+
+## Exercise detail insights at full width (2026-11-23)
+
+At the user's request, "Perkembangan gerakanmu" moves its insight card (`TMInsightCard`) out of the column beside the pose picture. The picture now sits beside the headline, since line and legend only, and the insight card spans the full width under both, before the trend chart. With long wording, especially in English, the column beside the 340 pt picture had grown much taller than the picture and left empty space under it. The stacked fallback keeps the same order: picture, change, insights, trend. This supersedes the "Perkembangan gerakanmu" bullet's column contents in *Exercise detail figure and layout*; the explicit ideal width on the side-by-side row stays.
+
+Verification: XcodeGen and a Debug iOS Simulator build succeeded. Pending: the preview canvases and, on the baseline iPad, both languages, large text, and an exercise without a measure (fold towel).
+
+
+## Skinned demonstration clips and blends (2026-11-23)
+
+At the user's request, all body and finger demonstration clips were re-rendered with one natural skin texture and the project blends were replaced.
+
+- **Look.** Both rigs use the PNG textures in `ArtSource/Textures` (`skin_albedo.png`, `skin_height.png`, relative paths), matched in texel density and exposure. Body and hand now share one style.
+- **Motion and framing.** The right hand grips with the arm (open when reaching, a loose hold for the other clips). Each body clip has a `Cam_<clip>` camera in the blend, following the waist-up rule; sit to stand is turned slightly to the side.
+- **Blends.** `BodyDemonstrations_ConnectedMotion.blend` and `RiggedFingerDemonstrations.blend` hold the skinned scenes. `author_body_demonstrations.py` keys the grip and prefers the stored camera; `render_rigged_hand_demonstrations.py` now writes 768 × 768 MP4 clips through FFmpeg.
+- **App.** The five finger clips are `*_demonstration.mp4` in `Resources/Animations` (the old `Fingers/*.mov` are removed). `FingerDemonstrationView` loads them through `FingerExercise.demonstrationResourceName`. Clip lengths match the old ones, so the 4 s and 16 s timing is unchanged.
+
+Verification: ffprobe confirmed 768 × 768, 24 FPS, yuv420p and the expected frame counts; both blends reopen with textures resolved; the authoring tool rendered two clips from the new blend. Pending: an XcodeGen and Simulator build, playback on the baseline iPad, and the `hand-*` catalog thumbnails, which were not re-rendered.

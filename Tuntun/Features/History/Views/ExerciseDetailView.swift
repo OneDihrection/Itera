@@ -265,7 +265,9 @@ struct TMExerciseDetailView<ViewModel: ExerciseDetailViewModelProtocol>: View {
 // MARK: - Progress
 
 /// "Perkembangan gerakanmu": the baseline menu, the two poses beside the change in the
-/// exercise's own words, the best result of each session, and the insight rows.
+/// exercise's own words, the insight rows at full width under both, and the best result of
+/// each session. Keeping the insights out of the column beside the picture keeps the two
+/// columns close in height when the wording runs long.
 private struct TMExerciseProgressSection<ViewModel: ExerciseDetailViewModelProtocol>: View {
     @Bindable var viewModel: ViewModel
     let progress: ExerciseProgress
@@ -284,15 +286,18 @@ private struct TMExerciseProgressSection<ViewModel: ExerciseDetailViewModelProto
                     picture
                         .frame(width: 340)
 
-                    summary
+                    change
+                        .frame(maxWidth: .infinity, alignment: .leading)
                 }
                 .frame(idealWidth: 680, maxWidth: .infinity, alignment: .leading)
 
                 VStack(alignment: .leading, spacing: 20) {
                     picture
-                    summary
+                    change
                 }
             }
+
+            insights
 
             trend
                 .padding(.top, 12)
@@ -390,14 +395,7 @@ private struct TMExerciseProgressSection<ViewModel: ExerciseDetailViewModelProto
         recordsHand ? frame.handPose : frame.bodyPose
     }
 
-    /// The headline, since line and legend, then the insights card.
-    private var summary: some View {
-        VStack(alignment: .leading, spacing: 20) {
-            change
-            insights
-        }
-    }
-
+    /// The headline, since line and legend, or the note that there is nothing to compare yet.
     @ViewBuilder
     private var change: some View {
         if let baselineSession = viewModel.baselineSession,

@@ -142,7 +142,7 @@ struct TMHomeView<ViewModel: HomeViewModelProtocol, Builder: HomeContentBuildabl
     #endif
 
     private var header: some View {
-        VStack(spacing: 0) {
+        VStack(spacing: 8) {
             TMHomeHeaderTitle(text: dateTitle)
             TMHomeHeaderSubtitle(text: headerSubtitle)
         }
@@ -158,9 +158,7 @@ struct TMHomeView<ViewModel: HomeViewModelProtocol, Builder: HomeContentBuildabl
                 viewModel.selectDate(date)
             }
         } onMoveWeek: { offset in
-            withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.25)) {
-                viewModel.moveVisibleWeek(by: offset)
-            }
+            viewModel.moveVisibleWeek(by: offset)
         }
     }
 
@@ -171,7 +169,7 @@ struct TMHomeView<ViewModel: HomeViewModelProtocol, Builder: HomeContentBuildabl
             emptyState
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
 
-        case .completed, .current, .upcoming:
+        case .completed, .missed, .current, .upcoming:
             planList
         }
     }
@@ -232,6 +230,8 @@ struct TMHomeView<ViewModel: HomeViewModelProtocol, Builder: HomeContentBuildabl
         switch viewModel.selectedDayState {
         case .completed:
             return Text("home.dailyPlan.completed")
+        case .missed:
+            return Text("home.dailyPlan.missed")
         case .current:
             return Text("home.dailyPlan.progress \(viewModel.completedCount) \(viewModel.rows.count)")
         case .upcoming:
@@ -249,7 +249,7 @@ struct TMHomeView<ViewModel: HomeViewModelProtocol, Builder: HomeContentBuildabl
         switch viewModel.selectedDayState {
         case .completed:
             return .completed
-        case .upcoming, .noSchedule:
+        case .missed, .upcoming, .noSchedule:
             return .upcoming(step: index + 1)
         case .current:
             switch row.status {
@@ -297,7 +297,12 @@ struct TMHomeView<ViewModel: HomeViewModelProtocol, Builder: HomeContentBuildabl
     private var floatingAction: some View {
         switch viewModel.selectedDayState {
         case .completed:
-            EmptyView()
+            if isViewingPastDate {
+                returnToTodayButton
+            }
+
+        case .missed:
+            returnToTodayButton
 
         case .current:
             TMHomeFloatingButton(
@@ -317,14 +322,26 @@ struct TMHomeView<ViewModel: HomeViewModelProtocol, Builder: HomeContentBuildabl
             )
 
         case .noSchedule:
-            TMHomeFloatingButton(
-                title: "home.dailyPlan.returnToday",
-                symbol: "arrow.uturn.backward",
-                style: .outlined
-            ) {
-                withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.2)) {
-                    viewModel.returnToToday()
-                }
+            returnToTodayButton
+        }
+    }
+
+    private var isViewingPastDate: Bool {
+        let calendar = Calendar.autoupdatingCurrent
+        let selectedDate = calendar.startOfDay(for: viewModel.selectedDate)
+        let today = calendar.startOfDay(for: .now)
+
+        return selectedDate < today
+    }
+
+    private var returnToTodayButton: some View {
+        TMHomeFloatingButton(
+            title: "home.dailyPlan.returnToday",
+            symbol: "arrow.uturn.backward",
+            style: .outlined
+        ) {
+            withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.2)) {
+                viewModel.returnToToday()
             }
         }
     }
@@ -417,6 +434,10 @@ private struct MockHomeBuilder: HomeContentBuildable {
 
 #Preview("Beranda — Hari Ini") {
     TMHomeView(viewModel: MockHomeViewModel(state: .current), builder: MockHomeBuilder())
+}
+
+#Preview("Beranda — Tidak Latihan") {
+    TMHomeView(viewModel: MockHomeViewModel(state: .missed), builder: MockHomeBuilder())
 }
 
 #Preview("Beranda — Besok") {
