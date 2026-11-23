@@ -68,6 +68,15 @@ protocol ExerciseDetailViewModelProtocol: AnyObject, Observable {
     func load() async
     /// Deletes the repetition's clip, keeping its skeleton and figures.
     func deleteClip(of rep: RecordedRep) async
+    /// True while the day's record is being deleted.
+    var deletingRecord: Bool { get }
+    /// Set when deleting the day's record failed.
+    var recordDeleteErrorKey: String? { get }
+    /// A session of the day also holds other exercises, which deleting the record removes too.
+    var recordSharesSessions: Bool { get }
+    /// Deletes every session of the exercise on the day, with its replays and clips, and the
+    /// plan's done mark for it, then closes the panel.
+    func deleteRecord() async
     func close()
 }
 
@@ -84,6 +93,8 @@ final class ExerciseDetailViewModel: ExerciseDetailViewModelProtocol {
     private(set) var loading = false
     private(set) var errorKey: String?
     private(set) var clipDeleteErrorKey: String?
+    private(set) var deletingRecord = false
+    private(set) var recordDeleteErrorKey: String?
     private(set) var progress: ExerciseProgress?
 
     var baseline: ProgressBaseline = .firstSession {
@@ -102,11 +113,15 @@ final class ExerciseDetailViewModel: ExerciseDetailViewModelProtocol {
     private var sessionHistory: [ExerciseSession] = []
     /// Recorded key repetitions of this exercise, by session.
     private var recordedReps: [PracticedExercise.Report: [RecordedRep]] = [:]
+    /// Sessions that also practised another exercise.
+    private var sharedReports: Set<PracticedExercise.Report> = []
 
     @ObservationIgnored private let exercise: PracticedExercise
     @ObservationIgnored private let sessions: any SessionRepository
     @ObservationIgnored private let fingers: FingerHomeViewModel
     @ObservationIgnored private let fingerReplayRepository: any FingerSessionRepository
+    @ObservationIgnored private let planHistoryRepository: any DailyPlanHistoryRepository
+    @ObservationIgnored private let history: any PracticeHistoryProviding
     @ObservationIgnored private let router: any HistoryRouterProtocol
 
     init(
@@ -114,6 +129,8 @@ final class ExerciseDetailViewModel: ExerciseDetailViewModelProtocol {
         sessions: any SessionRepository,
         fingers: FingerHomeViewModel,
         fingerReplayRepository: any FingerSessionRepository,
+        planHistoryRepository: any DailyPlanHistoryRepository,
+        history: any PracticeHistoryProviding,
         router: any HistoryRouterProtocol
     ) {
         day = route.day
@@ -121,6 +138,8 @@ final class ExerciseDetailViewModel: ExerciseDetailViewModelProtocol {
         self.sessions = sessions
         self.fingers = fingers
         self.fingerReplayRepository = fingerReplayRepository
+        self.planHistoryRepository = planHistoryRepository
+        self.history = history
         self.router = router
     }
 
@@ -177,6 +196,10 @@ final class ExerciseDetailViewModel: ExerciseDetailViewModelProtocol {
         case .hardest:
             return hardest(in: candidates, measure: progress.measure)
         }
+    }
+
+    var recordSharesSessions: Bool {
+        progress?.sessionsOnDay.contains { sharedReports.contains($0.report) } ?? false
     }
 
     var recordsSeveralSets: Bool {
@@ -240,6 +263,59 @@ final class ExerciseDetailViewModel: ExerciseDetailViewModelProtocol {
 
     func close() {
         router.dismissExerciseDetail()
+    }
+
+    // MARK: - Deleting the day's record
+
+    func deleteRecord() async {
+        guard !deletingRecord, let progress else {
+            return
+        }
+
+        deletingRecord = true
+        recordDeleteErrorKey = nil
+        defer { deletingRecord = false }
+
+        let deleted = await deleteSessions(progress.sessionsOnDay)
+
+        // The plan's mark would otherwise keep the exercise on the day; a failure here leaves
+        // the sessions deleted and is only logged.
+        do {
+            try await planHistoryRepository.removeCompleted(exercise.id, on: day)
+        } catch {
+            LogManager.shared.error("Plan mark not removed after deleting a record", error: error, category: .storage)
+        }
+
+        // Refreshes even after a partial failure, so the calendar and day page show what is left.
+        await history.refresh()
+
+        guard deleted else {
+            recordDeleteErrorKey = "exerciseDetail.deleteRecord.error"
+            return
+        }
+
+        router.dismissExerciseDetail()
+    }
+
+    /// Deletes each session with its replays and clips; false when any deletion failed.
+    private func deleteSessions(_ sessionsToDelete: [ExerciseSession]) async -> Bool {
+        var deletedAll = true
+
+        for session in sessionsToDelete {
+            do {
+                switch session.report {
+                case .session(let id):
+                    try await sessions.delete(id: id)
+                case .finger(let id):
+                    try await fingerReplayRepository.delete(id)
+                }
+            } catch {
+                deletedAll = false
+                LogManager.shared.error("Exercise session not deleted", error: error, category: .storage)
+            }
+        }
+
+        return deletedAll
     }
 
     // MARK: - Deleting clips
@@ -342,13 +418,17 @@ final class ExerciseDetailViewModel: ExerciseDetailViewModelProtocol {
     /// Guided and Balancing sessions that practised the exercise, with every set joined.
     private func guidedSessions() async throws -> [ExerciseSession] {
         try await sessions.history().compactMap { summary in
-            let results = summary.results.filter { result in
-                result.activity.kind.rawValue == exercise.id
-                    && (result.outcome == .completed || result.completedWork > 0)
+            let practised = summary.results.filter { result in
+                result.outcome == .completed || result.completedWork > 0
             }
+            let results = practised.filter { $0.activity.kind.rawValue == exercise.id }
 
             guard !results.isEmpty else {
                 return nil
+            }
+
+            if results.count < practised.count {
+                sharedReports.insert(.session(summary.id))
             }
 
             return ExerciseSession(
@@ -366,13 +446,17 @@ final class ExerciseDetailViewModel: ExerciseDetailViewModelProtocol {
         fingers.history
             .filter { $0.outcome != .savedForLater }
             .compactMap { summary in
-                let results = summary.results.filter { result in
-                    result.kind.rawValue == exercise.id
-                        && (result.repetitions > 0 || result.activeSeconds > 0)
+                let practised = summary.results.filter { result in
+                    result.repetitions > 0 || result.activeSeconds > 0
                 }
+                let results = practised.filter { $0.kind.rawValue == exercise.id }
 
                 guard !results.isEmpty else {
                     return nil
+                }
+
+                if results.count < practised.count {
+                    sharedReports.insert(.finger(summary.id))
                 }
 
                 return ExerciseSession(

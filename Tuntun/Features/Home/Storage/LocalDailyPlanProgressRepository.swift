@@ -99,6 +99,26 @@ actor LocalDailyPlanProgressRepository: DailyPlanProgressRepository, DailyPlanHi
         }
     }
 
+    /// Rewrites only the matching day, and only when it lists the item.
+    func removeCompleted(_ itemID: String, on day: Date) throws {
+        guard var days = try loadDays(),
+              let index = days.firstIndex(where: { Calendar.current.isDate($0.day, inSameDayAs: day) }),
+              days[index].completed.contains(itemID)
+        else {
+            return
+        }
+
+        let record = days[index]
+
+        days[index] = DayRecord(
+            day: record.day,
+            completed: record.completed.filter { $0 != itemID },
+            planned: record.planned
+        )
+
+        try AtomicJSONFiles.write(Record(version: 2, days: days), to: url)
+    }
+
     // MARK: - Reading
 
     /// `nil` when nothing was saved yet; throws for unreadable or unsupported data.

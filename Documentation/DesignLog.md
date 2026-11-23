@@ -1969,3 +1969,16 @@ At the user's request, the exercise detail panel's insight rows colour their sen
 - Volume: more is green, fewer is red, and the same is neutral.
 
 Verification: a Debug Simulator build with `IPHONEOS_DEPLOYMENT_TARGET=17.0` succeeded. Pending: the previews and the Progress tab in light and dark mode, checking the contrast of `green` and `warning` on the `panel` card, and the baseline iPad.
+
+
+## Delete an exercise's day record (2026-11-23)
+
+Users asked for a way to delete an exercise's record, for example a session recorded by mistake. They chose to delete one exercise on one day, and to remove its plan mark too.
+
+- The exercise detail panel ends with a destructive "Hapus catatan latihan ini" pill under the disclaimer, which keeps the Figma sections unchanged. A confirmation dialog names the exercise and the day and says the deletion can't be undone.
+- `ExerciseDetailViewModel.deleteRecord()` deletes every session in `progress.sessionsOnDay` through `SessionRepository.delete(id:)` or `FingerSessionRepository.delete(_:)`. Each call removes the summary, its replays and its clips.
+- **Plan mark.** `PracticeHistory` adds plan-completed items to a day, so the deleted exercise would otherwise stay on the day page. `DailyPlanHistoryRepository` gains `removeCompleted(_:on:)`, and `LocalDailyPlanProgressRepository` rewrites only the matching day, never replacing an unreadable file. A failure there is logged and doesn't undo the deleted sessions. Beranda reloads its progress when it appears (`HomeView.task` → `DailyPlanViewModel.load()`), so today's plan picks up the change before it saves again.
+- **Shared sessions.** Plan and Balancing sessions hold one exercise, but older routines and finger routines can hold several. Sessions are deleted whole, because summaries are immutable. When any of the day's sessions also practised another exercise, the dialog says those are deleted too.
+- **Refresh.** `ReportsViewModel` conforms to a new `PracticeHistoryProviding`. `PracticeDayViewModel` now reads its exercises from it instead of a snapshot, and the panel refreshes it after deleting, so the card leaves the day page and the calendar updates. If any session fails to delete, the panel stays open with an error, after still refreshing so partial deletions show.
+
+Verification: a Debug Simulator build with `IPHONEOS_DEPLOYMENT_TARGET=17.0` succeeded. Pending, because recording sessions needs the camera: on the baseline iPad, in both languages, delete a plan arm-raise record and a finger record. Then check that the panel closes, the card leaves, the calendar status changes, the session files and `daily-plan-progress.json` entry are gone, Beranda shows the item as not done, Cancel keeps everything, and an emptied day shows its empty message.

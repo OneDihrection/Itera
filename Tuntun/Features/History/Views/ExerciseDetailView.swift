@@ -12,6 +12,9 @@ import SwiftUI
 /// repetition's recording and the camera-estimate note. `TMDetailPanel` draws the card around it.
 struct TMExerciseDetailView<ViewModel: ExerciseDetailViewModelProtocol>: View {
     @State private var viewModel: ViewModel
+    @State private var confirmingRecordDelete = false
+
+    @Environment(\.locale) private var locale
 
     init(viewModel: ViewModel) {
         _viewModel = State(initialValue: viewModel)
@@ -48,16 +51,23 @@ struct TMExerciseDetailView<ViewModel: ExerciseDetailViewModelProtocol>: View {
 
     /// "Angkat lengan kiri" when the day practised one side, otherwise the plain name.
     private var titleText: Text {
+        Text(verbatim: titleName)
+    }
+
+    private var titleName: String {
         let name = String(localized: String.LocalizationValue(viewModel.titleKey), bundle: AppLanguage.selected.resourceBundle)
 
         guard let side = viewModel.titleSide else {
-            return Text(verbatim: name)
+            return name
         }
 
         let sideKey: String.LocalizationValue = side == .left ? "exerciseDetail.side.left" : "exerciseDetail.side.right"
         let sideName = String(localized: sideKey, bundle: AppLanguage.selected.resourceBundle)
 
-        return Text("exerciseDetail.title.sided \(name) \(sideName)")
+        return String(
+            localized: "exerciseDetail.title.sided \(name) \(sideName)",
+            bundle: AppLanguage.selected.resourceBundle
+        )
     }
 
     @ViewBuilder
@@ -110,6 +120,61 @@ struct TMExerciseDetailView<ViewModel: ExerciseDetailViewModelProtocol>: View {
             .typography(size: 18, weight: .regular, relativeTo: .footnote)
             .foregroundStyle(TherapyPalette.muted)
             .fixedSize(horizontal: false, vertical: true)
+
+        if !progress.sessionsOnDay.isEmpty {
+            recordDeletion(progress)
+        }
+    }
+
+    // MARK: - Deleting the record
+
+    /// "Hapus catatan latihan ini", confirmed first: deletes the exercise's sessions for the day
+    /// with their replays, and the plan's done mark.
+    @ViewBuilder
+    private func recordDeletion(_ progress: ExerciseProgress) -> some View {
+        TMTherapyButton(
+            title: "exerciseDetail.deleteRecord",
+            symbol: "trash",
+            destructive: true,
+            pill: true
+        ) {
+            confirmingRecordDelete = true
+        }
+        .fixedSize()
+        .disabled(viewModel.deletingRecord)
+        .confirmationDialog(
+            "exerciseDetail.deleteRecord.title",
+            isPresented: $confirmingRecordDelete,
+            titleVisibility: .visible
+        ) {
+            Button("exerciseDetail.deleteRecord.confirm", role: .destructive) {
+                Task {
+                    await viewModel.deleteRecord()
+                }
+            }
+
+            Button("exerciseDetail.record.deleteClip.cancel", role: .cancel) {}
+        } message: {
+            deletionMessage(progress)
+        }
+
+        if let key = viewModel.recordDeleteErrorKey {
+            TMTherapyError(key: key)
+        }
+    }
+
+    /// Names the exercise and day, and warns when a session also held other exercises.
+    private func deletionMessage(_ progress: ExerciseProgress) -> Text {
+        let day = progress.day.formatted(.dateTime.day().month(.wide).year().locale(locale))
+        let message = Text("exerciseDetail.deleteRecord.message \(titleName) \(day)")
+
+        guard viewModel.recordSharesSessions else {
+            return message
+        }
+
+        return message
+            + Text(verbatim: " ")
+            + Text("exerciseDetail.deleteRecord.shared")
     }
 
     private var wording: ExerciseWording {
@@ -1162,8 +1227,13 @@ private final class MockExerciseDetailViewModel: ExerciseDetailViewModelProtocol
         progress?.baselineSession(baseline)
     }
 
+    let deletingRecord = false
+    let recordDeleteErrorKey: String? = nil
+    let recordSharesSessions = false
+
     func load() async {}
     func deleteClip(of rep: RecordedRep) async {}
+    func deleteRecord() async {}
     func close() {}
 }
 

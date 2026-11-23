@@ -19,25 +19,31 @@ protocol PracticeDayViewModelProtocol: AnyObject, Observable {
     func open(_ exercise: PracticedExercise)
 }
 
-/// "Perkembangan latihanmu": one day's practised exercises. It receives that day's exercises
-/// from the Progress tab's loaded history, so opening a day reads no files. A card opens the
-/// exercise's detail panel.
+/// "Perkembangan latihanmu": one day's practised exercises. It reads that day's exercises from
+/// the Progress tab's loaded history, so opening a day reads no files and a record deleted from
+/// the detail panel leaves the page once that history refreshes. A card opens the exercise's
+/// detail panel.
 @MainActor
 @Observable
 final class PracticeDayViewModel: PracticeDayViewModelProtocol {
     let day: Date
-    let exercises: [PracticedExercise]
 
+    @ObservationIgnored private let history: any PracticeHistoryProviding
     @ObservationIgnored private let router: any HistoryRouterProtocol
 
     init(
         day: Date,
-        exercises: [PracticedExercise],
+        history: any PracticeHistoryProviding,
         router: any HistoryRouterProtocol
     ) {
         self.day = day
-        self.exercises = exercises
+        self.history = history
         self.router = router
+    }
+
+    /// Read through the observable history, so the page follows its refreshes.
+    var exercises: [PracticedExercise] {
+        history.practiceHistory.exercises(on: day)
     }
 
     func open(_ exercise: PracticedExercise) {

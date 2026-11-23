@@ -82,11 +82,11 @@ final class HistoryBuilder: HistoryContentBuildable {
             .environment(\.locale, AppLanguage.selected.locale)
     }
 
-    /// The day's exercises come from the history the Progress tab already loaded.
+    /// The day's exercises come from the history the Progress tab already loaded, and follow it.
     @ViewBuilder func buildPracticeDay(_ day: Date) -> some View {
         let viewModel: some PracticeDayViewModelProtocol = PracticeDayViewModel(
             day: day,
-            exercises: reportsViewModel.practiceHistory.exercises(on: day),
+            history: reportsViewModel,
             router: router
         )
 
@@ -100,6 +100,8 @@ final class HistoryBuilder: HistoryContentBuildable {
             sessions: dependency.sessions,
             fingers: dependency.fingers,
             fingerReplayRepository: dependency.fingerReplayRepository,
+            planHistoryRepository: dependency.planHistoryRepository,
+            history: reportsViewModel,
             router: router
         )
 

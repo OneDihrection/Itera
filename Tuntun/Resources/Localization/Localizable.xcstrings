@@ -3980,6 +3980,108 @@
         }
       }
     },
+    "exerciseDetail.deleteRecord" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Delete this practice record"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hapus catatan latihan ini"
+          }
+        }
+      }
+    },
+    "exerciseDetail.deleteRecord.confirm" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Delete"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hapus"
+          }
+        }
+      }
+    },
+    "exerciseDetail.deleteRecord.error" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The practice record could not be fully deleted. Try again."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Catatan latihan tidak dapat dihapus seluruhnya. Coba lagi."
+          }
+        }
+      }
+    },
+    "exerciseDetail.deleteRecord.message %@ %@" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Every %1$@ session on %2$@, including its videos and skeletons, will be deleted. This cannot be undone."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Semua sesi %1$@ pada %2$@, termasuk video dan kerangkanya, akan dihapus. Tindakan ini tidak bisa dibatalkan."
+          }
+        }
+      }
+    },
+    "exerciseDetail.deleteRecord.shared" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "These sessions also hold other exercises, which will be deleted too."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sesi ini juga berisi latihan lain yang ikut terhapus."
+          }
+        }
+      }
+    },
+    "exerciseDetail.deleteRecord.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Delete this practice record?"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hapus catatan latihan ini?"
+          }
+        }
+      }
+    },
     "exerciseDetail.disclaimer" : {
       "extractionState" : "manual",
       "localizations" : {

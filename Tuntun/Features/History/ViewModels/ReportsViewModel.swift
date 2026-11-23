@@ -8,6 +8,15 @@
 import Foundation
 import Observation
 
+/// The Progress tab's loaded history, read by a day's page and refreshed after a record is
+/// deleted from the exercise detail panel.
+@MainActor
+protocol PracticeHistoryProviding: AnyObject {
+    /// Practice per day, joined from every saved session and the plan's saved days.
+    var practiceHistory: PracticeHistory { get }
+    func refresh() async
+}
+
 @MainActor
 protocol ReportsViewModelProtocol: AnyObject, Observable {
     var path: [HistoryRoute] { get set }
@@ -33,7 +42,7 @@ protocol ReportsViewModelProtocol: AnyObject, Observable {
 /// history into one calendar, and opens a day's progress page through the router.
 @MainActor
 @Observable
-final class ReportsViewModel: ReportsViewModelProtocol {
+final class ReportsViewModel: ReportsViewModelProtocol, PracticeHistoryProviding {
     private(set) var practiceHistory = PracticeHistory.empty
     private(set) var displayedMonth = Date.now
     private(set) var today = Date.now
