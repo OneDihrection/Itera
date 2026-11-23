@@ -45,7 +45,6 @@ final class GuidanceAudioService: NSObject, AVSpeechSynthesizerDelegate {
     private var musicStart: Task<Void, Never>?
     private var cuePlayer: AVAudioPlayer?
     private var buttonPlayer: AVAudioPlayer?
-    private var audioSessionActive = false
     private var lastButtonSound = 0.0
     private var interruption: NSObjectProtocol?
     private var routeObserver: NSObjectProtocol?
@@ -284,7 +283,7 @@ final class GuidanceAudioService: NSObject, AVSpeechSynthesizerDelegate {
         }
         lastButtonSound = now
 
-        guard audioSessionActive else {
+        guard NarrationAudioSession.isSessionActive else {
             // Only the first tap after a deactivation waits for the session to come back.
             Task { [weak self] in
                 do {
@@ -449,7 +448,6 @@ final class GuidanceAudioService: NSObject, AVSpeechSynthesizerDelegate {
     /// voice commands are listening.
     private func activateSession() async throws {
         try await NarrationAudioSession.activate(allowsBluetoothMicrophone: true)
-        audioSessionActive = true
     }
 
     private func beginRecognition() throws {
@@ -612,7 +610,6 @@ final class GuidanceAudioService: NSObject, AVSpeechSynthesizerDelegate {
         suspend()
         music.stop()
         buttonPlayer?.stop()
-        audioSessionActive = false
         NarrationAudioSession.deactivateInBackground()
     }
 

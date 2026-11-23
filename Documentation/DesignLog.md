@@ -1982,3 +1982,12 @@ Users asked for a way to delete an exercise's record, for example a session reco
 - **Refresh.** `ReportsViewModel` conforms to a new `PracticeHistoryProviding`. `PracticeDayViewModel` now reads its exercises from it instead of a snapshot, and the panel refreshes it after deleting, so the card leaves the day page and the calendar updates. If any session fails to delete, the panel stays open with an error, after still refreshing so partial deletions show.
 
 Verification: a Debug Simulator build with `IPHONEOS_DEPLOYMENT_TARGET=17.0` succeeded. Pending, because recording sessions needs the camera: on the baseline iPad, in both languages, delete a plan arm-raise record and a finger record. Then check that the panel closes, the card leaves, the calendar status changes, the session files and `daily-plan-progress.json` entry are gone, Beranda shows the item as not done, Cancel keeps everything, and an emptied day shows its empty message.
+
+## Button click after another owner deactivates (2026-11-23)
+
+The console still showed `AVAudioSession_iOS.mm:978 This method can lead to UI unresponsiveness if called on the main thread` at `GuidanceAudioService.playButtonSound()` (`prepareToPlay()`/`play()`). The click checked a flag on `GuidanceAudioService` that only that service set and cleared. `SessionAudioService.stop()` deactivates the shared session through `AudioInputWorker.stop(deactivate: true)` without clearing it, so after a guided session the flag still read active, the click skipped the awaited activation, and `AVAudioPlayer` activated the session synchronously on the main thread.
+
+- **Shared state.** `NarrationAudioSession.isSessionActive` reads the session's real state under its lock. `playButtonClick()` checks it in place of the removed per-service flag, so the first tap after any owner's deactivation waits for `activate()`.
+- **Not changed.** Cue and count players run only inside a finger session after `configure(language:)` awaited activation, and nothing else deactivates during it.
+
+Verification: Debug Simulator build. Pending on the M1 iPad: no main-thread warning when tapping buttons after a guided, finger and Balancing session and at launch, and the click still plays (the first tap after a session slightly later).

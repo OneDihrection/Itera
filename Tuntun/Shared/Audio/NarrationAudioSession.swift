@@ -95,6 +95,16 @@ enum NarrationAudioSession {
         #endif
     }
 
+    /// Whether the shared session is active now, whoever activated or deactivated it.
+    ///
+    /// Main-actor players check this before playing: `AVAudioPlayer` activates an inactive
+    /// session synchronously on the main thread, which stalls the UI.
+    static var isSessionActive: Bool {
+        lock.lock()
+        defer { lock.unlock() }
+        return isActive
+    }
+
     /// The current activation count, captured when a deactivation is requested.
     static var activationToken: Int {
         lock.lock()
