@@ -17,21 +17,37 @@ enum HistoryRoute: Hashable {
     case practiceDay(Date)
 }
 
+/// One exercise of one day, shown in the floating detail panel over the Progress stack.
+struct ExerciseDetailRoute: Identifiable, Hashable {
+    /// Start of the day the exercise was opened from.
+    let day: Date
+    let exercise: PracticedExercise
+
+    var id: String {
+        "\(day.timeIntervalSinceReferenceDate)-\(exercise.id)"
+    }
+}
+
 @MainActor
 protocol HistoryRouterProtocol: AnyObject {
     func showFingerReport(id: UUID)
     func showSessionReport(id: UUID)
     func showPracticeDay(_ day: Date)
+    /// Floats the exercise's detail panel over the current page.
+    func showExerciseDetail(_ exercise: PracticedExercise, on day: Date)
+    func dismissExerciseDetail()
     func pop()
     func popToRoot()
 }
 
-/// Navigation for the Progress tab. It owns the tab's stack path; the reports list binds its
-/// `NavigationStack` to it, and every page on that stack receives this router.
+/// Navigation for the Progress tab. It owns the tab's stack path and the floating exercise
+/// detail panel; the reports list binds its `NavigationStack` and panel overlay to them, and
+/// every page on that stack receives this router.
 @MainActor
 @Observable
 final class HistoryRouter: HistoryRouterProtocol {
     var path: [HistoryRoute] = []
+    var exerciseDetail: ExerciseDetailRoute?
 
     func showFingerReport(id: UUID) {
         path.append(.fingerReport(id))
@@ -45,15 +61,25 @@ final class HistoryRouter: HistoryRouterProtocol {
         path.append(.practiceDay(day))
     }
 
+    func showExerciseDetail(_ exercise: PracticedExercise, on day: Date) {
+        exerciseDetail = ExerciseDetailRoute(day: day, exercise: exercise)
+    }
+
+    func dismissExerciseDetail() {
+        exerciseDetail = nil
+    }
+
     func pop() {
         guard !path.isEmpty else {
             return
         }
 
+        exerciseDetail = nil
         path.removeLast()
     }
 
     func popToRoot() {
+        exerciseDetail = nil
         path.removeAll()
     }
 }

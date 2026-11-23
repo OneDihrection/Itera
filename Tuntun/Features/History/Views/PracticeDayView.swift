@@ -8,7 +8,7 @@
 import SwiftUI
 
 /// "Perkembangan latihanmu": the exercises practised on one day, one `TMHistoryCard` each,
-/// numbered in the order they were practised. A card with a saved session opens its report.
+/// numbered in the order they were practised. A card opens the exercise's detail panel.
 struct TMPracticeDayView<ViewModel: PracticeDayViewModelProtocol>: View {
     @State private var viewModel: ViewModel
 
@@ -66,19 +66,10 @@ struct TMPracticeDayView<ViewModel: PracticeDayViewModelProtocol>: View {
         ForEach(Array(viewModel.exercises.enumerated()), id: \.element.id) { index, exercise in
             TMHistoryCard(
                 title: LocalizedStringKey(exercise.titleKey),
-                number: index + 1,
-                action: action(for: exercise)
-            )
-        }
-    }
-
-    private func action(for exercise: PracticedExercise) -> (() -> Void)? {
-        guard exercise.report != nil else {
-            return nil
-        }
-
-        return {
-            viewModel.open(exercise)
+                number: index + 1
+            ) {
+                viewModel.open(exercise)
+            }
         }
     }
 

@@ -19,15 +19,17 @@ protocol HistoryDependency {
     var planHistoryRepository: any DailyPlanHistoryRepository { get }
 }
 
-/// The pages the Progress tab pushes onto its stack.
+/// The pages the Progress tab pushes onto its stack, and the exercise detail panel's content.
 protocol HistoryContentBuildable {
     associatedtype FingerReportScreen: View
     associatedtype SessionReportScreen: View
     associatedtype PracticeDayScreen: View
+    associatedtype ExerciseDetailContent: View
 
     @ViewBuilder @MainActor func buildFingerReport(id: UUID) -> FingerReportScreen
     @ViewBuilder @MainActor func buildSessionReport(id: UUID) -> SessionReportScreen
     @ViewBuilder @MainActor func buildPracticeDay(_ day: Date) -> PracticeDayScreen
+    @ViewBuilder @MainActor func buildExerciseDetail(_ route: ExerciseDetailRoute) -> ExerciseDetailContent
 }
 
 @MainActor
@@ -89,5 +91,19 @@ final class HistoryBuilder: HistoryContentBuildable {
         )
 
         TMPracticeDayView(viewModel: viewModel)
+    }
+
+    /// Reads the exercise's whole history, so the panel can compare the day with earlier sessions.
+    @ViewBuilder func buildExerciseDetail(_ route: ExerciseDetailRoute) -> some View {
+        let viewModel: some ExerciseDetailViewModelProtocol = ExerciseDetailViewModel(
+            route: route,
+            sessions: dependency.sessions,
+            fingers: dependency.fingers,
+            fingerReplayRepository: dependency.fingerReplayRepository,
+            router: router
+        )
+
+        TMExerciseDetailView(viewModel: viewModel)
+            .environment(\.locale, AppLanguage.selected.locale)
     }
 }

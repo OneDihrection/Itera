@@ -1,0 +1,137 @@
+ExerciseBodyVisibility.txt
+Tuntun
+Created by dimaswisodewo on 23/11/2026.
+
+EXERCISE BODY VISIBILITY
+========================
+
+Which body parts must be visible to the camera for each exercise.
+"Required" parts must be detected in a frame or the frame is not used
+(tracking is lost, holds freeze, nothing is credited). "Optional" parts
+improve tracking but are estimated when missing.
+
+Taken from the tracking code; source files are listed per exercise
+(paths under Tuntun/Features/Therapy/).
+
+
+GENERAL
+-------
+- iPad front camera for every exercise. Body exercises prefer the
+  ultra-wide camera, hand exercises the wide-angle camera.
+- Only one person in the picture. The patient is locked by torso position
+  and shoulder width; a bystander is never adopted for being larger.
+- Body frames are padded downward by 50% before inference, so the lower
+  body near the bottom edge can still be found.
+- Seated body exercises are framed from the waist up. Sit to stand is
+  framed from the side, down to the knees.
+- "Exercised side" means the arm selected for the activity (left or right).
+  With both sides, the sides alternate, so both arms must fit in view.
+
+
+BODY EXERCISES (Vision body pose)
+=================================
+
+1. ARM RAISE
+   Source: Shared/Movement/MovementActivity.swift (limbJoints)
+   Framing: seated, waist up.
+   Required (exercised side):
+   - Hip              (reference, confidence >= 0.3)
+   - Shoulder         (pivot, confidence >= 0.3)
+   - Elbow            (tracked point, confidence >= 0.2)
+   Not needed: wrist, the other arm, face, legs.
+
+2. ELBOW BEND
+   Source: Shared/Movement/MovementActivity.swift (limbJoints)
+   Framing: seated, waist up.
+   Required (exercised side):
+   - Shoulder         (reference, confidence >= 0.3)
+   - Elbow            (pivot, confidence >= 0.2)
+   - Wrist            (tracked point, confidence >= 0.2)
+   Not needed: hip, face, legs.
+
+3. DIRECTIONAL REACH
+   Source: Activities/DirectionalReach/DirectionalReachActivity.swift
+   Framing: seated, waist up, with room for the arm to reach right/left
+   and up.
+   Required:
+   - Exercised shoulder, elbow and wrist
+   - Both shoulders   (also used to detect mirroring / body orientation)
+   - Nose (face)
+   Not needed: hips, legs.
+
+4. CROSS MIDLINE (Balancing)
+   Source: Activities/Balance/CrossMidlineBalanceEngine.swift (geometry)
+   Framing: seated, waist up.
+   Required:
+   - Neck or nose
+   - Both shoulders
+   - Wrist of the moving arm
+   - Neck/nose AND mid-hip or one hip, freshly detected, to score a reach
+   Optional: hips / mid-hip (estimated below the shoulders when missing,
+   but scoring waits for fresh hip evidence).
+
+5. EXTERNAL ROTATION, INTERNAL ROTATION, SHOULDER FLEXION (Balancing)
+   Source: Activities/Balance/ArmMovementEngine.swift (geometry)
+   Framing: seated, waist up.
+   Required:
+   - Neck or nose
+   - Both shoulders
+   - Elbow and wrist of the active arm (accepted at low confidence and
+     slightly beyond the picture edge)
+   Optional: hips / mid-hip (estimated below the shoulders when missing).
+   If the body is found but the elbow or wrist is not, the app asks the
+   patient to sit back (arm out of view).
+
+6. SIT TO STAND (Balancing)
+   Source: Activities/SitToStand/SitToStandActivity.swift
+   Framing: patient sideways to the camera, full body down to the knees,
+   both seated and standing.
+   Required (side facing the camera, confidence >= 0.3):
+   - Shoulder
+   - Hip
+   - Knee
+   Not needed: ankle/feet, arms, face.
+
+
+HAND EXERCISES (Vision hand pose)
+=================================
+Source: Activities/Fingers/FingerGeometry.swift (requiredJoints)
+Joints need confidence >= 0.5 unless noted. "Knuckle" = MCP joint.
+
+7. FULL FIST, HOOK FIST
+   Required:
+   - Wrist
+   - At least two complete finger chains (knuckle, middle joint and end
+     joint of the same finger); a fist hides some fingers, so two suffice.
+
+8. THUMB OPPOSITION
+   Required:
+   - Wrist
+   - Middle-finger knuckle
+   - Thumb tip              (confidence >= 0.3)
+   - Tip of the target finger (index, middle, ring or little;
+     confidence >= 0.3)
+
+9. FINGER SPREADING
+   Required:
+   - Wrist
+   - Middle-finger knuckle
+   - Index, middle, ring and little fingertips
+
+10. FINGER EXTENSION SEQUENCE
+    Required:
+    - Wrist
+    - The selected finger's knuckle, middle joint, end joint and tip
+
+11. FOREARM ROTATION
+    Required (confidence >= 0.3, because a turning palm hides knuckles):
+    - Wrist
+    - Index, middle and little-finger knuckles
+
+12. FOLD TOWEL
+    Source: Activities/FoldTowel/TowelSnapshot.swift
+    Required (selected hand):
+    - Thumb tip, index tip and middle-finger knuckle (pinch measurement)
+    - At least three of: wrist, index, middle, ring and little-finger
+      knuckles (palm-centre cursor that moves the towel)
+    Also keep the towel's grab and goal areas inside the picture.

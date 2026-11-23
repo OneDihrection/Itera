@@ -34,9 +34,10 @@ protocol SessionReportViewModelProtocol: AnyObject, Observable {
 @MainActor
 @Observable
 final class SessionReportViewModel: SessionReportViewModelProtocol {
-    /// Changes smaller than these read as steady, given 2D camera noise.
-    private static let durationChangeSeconds = 0.5
-    private static let peakChangeDegrees = 5.0
+    /// Changes smaller than these read as steady, given 2D camera noise; shared with the
+    /// exercise detail panel so the two never disagree.
+    private static let durationChangeSeconds = ExerciseProgress.steadyDurationSeconds
+    private static let peakChangeDegrees = ExerciseProgress.steadyAngleDegrees
     /// Below this share of usable frames a replay is flagged as unclear rather than shown with a
     /// percentage, so a reader is warned only when it matters.
     private static let lowTrackingCoverage = 0.5

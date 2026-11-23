@@ -15,12 +15,13 @@ protocol PracticeDayViewModelProtocol: AnyObject, Observable {
     /// Exercises practised that day, in the order first practised.
     var exercises: [PracticedExercise] { get }
 
-    /// Opens the exercise's saved report; does nothing when it has none.
+    /// Floats the exercise's detail panel over the day.
     func open(_ exercise: PracticedExercise)
 }
 
 /// "Perkembangan latihanmu": one day's practised exercises. It receives that day's exercises
-/// from the Progress tab's loaded history, so opening a day reads no files.
+/// from the Progress tab's loaded history, so opening a day reads no files. A card opens the
+/// exercise's detail panel.
 @MainActor
 @Observable
 final class PracticeDayViewModel: PracticeDayViewModelProtocol {
@@ -40,15 +41,6 @@ final class PracticeDayViewModel: PracticeDayViewModelProtocol {
     }
 
     func open(_ exercise: PracticedExercise) {
-        guard let report = exercise.report else {
-            return
-        }
-
-        switch report {
-        case .finger(let id):
-            router.showFingerReport(id: id)
-        case .session(let id):
-            router.showSessionReport(id: id)
-        }
+        router.showExerciseDetail(exercise, on: day)
     }
 }

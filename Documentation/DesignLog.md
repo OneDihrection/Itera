@@ -1856,3 +1856,66 @@ The product owner supplied the Figma "Foundation Colors" page (Primary Yellow BG
 
 Verification: XcodeGen and a Debug Simulator build (iPad Pro 13-inch, M5) succeeded. Contrast figures were computed from the hex values. Pending on the baseline iPad: Home timeline and the "Lanjutkan Latihan" pill, the exercise intro and live counters, the long and short rests, Progress and the session report, the pause dialog and a destructive confirmation, in light and dark mode.
 
+## Exercise detail panel (2026-11-23)
+
+The Figma for the day page adds a patient-facing detail panel per exercise, floating over the list on a blurred backdrop like an App Store detail card on iPad. It replaces the push to the finger or session report from the day page's cards; those pages remain for now but are unlinked from the day page.
+
+- **Presentation.** `HistoryRouter.exerciseDetail` holds the open panel; `PracticeDayViewModel.open` sets it and `ReportsViewModel` forwards it to the stack owner, which overlays `TMDetailPanel` on the whole `NavigationStack`, navigation bar included, and fades it in and out. Popping clears it. It is an overlay rather than a sheet so the page behind stays visible through the frost.
+- **Figures.** `ExerciseProgress` (History/Models) joins every guided, Balancing and finger session of the exercise. The day's best repetition is the highest peak angle, or the best share of the calibrated range for finger exercises (from their key repetitions, as finger summaries keep no per-repetition metrics), or the repetition count when there is no measure (fold towel). Average seconds per repetition come from every repetition's duration for guided sessions and from practice time for finger sessions.
+- **Baseline.** At the product owner's choice the menu offers the first session, the previous session, or the latest session on or before the same day a week earlier. With none, the panel says today is the starting point. Changes within 5° (or 5% of range) read as steady; `SessionReportViewModel` now takes its thresholds from `ExerciseProgress` so the two never disagree.
+- **Picture.** No per-exercise illustration exists, so the comparison draws the best key repetition of each session as a skeleton (`TMPoseComparison`). The pose shown is the frame that differs most from the repetition's first frame (`KeyRep.peakFrame`), a display choice and not a scoring rule. Poses are aligned at the neck (wrist for hands).
+- **Record.** "Catatan latihan" shows the day's hardest key repetition (the recorder's lowest peak; across sets the lowest, then the longest), its clip when saved, otherwise its skeleton, with its duration and its peak against the baseline's best.
+
+Verification: XcodeGen and a Debug Simulator build (`IPHONEOS_DEPLOYMENT_TARGET=17.0`) succeeded. Pending: the panel on the baseline iPad in both orientations, with Reduce Motion, large text and VoiceOver (the backdrop and close circle dismiss it), and with real history for an arm exercise, a finger exercise and fold towel. The baseline menu's Secondary Blue text (about 2.6:1 on white) follows the Figma and needs a contrast decision.
+
+## Exercise detail insights (2026-11-23)
+
+At the product owner's request, "Perkembangan gerakanmu" gains insight rows (`TMInsightRow`) under the legend, from data already saved, through `ExerciseProgress.insights(against:)`:
+
+- **Pace.** The day's mean seconds per repetition against the baseline's, averaged the same way on both sides; within 0.5 s it reads as the same. It is worded as quicker or slower, never better or worse, because a quicker repetition is not necessarily better therapy.
+- **Consistency.** The best minus the lowest peak across the day's repetitions (at least three); within 5° (or 5% of range) every repetition reads as steady.
+- **Stamina.** The day's last repetition peak against its first, in practice order across sessions and sets. A drop is worded gently ("wajar jika mulai lelah") with the yellow attention tone, never red.
+- **Volume.** Today's repetitions against the baseline's, with the number of sessions since the baseline.
+
+Pace and volume need a baseline and follow the menu; consistency and stamina describe the day alone. Finger sessions keep only their key repetitions, so their consistency and stamina rest on the first, hardest and last repetition of each set. Fold towel, which has no measure, now shows the section with its pace and volume rows but no picture or legend. The panel title names the side ("Angkat lengan kiri") when every session of the day practised one side.
+
+Verification: XcodeGen and a Debug Simulator build (`IPHONEOS_DEPLOYMENT_TARGET=17.0`) succeeded with no warnings in the changed files. Pending: the rows with real history on the baseline iPad in both languages, at large text sizes and with VoiceOver.
+
+## Exercise detail record choices (2026-11-23)
+
+"Catatan latihan" on the exercise detail panel now offers the day's first, hardest and last key repetition instead of the hardest alone, at the product owner's request. The choice is day-level, matching the panel's day figures: first and last are the earliest and latest repetitions holding that role in practice order (sessions oldest first, then set, then repetition), and the hardest is, across sets, the one that reached least, then the longest. Hardest stays the default. The choice uses `TMChoiceChips` in the panel's yellow style rather than the system segmented control of the clinician report; with one repetition (all three roles) a note replaces the chips. A native switch, "Tampilkan kerangka", swaps a saved clip for its skeleton and appears only when the chosen repetition has a clip. The blue call-out follows the choice: the hardest keeps "Gerakanmu sedikit berbeda di repetisi ke-N", the first and last say "Begini gerakanmu di awal / di akhir, repetisi ke-N"; the duration and baseline-change tiles describe the chosen repetition.
+
+Verification: XcodeGen and a Debug Simulator build (`IPHONEOS_DEPLOYMENT_TARGET=17.0`) succeeded. Pending on the baseline iPad: switching roles and the skeleton switch with real clips, VoiceOver selection state on the chips, and large text.
+
+## Exercise detail wording and trend (2026-11-23)
+
+At the product owner's request the detail panel speaks in the exercise's own words and plainer language for non-medical readers.
+
+- **Exercise wording.** `ExerciseWording` maps each measured exercise and the day's side to a headline lead and a card caption: arm raise "Lengan kirimu bisa terangkat", shoulder flexion "…terangkat ke depan", elbow bend "Siku kirimu bisa menekuk", the rotations "…berputar ke luar / ke dalam", sit to stand "Saat berdiri, badanmu bisa", finger exercises "Jari tangan / Ibu jari / Lengan bawah kirimu bisa bergerak / berputar". "Lenganmu…" is used when sides alternated. Changes read in matching words: lifting is higher or lower, bending and turning further or less far, standing straighter or less straight; ranges keep "% lebih jauh / lebih pendek". Reach, cross midline and fold towel keep the generic text.
+- **Trend.** "Hasil terbaik tiap sesi" charts each session's best result up to the shown day, at most ten points, keeping the baseline session even when older, today last (`ExerciseProgress.trend`). Finger sessions gain a value once their key repetitions are read, so the panel reads those of the sessions the chart can show. The insight rows moved under the chart, full width, so the figure and headline keep the reference layout.
+- **Record cards.** The heading says "gerakan ke-5" rather than "repetisi", names the set only when the day had several, and reads as a plain sentence for each role. "Lama gerakan" compares the move with the day's average ("Lebih lama dari biasanya (rata-rata 12,5 detik)", within 0.5 s "Sama seperti biasanya"). The second card names the movement ("Seberapa tinggi lenganmu terangkat"), shows the move's own result, then how it compares with the baseline in the exercise's words and with the day's best ("Terbaikmu hari ini: 112°" or "Ini hasil terbaikmu hari ini"). `TMDetailStatTile` now takes several lines.
+
+Verification: XcodeGen and a Debug Simulator build (`IPHONEOS_DEPLOYMENT_TARGET=17.0`) succeeded. Pending on the baseline iPad: wording for each exercise and side in both languages, the chart with real history and a changing baseline, and large text.
+
+## Exercise detail figure and layout (2026-11-23)
+
+A design pass on the detail panel at the product owner's request.
+
+- **One figure style.** Both figures in the panel, the progress comparison and the "Catatan latihan" skeleton replay, are drawn as a filled silhouette (`TMFigureShape`, `TMFigureRenderer`) closer to the reference illustration, for a lower reading load: thick round-capped limbs, a filled torso or palm, a round head, a soft blue-grey body with no joint dots, and only the moving limb in yellow. The comparison draws the earlier pose's moving limb as a pale blue ghost behind it. The clinician report pages keep the stick figure, whose joints a clinician reads.
+- **Perkembangan gerakanmu.** The illustration has no border and 24 pt rounded corners. Beside it, one column holds the headline, the since line and the legend, then the insight rows in one card (`TMInsightCard`) with coloured bullets instead of icons. The trend chart stays below at full width. The side-by-side row has an explicit ideal width, because `ViewThatFits` measured the sentences unwrapped and always chose the stacked fallback.
+- **Catatan latihan.** The two tiles always share one row; their text wraps inside each tile.
+- **Fix.** The headline lead key was built inside a `LocalizedStringKey` string interpolation, which made it a format key and showed the raw key; it is now built as a `String` first.
+
+Verification: XcodeGen and a Debug Simulator build succeeded, and the panel was rendered with synthetic arm-raise poses through a temporary debug gallery screen (removed) on the iPad Pro 13-inch (M5) Simulator. Pending on the baseline iPad: real recordings for body and hand exercises, both languages, large text.
+
+## Calmer detail-panel figure (2026-11-23)
+
+The product owner asked for a calmer figure in which every joint stays clear. This supersedes the filled silhouette's look in *Exercise detail figure and layout*; the clinician reports still use the stick figure.
+
+- The silhouette becomes a faint backdrop: limbs about 20% thinner (0.30 of the shoulder width, 0.24 of the knuckle span for a hand) at 28% opacity instead of 60%.
+- A thin 2.5 pt skeleton in the new `figureLine` slate token runs over it, with a small white dot ringed in slate at every joint, so the joints a reader follows are always visible.
+- The moving limb has a soft yellow halo, 4 pt yellow bones and larger yellow joints. Only bones that are both emphasized and drawn as limbs count as moving, so the hip that arm raise is measured against no longer colours the torso side.
+- The earlier pose in the comparison is a pale blue capsule under thin dashed blue bones and small blue joint dots.
+
+Verification: a Debug Simulator build succeeded, and synthetic arm-raise and hand poses were rendered through a temporary debug gallery (removed) on the iPad Pro 13-inch (M5) Simulator. Pending on the baseline iPad: real recordings, dark mode.
+

@@ -30,6 +30,25 @@ struct TMFingerReportsView<ViewModel: ReportsViewModelProtocol, Builder: History
         // while any is open. It is set once, outside the stack, from the path: a modifier on
         // the pushed page itself flipped the bar during the pop transition and it flickered.
         .toolbar(viewModel.path.isEmpty ? .visible : .hidden, for: .tabBar)
+        // The detail panel floats over the whole stack, navigation bar included, like a
+        // detail card in the iPad App Store.
+        .overlay {
+            exerciseDetail
+        }
+        .animation(.easeInOut(duration: 0.25), value: viewModel.exerciseDetail)
+    }
+
+    @ViewBuilder
+    private var exerciseDetail: some View {
+        if let route = viewModel.exerciseDetail {
+            TMDetailPanel(closeTitle: "action.close") {
+                viewModel.dismissExerciseDetail()
+            } content: {
+                builder.buildExerciseDetail(route)
+            }
+            .id(route.id)
+            .transition(.opacity)
+        }
     }
 
     @ViewBuilder
@@ -294,6 +313,7 @@ struct TMFingerReportDetailView<ViewModel: FingerReportDetailViewModelProtocol>:
 @Observable
 private final class MockReportsViewModel: ReportsViewModelProtocol {
     var path: [HistoryRoute] = []
+    var exerciseDetail: ExerciseDetailRoute?
     let practiceHistory = PracticeHistory.preview
     private(set) var displayedMonth = Date.now
     let today = Date.now
@@ -316,6 +336,10 @@ private final class MockReportsViewModel: ReportsViewModelProtocol {
     func openDay(_ day: Date) {
         path.append(.practiceDay(day))
     }
+
+    func dismissExerciseDetail() {
+        exerciseDetail = nil
+    }
 }
 
 @MainActor
@@ -330,6 +354,10 @@ private struct MockHistoryBuilder: HistoryContentBuildable {
 
     @ViewBuilder func buildPracticeDay(_ day: Date) -> some View {
         Text(verbatim: "Practice day")
+    }
+
+    @ViewBuilder func buildExerciseDetail(_ route: ExerciseDetailRoute) -> some View {
+        Text(verbatim: "Exercise detail")
     }
 }
 

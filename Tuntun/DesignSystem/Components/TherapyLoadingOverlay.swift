@@ -9,10 +9,13 @@ import SwiftUI
 
 /// The frosted, darkened backdrop shared by the full-screen countdown and the loading overlay.
 struct TMFrostedBackdrop: View {
+    /// How much the frost is darkened; a floating panel passes a lighter value.
+    var dimming = 0.5
+
     var body: some View {
         Rectangle()
             .fill(.regularMaterial)
-            .overlay(Color.black.opacity(0.5))
+            .overlay(Color.black.opacity(dimming))
             .ignoresSafeArea()
             .accessibilityHidden(true)
     }

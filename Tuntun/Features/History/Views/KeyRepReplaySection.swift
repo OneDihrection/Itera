@@ -151,7 +151,7 @@ extension KeyRepRole {
     }
 }
 
-private extension SkeletonFrame {
+extension SkeletonFrame {
     var bodyPose: TMSkeletonPose {
         TMSkeletonPose(
             time: time,
@@ -184,6 +184,28 @@ extension BodyJoint {
     ]
 
     static let replayBones = replayPairs.map { TMSkeletonBone(from: $0.0.index, to: $0.1.index) }
+
+    private static let figureLimbPairs: [(BodyJoint, BodyJoint)] = [
+        (.neck, .nose),
+        (.leftShoulder, .leftElbow), (.leftElbow, .leftWrist),
+        (.rightShoulder, .rightElbow), (.rightElbow, .rightWrist),
+        (.leftHip, .leftKnee), (.leftKnee, .leftAnkle),
+        (.rightHip, .rightKnee), (.rightKnee, .rightAnkle),
+    ]
+
+    private static let shoulderWidth = TMSkeletonBone(from: BodyJoint.leftShoulder.index, to: BodyJoint.rightShoulder.index)
+
+    /// The body for the patient-facing detail panel: a faint silhouette (limb capsules, filled
+    /// torso, round head sized from the shoulders) under the thin replay skeleton.
+    static let figureShape = TMFigureShape(
+        limbs: figureLimbPairs.map { TMSkeletonBone(from: $0.0.index, to: $0.1.index) },
+        bones: replayBones,
+        fills: [
+            [BodyJoint.leftShoulder, .rightShoulder, .rightHip, .leftHip].map(\.index),
+        ],
+        head: TMFigureShape.Head(center: BodyJoint.nose.index, sizeFrom: shoulderWidth),
+        widthFrom: shoulderWidth
+    )
 
     var index: Int {
         Self.allCases.firstIndex(of: self) ?? 0
@@ -251,4 +273,24 @@ enum HandSkeleton {
 
     /// Fold towel moves the whole hand.
     static let towelEmphasis = wholeHand
+
+    /// The hand for the patient-facing detail panel: a faint palm and fingers sized from the
+    /// knuckle span, under the thin hand skeleton.
+    static let figureShape: TMFigureShape = {
+        var limbs = [TMSkeletonBone(from: 0, to: 1)]
+
+        for base in fingerBases {
+            for joint in base..<(base + 3) {
+                limbs.append(TMSkeletonBone(from: joint, to: joint + 1))
+            }
+        }
+
+        return TMFigureShape(
+            limbs: limbs,
+            bones: bones,
+            fills: [[0, 5, 9, 13, 17]],
+            widthFrom: TMSkeletonBone(from: 5, to: 17),
+            widthScale: 0.24
+        )
+    }()
 }

@@ -11,6 +11,8 @@ import Observation
 @MainActor
 protocol ReportsViewModelProtocol: AnyObject, Observable {
     var path: [HistoryRoute] { get set }
+    /// The exercise whose detail panel floats over the stack, if any.
+    var exerciseDetail: ExerciseDetailRoute? { get }
     /// Practice per day, joined from every saved session and the plan's saved days.
     var practiceHistory: PracticeHistory { get }
     /// Any date inside the month the calendar shows.
@@ -24,6 +26,7 @@ protocol ReportsViewModelProtocol: AnyObject, Observable {
     func showNextMonth()
     /// Opens one day's progress page.
     func openDay(_ day: Date)
+    func dismissExerciseDetail()
 }
 
 /// The Progress tab: exposes its router's navigation stack, joins finger, guided and plan
@@ -62,6 +65,11 @@ final class ReportsViewModel: ReportsViewModelProtocol {
         set {
             router.path = newValue
         }
+    }
+
+    /// The detail panel's state also lives in the router, so a day page's card can open it.
+    var exerciseDetail: ExerciseDetailRoute? {
+        router.exerciseDetail
     }
 
     var errorKey: String? {
@@ -132,5 +140,9 @@ final class ReportsViewModel: ReportsViewModelProtocol {
         }
 
         router.showPracticeDay(start)
+    }
+
+    func dismissExerciseDetail() {
+        router.dismissExerciseDetail()
     }
 }

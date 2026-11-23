@@ -17,6 +17,23 @@
         }
       }
     },
+    "action.close" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Close"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tutup"
+          }
+        }
+      }
+    },
     "action.decrease" : {
       "localizations" : {
         "en" : {
@@ -2636,6 +2653,23 @@
         }
       }
     },
+    "chart.axis.session" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Session"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sesi"
+          }
+        }
+      }
+    },
     "chart.axis.value" : {
       "comment" : "Chart axis label for the measured value of each repetition in a bar chart.",
       "localizations" : {
@@ -3347,6 +3381,1978 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Mulai Latihan"
+          }
+        }
+      }
+    },
+    "exerciseDetail.baseline.firstSession" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Since first session"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sejak sesi pertama"
+          }
+        }
+      }
+    },
+    "exerciseDetail.baseline.label" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Compare with"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bandingkan dengan"
+          }
+        }
+      }
+    },
+    "exerciseDetail.baseline.previousSession" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Since previous session"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sejak sesi sebelumnya"
+          }
+        }
+      }
+    },
+    "exerciseDetail.baseline.weekAgo" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Since a week ago"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sejak seminggu lalu"
+          }
+        }
+      }
+    },
+    "exerciseDetail.callout.change" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Change in movement"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Perubahan gerakan"
+          }
+        }
+      }
+    },
+    "exerciseDetail.callout.duration" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "How long it took"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lama gerakan"
+          }
+        }
+      }
+    },
+    "exerciseDetail.callout.first" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "your first move"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "gerakan pertamamu"
+          }
+        }
+      }
+    },
+    "exerciseDetail.callout.hardest.lead" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "In "
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Di "
+          }
+        }
+      }
+    },
+    "exerciseDetail.callout.hardest.rep %lld" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "move %lld"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "gerakan ke-%lld"
+          }
+        }
+      }
+    },
+    "exerciseDetail.callout.hardest.tail" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : ", your movement was a little different. Let's take a look!"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : ", gerakanmu sedikit berbeda. Yuk kita lihat!"
+          }
+        }
+      }
+    },
+    "exerciseDetail.callout.last" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "your last move"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "gerakan terakhirmu"
+          }
+        }
+      }
+    },
+    "exerciseDetail.callout.set %lld" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : " (set %lld)"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : " (set %lld)"
+          }
+        }
+      }
+    },
+    "exerciseDetail.callout.this" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This is "
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ini "
+          }
+        }
+      }
+    },
+    "exerciseDetail.callout.today" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : " today."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : " hari ini."
+          }
+        }
+      }
+    },
+    "exerciseDetail.caption.arm" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "How high your arm lifted"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Seberapa tinggi lenganmu terangkat"
+          }
+        }
+      }
+    },
+    "exerciseDetail.caption.armForward" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "How high your arm lifted forward"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Seberapa tinggi lenganmu terangkat ke depan"
+          }
+        }
+      }
+    },
+    "exerciseDetail.caption.elbow" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "How far your elbow bent"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Seberapa jauh sikumu menekuk"
+          }
+        }
+      }
+    },
+    "exerciseDetail.caption.fingers" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "How far your fingers moved"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Seberapa jauh jarimu bergerak"
+          }
+        }
+      }
+    },
+    "exerciseDetail.caption.forearm" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "How far your forearm turned"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Seberapa jauh lengan bawahmu berputar"
+          }
+        }
+      }
+    },
+    "exerciseDetail.caption.rotateIn" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "How far your arm turned inward"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Seberapa jauh lenganmu berputar ke dalam"
+          }
+        }
+      }
+    },
+    "exerciseDetail.caption.rotateOut" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "How far your arm turned outward"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Seberapa jauh lenganmu berputar ke luar"
+          }
+        }
+      }
+    },
+    "exerciseDetail.caption.stand" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "How straight you stood"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Seberapa tegak badanmu saat berdiri"
+          }
+        }
+      }
+    },
+    "exerciseDetail.caption.thumb" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "How far your thumb moved"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Seberapa jauh ibu jarimu bergerak"
+          }
+        }
+      }
+    },
+    "exerciseDetail.change.angleHigher %lld" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld° higher"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld° lebih tinggi"
+          }
+        }
+      }
+    },
+    "exerciseDetail.change.angleLower %lld" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld° lower"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld° lebih rendah"
+          }
+        }
+      }
+    },
+    "exerciseDetail.change.further.higher %lld" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld° further"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld° lebih jauh"
+          }
+        }
+      }
+    },
+    "exerciseDetail.change.further.lower %lld" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld° less far"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld° kurang jauh"
+          }
+        }
+      }
+    },
+    "exerciseDetail.change.rangeHigher %lld" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld%% further"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld%% lebih jauh"
+          }
+        }
+      }
+    },
+    "exerciseDetail.change.rangeLower %lld" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld%% shorter"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld%% lebih pendek"
+          }
+        }
+      }
+    },
+    "exerciseDetail.change.steady" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "about the same as before"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "sama seperti sebelumnya"
+          }
+        }
+      }
+    },
+    "exerciseDetail.change.straight.higher %lld" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld° straighter"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld° lebih tegak"
+          }
+        }
+      }
+    },
+    "exerciseDetail.change.straight.lower %lld" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld° less straight"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld° kurang tegak"
+          }
+        }
+      }
+    },
+    "exerciseDetail.comparison.label" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Drawing of your movement: the earlier session faded, today highlighted"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gambar gerakanmu: sesi sebelumnya samar, hari ini disorot"
+          }
+        }
+      }
+    },
+    "exerciseDetail.disclaimer" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Angles are camera estimates, not a clinical assessment or a sign that the movement is correct."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sudut adalah perkiraan kamera, bukan penilaian klinis atau tanda gerakan sudah benar."
+          }
+        }
+      }
+    },
+    "exerciseDetail.durationCompare.longer %@" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Longer than usual (average %@ s)"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lebih lama dari biasanya (rata-rata %@ detik)"
+          }
+        }
+      }
+    },
+    "exerciseDetail.durationCompare.quicker %@" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Quicker than usual (average %@ s)"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lebih cepat dari biasanya (rata-rata %@ detik)"
+          }
+        }
+      }
+    },
+    "exerciseDetail.durationCompare.same %@" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "About as usual (average %@ s)"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sama seperti biasanya (rata-rata %@ detik)"
+          }
+        }
+      }
+    },
+    "exerciseDetail.empty" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No movement was recorded for this exercise on this day."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Belum ada catatan gerakan untuk latihan ini pada hari ini."
+          }
+        }
+      }
+    },
+    "exerciseDetail.headline.higher" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Great!"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hebat!"
+          }
+        }
+      }
+    },
+    "exerciseDetail.headline.lower" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Keep going!"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tetap semangat!"
+          }
+        }
+      }
+    },
+    "exerciseDetail.headline.steady" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Holding steady!"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tetap stabil!"
+          }
+        }
+      }
+    },
+    "exerciseDetail.insight.evenAngle %lld" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Every repetition was steady, only %lld° apart"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Semua repetisi stabil, selisih hanya %lld°"
+          }
+        }
+      }
+    },
+    "exerciseDetail.insight.evenRange %lld" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Every repetition was steady, only %lld%% apart"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Semua repetisi stabil, selisih hanya %lld%%"
+          }
+        }
+      }
+    },
+    "exerciseDetail.insight.paceFaster %@" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ s quicker per repetition"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tempomu %@ detik lebih cepat per repetisi"
+          }
+        }
+      }
+    },
+    "exerciseDetail.insight.paceSlower %@" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ s slower per repetition"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tempomu %@ detik lebih pelan per repetisi"
+          }
+        }
+      }
+    },
+    "exerciseDetail.insight.paceSteady" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Your pace is the same as before"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tempomu sama seperti sebelumnya"
+          }
+        }
+      }
+    },
+    "exerciseDetail.insight.sessionsSinceFirst %lld" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld sessions since your first"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld sesi latihan sejak sesi pertama"
+          }
+        }
+      }
+    },
+    "exerciseDetail.insight.sessionsSincePrevious %lld" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld sessions since your previous one"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld sesi latihan sejak sesi sebelumnya"
+          }
+        }
+      }
+    },
+    "exerciseDetail.insight.sessionsSinceWeekAgo %lld" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld sessions since a week ago"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld sesi latihan sejak seminggu lalu"
+          }
+        }
+      }
+    },
+    "exerciseDetail.insight.staminaHigherAngle %lld" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Your last repetition was %lld° higher than your first"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Repetisi terakhir %lld° lebih tinggi dari yang pertama"
+          }
+        }
+      }
+    },
+    "exerciseDetail.insight.staminaHigherRange %lld" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Your last repetition reached %lld%% further than your first"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Repetisi terakhir %lld%% lebih jauh dari yang pertama"
+          }
+        }
+      }
+    },
+    "exerciseDetail.insight.staminaLowerAngle %lld" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Your last repetition was %lld° lower; it's normal to tire"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Repetisi terakhir %lld° lebih rendah, wajar jika mulai lelah"
+          }
+        }
+      }
+    },
+    "exerciseDetail.insight.staminaLowerRange %lld" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Your last repetition was %lld%% shorter; it's normal to tire"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Repetisi terakhir %lld%% lebih pendek, wajar jika mulai lelah"
+          }
+        }
+      }
+    },
+    "exerciseDetail.insight.staminaSteady" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Your last repetition reached as far as your first"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Repetisi terakhir tetap sejauh yang pertama"
+          }
+        }
+      }
+    },
+    "exerciseDetail.insight.variedAngle %lld" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Your reach varied by up to %lld° between repetitions"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Jangkauanmu berbeda hingga %lld° antar repetisi"
+          }
+        }
+      }
+    },
+    "exerciseDetail.insight.variedRange %lld" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Your reach varied by up to %lld%% between repetitions"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Jangkauanmu berbeda hingga %lld%% antar repetisi"
+          }
+        }
+      }
+    },
+    "exerciseDetail.insight.volumeFewer %lld %lld" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$lld repetitions today, %2$lld fewer"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$lld repetisi hari ini, %2$lld lebih sedikit"
+          }
+        }
+      }
+    },
+    "exerciseDetail.insight.volumeMore %lld %lld" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$lld repetitions today, %2$lld more"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$lld repetisi hari ini, %2$lld lebih banyak"
+          }
+        }
+      }
+    },
+    "exerciseDetail.insight.volumeSame %lld" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld repetitions today, the same as before"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld repetisi hari ini, sama seperti sebelumnya"
+          }
+        }
+      }
+    },
+    "exerciseDetail.lead.arm.left" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Your left arm lifted"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lengan kirimu bisa terangkat"
+          }
+        }
+      }
+    },
+    "exerciseDetail.lead.arm.none" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Your arm lifted"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lenganmu bisa terangkat"
+          }
+        }
+      }
+    },
+    "exerciseDetail.lead.arm.right" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Your right arm lifted"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lengan kananmu bisa terangkat"
+          }
+        }
+      }
+    },
+    "exerciseDetail.lead.armForward.left" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Your left arm lifted forward"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lengan kirimu bisa terangkat ke depan"
+          }
+        }
+      }
+    },
+    "exerciseDetail.lead.armForward.none" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Your arm lifted forward"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lenganmu bisa terangkat ke depan"
+          }
+        }
+      }
+    },
+    "exerciseDetail.lead.armForward.right" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Your right arm lifted forward"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lengan kananmu bisa terangkat ke depan"
+          }
+        }
+      }
+    },
+    "exerciseDetail.lead.elbow.left" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Your left elbow bent"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Siku kirimu bisa menekuk"
+          }
+        }
+      }
+    },
+    "exerciseDetail.lead.elbow.none" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Your elbow bent"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sikumu bisa menekuk"
+          }
+        }
+      }
+    },
+    "exerciseDetail.lead.elbow.right" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Your right elbow bent"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Siku kananmu bisa menekuk"
+          }
+        }
+      }
+    },
+    "exerciseDetail.lead.fingers.left" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Your left fingers moved"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Jari tangan kirimu bisa bergerak"
+          }
+        }
+      }
+    },
+    "exerciseDetail.lead.fingers.none" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Your fingers moved"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Jari tanganmu bisa bergerak"
+          }
+        }
+      }
+    },
+    "exerciseDetail.lead.fingers.right" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Your right fingers moved"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Jari tangan kananmu bisa bergerak"
+          }
+        }
+      }
+    },
+    "exerciseDetail.lead.forearm.left" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Your left forearm turned"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lengan bawah kirimu bisa berputar"
+          }
+        }
+      }
+    },
+    "exerciseDetail.lead.forearm.none" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Your forearm turned"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lengan bawahmu bisa berputar"
+          }
+        }
+      }
+    },
+    "exerciseDetail.lead.forearm.right" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Your right forearm turned"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lengan bawah kananmu bisa berputar"
+          }
+        }
+      }
+    },
+    "exerciseDetail.lead.rotateIn.left" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Your left arm turned inward"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lengan kirimu bisa berputar ke dalam"
+          }
+        }
+      }
+    },
+    "exerciseDetail.lead.rotateIn.none" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Your arm turned inward"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lenganmu bisa berputar ke dalam"
+          }
+        }
+      }
+    },
+    "exerciseDetail.lead.rotateIn.right" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Your right arm turned inward"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lengan kananmu bisa berputar ke dalam"
+          }
+        }
+      }
+    },
+    "exerciseDetail.lead.rotateOut.left" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Your left arm turned outward"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lengan kirimu bisa berputar ke luar"
+          }
+        }
+      }
+    },
+    "exerciseDetail.lead.rotateOut.none" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Your arm turned outward"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lenganmu bisa berputar ke luar"
+          }
+        }
+      }
+    },
+    "exerciseDetail.lead.rotateOut.right" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Your right arm turned outward"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lengan kananmu bisa berputar ke luar"
+          }
+        }
+      }
+    },
+    "exerciseDetail.lead.stand.none" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "When standing, you were"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Saat berdiri, badanmu bisa"
+          }
+        }
+      }
+    },
+    "exerciseDetail.lead.thumb.left" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Your left thumb moved"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ibu jari kirimu bisa bergerak"
+          }
+        }
+      }
+    },
+    "exerciseDetail.lead.thumb.none" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Your thumb moved"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ibu jarimu bisa bergerak"
+          }
+        }
+      }
+    },
+    "exerciseDetail.lead.thumb.right" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Your right thumb moved"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ibu jari kananmu bisa bergerak"
+          }
+        }
+      }
+    },
+    "exerciseDetail.legend.firstSession" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "First session"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sesi pertama"
+          }
+        }
+      }
+    },
+    "exerciseDetail.legend.now" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Now"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Saat ini"
+          }
+        }
+      }
+    },
+    "exerciseDetail.legend.previousSession" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Previous session"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sesi sebelumnya"
+          }
+        }
+      }
+    },
+    "exerciseDetail.legend.weekAgo" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A week ago"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Seminggu lalu"
+          }
+        }
+      }
+    },
+    "exerciseDetail.minutesSeconds %lld %lld" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$lld min %2$lld s"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$lld mnt %2$lld dtk"
+          }
+        }
+      }
+    },
+    "exerciseDetail.progress.lead" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Your movement reached"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gerakanmu bisa mencapai"
+          }
+        }
+      }
+    },
+    "exerciseDetail.progress.noBaseline" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "There is no earlier session to compare with yet. Today is your starting point."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Belum ada sesi sebelumnya untuk dibandingkan. Hasil hari ini menjadi titik awalmu."
+          }
+        }
+      }
+    },
+    "exerciseDetail.progress.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Your movement progress"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Perkembangan gerakanmu"
+          }
+        }
+      }
+    },
+    "exerciseDetail.record.showSkeleton" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Show skeleton"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tampilkan kerangka"
+          }
+        }
+      }
+    },
+    "exerciseDetail.record.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Practice record"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Catatan latihan"
+          }
+        }
+      }
+    },
+    "exerciseDetail.same.firstSession" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "About the same as your first session"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sama seperti sesi pertama"
+          }
+        }
+      }
+    },
+    "exerciseDetail.same.previousSession" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "About the same as your previous session"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sama seperti sesi sebelumnya"
+          }
+        }
+      }
+    },
+    "exerciseDetail.same.weekAgo" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "About the same as a week ago"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sama seperti seminggu lalu"
+          }
+        }
+      }
+    },
+    "exerciseDetail.seconds %@" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ s"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ detik"
+          }
+        }
+      }
+    },
+    "exerciseDetail.secondsShort %lld" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld s"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld dtk"
+          }
+        }
+      }
+    },
+    "exerciseDetail.side.left" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "left"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "kiri"
+          }
+        }
+      }
+    },
+    "exerciseDetail.side.right" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "right"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "kanan"
+          }
+        }
+      }
+    },
+    "exerciseDetail.since.firstSession %@" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "From your first session to %@"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sejak latihan pertama hingga %@"
+          }
+        }
+      }
+    },
+    "exerciseDetail.since.previousSession %@" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "From your previous session to %@"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sejak sesi sebelumnya hingga %@"
+          }
+        }
+      }
+    },
+    "exerciseDetail.since.weekAgo %@" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "From a week earlier to %@"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sejak seminggu sebelumnya hingga %@"
+          }
+        }
+      }
+    },
+    "exerciseDetail.stat.activeTime" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "time moving"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "waktu bergerak"
+          }
+        }
+      }
+    },
+    "exerciseDetail.stat.averageDuration" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "average per repetition"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "rata-rata per repetisi"
+          }
+        }
+      }
+    },
+    "exerciseDetail.stat.peakAngle" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "highest angle"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "sudut tertinggi"
+          }
+        }
+      }
+    },
+    "exerciseDetail.stat.peakRange" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "best range"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "jangkauan terbaik"
+          }
+        }
+      }
+    },
+    "exerciseDetail.stat.repetitions" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "repetitions"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "repetisi"
+          }
+        }
+      }
+    },
+    "exerciseDetail.title.sided %@ %@" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ (%2$@)"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ %2$@"
+          }
+        }
+      }
+    },
+    "exerciseDetail.todayBest %@" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Your best today: %@"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Terbaikmu hari ini: %@"
+          }
+        }
+      }
+    },
+    "exerciseDetail.todayBest.this" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This was your best today"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ini hasil terbaikmu hari ini"
+          }
+        }
+      }
+    },
+    "exerciseDetail.trend.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Best result each session"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hasil terbaik tiap sesi"
+          }
+        }
+      }
+    },
+    "exerciseDetail.vs.firstSession" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : " than your first session"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : " dari sesi pertama"
+          }
+        }
+      }
+    },
+    "exerciseDetail.vs.previousSession" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : " than your previous session"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : " dari sesi sebelumnya"
+          }
+        }
+      }
+    },
+    "exerciseDetail.vs.weekAgo" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : " than a week ago"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : " dari seminggu lalu"
           }
         }
       }
@@ -4241,13 +6247,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Opens this exercise's report."
+            "value" : "Opens this exercise's details."
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Membuka laporan latihan ini."
+            "value" : "Membuka detail latihan ini."
           }
         }
       }

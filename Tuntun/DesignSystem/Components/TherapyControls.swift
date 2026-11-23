@@ -154,6 +154,8 @@ enum TherapyPalette {
     static let badgeRibbonLight = Color(red: 0.62, green: 0.80, blue: 0.99)
     /// Pale blue behind each exercise on a day's progress page (`TMHistoryCard`).
     static let historyCard = adaptive(light: (0.937, 0.961, 0.996), dark: (0.11, 0.15, 0.21))
+    /// The calm slate line and joint ring of the detail panel's figure (#5B7A99, lighter in dark).
+    static let figureLine = adaptive(light: (0.357, 0.478, 0.6), dark: (0.616, 0.706, 0.8))
 
     private static func adaptive(
         light: (Double, Double, Double),
@@ -448,6 +450,8 @@ struct TMTherapyIconButton: View {
     var size: CGFloat = 88
     /// The page-level black circle used for back and close.
     var circle = false
+    /// With `circle`, a light grey circle with a dark glyph, for closing a floating panel.
+    var quiet = false
     let action: () -> Void
 
     var body: some View {
@@ -455,9 +459,9 @@ struct TMTherapyIconButton: View {
             if circle {
                 Image(systemName: symbol)
                     .typography(size: size * 0.4, weight: .semiBold)
-                    .foregroundStyle(TherapyPalette.onHero)
+                    .foregroundStyle(quiet ? TherapyPalette.ink : TherapyPalette.onHero)
                     .frame(width: size, height: size)
-                    .background(TherapyPalette.heroCard, in: Circle())
+                    .background(quiet ? TherapyPalette.panel : TherapyPalette.heroCard, in: Circle())
                     .shadow(color: .black.opacity(0.12), radius: 8, y: 2)
                     // Keep at least a 64-point touch target around the small visual circle.
                     .frame(minWidth: 64, minHeight: 64)
