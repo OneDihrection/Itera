@@ -2350,3 +2350,14 @@ At the product owner's request, Preferences now opens over a frosted Beranda, li
 - **Naming.** The router state is no longer a sheet: `HomeSheet` → `HomePanel`, `sheet` → `panel`, `dismissSheet()` → `dismissPanel()`. `.presentationDetents` was dropped from the view.
 
 Verification: `xcodegen generate` and an iOS Simulator build with `IPHONEOS_DEPLOYMENT_TARGET=17.0` succeeded. `-TuntunScreen settings` on the iPad (A16) Simulator showed the card centred over the frosted Beranda. Closing by Selesai and the backdrop was not exercised. Pending on the M1 iPad: both close paths, Arrange drag inside the panel, VoiceOver staying inside the panel, dark mode, landscape on both sides, and History's detail panel unchanged.
+
+
+## Fold towel inside the filled preview (2026-11-23)
+
+After the camera previews switched to aspect-fill (*Set list under the demonstration*), the fold towel's grab and goal zones (x 0.2 / 0.8, y 0.2 / 0.8 of the image) and its 0.6-wide towel fell partly into the image's cropped sides, so the indicator was cut off. The demonstration, which reuses `TMTowelWorkspaceView`, was cropped the same way.
+
+- **Workspace is the visible preview.** `CameraDisplayGeometry.visibleRect` gives the part of the image the fill preview shows, in normalized image coordinates. `FoldTowelActivity` maps the filtered palm cursor into it (`workspacePoint`), so the sequence, the snapshot's hand position and acceptance all use workspace coordinates whose 0…1 spans exactly the visible view. `HandCursorFilter` still runs in image coordinates, keeping its tuning. Without a viewport yet the workspace is the whole image; a viewport change already suspends the sequence.
+- **Drawing.** `TMTowelWorkspaceView` maps workspace points straight onto its own frame (`TowelBoard.screen`) and sizes the towel and zones from the frame, not the overflowing image rect. The demonstration now fills its panel.
+- **Tradeoff.** The fixed path keeps its fractions of the visible view, so on a cropped column the physical reach is shorter in proportion to the crop (a 16:9 image in a column about 1.2 wide: the 0.6 reach is about 0.4 of the image width). Keeping the whole path on screen requires it.
+
+Verification: `xcodegen generate` and a Debug iOS Simulator build with `IPHONEOS_DEPLOYMENT_TARGET=17.0` succeeded. Nothing was run in the Simulator or on the iPad. Pending on the M1 iPad: in both orientations and on both sides, the towel, chevrons and both zones fully visible for horizontal and vertical folds; the hand circle staying on the palm and joining the zone where it is drawn; four folds completing; the demonstration uncropped.
