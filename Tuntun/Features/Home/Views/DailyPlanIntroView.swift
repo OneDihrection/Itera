@@ -7,8 +7,9 @@
 
 import SwiftUI
 
-/// The page before each daily-plan exercise: what it trains, today's target, a safety note
-/// and the explicit Start that validates readiness and opens the session.
+/// The page before each daily-plan exercise: what it trains, today's sets, repetitions and an
+/// estimate of the minutes, a safety note and the voice commands. It reads its introduction,
+/// then validates readiness and opens the session on its own; there is no Start button.
 struct TMDailyPlanIntroView<ViewModel: DailyPlanIntroViewModelProtocol>: View {
     @State private var viewModel: ViewModel
     @Environment(\.scenePhase) private var scenePhase
@@ -20,62 +21,85 @@ struct TMDailyPlanIntroView<ViewModel: DailyPlanIntroViewModelProtocol>: View {
 
     var body: some View {
         if let row = viewModel.row {
-            intro(row)
-                .overlay(alignment: .topTrailing) {
-                    debugStartButton
+            if viewModel.isAfterRest {
+                // The plan's cover has no stack to go back through, so the page gets its own
+                // navigation bar with a system bar button that leaves the plan.
+                NavigationStack {
+                    page(row)
+                        .toolbar {
+                            ToolbarItem(placement: .cancellationAction) {
+                                if !viewModel.isPreparingSession {
+                                    Button("action.back", action: viewModel.back)
+                                }
+                            }
+                        }
                 }
-                .overlay {
-                    if viewModel.isPreparingSession {
-                        TMLoadingOverlay(message: "loading.preparingSession")
-                    }
-                }
-                .animation(
-                    reduceMotion ? nil : .easeInOut(duration: 0.2),
-                    value: viewModel.isPreparingSession
-                )
-                .navigationBarBackButtonHidden(true)
-                .toolbar(.hidden, for: .navigationBar)
-                .toolbar(.hidden, for: .tabBar)
-                .task {
-                    viewModel.appear()
-                }
-                .onDisappear {
-                    viewModel.disappear()
-                }
-                .onChange(of: scenePhase) { _, phase in
-                    if phase != .active {
-                        viewModel.pauseNarration()
-                    }
-                }
+            } else {
+                // Pushed on Beranda's stack: the system back button pops it, and Beranda's
+                // screen model ends the plan when the intro leaves the path.
+                page(row)
+            }
         }
+    }
+
+    private func page(_ row: DailyPlanRow) -> some View {
+        intro(row)
+            .overlay(alignment: .topLeading) {
+                debugStartButton
+            }
+            .overlay {
+                if viewModel.isPreparingSession {
+                    TMLoadingOverlay(message: "loading.preparingSession")
+                }
+            }
+            .animation(
+                reduceMotion ? nil : .easeInOut(duration: 0.2),
+                value: viewModel.isPreparingSession
+            )
+            .navigationBarTitleDisplayMode(.inline)
+            // No way back while readiness opens the session.
+            .navigationBarBackButtonHidden(viewModel.isPreparingSession)
+            .toolbar(.hidden, for: .tabBar)
+            .task {
+                viewModel.appear()
+            }
+            .onDisappear {
+                viewModel.disappear()
+            }
+            .onChange(of: scenePhase) { _, phase in
+                if phase == .active {
+                    viewModel.becameActive()
+                } else {
+                    viewModel.pauseNarration()
+                }
+            }
     }
 
     private func intro(_ row: DailyPlanRow) -> some View {
         TMTherapyExerciseIntro(
             heading: TMTherapyExerciseHeading(
-                eyebrow: Text("plan.exerciseNumber \(viewModel.exerciseNumber)"),
                 title: Text(LocalizedStringKey(row.titleKey))
             ),
             focusTitle: "plan.focusTitle",
             focus: Text(LocalizedStringKey("plan.purpose." + viewModel.itemID)),
-            targetTitle: "plan.targetTitle",
-            safetyNote: "exercise.safetyNote",
-            startTitle: LocalizedStringKey(viewModel.startTitleKey),
-            startDisabled: viewModel.startDisabled,
             message: viewModel.readinessMessageKey.map { Text(LocalizedStringKey($0)) },
             countdownSeconds: viewModel.countdownSeconds,
-            onBack: viewModel.back,
-            onStart: viewModel.start
+            actionTitle: viewModel.actionTitleKey.map { LocalizedStringKey($0) },
+            actionDisabled: viewModel.actionDisabled,
+            onAction: viewModel.performAction
         ) {
             demonstration
         } targets: {
-            targets(row.details)
+            targets
+        } notes: {
+            notes
         }
     }
 
     // MARK: - Content
 
-    /// Debug builds only: skips the intro narration and opens the session at once.
+    /// Debug builds only: skips the intro narration and opens the session at once. It sits at the
+    /// top left under the navigation bar, clear of the centred title.
     @ViewBuilder
     private var debugStartButton: some View {
         #if DEBUG
@@ -83,8 +107,8 @@ struct TMDailyPlanIntroView<ViewModel: DailyPlanIntroViewModelProtocol>: View {
             TMDebugActionButton(title: "debug.startExercise", symbol: "forward.end.fill") {
                 viewModel.startWithoutNarration()
             }
-            .padding(.top, 24)
-            .padding(.trailing, 48)
+            .padding(.top, 8)
+            .padding(.leading, 24)
         }
         #endif
     }
@@ -126,36 +150,66 @@ struct TMDailyPlanIntroView<ViewModel: DailyPlanIntroViewModelProtocol>: View {
         }
     }
 
+    /// Sets, repetitions and the estimated minutes, as three equal tiles.
     @ViewBuilder
-    private func targets(_ details: [DailyPlanRow.Detail]) -> some View {
-        let sets = details.filter { detail in
-            if case .sets = detail {
-                return true
-            }
-            return false
-        }
-        let otherDetails = details.filter { !sets.contains($0) }
-        let orderedDetails = viewModel.usesScript ? sets + otherDetails : otherDetails + sets
+    private var targets: some View {
+        let counts = viewModel.counts
+        let minutes = viewModel.estimatedMinutes
 
-        TMTherapyStatRow {
-            ForEach(orderedDetails.indices, id: \.self) { index in
-                if index > 0 {
-                    TMTherapyStatDivider()
-                }
-                target(orderedDetails[index])
-            }
-        }
+        TMTherapyStatTile(
+            value: Text(counts.sets, format: .number),
+            unit: unit(
+                for: counts.sets,
+                one: "plan.intro.setUnit",
+                other: "plan.intro.setsUnit"
+            )
+        )
+
+        TMTherapyStatTile(
+            value: Text(counts.repetitions, format: .number),
+            unit: unit(
+                for: counts.repetitions,
+                one: "plan.intro.repetitionUnit",
+                other: "plan.intro.repetitionsUnit"
+            )
+        )
+
+        TMTherapyStatTile(
+            value: Text(verbatim: "\(minutes.lowerBound)–\(minutes.upperBound)"),
+            unit: Text("plan.intro.minutesUnit")
+        )
     }
 
-    private func target(_ detail: DailyPlanRow.Detail) -> TMTherapyTargetStat {
-        switch detail {
-        case .repetitions(let count):
-            return TMTherapyTargetStat(value: count, unit: Text("exercise.repetitionsUnit"))
-        case .sets(let count):
-            return TMTherapyTargetStat(value: count, unit: Text("exercise.setsUnit"))
-        case .holdSeconds(let seconds):
-            return TMTherapyTargetStat(value: seconds, unit: Text("balance.secondsUnit"))
+    /// English says "1 set" but "3 sets"; a String Catalog plural must show its number, and
+    /// the number has its own line here, so singular and plural are separate keys.
+    private func unit(
+        for count: Int,
+        one: LocalizedStringKey,
+        other: LocalizedStringKey
+    ) -> Text {
+        guard count == 1 else {
+            return Text(other)
         }
+
+        return Text(one)
+    }
+
+    /// Safety first, then how to pause and resume by voice.
+    @ViewBuilder
+    private var notes: some View {
+        TMTherapyInfoCard(
+            symbol: "info.circle",
+            tint: TherapyPalette.warning,
+            title: Text("plan.intro.safety.title"),
+            message: Text("plan.intro.safety.message")
+        )
+
+        TMTherapyInfoCard(
+            symbol: "mic.fill",
+            tint: TherapyPalette.guidanceBlue,
+            title: Text("plan.intro.voice.title"),
+            message: Text("plan.intro.voice.message")
+        )
     }
 }
 
@@ -167,19 +221,21 @@ struct TMDailyPlanIntroView<ViewModel: DailyPlanIntroViewModelProtocol>: View {
 private final class MockDailyPlanIntroViewModel: DailyPlanIntroViewModelProtocol {
     let itemID = "armRaise"
     let row: DailyPlanRow? = nil
-    let exerciseNumber = 2
+    let counts = (sets: 3, repetitions: 8)
+    let estimatedMinutes = 5...8
     let demonstration: DailyPlanIntroDemonstration? = .movement(.armRaise, mirrored: false)
-    let usesScript = false
     let countdownSeconds: Int? = nil
-    let startTitleKey = "exercise.start"
-    let startDisabled = false
+    let isAfterRest = false
+    let actionTitleKey: String? = nil
+    let actionDisabled = false
     let isPreparingSession = false
     let readinessMessageKey: String? = nil
 
     func appear() {}
     func disappear() {}
     func pauseNarration() {}
-    func start() {}
+    func becameActive() {}
+    func performAction() {}
     func back() {}
     func startWithoutNarration() {}
 }

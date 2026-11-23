@@ -143,3 +143,38 @@ struct DailyPlanProgress: Equatable {
         return self
     }
 }
+
+/// A rough "about how long" for one plan exercise, shown on its intro as a range of minutes.
+///
+/// No session measures its own length ahead of time, so this is an estimate from the counts the
+/// patient will practise: a setup allowance (intro, camera and calibration), a pace per
+/// repetition, and the plan's short rest before every later set. The quick end assumes 1 minute
+/// of setup and 8 s per repetition, the slow end 2 minutes and 12 s; each end rounds up to a
+/// whole minute. Sides are not counted separately: it is a guide, not a timer.
+enum DailyPlanDuration {
+    static let quickSetupSeconds = 60
+    static let slowSetupSeconds = 120
+    static let quickSecondsPerRepetition = 8
+    static let slowSecondsPerRepetition = 12
+
+    static func minutes(
+        sets: Int,
+        repetitions: Int,
+        restSeconds: Int
+    ) -> ClosedRange<Int> {
+        let repetitionCount = max(sets, 1) * max(repetitions, 1)
+        let restTotal = max(sets - 1, 0) * restSeconds
+
+        let quick = quickSetupSeconds + repetitionCount * quickSecondsPerRepetition + restTotal
+        let slow = slowSetupSeconds + repetitionCount * slowSecondsPerRepetition + restTotal
+
+        let lower = wholeMinutes(quick)
+        let upper = max(wholeMinutes(slow), lower + 1)
+
+        return lower...upper
+    }
+
+    private static func wholeMinutes(_ seconds: Int) -> Int {
+        (seconds + 59) / 60
+    }
+}

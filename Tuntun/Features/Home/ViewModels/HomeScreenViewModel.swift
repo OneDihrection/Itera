@@ -76,7 +76,17 @@ final class HomeScreenViewModel: HomeViewModelProtocol {
             router.path
         }
         set {
+            let leavesIntro = router.path.contains(where: \.isPlanIntro)
+                && !newValue.contains(where: \.isPlanIntro)
+
             router.path = newValue
+
+            // The intro's system back button pops the stack itself, so the plan that intro
+            // started ends here, as the former custom back button's `plan.end()` did. The plan's
+            // own `end()` stops running first, so this never ends it twice.
+            if leavesIntro, plan.isRunning {
+                plan.end()
+            }
         }
     }
 
