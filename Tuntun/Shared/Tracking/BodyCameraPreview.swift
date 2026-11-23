@@ -18,7 +18,7 @@ struct TMBodyCameraPreview: UIViewRepresentable {
     func makeUIView(context: Context) -> TMPreviewView {
         let view = TMPreviewView()
         TMPreviewView.active = view
-        view.previewLayer.videoGravity = .resizeAspect
+        view.previewLayer.videoGravity = .resizeAspectFill
         view.previewLayer.session = session
         view.onReady = onReady
         view.onOrientation = onOrientation

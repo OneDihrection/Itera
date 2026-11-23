@@ -70,31 +70,6 @@ struct TMTherapyTargetStat: View {
     }
 }
 
-/// "Repetisi 3 / 8": a label, the current value in dark ink and the total in grey.
-struct TMTherapyProgressStat: View {
-    let label: Text
-    let value: Int
-    let total: Int
-    var textScale: CGFloat = 1
-
-    var body: some View {
-        HStack(alignment: .center, spacing: 18) {
-            label
-                .typography(size: 30 * textScale, weight: .semiBold, relativeTo: .title2)
-                .foregroundStyle(TherapyPalette.muted)
-            HStack(alignment: .firstTextBaseline, spacing: 8) {
-                Text(value, format: .number)
-                    .typography(size: 56 * textScale, weight: .bold, relativeTo: .largeTitle)
-                    .foregroundStyle(TherapyPalette.brandInk)
-                Text(verbatim: "/ \(total)")
-                    .typography(size: 48 * textScale, weight: .regular, relativeTo: .largeTitle)
-                    .foregroundStyle(TherapyPalette.muted)
-            }
-        }
-        .accessibilityElement(children: .combine)
-    }
-}
-
 /// Stats side by side with a thin divider between them.
 struct TMTherapyStatRow<Content: View>: View {
     @ViewBuilder let content: Content
@@ -304,8 +279,8 @@ enum TherapyLiveCuePlacement {
     }
 }
 
-/// The practice screen: heading, the camera with its cue bubble, the demonstration column,
-/// repetition and set counters, and Pause and End.
+/// The practice screen: the exercise title, the camera filling the left column, and beside it
+/// the demonstration, every set's repetitions (`TMTherapySetProgress`), and Pause and End.
 ///
 /// The camera keeps one position in this view for every state, so callers can layer stage
 /// pages and dialogs over it without remounting the preview.
@@ -313,19 +288,18 @@ struct TMTherapyExerciseLiveLayout<Camera: View, Demo: View, Accessories: View>:
     let heading: TMTherapyExerciseHeading
     var cue: Text? = nil
     var cuePlacement = TherapyLiveCuePlacement.floating
-    let demoTitle: LocalizedStringKey
     let repetitions: (done: Int, goal: Int)
     var sets: (number: Int, total: Int)? = nil
     let pauseTitle: LocalizedStringKey
     let endTitle: LocalizedStringKey
     var pauseDisabled = false
-    /// Hides the repetition and set counters while the activity calibrates; their space stays
-    /// reserved so the camera does not move.
+    /// Hides the set list while the activity calibrates; its space stays reserved so the
+    /// demonstration does not move when practice starts.
     var calibrating = false
     var demoWidthFraction: CGFloat = 0.9
     /// Changes whenever the demonstration moves to a new step, which highlights the panel.
     var demoRevision = 0
-    /// Spoken to VoiceOver when `demoRevision` changes, usually the new `demoTitle`.
+    /// Spoken to VoiceOver when `demoRevision` changes.
     var demoAnnouncement: String? = nil
     let onPause: () -> Void
     let onEnd: () -> Void
@@ -334,15 +308,13 @@ struct TMTherapyExerciseLiveLayout<Camera: View, Demo: View, Accessories: View>:
     /// Small trailing controls beside the heading, such as music or voice.
     @ViewBuilder let accessories: Accessories
 
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
-
-    // The heading and the counters/buttons row take fixed shares of the height (about 12% and
-    // 20%); the camera and demo row takes the rest. The minimums keep a two-line heading and
-    // the stacked buttons from clipping on the smallest iPad.
+    // The heading and the Pause/End block take fixed shares of the height (about 12% and 20%);
+    // the demonstration takes what the set list leaves. The minimums keep a two-line heading
+    // and the stacked buttons from clipping on the smallest iPad.
     private static var headerHeightFraction: CGFloat { 0.12 }
-    private static var bottomHeightFraction: CGFloat { 0.20 }
+    private static var controlsHeightFraction: CGFloat { 0.20 }
     private static var minimumHeaderHeight: CGFloat { 72 }
-    private static var minimumBottomHeight: CGFloat { 140 }
+    private static var minimumControlsHeight: CGFloat { 140 }
 
     var body: some View {
         GeometryReader { geometry in
@@ -354,9 +326,9 @@ struct TMTherapyExerciseLiveLayout<Camera: View, Demo: View, Accessories: View>:
             let cameraWidth = availableWidth - sideWidth
             let rowSpacing = columnSpacing * 0.5
             let verticalPadding = min(10, geometry.size.height * 0.012)
-            let contentHeight = max(0, geometry.size.height - 2 * verticalPadding - 2 * rowSpacing)
+            let contentHeight = max(0, geometry.size.height - 2 * verticalPadding - rowSpacing)
             let headerHeight = max(contentHeight * Self.headerHeightFraction, Self.minimumHeaderHeight)
-            let bottomHeight = max(contentHeight * Self.bottomHeightFraction, Self.minimumBottomHeight)
+            let controlsHeight = max(contentHeight * Self.controlsHeightFraction, Self.minimumControlsHeight)
             let scale = therapyLayoutScale(for: geometry.size, limits: 0.8...1.3)
 
             VStack(spacing: rowSpacing) {
@@ -366,18 +338,16 @@ struct TMTherapyExerciseLiveLayout<Camera: View, Demo: View, Accessories: View>:
                 HStack(alignment: .top, spacing: columnSpacing) {
                     cameraArea
                         .frame(width: cameraWidth)
-                    demoColumn(maxMediaWidth: sideWidth * demoWidthFraction)
-                        .frame(width: sideWidth)
+
+                    sideColumn(
+                        maxMediaWidth: sideWidth * demoWidthFraction,
+                        spacing: columnSpacing,
+                        controlsHeight: controlsHeight,
+                        scale: scale
+                    )
+                    .frame(width: sideWidth)
                 }
                 .frame(maxHeight: .infinity)
-
-                HStack(alignment: .center, spacing: columnSpacing) {
-                    statsSlot(scale: scale)
-                        .frame(width: cameraWidth)
-                    controls(scale: scale)
-                        .frame(width: sideWidth)
-                }
-                .frame(height: bottomHeight)
             }
             .padding(.horizontal, inset)
             .padding(.vertical, verticalPadding)
@@ -385,13 +355,16 @@ struct TMTherapyExerciseLiveLayout<Camera: View, Demo: View, Accessories: View>:
         .background(TherapyPalette.canvas)
     }
 
+    /// The exercise title alone: the "Latihan N" eyebrow is left to the pages around practice.
     @ViewBuilder
     private var liveHeader: some View {
+        let title = TMTherapyExerciseHeading(title: heading.title)
+
         if Accessories.self == EmptyView.self {
-            heading
+            title
         } else {
             HStack(spacing: 12) {
-                heading
+                title
 
                 HStack(spacing: 12) {
                     accessories
@@ -413,84 +386,51 @@ struct TMTherapyExerciseLiveLayout<Camera: View, Demo: View, Accessories: View>:
             }
     }
 
-    private var demoTitleOffset: CGFloat {
-        guard case .video(let bounds) = cuePlacement else {
-            return 0
-        }
-        return bounds?.minY ?? 0
-    }
+    private func sideColumn(
+        maxMediaWidth: CGFloat,
+        spacing: CGFloat,
+        controlsHeight: CGFloat,
+        scale: CGFloat
+    ) -> some View {
+        VStack(spacing: spacing) {
+            demoMedia(maxMediaWidth: maxMediaWidth)
 
-    private func demoColumn(maxMediaWidth: CGFloat) -> some View {
-        VStack(spacing: 8) {
-            Text(demoTitle)
-                .typography(size: 24, weight: .bold, relativeTo: .title3)
-                .foregroundStyle(TherapyPalette.ink)
-                .contentTransition(.opacity)
-                .animation(reduceMotion ? nil : .easeInOut(duration: 0.3), value: demoRevision)
-                .offset(y: demoTitleOffset)
+            setProgress
+                .padding(.horizontal, 4)
+                .fixedSize(horizontal: false, vertical: true)
 
-            Color.clear
-                .aspectRatio(1, contentMode: .fit)
-                .frame(maxWidth: maxMediaWidth)
-                .overlay {
-                    demo
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                        .environment(\.therapyDemoCaptionHidden, true)
-                }
-                .clipShape(RoundedRectangle(cornerRadius: 24))
-                .therapyDemoHighlight(revision: demoRevision, announcement: demoAnnouncement)
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            controls(scale: scale)
+                .frame(height: controlsHeight)
         }
     }
 
-    /// No repetitions are counted during calibration, so the counters are left out until practice.
-    @ViewBuilder
-    private func statsSlot(scale: CGFloat) -> some View {
-        if calibrating {
-            Color.clear
-        } else {
-            stats(scale: scale)
-        }
-    }
-
-    private func stats(scale: CGFloat) -> some View {
-        ViewThatFits(in: .horizontal) {
-            TMTherapyStatRow {
-                repetitionStat(scale: scale)
-
-                if let sets {
-                    TMTherapyStatDivider(thickness: cuePlacement.usesVideo ? 3 : 1.5)
-                    setStat(sets, scale: scale)
-                }
+    /// The square demonstration, shrinking to the height the set list and buttons leave.
+    private func demoMedia(maxMediaWidth: CGFloat) -> some View {
+        Color.clear
+            .aspectRatio(1, contentMode: .fit)
+            .frame(maxWidth: maxMediaWidth)
+            .overlay {
+                demo
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .environment(\.therapyDemoCaptionHidden, true)
             }
-            .fixedSize(horizontal: true, vertical: false)
+            .clipShape(RoundedRectangle(cornerRadius: 24))
+            .therapyDemoHighlight(revision: demoRevision, announcement: demoAnnouncement)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
 
-            VStack(spacing: 4) {
-                repetitionStat(scale: scale)
-
-                if let sets {
-                    setStat(sets, scale: scale)
-                }
-            }
+    /// No repetitions are counted during calibration, so the list is hidden until practice.
+    private var setProgress: some View {
+        TMTherapySetProgress(
+            setNumber: sets?.number ?? 1,
+            setTotal: sets?.total ?? 1,
+            completed: repetitions.done,
+            goal: repetitions.goal
+        ) { number in
+            Text("session.setNumber \(number)")
         }
-    }
-
-    private func repetitionStat(scale: CGFloat) -> some View {
-        TMTherapyProgressStat(
-            label: Text("exercise.repetitionsUnit"),
-            value: repetitions.done,
-            total: repetitions.goal,
-            textScale: (cuePlacement.usesVideo ? 1.2 : 1) * scale
-        )
-    }
-
-    private func setStat(_ sets: (number: Int, total: Int), scale: CGFloat) -> some View {
-        TMTherapyProgressStat(
-            label: Text("exercise.setsUnit"),
-            value: sets.number,
-            total: sets.total,
-            textScale: (cuePlacement.usesVideo ? 1.2 : 1) * scale
-        )
+        .opacity(calibrating ? 0 : 1)
+        .accessibilityHidden(calibrating)
     }
 
     private func controls(scale: CGFloat) -> some View {

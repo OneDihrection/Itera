@@ -26,7 +26,6 @@ extension TMTherapySessionView {
                 )
                 : lightHeading,
             cuePlacement: .video(videoBounds),
-            demoTitle: LocalizedStringKey(model.demoTitleKey),
             repetitions: (model.snapshot.presentation?.count ?? 0, model.snapshot.activity?.goal ?? 0),
             sets: (model.snapshot.setNumber, model.snapshot.activity?.sets ?? 1),
             pauseTitle: "session.pauseAction",

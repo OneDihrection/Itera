@@ -2178,3 +2178,20 @@ At the user's request, the camera preview shows a white chip in its top-left cor
 - The chip is status, not instruction text, so the rule against instruction text over the camera stands.
 
 Verification: XcodeGen and a Debug iOS Simulator build with `IPHONEOS_DEPLOYMENT_TARGET=17.0` succeeded. Nothing was run in the Simulator or on the iPad. Pending on the M1 iPad: in each session type, both languages and both landscape orientations, check that stepping out of frame turns the chip red after about 1 s and back to green on return. Also check that it never covers the bubbles or the finger recovery actions, and that it reads well with large text.
+
+
+## Set list under the demonstration (2026-11-23)
+
+At the user's request, the live exercise screen (`TMTherapyExerciseLiveLayout`, shared by finger, Balancing and light guided sessions) was reworked:
+
+- **Set list.** The "Repetisi 3 / 8 | Set 1 / 2" counters under the camera were removed (`TMTherapyProgressStat` had no other caller and was deleted). The side column now shows the demonstration, then `TMTherapySetProgress`, then Pause and End. The set list is "Set N" over one circle per repetition for every set, top-aligned. Each row draws exactly its goal's circles, spread with space between them at the size twelve would need. Done repetitions are green with a check and the rest grey. Earlier sets are drawn full, since a set advances only on its goal. It stays hidden, with its space kept, during calibration.
+- **Text removed.** The live screen no longer shows the "Ikuti gerakan ini" / step title above the demonstration, or the "Latihan N" eyebrow over the exercise title. Intro, summary and rest pages keep "Latihan N". A new demonstration step still highlights the panel and is announced to VoiceOver.
+- **Camera fills.** The camera takes the whole left column. Both previews use `.resizeAspectFill`, and the overlay mappings switched together from fit to fill scale: `CameraDisplayGeometry` (bubbles, guide arrows, fold towel), `fixedBubbleRadius` (acceptance stays the drawn bubble) and `TMFingerLandmarkOverlay`. The image's cropped sides are tracked but not shown.
+- **Settings ranges.** Settings' sets are 0–3 and repetitions 0–12 (`DailyPlanOverrides.setsRange`, `repetitionsRange`). A 0 hides the exercise from Beranda and the day's count (`DailyPlanOverrides.hidesExercise`), and Settings marks it Hidden while its controls stay open, so raising it to 1 shows it again. While a plan runs, the visible items update after `end()`. Every plan session clamps its counts to 1–3 and 1–12 (`playableSets`, `playableRepetitions`), including a program's own values and the arm-raise script. Stored routine and history validation (1–5, 1–20) is unchanged, so saved files stay readable.
+
+Verification: XcodeGen and a Debug iOS Simulator build with `IPHONEOS_DEPLOYMENT_TARGET=17.0` succeeded. Nothing was run in the Simulator or on the iPad. Pending on the M1 iPad:
+- a three-set session in a guided exercise, a Balancing exercise and a finger exercise, with circles filling per repetition and the next set starting its row;
+- Pause and End reachable on the smallest iPad and with large text;
+- bubbles, arrows, fingertip circles and the fold-towel zones still on the joints with the filled preview, in both orientations;
+- reach left/right, cross midline and bilateral arm raise targets staying on screen despite the crop;
+- Settings 0 hiding and restoring an exercise.

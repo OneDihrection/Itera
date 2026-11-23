@@ -176,13 +176,23 @@ struct TMPracticePreferencesView<ViewModel: PracticePreferencesViewModelProtocol
                 .typography(.body)
                 .foregroundStyle(.secondary)
         }
-        .opacity(entry.isShown ? 1 : 0.6)
+        .opacity(isShown(entry, item: item) ? 1 : 0.6)
         .accessibilityElement(children: .combine)
+    }
+
+    /// Hidden in Arrange, or with 0 sets or repetitions, which also hides the exercise. Its
+    /// controls stay open, so raising the count to 1 shows it again.
+    private func isShown(_ entry: DailyPlanLayout.Entry, item: DailyPlanItem) -> Bool {
+        let counts = viewModel.counts(for: item)
+
+        return entry.isShown
+            && counts.sets > 0
+            && counts.repetitions > 0
     }
 
     @ViewBuilder
     private func exerciseSummary(_ entry: DailyPlanLayout.Entry, item: DailyPlanItem) -> some View {
-        if entry.isShown {
+        if isShown(entry, item: item) {
             let counts = viewModel.counts(for: item)
 
             HStack(spacing: 6) {

@@ -158,7 +158,6 @@ struct TMBalanceSessionView<ViewModel: BalanceSessionViewModelProtocol>: View {
                 ? heading
                 : TMTherapyExerciseHeading(eyebrow: eyebrow, title: Text("stage.calibration")),
             cuePlacement: .video(videoBounds),
-            demoTitle: "session.followMovement",
             repetitions: (model.snapshot.metrics.completedTouches, model.snapshot.goal),
             sets: (model.setNumber, model.totalSets),
             pauseTitle: "session.pauseAction",

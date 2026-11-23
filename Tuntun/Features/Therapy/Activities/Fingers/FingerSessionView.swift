@@ -60,7 +60,6 @@ struct TMFingerSessionView<Service: FingerSessionServiceProtocol>: View {
         TMTherapyExerciseLiveLayout(
             heading: heading(model),
             cuePlacement: .video(videoBounds),
-            demoTitle: LocalizedStringKey(model.demoTitleKey),
             repetitions: (model.activity.repetitions, model.routine.repetitions),
             sets: (model.activity.set, model.routine.sets),
             pauseTitle: "session.pauseAction",

@@ -134,7 +134,6 @@ struct TMDebugScreenGallery: View {
         TMTherapyExerciseLiveLayout(
             heading: heading,
             cue: Text("plan.purpose.crossMidline"),
-            demoTitle: demoStepped ? "demo.step.peak" : "demo.step.start",
             repetitions: (3, 8),
             sets: (1, 3),
             pauseTitle: "session.pauseAction",
