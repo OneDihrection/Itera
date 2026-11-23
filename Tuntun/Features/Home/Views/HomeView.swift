@@ -107,7 +107,7 @@ struct TMHomeView<ViewModel: HomeViewModelProtocol, Builder: HomeContentBuildabl
     }
 
     private var header: some View {
-        VStack(spacing: 0) {
+        VStack(spacing: 8) {
             TMHomeHeaderTitle(text: dateTitle)
             TMHomeHeaderSubtitle(text: headerSubtitle)
         }

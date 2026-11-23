@@ -19,10 +19,36 @@ struct TMDailyPlanCalendar: View {
     @State private var isRecentering = false
 
     var body: some View {
+        VStack(spacing: 0) {
+            weekdayHeader
+            dateScroller
+        }
+        .frame(height: 112)
+        .foregroundStyle(TherapyPalette.brandInk)
+        .accessibilityAction(named: Text("home.calendar.previousWeek")) {
+            onMoveWeek(-1)
+        }
+        .accessibilityAction(named: Text("home.calendar.nextWeek")) {
+            onMoveWeek(1)
+        }
+    }
+
+    private var weekdayHeader: some View {
+        HStack(spacing: 0) {
+            ForEach(dates.prefix(7), id: \.self) { date in
+                Text(date, format: .dateTime.weekday(.abbreviated))
+                    .typography(size: 20, weight: .regular, relativeTo: .body)
+                    .frame(maxWidth: .infinity, minHeight: 48)
+            }
+        }
+        .frame(height: 48)
+    }
+
+    private var dateScroller: some View {
         ScrollView(.horizontal) {
             HStack(spacing: 0) {
                 ForEach(-1...1, id: \.self) { pageOffset in
-                    weekPage(offset: pageOffset)
+                    datePage(offset: pageOffset)
                         .containerRelativeFrame(.horizontal)
                         .id(pageOffset)
                 }
@@ -33,8 +59,7 @@ struct TMDailyPlanCalendar: View {
         .scrollTargetBehavior(.paging)
         .defaultScrollAnchor(.center)
         .scrollPosition(id: $visiblePage)
-        .frame(height: 112)
-        .foregroundStyle(TherapyPalette.brandInk)
+        .frame(height: 64)
         .onChange(of: visiblePage) { _, page in
             guard let page else {
                 return
@@ -58,35 +83,19 @@ struct TMDailyPlanCalendar: View {
                 visiblePage = 0
             }
         }
-        .accessibilityAction(named: Text("home.calendar.previousWeek")) {
-            onMoveWeek(-1)
-        }
-        .accessibilityAction(named: Text("home.calendar.nextWeek")) {
-            onMoveWeek(1)
-        }
     }
 
-    private func weekPage(offset: Int) -> some View {
+    private func datePage(offset: Int) -> some View {
         let pageDates = dates.compactMap { date in
             calendar.date(byAdding: .day, value: offset * 7, to: date)
         }
 
-        return VStack(spacing: 0) {
-            HStack(spacing: 0) {
-                ForEach(pageDates, id: \.self) { date in
-                    Text(date, format: .dateTime.weekday(.abbreviated))
-                        .typography(size: 20, weight: .regular, relativeTo: .body)
-                        .frame(maxWidth: .infinity, minHeight: 48)
-                }
+        return HStack(spacing: 0) {
+            ForEach(pageDates, id: \.self) { date in
+                dayButton(date)
             }
-
-            HStack(spacing: 0) {
-                ForEach(pageDates, id: \.self) { date in
-                    dayButton(date)
-                }
-            }
-            .frame(height: 64, alignment: .top)
         }
+        .frame(height: 64, alignment: .top)
     }
 
     private func dayButton(_ date: Date) -> some View {
