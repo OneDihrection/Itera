@@ -194,14 +194,16 @@ struct FoldTowelActivity: TherapyActivity {
             snapshot.grip = .uncertain
         }
 
-        // Cursor and acceptance share one filtered point, so what is drawn is what is scored.
-        let position = cursorFilter.consume(
+        // Cursor and acceptance share one filtered point, so what is drawn is what is scored. The
+        // filter keeps its image-coordinate tuning; the workspace is mapped afterwards.
+        let filtered = cursorFilter.consume(
             TherapyPoint(
                 x: frame.workspaceMirrored ? 1 - measurement.position.x : measurement.position.x,
                 y: measurement.position.y
             ),
             at: frame.timestamp
         )
+        let position = workspacePoint(filtered, aspect: frame.aspect)
         snapshot.handPosition = position
         if snapshot.phase == .practice {
             // Practice time follows reach's rule: each measured frame credits at most 0.2 s, and
@@ -209,6 +211,32 @@ struct FoldTowelActivity: TherapyActivity {
             snapshot.practiceSeconds += gap > 0 && gap <= 0.3 ? min(0.2, gap) : 0
             sequence.consume(position: position, grip: snapshot.grip, timestamp: frame.timestamp)
         }
+    }
+
+    // MARK: - Workspace
+
+    /// Maps a normalized image point into the towel workspace, whose 0…1 spans only the part of
+    /// the image the aspect-fill preview shows, so every zone and the towel stay on screen.
+    /// Without a viewport yet the workspace is the whole image. A viewport change suspends the
+    /// sequence, so one fold never mixes two mappings.
+    private func workspacePoint(_ point: TherapyPoint, aspect: Double) -> TherapyPoint {
+        guard let viewport else {
+            return point
+        }
+
+        let visible = CameraDisplayGeometry(
+            aspect: aspect,
+            viewport: CGSize(width: viewport.width, height: viewport.height)
+        ).visibleRect
+
+        guard visible.width > 0, visible.height > 0 else {
+            return point
+        }
+
+        return TherapyPoint(
+            x: (point.x - visible.minX) / visible.width,
+            y: (point.y - visible.minY) / visible.height
+        )
     }
 
     // MARK: - Pinch thresholds
