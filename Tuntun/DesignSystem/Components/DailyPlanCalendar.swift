@@ -15,27 +15,48 @@ struct TMDailyPlanCalendar: View {
     let onMoveWeek: (Int) -> Void
 
     @Environment(\.calendar) private var calendar
+    @State private var visiblePage: Int? = 0
+    @State private var isRecentering = false
 
     var body: some View {
-        VStack(spacing: 0) {
+        ScrollView(.horizontal) {
             HStack(spacing: 0) {
-                ForEach(dates, id: \.self) { date in
-                    Text(date, format: .dateTime.weekday(.abbreviated))
-                        .typography(size: 20, weight: .regular, relativeTo: .body)
-                        .frame(maxWidth: .infinity, minHeight: 48)
+                ForEach(-1...1, id: \.self) { pageOffset in
+                    weekPage(offset: pageOffset)
+                        .containerRelativeFrame(.horizontal)
+                        .id(pageOffset)
                 }
+            }
+            .scrollTargetLayout()
+        }
+        .scrollIndicators(.hidden)
+        .scrollTargetBehavior(.paging)
+        .scrollPosition(id: $visiblePage)
+        .frame(height: 112)
+        .foregroundStyle(TherapyPalette.brandInk)
+        .onChange(of: visiblePage) { _, page in
+            guard let page else {
+                return
             }
 
-            HStack(spacing: 0) {
-                ForEach(dates, id: \.self) { date in
-                    dayButton(date)
-                }
+            if page == 0 {
+                isRecentering = false
+                return
             }
-            .frame(height: 64, alignment: .top)
+
+            guard !isRecentering else {
+                return
+            }
+
+            isRecentering = true
+            onMoveWeek(page)
+
+            var transaction = Transaction()
+            transaction.disablesAnimations = true
+            withTransaction(transaction) {
+                visiblePage = 0
+            }
         }
-        .foregroundStyle(TherapyPalette.brandInk)
-        .contentShape(Rectangle())
-        .simultaneousGesture(weekSwipeGesture)
         .accessibilityAction(named: Text("home.calendar.previousWeek")) {
             onMoveWeek(-1)
         }
@@ -44,21 +65,27 @@ struct TMDailyPlanCalendar: View {
         }
     }
 
-    /// A horizontal swipe changes the visible seven-day page without stealing ordinary taps
-    /// from the individual date buttons.
-    private var weekSwipeGesture: some Gesture {
-        DragGesture(minimumDistance: 30)
-            .onEnded { value in
-                let horizontalDistance = value.translation.width
-                let verticalDistance = value.translation.height
+    private func weekPage(offset: Int) -> some View {
+        let pageDates = dates.compactMap { date in
+            calendar.date(byAdding: .day, value: offset * 7, to: date)
+        }
 
-                guard abs(horizontalDistance) > abs(verticalDistance),
-                      abs(horizontalDistance) >= 50 else {
-                    return
+        return VStack(spacing: 0) {
+            HStack(spacing: 0) {
+                ForEach(pageDates, id: \.self) { date in
+                    Text(date, format: .dateTime.weekday(.abbreviated))
+                        .typography(size: 20, weight: .regular, relativeTo: .body)
+                        .frame(maxWidth: .infinity, minHeight: 48)
                 }
-
-                onMoveWeek(horizontalDistance < 0 ? 1 : -1)
             }
+
+            HStack(spacing: 0) {
+                ForEach(pageDates, id: \.self) { date in
+                    dayButton(date)
+                }
+            }
+            .frame(height: 64, alignment: .top)
+        }
     }
 
     private func dayButton(_ date: Date) -> some View {

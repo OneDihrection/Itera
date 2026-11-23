@@ -123,9 +123,7 @@ struct TMHomeView<ViewModel: HomeViewModelProtocol, Builder: HomeContentBuildabl
                 viewModel.selectDate(date)
             }
         } onMoveWeek: { offset in
-            withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.25)) {
-                viewModel.moveVisibleWeek(by: offset)
-            }
+            viewModel.moveVisibleWeek(by: offset)
         }
     }
 
