@@ -154,9 +154,7 @@ struct TMBalanceSessionView<ViewModel: BalanceSessionViewModelProtocol>: View {
 
     private var live: some View {
         TMTherapyExerciseLiveLayout(
-            heading: model.calibrationMessage == nil
-                ? heading
-                : TMTherapyExerciseHeading(eyebrow: eyebrow, title: Text("stage.calibration")),
+            heading: model.calibrationMessage == nil ? heading : .calibration,
             cuePlacement: .video(videoBounds),
             repetitions: (model.snapshot.metrics.completedTouches, model.snapshot.goal),
             sets: (model.setNumber, model.totalSets),
@@ -360,9 +358,9 @@ struct TMBalanceSessionView<ViewModel: BalanceSessionViewModelProtocol>: View {
         TMTherapySetSummary(
             heading: heading,
             headline: Text("session.allDoneTitle"),
+            total: AppLanguage.selected.attributedString("session.total \(repetitionsDone)"),
             message: Text("session.allDoneMessage"),
-            results: results,
-            total: Text("session.total \(repetitionsDone)")
+            results: results
         ) {
             if !automaticallyRests {
                 TMTherapyFinishActions(

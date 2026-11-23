@@ -12,7 +12,7 @@ import Observation
 protocol FingerSessionCompleteViewModelProtocol: AnyObject, Observable {
     var summary: FingerSessionSummary? { get }
     var exerciseTitle: String { get }
-    var sessionLocale: Locale { get }
+    var sessionLanguage: AppLanguage { get }
     /// The item's position in today's plan while the plan runs.
     var exerciseNumber: Int? { get }
     var isPlanRunning: Bool { get }
@@ -62,8 +62,8 @@ final class FingerSessionCompleteViewModel: FingerSessionCompleteViewModelProtoc
         fingerSessionService.session?.exerciseTitle ?? ""
     }
 
-    var sessionLocale: Locale {
-        fingerSessionService.session?.sessionLanguage.locale ?? AppLanguage.selected.locale
+    var sessionLanguage: AppLanguage {
+        fingerSessionService.session?.sessionLanguage ?? AppLanguage.selected
     }
 
     var exerciseNumber: Int? {

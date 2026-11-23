@@ -104,11 +104,10 @@ struct TMDebugScreenGallery: View {
         case "setDone":
             TMTherapySetSummary(
                 heading: heading,
-                headline: Text("session.setDone \(2)"),
-                message: Text("session.setRest \(3)"),
+                headline: Text("session.setDoneCheer \(2)"),
+                total: AppLanguage.selected.attributedString("session.totalOfCheer \(16) \(24)"),
                 results: results,
-                total: Text("session.totalOf \(16) \(24)"),
-                footer: Text("session.nextSetIn \(3) \(12)")
+                footer: Text("session.restBeforeSet \(45) \(3)")
             ) {
                 EmptyView()
             }
@@ -116,9 +115,9 @@ struct TMDebugScreenGallery: View {
             TMTherapySetSummary(
                 heading: heading,
                 headline: Text("session.allDoneTitle"),
+                total: AppLanguage.selected.attributedString("session.total \(24)"),
                 message: Text("session.allDoneMessage"),
-                results: results.map { TherapySetResult(number: $0.number, done: 8, goal: 8, state: .done) },
-                total: Text("session.total \(24)")
+                results: results.map { TherapySetResult(number: $0.number, done: 8, goal: 8, state: .done) }
             ) {
                 TMTherapyButton(title: "plan.nextContinue", symbol: "play.fill", prominent: true) {}
             }

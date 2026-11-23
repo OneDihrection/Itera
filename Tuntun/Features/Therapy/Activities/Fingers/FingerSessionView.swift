@@ -167,13 +167,13 @@ struct TMFingerSessionView<Service: FingerSessionServiceProtocol>: View {
     }
 
     private func heading(_ model: Service.Session) -> TMTherapyExerciseHeading {
-        TMTherapyExerciseHeading(
+        guard !model.isCalibrating else {
+            return .calibration
+        }
+
+        return TMTherapyExerciseHeading(
             eyebrow: plan.currentNumber.map { Text("plan.exerciseNumber \($0)") },
-            title: model.isCalibrating
-                ? Text(LocalizedStringKey(model.usesOppositionScript
-                    ? OppositionGuidance.prefix(for: model.routine.side) + "calibration.title"
-                    : "stage.calibration"))
-                : Text(verbatim: model.exerciseTitle)
+            title: Text(verbatim: model.exerciseTitle)
         )
     }
 

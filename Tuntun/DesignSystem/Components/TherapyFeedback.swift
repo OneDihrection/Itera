@@ -36,9 +36,8 @@ struct TMTherapyProgressRing: View {
 /// `animationDuration` is how long the circle eases toward each `intensity` sample; `paused`
 /// stops its idle motion.
 ///
-/// The page shows only the cue, a comfort line and the circle. Like the practice countdown, a tap
-/// anywhere pauses (the pause menu offers End), and End and Skip stay available as accessibility
-/// actions.
+/// The page shows the cue, a comfort line and the circle, with underlined Pause and End text
+/// actions at the bottom. Tapping elsewhere does nothing; Skip stays an accessibility action.
 struct TMTherapyBreathingRest: View {
     let cue: LocalizedStringKey
     let intensity: Double
@@ -49,28 +48,36 @@ struct TMTherapyBreathingRest: View {
     var skip: (() -> Void)? = nil
 
     var body: some View {
-        Button(action: pause) {
-            VStack(spacing: 0) {
-                heading
+        VStack(spacing: 0) {
+            Spacer(minLength: 0)
 
-                TMTherapyBreathingCircle(
-                    intensity: intensity,
-                    paused: paused,
-                    smoothing: animationDuration
-                )
-                .aspectRatio(1, contentMode: .fit)
-                .frame(maxWidth: 240, maxHeight: 240)
-                .padding(.top, 56)
-            }
-            .padding(24)
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .contentShape(Rectangle())
+            heading
+
+            TMTherapyBreathingCircle(
+                intensity: intensity,
+                paused: paused,
+                smoothing: animationDuration
+            )
+            .aspectRatio(1, contentMode: .fit)
+            .frame(maxWidth: 240, maxHeight: 240)
+            .padding(.top, 56)
+            .accessibilityHidden(true)
+
+            Spacer(minLength: 0)
+
+            // Raised clear of the debug Skip rest control pinned to the bottom centre.
+            TMTherapyRestActions(
+                paused: paused,
+                disablesPauseWhilePaused: true,
+                pause: pause,
+                stop: stop
+            )
+            .padding(.bottom, 96)
         }
-        .buttonStyle(.plain)
+        .padding(24)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .foregroundStyle(TherapyPalette.ink)
         .background(TherapyPalette.canvas.ignoresSafeArea())
-        .accessibilityHint("countdown.pauseHint")
-        .accessibilityAction(named: Text("action.end"), stop)
         .accessibilityActions {
             if let skip {
                 Button("rest.skip", action: skip)
@@ -92,11 +99,57 @@ struct TMTherapyBreathingRest: View {
     }
 }
 
+/// Underlined Pause and End text actions at the bottom of a rest page. With
+/// `disablesPauseWhilePaused`, Pause is disabled while paused (the pause dialog resumes);
+/// otherwise it reads "Lanjutkan latihan" and resumes.
+private struct TMTherapyRestActions: View {
+    let paused: Bool
+    var disablesPauseWhilePaused = false
+    var tint: Color? = nil
+    let pause: () -> Void
+    let stop: () -> Void
+
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+
+    var body: some View {
+        let layout = dynamicTypeSize.isAccessibilitySize
+            ? AnyLayout(VStackLayout(spacing: 8))
+            : AnyLayout(HStackLayout(spacing: 24))
+
+        layout {
+            TMTherapyButton(
+                title: showsResume ? "session.resumeExercise" : "session.pauseAction",
+                symbol: showsResume ? "play.fill" : "pause.fill",
+                disabled: disablesPauseWhilePaused && paused,
+                plain: true,
+                underlined: true,
+                tint: tint,
+                action: pause
+            )
+            .fixedSize()
+
+            TMTherapyButton(
+                title: "session.endAction",
+                symbol: "stop.fill",
+                plain: true,
+                underlined: true,
+                tint: tint,
+                action: stop
+            )
+            .fixedSize()
+        }
+    }
+
+    private var showsResume: Bool {
+        paused && !disablesPauseWhilePaused
+    }
+}
+
 /// Full-screen rest waves. The caller supplies the breathing cue and animation progress.
 ///
-/// The page shows only the centred cue and a comfort line over the waves, with no buttons: a tap
-/// anywhere pauses or resumes, and paused the cue reads "Paused". End is an accessibility action.
-/// `counter` (breaths remaining) is read to VoiceOver instead of drawn.
+/// The page shows the centred cue and a comfort line over the waves, with underlined Pause (or
+/// Resume) and End text actions at the bottom; tapping elsewhere does nothing. Paused, the cue
+/// reads "Paused". `counter` (breaths remaining) is read to VoiceOver instead of drawn.
 struct TMTherapyLongRest: View {
     let cue: Text
     let cueID: String
@@ -112,16 +165,20 @@ struct TMTherapyLongRest: View {
         ZStack(alignment: .bottom) {
             TMTherapyLongRestWaves(intensity: intensity, paused: paused)
                 .ignoresSafeArea()
+                .accessibilityHidden(true)
 
-            Button(action: togglePause) {
-                heading
-                    .padding(24)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-            .accessibilityHint(paused ? Text("session.resume") : Text("session.pause"))
-            .accessibilityAction(named: Text("action.end"), stop)
+            heading
+                .padding(24)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+
+            // Raised clear of the debug Skip rest control pinned to the bottom centre.
+            TMTherapyRestActions(
+                paused: paused,
+                tint: TherapyPalette.onBrand,
+                pause: togglePause,
+                stop: stop
+            )
+            .padding(.bottom, 120)
         }
         .foregroundStyle(TherapyPalette.onBrand)
         .animation(reduceMotion ? nil : .easeInOut(duration: 0.2), value: paused)
