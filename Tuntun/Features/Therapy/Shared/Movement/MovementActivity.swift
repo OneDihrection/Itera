@@ -40,6 +40,9 @@ struct MovementActivity: TherapyActivity {
     private var recoveringSince: Double?
     /// When display-only frames lost the limb, so the drawn guide survives a brief dropout.
     private var previewMissingSince: Double?
+    /// The last preview frame that found the limb, so the first tick after a cue does not date
+    /// a tracking loss from the last scored frame before it.
+    private var lastPreviewSeen: Double?
 
     /// Confidence floor for the hip and shoulders.
     private static let jointConfidence: Float = 0.3
@@ -171,7 +174,11 @@ struct MovementActivity: TherapyActivity {
             if let lastValid, time - lastValid > 0.5 {
                 phase = 0
                 // Without frames the loss began when evidence was last good.
-                noteTrackingLoss(at: time, since: lastValid)
+                noteTrackingLoss(
+                    at: time,
+                    since: max(lastValid, lastPreviewSeen ?? lastValid),
+                    reason: "noFrames"
+                )
 
                 if !holdSurvivesLoss(at: time) {
                     dwell.reset()
@@ -241,6 +248,7 @@ struct MovementActivity: TherapyActivity {
         calibrationCueVisible = true
         missingSince = nil
         recoveringSince = nil
+        lastPreviewSeen = nil
         if scriptedGuidance {
             snapshot.instruction = target == nil ? "session.holdStart" : "session.returnStart"
         }
@@ -248,14 +256,21 @@ struct MovementActivity: TherapyActivity {
 
     /// Shows the tracking message only after evidence has been missing for
     /// `trackingMessageDelay`, so a single weak frame never swaps the cue text.
-    private mutating func noteTrackingLoss(at time: Double, since start: Double? = nil) {
+    private mutating func noteTrackingLoss(at time: Double, since start: Double? = nil, reason: String) {
         recoveringSince = nil
         let since = missingSince ?? start ?? time
         missingSince = since
 
-        if time - since >= Self.trackingMessageDelay {
-            snapshot.trackingMessage = "session.movementTrackingLost"
+        guard time - since >= Self.trackingMessageDelay,
+              snapshot.trackingMessage == nil else {
+            return
         }
+
+        snapshot.trackingMessage = "session.movementTrackingLost"
+        LogManager.shared.info(
+            "Movement tracking lost side=\(configuration.side.rawValue) reason=\(reason)",
+            category: .tracking
+        )
     }
 
     /// Hides the tracking message only after evidence has stayed good for a moment.
@@ -273,6 +288,10 @@ struct MovementActivity: TherapyActivity {
         if time - since >= Self.trackingRecoveryDelay {
             snapshot.trackingMessage = nil
             recoveringSince = nil
+            LogManager.shared.info(
+                "Movement tracking recovered side=\(configuration.side.rawValue)",
+                category: .tracking
+            )
         }
     }
 
@@ -304,9 +323,9 @@ struct MovementActivity: TherapyActivity {
         return dwell.isHolding && time - lastValid <= Self.dwellTrackingGrace
     }
 
-    private mutating func loseTracking(at time: Double) {
+    private mutating func loseTracking(at time: Double, reason: String) {
         dwell.interrupt(at: time, grace: Self.dwellTrackingGrace)
-        noteTrackingLoss(at: time)
+        noteTrackingLoss(at: time, reason: reason)
 
         if lastValid.map({ time - $0 > 0.5 }) == true {
             phase = 0
@@ -347,13 +366,13 @@ struct MovementActivity: TherapyActivity {
         last = time
         let left = configuration.side == .left
         guard let joints = limbJoints(in: frame) else {
-            loseTracking(at: time)
+            loseTracking(at: time, reason: frame.joints.isEmpty ? "noSubject" : "limbJointsMissing")
             return
         }
         let (reference, anchor, tracked) = joints
         let scale = (reference - anchor).length
         guard scale > 0.03 else {
-            loseTracking(at: time)
+            loseTracking(at: time, reason: "shortReferenceSegment")
             return
         }
         guard (tracked - anchor).length > 0.03 else {
@@ -590,9 +609,11 @@ struct MovementActivity: TherapyActivity {
     private mutating func preview(_ frame: TrackingObservation) {
         let time = frame.timestamp
 
+        // The tracking status follows previews too, so the chip stays live while a cue plays.
         guard let joints = limbJoints(in: frame) else {
             let since = previewMissingSince ?? time
             previewMissingSince = since
+            noteTrackingLoss(at: time, reason: "preview")
 
             if time - since > Self.dwellTrackingGrace {
                 snapshot.guide = nil
@@ -605,8 +626,12 @@ struct MovementActivity: TherapyActivity {
         let scale = (reference - anchor).length
 
         guard scale > 0.03 else {
+            noteTrackingLoss(at: time, reason: "preview")
             return
         }
+
+        lastPreviewSeen = time
+        noteTrackingRecovery(at: time)
 
         guard let start, let target else {
             let calibrationTip = snapshot.guide?.calibrationTip

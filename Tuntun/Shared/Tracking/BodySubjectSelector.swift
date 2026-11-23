@@ -39,6 +39,17 @@ struct BodySubjectSelector {
         var centerOffset: Double = 0.5
     }
 
+    /// Which rule settled the latest frame, for diagnostics.
+    enum Decision: String {
+        case continuity
+        case anchored
+        case initial
+        /// Someone could be followed, but no rule picked them.
+        case ambiguous
+        /// Nobody in view had a confident torso.
+        case noTrackable
+    }
+
     /// How long a lost patient remains the preferred subject. Matches the exercise hold grace.
     static let continuityWindow = 1.5
     /// How long the patient's usual place is remembered after tracking is lost. Afterwards the
@@ -76,6 +87,14 @@ struct BodySubjectSelector {
     /// or pick-up at the usual place), so landmark smoothing never blends two people.
     private(set) var epoch = 0
 
+    /// The rule that settled the latest `select` call.
+    private(set) var lastDecision = Decision.noTrackable
+
+    /// Seconds since the usual place was last refreshed, or nil when none is remembered.
+    func anchorAge(at time: Double) -> Double? {
+        anchorTime.map { time - $0 }
+    }
+
     /// Forgets the patient. A new camera generation (restart, camera or orientation change)
     /// means positions are no longer comparable.
     mutating func reset() {
@@ -101,16 +120,28 @@ struct BodySubjectSelector {
         }
 
         guard !trackable.isEmpty else {
+            lastDecision = .noTrackable
             return nil
         }
 
         if let continuing = continuingIndex(in: candidates, among: trackable, at: time) {
+            lastDecision = .continuity
             remember(candidates[continuing], at: time)
             return continuing
         }
 
-        let found = anchoredIndex(in: candidates, among: trackable, at: time)
-            ?? initialIndex(in: candidates, among: trackable, at: time)
+        let found: Int?
+
+        if let anchored = anchoredIndex(in: candidates, among: trackable, at: time) {
+            lastDecision = .anchored
+            found = anchored
+        } else if let initial = initialIndex(in: candidates, among: trackable, at: time) {
+            lastDecision = .initial
+            found = initial
+        } else {
+            lastDecision = .ambiguous
+            found = nil
+        }
 
         guard let index = found else {
             return nil

@@ -17,8 +17,8 @@ import SwiftUI
 /// acceptance boundary). The hold progress arc is a `TMTherapyGuideBubble` laid exactly on the
 /// shader's outline, which keeps the bubble's completion acknowledgment. The caller decides
 /// `merge` from its own geometry; changes are eased with a short spring, and Reduce Motion
-/// applies them at once. A single circle may also `glide`: its centre and size then ease between
-/// tracking samples, so a circle fed at the camera rate moves at the display rate.
+/// applies them at once. The circles may also `glide`: their centres and sizes then ease between
+/// tracking samples, so circles fed at the camera rate move at the display rate.
 struct TMTherapyMergingGuide: View {
     enum Anchor {
         /// Both circles meet halfway and the merged circle grows slightly.
@@ -55,8 +55,7 @@ struct TMTherapyMergingGuide: View {
     var secondSymbol: String? = nil
     /// How `merge` changes ease; pass a curve without bounce for a calmer indicator.
     var mergeAnimation: Animation = .spring(duration: 0.35, bounce: 0.15)
-    /// Single circle only: eases the centre and diameter toward each new value. Nil places them
-    /// at once.
+    /// Eases both centres and diameters toward each new value. Nil places them at once.
     var glide: Animation? = nil
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -70,12 +69,20 @@ struct TMTherapyMergingGuide: View {
 
     @ViewBuilder
     private var content: some View {
-        if let glide, first == second, firstDiameter == nil {
-            // Geometry is kept out of the layer's own animatable data, so merging callers keep
-            // tracking their points exactly.
-            GlidingCircleLayer(guide: self, center: second, diameter: diameter)
-                .animation(reduceMotion ? nil : glide, value: second)
-                .animation(reduceMotion ? nil : glide, value: diameter)
+        if let glide {
+            // Geometry is kept out of the layer's own animatable data, so callers without a
+            // glide keep tracking their points exactly.
+            GlidingLayer(
+                guide: self,
+                first: first,
+                second: second,
+                firstDiameter: firstDiameter ?? diameter,
+                secondDiameter: diameter
+            )
+            .animation(reduceMotion ? nil : glide, value: first)
+            .animation(reduceMotion ? nil : glide, value: second)
+            .animation(reduceMotion ? nil : glide, value: diameter)
+            .animation(reduceMotion ? nil : glide, value: firstDiameter)
         } else {
             layer(
                 first: first,
@@ -150,31 +157,41 @@ extension TMTherapyMergingGuide {
     }
 }
 
-// MARK: - Gliding circle
+// MARK: - Gliding geometry
 
-/// Interpolates a single circle's centre and diameter frame by frame, then draws the layer at
+/// Interpolates both circles' centres and diameters frame by frame, then draws the layer at
 /// the interpolated geometry.
-private struct GlidingCircleLayer: View, Animatable {
+private struct GlidingLayer: View, Animatable {
     let guide: TMTherapyMergingGuide
-    var center: CGPoint
-    var diameter: CGFloat
+    var first: CGPoint
+    var second: CGPoint
+    var firstDiameter: CGFloat
+    var secondDiameter: CGFloat
 
-    var animatableData: AnimatablePair<CGPoint.AnimatableData, CGFloat> {
+    var animatableData: AnimatablePair<
+        AnimatablePair<CGPoint.AnimatableData, CGPoint.AnimatableData>,
+        AnimatablePair<CGFloat, CGFloat>
+    > {
         get {
-            AnimatablePair(center.animatableData, diameter)
+            AnimatablePair(
+                AnimatablePair(first.animatableData, second.animatableData),
+                AnimatablePair(firstDiameter, secondDiameter)
+            )
         }
         set {
-            center.animatableData = newValue.first
-            diameter = newValue.second
+            first.animatableData = newValue.first.first
+            second.animatableData = newValue.first.second
+            firstDiameter = newValue.second.first
+            secondDiameter = newValue.second.second
         }
     }
 
     var body: some View {
         guide.layer(
-            first: center,
-            second: center,
-            firstDiameter: diameter,
-            secondDiameter: diameter
+            first: first,
+            second: second,
+            firstDiameter: firstDiameter,
+            secondDiameter: secondDiameter
         )
     }
 }

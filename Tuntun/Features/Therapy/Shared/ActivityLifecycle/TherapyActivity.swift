@@ -276,7 +276,8 @@ func fixedBubbleRadius(diameter: Double, aspect: Double, viewport: TherapyViewpo
         return 0.05
     }
 
-    let height = min(viewport.height, viewport.width / aspect)
+    // The preview fills its frame (aspect-fill), as `CameraDisplayGeometry` maps it.
+    let height = max(viewport.height, viewport.width / aspect)
 
     return diameter / (height * 2)
 }

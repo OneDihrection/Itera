@@ -23,6 +23,9 @@ struct FoldTowelActivity: TherapyActivity {
     /// Joints used last frame, so a joint hovering at the confidence cutoff does not flicker.
     private var measuredJoints: Set<Int> = []
     private var lastMeasured = 0.0
+    /// The last preview frame that found the hand; kept apart from `lastMeasured` so previews
+    /// never bridge a scored dropout.
+    private var lastPreviewMeasured = 0.0
     private var viewport: TherapyViewport?
 
     /// Longest stretch of missing or weak evidence bridged by holding the last state.
@@ -43,7 +46,11 @@ struct FoldTowelActivity: TherapyActivity {
             if !suspended, last.map({ time - $0 > 0.15 }) == true {
                 loseTracking(at: time)
             }
-        case .guidanceCompleted, .preview:
+        case .preview(let frame):
+            if !suspended {
+                previewTracking(frame)
+            }
+        case .guidanceCompleted:
             break
         case .countdownFinished:
             if snapshot.phase == .countdown {
@@ -121,6 +128,37 @@ struct FoldTowelActivity: TherapyActivity {
         snapshot.instruction = phase == .countdown ? "session.countdown" : "towel.approach"
     }
 
+    /// The frame's hand when it is the exercised one and belongs to this frame.
+    private func exercisedHand(in frame: TrackingObservation) -> HandEvidence? {
+        guard let hand = frame.hand,
+              hand.generation == frame.generation,
+              hand.timestamp == frame.timestamp,
+              hand.side?.rawValue == configuration.side.rawValue else {
+            return nil
+        }
+
+        return hand
+    }
+
+    /// While a cue holds scoring back, only the tracking message follows the hand, so the
+    /// status chip stays live. Grip, cursor and fold sequence are left untouched.
+    private mutating func previewTracking(_ frame: TrackingObservation) {
+        guard frame.timestamp.isFinite else {
+            return
+        }
+
+        guard let hand = exercisedHand(in: frame),
+              TowelHandMeasurement(hand, retained: measuredJoints) != nil else {
+            if frame.timestamp - lastPreviewMeasured > Self.dropoutBridge {
+                snapshot.trackingMessage = "towel.trackingLost"
+            }
+            return
+        }
+
+        lastPreviewMeasured = frame.timestamp
+        snapshot.trackingMessage = nil
+    }
+
     private mutating func consume(_ frame: TrackingObservation) {
         guard frame.timestamp.isFinite, last.map({ frame.timestamp > $0 }) ?? true else {
             return
@@ -135,10 +173,7 @@ struct FoldTowelActivity: TherapyActivity {
         }
         last = frame.timestamp
         snapshot.imageAspect = frame.aspect
-        guard let hand = frame.hand,
-              hand.generation == frame.generation,
-              hand.timestamp == frame.timestamp,
-              hand.side?.rawValue == configuration.side.rawValue,
+        guard let hand = exercisedHand(in: frame),
               let measurement = TowelHandMeasurement(hand, retained: measuredJoints) else {
             // One missed or low-confidence frame keeps the last cursor and state instead of
             // flashing the hand away; the tick timeout still ends a real loss.

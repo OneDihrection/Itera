@@ -220,15 +220,45 @@ struct TMTherapyButton: View {
     var prominent = false
     /// With `pill`, fills the pill with the yellow brand color instead of the dark action color.
     var brand = false
+    /// No fill: the icon and title alone in `tint` (muted by default), for Pause beside End and
+    /// the quiet actions on rest pages. Ignores `pill`, `secondary` and `brand`.
+    var plain = false
+    /// Underlines the title, as the rest pages' plain actions do.
+    var underlined = false
+    /// The plain label's colour, such as `onBrand` over the long rest's yellow waves.
+    var tint: Color? = nil
     var extraVerticalPadding: CGFloat = 0
     let action: () -> Void
 
     var body: some View {
         if prominent {
             prominentButton
+        } else if plain {
+            plainButton
         } else {
             standardButton
         }
+    }
+
+    private var plainButton: some View {
+        Button(action: action) {
+            HStack(spacing: 12) {
+                if let symbol {
+                    Image(systemName: symbol)
+                }
+                Text(title)
+                    .underline(underlined)
+            }
+            .typography(.headline)
+            .foregroundStyle(tint ?? TherapyPalette.muted)
+            .frame(maxWidth: .infinity, minHeight: 60)
+            .padding(.horizontal, 20)
+            .padding(.vertical, extraVerticalPadding)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(TMTherapySoundButtonStyle())
+        .disabled(disabled)
+        .opacity(disabled ? 0.5 : 1)
     }
 
     private var prominentButton: some View {

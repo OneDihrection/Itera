@@ -22,7 +22,12 @@ enum NarrationAudioSession {
     /// Launch argument that restores `.voiceChat` while listening, to compare on a device.
     static let voiceChatComparisonArgument = "-TuntunVoiceChatAudioMode"
 
+    /// Guards `isActive` and `activationRequests` only, so main-thread readers never wait for
+    /// the audio hardware.
     private static let lock = NSLock()
+    /// Serializes the blocking `AVAudioSession` calls between `sessionQueue` and
+    /// `AudioInputWorker`'s queue. Never taken on the main thread.
+    private static let hardwareLock = NSLock()
     private static var isActive = false
     /// Counts activation requests, so a deactivation scheduled earlier can tell that someone
     /// has needed the session since and must not switch it off under them.
@@ -72,8 +77,8 @@ enum NarrationAudioSession {
     /// rate, which clicks and glitches music and narration. Every caller therefore asks for the
     /// same configuration, and repeated calls are no-ops apart from the speaker check.
     private static func configureAndActivate(allowsBluetoothMicrophone: Bool) throws {
-        lock.lock()
-        defer { lock.unlock() }
+        hardwareLock.lock()
+        defer { hardwareLock.unlock() }
 
         let session = AVAudioSession.sharedInstance()
         let changed = try configureCategory(
@@ -81,18 +86,28 @@ enum NarrationAudioSession {
             allowsBluetoothMicrophone: allowsBluetoothMicrophone
         )
 
-        guard changed || !isActive else {
+        guard changed || !isSessionActive else {
             enforceSpeakerIfNeeded(session)
             return
         }
 
         try session.setActive(true)
-        isActive = true
+        setActiveState(true)
         enforceSpeakerIfNeeded(session)
 
         #if DEBUG
         LogManager.shared.info("Audio session configured category=\(session.category.rawValue)", category: .audio)
         #endif
+    }
+
+    /// Whether the shared session is active now, whoever activated or deactivated it.
+    ///
+    /// Main-actor players check this before playing: `AVAudioPlayer` activates an inactive
+    /// session synchronously on the main thread, which stalls the UI.
+    static var isSessionActive: Bool {
+        lock.lock()
+        defer { lock.unlock() }
+        return isActive
     }
 
     /// The current activation count, captured when a deactivation is requested.
@@ -108,11 +123,14 @@ enum NarrationAudioSession {
     /// narrator that started in between: the readiness check before a session stops listening
     /// just as the session's own audio starts, and a late deactivation left the whole session
     /// mute.
+    ///
+    /// The comparison and `setActive(false)` run under `hardwareLock`: an activation counted in
+    /// between waits for the lock and then finds the session inactive, so it reactivates it.
     static func deactivate(ifUnchangedSince token: Int) {
-        lock.lock()
-        defer { lock.unlock() }
+        hardwareLock.lock()
+        defer { hardwareLock.unlock() }
 
-        guard activationRequests == token else {
+        guard activationToken == token else {
             #if DEBUG
             LogManager.shared.info("Audio session deactivation skipped: reactivated since it was requested", category: .audio)
             #endif
@@ -148,15 +166,20 @@ enum NarrationAudioSession {
 
     /// Call on every route change: when headphones or a Bluetooth device disconnect, a
     /// recording category can fall back to the quiet receiver instead of the loud speaker.
+    ///
+    /// Route changes are posted on the main queue while the session is being reconfigured, so the
+    /// check and the speaker override run on `sessionQueue`.
     static func handleRouteChange() {
-        lock.lock()
-        defer { lock.unlock() }
+        sessionQueue.async {
+            hardwareLock.lock()
+            defer { hardwareLock.unlock() }
 
-        guard isActive else {
-            return
+            guard isSessionActive else {
+                return
+            }
+
+            enforceSpeakerIfNeeded(AVAudioSession.sharedInstance())
         }
-
-        enforceSpeakerIfNeeded(AVAudioSession.sharedInstance())
     }
 
     // MARK: - Private
@@ -221,10 +244,17 @@ enum NarrationAudioSession {
         }
     }
 
-    /// Callers hold `lock`.
+    private static func setActiveState(_ value: Bool) {
+        lock.lock()
+        defer { lock.unlock() }
+
+        isActive = value
+    }
+
+    /// Callers hold `hardwareLock`.
     private static func deactivateSession() {
         try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
-        isActive = false
+        setActiveState(false)
     }
 
     private static var playAndRecordMode: AVAudioSession.Mode {

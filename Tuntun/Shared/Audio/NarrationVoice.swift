@@ -24,7 +24,27 @@ enum NarrationVoice {
     ///
     /// Prefers an exact language match, then the same base language ("id"), and skips
     /// novelty voices and Personal Voice. Returns `nil` only when no voice exists at all.
+    ///
+    /// `speechVoices()` is slow and every session start and long rest asks again, so the choice
+    /// is kept per language for the life of the process. A voice downloaded meanwhile is picked
+    /// up on the next launch.
     static func best(for language: String) -> AVSpeechSynthesisVoice? {
+        cacheLock.lock()
+        defer { cacheLock.unlock() }
+
+        if let cached = cache[language] {
+            return cached
+        }
+
+        let voice = selectBest(for: language)
+        cache[language] = voice
+        return voice
+    }
+
+    private static let cacheLock = NSLock()
+    private static var cache: [String: AVSpeechSynthesisVoice?] = [:]
+
+    private static func selectBest(for language: String) -> AVSpeechSynthesisVoice? {
         let candidates = AVSpeechSynthesisVoice.speechVoices().filter(isNarrationVoice)
         let base = language.split(separator: "-").first.map(String.init) ?? language
 

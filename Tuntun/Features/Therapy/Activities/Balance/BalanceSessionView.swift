@@ -154,11 +154,8 @@ struct TMBalanceSessionView<ViewModel: BalanceSessionViewModelProtocol>: View {
 
     private var live: some View {
         TMTherapyExerciseLiveLayout(
-            heading: model.calibrationMessage == nil
-                ? heading
-                : TMTherapyExerciseHeading(eyebrow: eyebrow, title: Text("stage.calibration")),
+            heading: model.calibrationMessage == nil ? heading : .calibration,
             cuePlacement: .video(videoBounds),
-            demoTitle: "session.followMovement",
             repetitions: (model.snapshot.metrics.completedTouches, model.snapshot.goal),
             sets: (model.setNumber, model.totalSets),
             pauseTitle: "session.pauseAction",
@@ -200,7 +197,11 @@ struct TMBalanceSessionView<ViewModel: BalanceSessionViewModelProtocol>: View {
 
             cameraStatus
         }
-        .trackingStatusChip(model.trackingPositioned, videoBounds: videoBounds)
+        .trackingStatusChip(
+            model.trackingPositioned,
+            muted: model.trackingMuted,
+            videoBounds: videoBounds
+        )
         .background(TherapyPalette.canvas)
         .background {
             GeometryReader { proxy in
@@ -361,9 +362,9 @@ struct TMBalanceSessionView<ViewModel: BalanceSessionViewModelProtocol>: View {
         TMTherapySetSummary(
             heading: heading,
             headline: Text("session.allDoneTitle"),
+            total: AppLanguage.selected.attributedString("session.total \(repetitionsDone)"),
             message: Text("session.allDoneMessage"),
-            results: results,
-            total: Text("session.total \(repetitionsDone)")
+            results: results
         ) {
             if !automaticallyRests {
                 TMTherapyFinishActions(
