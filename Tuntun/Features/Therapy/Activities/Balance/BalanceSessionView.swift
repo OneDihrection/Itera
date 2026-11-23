@@ -70,6 +70,9 @@ struct TMBalanceSessionView<ViewModel: BalanceSessionViewModelProtocol>: View {
             debugFinishButton
                 .zIndex(4)
 
+            debugSkipRestButton
+                .zIndex(4)
+
             loadingOverlay
                 .zIndex(5)
         }
@@ -131,6 +134,18 @@ struct TMBalanceSessionView<ViewModel: BalanceSessionViewModelProtocol>: View {
             .padding(.top, 12)
             .padding(.trailing, 20)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
+        }
+        #endif
+    }
+
+    /// Debug builds only: ends the running rest between sets and starts the next set's countdown.
+    @ViewBuilder
+    private var debugSkipRestButton: some View {
+        #if DEBUG
+        if model.restBreath != nil, !model.paused, !model.allSetsDone {
+            TMDebugSkipRestButton {
+                model.skipRestForDebug()
+            }
         }
         #endif
     }

@@ -84,6 +84,47 @@ struct TMDebugActionButton: View {
     }
 }
 
+/// A quiet menu marked as debug-only, for developer choices such as starting any plan exercise.
+/// Its label matches `TMTherapyTextButton`, which a `Menu` cannot reuse because it is a button.
+struct TMDebugMenu<Content: View>: View {
+    let title: LocalizedStringKey
+    var symbol: String? = nil
+    @ViewBuilder let content: () -> Content
+
+    var body: some View {
+        Menu {
+            content()
+        } label: {
+            HStack(spacing: 8) {
+                if let symbol {
+                    Image(systemName: symbol)
+                }
+                Text(title)
+            }
+            .typography(size: 18, weight: .semiBold, relativeTo: .subheadline)
+            .foregroundStyle(TherapyPalette.muted)
+            .padding(.horizontal, 14)
+            .frame(minHeight: 48)
+            .contentShape(Rectangle())
+        }
+        .debugOnly()
+    }
+}
+
+/// "Skip rest" for a full-screen rest page, pinned to its bottom centre so it never meets the
+/// header's debug "Finish exercise" action. The caller decides when a rest can be skipped and
+/// sends its own session command; the button only forwards the tap.
+struct TMDebugSkipRestButton: View {
+    var title: LocalizedStringKey = "debug.skipRest"
+    let action: () -> Void
+
+    var body: some View {
+        TMDebugActionButton(title: title, symbol: "forward.fill", action: action)
+            .padding(.bottom, 40)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
+    }
+}
+
 extension View {
     /// Marks a debug-build control with a dashed orange outline and a "DEBUG" corner ribbon.
     /// Use only inside `#if DEBUG`; the modifier itself does not exist in Release builds.

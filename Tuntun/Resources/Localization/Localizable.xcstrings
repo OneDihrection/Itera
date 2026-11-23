@@ -2850,6 +2850,60 @@
         }
       }
     },
+    "debug.skipCountdown" : {
+      "comment" : "Debug builds only: ends the countdown after the plan's long rest and opens the next exercise.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Skip countdown"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lewati hitung mundur"
+          }
+        }
+      }
+    },
+    "debug.skipRest" : {
+      "comment" : "Debug builds only: ends the current rest at once, as if it had run out.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Skip rest"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lewati istirahat"
+          }
+        }
+      }
+    },
+    "debug.startAnyExercise" : {
+      "comment" : "Debug builds only: menu that opens any plan exercise's intro, whatever the earlier exercises' state.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Start any exercise"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mulai latihan mana pun"
+          }
+        }
+      }
+    },
     "debug.startExercise" : {
       "comment" : "Debug builds only: skips the plan intro narration and opens the exercise at once.",
       "extractionState" : "manual",
