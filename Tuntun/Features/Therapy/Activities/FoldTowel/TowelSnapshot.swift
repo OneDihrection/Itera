@@ -31,14 +31,18 @@ struct TowelSnapshot {
 
 /// Camera-derived pinch is a visible gesture estimate, never grip force.
 struct TowelHandMeasurement {
-    let position: TherapyPoint
+    /// Palm center (wrist plus knuckles): low-noise, it carries the hand's movement.
+    let palm: TherapyPoint
+    /// Thumb- and index-tip midpoint minus `palm`; `nil` unless both tips are measurable.
+    /// The cursor is `palm` plus this offset, so it sits where the patient pinches.
+    let pinchOffset: TherapyPoint?
     /// Thumb-tip to index-tip distance over palm length; small when pinched, `nil` when not measurable.
     let pinch: Double?
 
     /// Joints that contributed to this measurement; pass back as `retained` for the next frame.
     private(set) var joints: Set<Int> = []
 
-    /// A joint enters at confidence 0.5 but stays while it keeps at least 0.35, so the palm-center
+    /// A joint enters at confidence 0.5 but stays while it keeps at least 0.35, so the cursor's
     /// joint set does not flicker (and step the cursor) when one joint hovers at the cutoff.
     init?(_ hand: HandEvidence, retained: Set<Int> = []) {
         guard hand.points.count == 21,
@@ -67,16 +71,31 @@ struct TowelHandMeasurement {
             pinch = nil
         }
 
-        // The palm center (wrist plus knuckles) barely moves when the thumb and index close, unlike the
-        // wrist alone, whose detected position can shift with the hand pose.
+        // The palm (wrist plus knuckles) still decides whether a hand is present.
         let palm = ([0] + [5, 9, 13, 17]).filter(usable)
         guard palm.count >= 3 else { return nil }
         used.formUnion(palm)
-        joints = used
+
         let count = Double(palm.count)
-        position = TherapyPoint(
+        let center = TherapyPoint(
             x: palm.reduce(0) { $0 + hand.points[$1].x } / count,
             y: palm.reduce(0) { $0 + hand.points[$1].y } / count
         )
+        self.palm = center
+
+        // The thumb and index tips meet near their midpoint, so the offset changes little as they
+        // close; the activity smooths it separately from the palm.
+        if [4, 8].allSatisfy(usable) {
+            used.formUnion([4, 8])
+            let midpoint = TherapyPoint(
+                x: (hand.points[4].x + hand.points[8].x) / 2,
+                y: (hand.points[4].y + hand.points[8].y) / 2
+            )
+            pinchOffset = midpoint - center
+        } else {
+            pinchOffset = nil
+        }
+
+        joints = used
     }
 }

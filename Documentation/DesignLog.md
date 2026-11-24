@@ -2419,3 +2419,15 @@ Verification: `xcodegen generate`, then Debug and Release iOS Simulator builds w
 At the product owner's request, the towel workspace no longer draws the step strip (Grab, Slide, Release) or the four fold dots over the camera. The strip sat in the preview's top-left corner over the tracking status chip, which stays where it is. The fold number is still shown in the session's side panel, and the grab handle, chevron trail and goal zone still mark the current step. This supersedes the top-corner step strip and fold dots in *Towel folding: smooth tracking and guided path* and the "step strip still follow every phase" wording in *Quiet towel practice*. The demonstration already left them out. `TMTherapyStepStrip` and `TMTherapyProgressDots` stay in the design system.
 
 Verification: `xcodegen generate` and an iOS Simulator build. Pending on the M1 iPad: during fold towel practice only the tracking status chip shows in the camera's top-left corner and nothing shows in the top-right corner.
+
+## Fold towel cursor on the pinch point (2026-11-24)
+
+At the product owner's request, the fold towel hand circle sits at the midpoint of the thumb and index fingertips instead of the palm centre, so it marks where the patient pinches. `TowelHandMeasurement` still needs at least three usable palm joints (wrist and knuckles 5, 9, 13, 17) to count a hand as present. When either fingertip is not measurable it falls back to the palm centre, and the grip is then uncertain anyway. Drawing and acceptance still share one filtered point, so the grab and goal zones are judged at the pinch point too. This supersedes the palm-centre cursor chosen because it barely moves while pinching: the fingertips meet near their midpoint and `HandCursorFilter` smooths the remaining movement.
+
+Verification: `xcodegen generate` and an iOS Simulator build. Pending on the M1 iPad: the circle stays between the thumb and index tip while open and pinched, does not visibly jump on pinch or release, and grab and release still trigger inside the zones.
+
+## Smoother fold towel pinch cursor (2026-11-24)
+
+At the product owner's request, the fold towel pinch-point cursor is smoothed more. The fingertip midpoint is much noisier than the palm centre, but lowering the single cursor filter's cutoff would make the whole hand lag. The cursor is now split into two parts. The palm centre carries hand movement through the existing `HandCursorFilter` (1 Hz at rest, speed gain 10). The palm-to-pinch offset goes through a second `HandCursorFilter` (0.5 Hz at rest, speed gain 3; starting values pending device tuning). When a fingertip is not measurable, the last smoothed offset is held, so the cursor no longer jumps back to the palm. This refines the fallback in *Fold towel cursor on the pinch point*. Drawing and acceptance still share the one resulting point, and the display spring is unchanged.
+
+Verification: `xcodegen generate` and an iOS Simulator build. Pending on the M1 iPad: the circle is steady at the pinch point while still, follows a slide without visible lag, does not jump on pinch, release or a hidden fingertip, and grab and release still trigger inside the zones.

@@ -14,9 +14,9 @@ import Foundation
 /// acceptance, so what the patient sees is what is scored.
 struct HandCursorFilter {
     /// Cutoff in Hz at rest. Lower removes more jitter but adds lag while nearly still.
-    private let minimumCutoff = 1.0
+    private let minimumCutoff: Double
     /// How quickly the cutoff rises with speed (normalized image units per second).
-    private let speedGain = 10.0
+    private let speedGain: Double
     private let derivativeCutoff = 1.0
     /// A gap longer than this means evidence was lost; the next sample starts a fresh track.
     private let maximumGap = 0.3
@@ -25,6 +25,16 @@ struct HandCursorFilter {
     private var previousRaw: TherapyPoint?
     private var velocity = TherapyPoint(x: 0, y: 0)
     private var timestamp: Double?
+
+    /// The defaults suit a whole-hand cursor; a slowly changing quantity such as a fingertip
+    /// offset takes a lower cutoff and gain.
+    init(
+        minimumCutoff: Double = 1.0,
+        speedGain: Double = 10.0
+    ) {
+        self.minimumCutoff = minimumCutoff
+        self.speedGain = speedGain
+    }
 
     mutating func reset() {
         filtered = nil
