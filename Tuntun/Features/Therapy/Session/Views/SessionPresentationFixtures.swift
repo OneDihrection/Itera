@@ -242,7 +242,7 @@ private final class PreviewPlan: DailyPlanSessionReporting {
     func end() {}
     func markFingerScriptRest(_ side: HandSide?) {}
     func markArmRaiseRest(_ side: TherapySide?) {}
-    func markBalanceScriptRest(_ scripted: Bool) {}
+    func markScriptedRest(_ scripted: Bool) {}
 }
 
 @MainActor

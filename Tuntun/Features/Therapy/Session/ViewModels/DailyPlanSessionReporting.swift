@@ -22,8 +22,9 @@ protocol DailyPlanSessionReporting: AnyObject {
     func end()
     func markFingerScriptRest(_ side: HandSide?)
     func markArmRaiseRest(_ side: TherapySide?)
-    /// A Balancing session that a 2026-11-23 script narrated finished; the long rest follows suit.
-    func markBalanceScriptRest(_ scripted: Bool)
+    /// A session that a 2026-11-23/24 script narrated finished (Balancing, elbow bend, directional
+    /// reach); the long rest follows suit.
+    func markScriptedRest(_ scripted: Bool)
 }
 
 enum DailyPlanTiming {

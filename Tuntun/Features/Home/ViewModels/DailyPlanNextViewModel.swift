@@ -65,6 +65,7 @@ final class DailyPlanNextViewModel: DailyPlanNextViewModelProtocol {
         return plan.usesFingerScript(itemID: itemID)
             || plan.usesArmRaiseScript(itemID: itemID)
             || plan.usesBalanceScript(itemID: itemID)
+            || plan.usesGuidedScript(itemID: itemID)
     }
 
     var usesScriptedLongRest: Bool {

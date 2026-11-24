@@ -3769,6 +3769,499 @@
         }
       }
     },
+    "directionalReach.left.firstSet.rep.1.cross" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Slowly move your left hand across to the right as far as you can."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Perlahan, gerakkan tangan kirimu menyilang ke arah kanan sejauh yang kamu bisa."
+          }
+        }
+      }
+    },
+    "directionalReach.left.firstSet.rep.1.side" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Raise your left arm straight out to the side as far as you can."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Angkat tangan kiri lurus ke samping sejauh yang kamu bisa."
+          }
+        }
+      }
+    },
+    "directionalReach.left.firstSet.rep.1.start" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Let's begin, keep both arms straight at your sides."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kita mulai, biarkan kedua tangan tetap lurus di samping tubuh."
+          }
+        }
+      }
+    },
+    "directionalReach.left.firstSet.rep.2.cross" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Let's continue, move your left hand across to the right."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kita lanjut, gerakkan tangan kiri menyilang ke arah kanan."
+          }
+        }
+      }
+    },
+    "directionalReach.left.firstSet.rep.2.side" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Raise your left arm straight out to the side."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Angkat tangan kiri lurus ke samping."
+          }
+        }
+      }
+    },
+    "directionalReach.left.firstSet.rep.2.up" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Raise your left arm straight up."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Angkat tangan kiri lurus ke atas."
+          }
+        }
+      }
+    },
+    "directionalReach.left.firstSet.rep.3.cross" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Left hand across to the right."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tangan kiri menyilang ke arah kanan."
+          }
+        }
+      }
+    },
+    "directionalReach.left.firstSet.rep.3.side" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Raise your left arm to the side."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Angkat tangan kiri ke samping."
+          }
+        }
+      }
+    },
+    "directionalReach.left.firstSet.rep.3.up" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Raise your left arm up."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Angkat tangan kiri ke atas."
+          }
+        }
+      }
+    },
+    "directionalReach.left.firstSet.rep.4.cross" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Across to the right."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Menyilang ke arah kanan."
+          }
+        }
+      }
+    },
+    "directionalReach.left.firstSet.rep.4.side" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Raise it to the side."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Angkat ke samping."
+          }
+        }
+      }
+    },
+    "directionalReach.left.firstSet.rep.4.up" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Raise it up."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Angkat ke atas."
+          }
+        }
+      }
+    },
+    "directionalReach.left.firstSet.rep.5.cross" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Last one, across to the right."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Terakhir, menyilang ke arah kanan."
+          }
+        }
+      }
+    },
+    "directionalReach.left.intro.calibration" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Before we start, we will adjust to your position and how you can move."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sebelum mulai, kita akan menyesuaikan posisi dan kemampuan gerakmu terlebih dahulu."
+          }
+        }
+      }
+    },
+    "directionalReach.left.intro.purpose" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This exercise helps train reaching in different directions, like picking things up from a table or shelf."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Latihan ini membantu melatih meraih ke berbagai arah, seperti saat mengambil barang di meja atau rak."
+          }
+        }
+      }
+    },
+    "directionalReach.left.intro.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Next, we will do Directional Reach."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Selanjutnya kita akan latihan Jangkauan Terarah."
+          }
+        }
+      }
+    },
+    "directionalReach.left.laterSet.rep.1.cross" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Move your left hand across to the right."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gerakkan tangan kiri menyilang ke arah kanan."
+          }
+        }
+      }
+    },
+    "directionalReach.left.laterSet.rep.1.start" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Keep both arms straight at your sides."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Biarkan kedua tangan tetap lurus di samping tubuh."
+          }
+        }
+      }
+    },
+    "directionalReach.left.prep.cross" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Now move your left hand across to the right as far as you can."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sekarang, gerakkan tangan kirimu menyilang ke arah kanan sejauh yang kamu bisa."
+          }
+        }
+      }
+    },
+    "directionalReach.left.prep.crossReturn" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lower your left arm back to your side."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Turunkan kembali tangan kiri ke samping tubuh."
+          }
+        }
+      }
+    },
+    "directionalReach.left.prep.directions" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "In this exercise you will move in three directions: reaching to the right, to the side, and up."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dalam latihan ini, ada tiga arah gerakan yang akan kamu lakukan, yaitu menjangkau ke arah kanan, ke samping, dan ke atas."
+          }
+        }
+      }
+    },
+    "directionalReach.left.prep.side" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Next, raise your left arm straight out to the side as far as you can."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Selanjutnya, angkat tangan kiri lurus ke samping sejauh yang kamu bisa."
+          }
+        }
+      }
+    },
+    "directionalReach.left.prep.sideReturn" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lower your left arm again."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Turunkan kembali tangan kiri."
+          }
+        }
+      }
+    },
+    "directionalReach.left.prep.start" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "We start with both arms straight and relaxed at your sides."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kita mulai dari biarkan kedua tangan lurus dan rileks di samping tubuh."
+          }
+        }
+      }
+    },
+    "directionalReach.left.prep.up" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Last, raise your left arm straight up as far as you can."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Terakhir, angkat tangan kiri lurus ke atas sejauh yang kamu bisa."
+          }
+        }
+      }
+    },
+    "directionalReach.left.prep.upReturn" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lower it back to your side."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Turunkan kembali ke samping tubuh."
+          }
+        }
+      }
+    },
+    "directionalReach.left.prep.visible" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Make sure your nose, both shoulders, elbows and wrists are visible to the camera."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pastikan hidung, kedua bahu, siku, dan pergelangan tangan terlihat di kamera."
+          }
+        }
+      }
+    },
+    "directionalReach.left.return.back" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lower it again."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Turunkan kembali."
+          }
+        }
+      }
+    },
+    "directionalReach.left.return.short" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lower it."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Turunkan."
+          }
+        }
+      }
+    },
     "done.messagePartial" : {
       "localizations" : {
         "en" : {
@@ -3813,6 +4306,261 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Lihat Progres"
+          }
+        }
+      }
+    },
+    "elbowBend.left.firstSet.rep.1.return" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Straighten it again at your side. Hold."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Luruskan kembali di samping tubuh. Tahan."
+          }
+        }
+      }
+    },
+    "elbowBend.left.firstSet.rep.1.target" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Let's begin. Bend your left elbow as far as you can. Hold."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Yuk kita mulai. Tekuk siku lengan kiri sejauh yang kamu bisa. Tahan."
+          }
+        }
+      }
+    },
+    "elbowBend.left.firstSet.rep.2.return" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Straighten it at your side."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Luruskan di samping tubuh."
+          }
+        }
+      }
+    },
+    "elbowBend.left.firstSet.rep.2.target" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bend your left elbow again."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tekuk kembali siku lengan kiri."
+          }
+        }
+      }
+    },
+    "elbowBend.left.firstSet.rep.3.return" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Straighten it again."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Luruskan kembali."
+          }
+        }
+      }
+    },
+    "elbowBend.left.firstSet.rep.3.target" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bend your left elbow."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tekuk siku lengan kiri."
+          }
+        }
+      }
+    },
+    "elbowBend.left.firstSet.rep.4.target" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Let's go on, bend your left elbow."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kita lanjut lagi, tekuk siku lengan kiri."
+          }
+        }
+      }
+    },
+    "elbowBend.left.intro.purpose" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This exercise helps train bending and straightening your elbow, like bringing food to your mouth."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Latihan ini membantu melatih menekuk dan meluruskan siku, seperti saat menyuap makanan ke mulut."
+          }
+        }
+      }
+    },
+    "elbowBend.left.intro.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Next, we will do Elbow Bend."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Selanjutnya kita akan latihan Tekuk Siku."
+          }
+        }
+      }
+    },
+    "elbowBend.left.laterSet.rep.1.target" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bend your left elbow as far as you can. Hold."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tekuk siku lengan kiri sejauh yang kamu bisa. Tahan."
+          }
+        }
+      }
+    },
+    "elbowBend.left.prep.return" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Straighten it again at your side."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Luruskan kembali di samping tubuh."
+          }
+        }
+      }
+    },
+    "elbowBend.left.prep.start" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Let both arms rest straight and relaxed at your sides. Hold."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Biarkan kedua tangan lurus dan rileks di samping tubuh. Tahan."
+          }
+        }
+      }
+    },
+    "elbowBend.left.prep.target" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Now slowly bend your left elbow as far as you can. Hold."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sekarang, perlahan tekuk siku lengan kiri sejauh yang kamu bisa. Tahan."
+          }
+        }
+      }
+    },
+    "elbowBend.left.prep.turn" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "We start with your left arm, so turn your body slightly to the right."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kita akan mulai latihan dari tangan kiri. Jadi, arahkan tubuhmu sedikit menyerong ke kanan."
+          }
+        }
+      }
+    },
+    "elbowBend.left.prep.visible" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Make sure your shoulders, elbows and wrists are visible to the camera."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pastikan bahu, siku, dan pergelangan tangan terlihat di kamera."
           }
         }
       }

@@ -414,7 +414,7 @@ struct TMBalanceSessionView<ViewModel: BalanceSessionViewModelProtocol>: View {
                 return
             }
 
-            plan.markBalanceScriptRest(model.usesScript)
+            plan.markScriptedRest(model.usesScript)
             plan.finish(completed: completed)
         }
     }

@@ -121,6 +121,7 @@ struct TMTherapySessionView<ViewModel: TherapySessionViewModelProtocol>: View {
             if id != nil, let summary = model.snapshot.summary,
                 !summary.stopped, !summary.interrupted {
                 plan.markArmRaiseRest(model.snapshot.usesArmRaiseScript ? model.snapshot.armRaiseScriptSide : nil)
+                plan.markScriptedRest(model.snapshot.usesGuidedScript && !model.snapshot.usesArmRaiseScript)
                 celebrationStart = Date()
             }
         }
@@ -251,7 +252,7 @@ struct TMTherapySessionView<ViewModel: TherapySessionViewModelProtocol>: View {
         if model.snapshot.stage == .rest, let breath = model.snapshot.guidedSetBreathing,
            !model.cameraDenied, model.voiceReady {
             TMTherapyBreathingRest(
-                cue: LocalizedStringKey(breath.cueKey(prefix: model.snapshot.armRaiseRestPrefix)),
+                cue: LocalizedStringKey(breath.cueKey(prefix: model.snapshot.scriptRestPrefix)),
                 intensity: breath.intensity,
                 paused: model.snapshot.paused,
                 pause: { model.command(.pause) },

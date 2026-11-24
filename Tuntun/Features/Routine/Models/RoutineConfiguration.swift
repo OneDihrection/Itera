@@ -25,12 +25,25 @@ struct RoutineExercise: Identifiable, Codable, Equatable {
         case id, kind, sides, firstSide, leftGoal, rightGoal, rounds, sets
     }
 
-    init(kind: TherapyKind, sides: RoutineSides = .both) {
+    /// - Parameter sides: the exercise's sides; without one, `defaultSides(for:)`.
+    init(kind: TherapyKind, sides: RoutineSides? = nil) {
         self.kind = kind
-        self.sides = sides
+        self.sides = sides ?? Self.defaultSides(for: kind)
         if kind == .foldTowel {
             leftGoal = 1
             rightGoal = 1
+        }
+    }
+
+    /// Elbow bend and directional reach start on the left arm, which their Indonesian 2026-11-24
+    /// scripts are written for; every other exercise starts with both sides. A saved routine or a
+    /// side chosen in Settings keeps its own.
+    static func defaultSides(for kind: TherapyKind) -> RoutineSides {
+        switch kind {
+        case .elbowBend, .directionalReach:
+            return .left
+        default:
+            return .both
         }
     }
 

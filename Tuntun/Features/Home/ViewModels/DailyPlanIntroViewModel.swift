@@ -119,7 +119,10 @@ final class DailyPlanIntroViewModel: DailyPlanIntroViewModelProtocol {
     }
 
     private var usesScript: Bool {
-        usesArmRaiseScript || plan.usesFingerScript(itemID: itemID) || plan.usesBalanceScript(itemID: itemID)
+        usesArmRaiseScript
+            || plan.usesFingerScript(itemID: itemID)
+            || plan.usesBalanceScript(itemID: itemID)
+            || plan.usesGuidedScript(itemID: itemID)
     }
 
     var countdownSeconds: Int? {
@@ -326,6 +329,10 @@ final class DailyPlanIntroViewModel: DailyPlanIntroViewModelProtocol {
     private var scriptIntroduction: [NarrationLine] {
         if plan.usesBalanceScript(itemID: itemID) {
             return plan.balanceIntroductionLines(itemID: itemID)
+        }
+
+        if plan.usesGuidedScript(itemID: itemID) {
+            return plan.guidedIntroductionLines(itemID: itemID)
         }
 
         guard usesArmRaiseScript else {
