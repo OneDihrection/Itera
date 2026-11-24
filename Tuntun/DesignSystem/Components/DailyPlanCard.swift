@@ -32,6 +32,7 @@ struct TMDailyPlanCard: View {
     let state: TMDailyPlanCardState
     let isLast: Bool
     var isInteractionEnabled = true
+    var artwork: String? = nil
     let action: () -> Void
 
     var body: some View {
@@ -80,7 +81,7 @@ struct TMDailyPlanCard: View {
     private func stepMarker(step: Int, dashed: Bool) -> some View {
         ZStack {
             Circle()
-                .fill(TherapyPalette.canvas)
+                .fill(TherapyPalette.progressCanvas)
 
             Circle()
                 .strokeBorder(
@@ -114,12 +115,9 @@ struct TMDailyPlanCard: View {
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
 
-                    RoundedRectangle(cornerRadius: 28)
-                        .fill(tileColor)
-                        .frame(width: 104, height: 104)
-                        .accessibilityHidden(true)
+                    illustration
                 }
-                .frame(height: 104)
+                .frame(height: artwork == nil ? 104 : 108)
 
                 Rectangle()
                     .fill(TherapyPalette.planDivider)
@@ -131,6 +129,20 @@ struct TMDailyPlanCard: View {
         }
         .buttonStyle(TMTherapySoundButtonStyle())
         .disabled(!state.isAvailable || !isInteractionEnabled)
+    }
+
+    @ViewBuilder
+    private var illustration: some View {
+        if let artwork {
+            TMExerciseCardArtwork(name: artwork)
+                .saturation(state.isAvailable ? 1 : 0)
+                .opacity(state.isAvailable ? 1 : 0.4)
+        } else {
+            RoundedRectangle(cornerRadius: 28)
+                .fill(tileColor)
+                .frame(width: 104, height: 104)
+                .accessibilityHidden(true)
+        }
     }
 
     private var metrics: some View {

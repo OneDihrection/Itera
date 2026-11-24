@@ -182,3 +182,5 @@ Components/TherapyDetailStats.swift owns the panel's pieces: `TMDetailStatTile` 
 `TMHistoryCard` and `TMMonthlyCalendar` share the existing `TherapyPalette.canvas` background (#F9F9F9 in light mode, adaptive in dark mode). The blue `historyCard` token remains for exercise-detail call-outs and replay surfaces.
 
 `TherapyPalette.progressCanvas` uses the system background (#FFFFFF in light mode) for the Progress root, daily history page and outlined summary header. Calendar and history-card fills retain `canvas` (#F9F9F9); the calendar has no outline, matching the supplied reference. Both tokens adapt in dark mode.
+
+`TMExerciseCardArtwork` (Components/TherapyArtwork.swift) shares the static photographic card slot between `TMDailyPlanCard` and `TMHistoryCard`: asset name only, 300 × 108 pt, aspect-fit, 12 pt rounded corners and a 1.5 pt `TherapyPalette.outline` inset border. Both cards accept optional `artwork`; without it they retain their placeholder or badge. The image is decorative because the card already names the exercise.

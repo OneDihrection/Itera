@@ -2437,3 +2437,146 @@ Verification: `xcodegen generate` and an iOS Simulator build. Pending on the M1 
 At the product owner's request, the results card on the set-done and all-done pages (`TMTherapySetSummary`) is sized to its sets instead of always spanning 65% of the width. The set columns share a minimum width so they stay evenly spaced, and the card is centred. When the sets need more than 65% of the width (the finger all-done page lists every movement's sets), they fall back to sharing that capped width as before (`ViewThatFits`). Colours, typography and contents are unchanged.
 
 Verification: `xcodegen generate` and an iOS Simulator build. The `allDone` and `setDone` debug galleries were checked in the Simulator. Pending on the M1 iPad.
+
+
+## Sit-to-stand card photograph (2026-11-24)
+
+The user supplied `fix-sit-to-stand-card-zoomed.png` and requested it on the sit-to-stand daily-plan card in Beranda and the corresponding history cards on the daily progress page. The original PNG is copied unchanged into `Tuntun/Assets.xcassets/exercise-card-sitToStand.imageset/sit-to-stand-card.png`; its source is the user-provided Downloads file, not the generated plan-art tool.
+
+`TMDailyPlanCard` and `TMHistoryCard` accept an optional artwork asset name. Home and History pass the new asset only for `sitToStand`. `TMExerciseCardArtwork`, alongside `TMTherapyArtwork`, shares the 300 × 108 pt, aspect-fit, 12 pt rounded presentation and hides the decorative image from accessibility. Existing card actions and exercise titles remain; other exercises retain their placeholder or progress badge until their images are supplied. The intro, live exercise and exercise-detail panel keep their animation demonstrations.
+
+Verification: `xcodegen generate`, Debug Simulator build with `IPHONEOS_DEPLOYMENT_TARGET=17.0`, and `git diff --check` passed. The compiled asset catalog contains `exercise-card-sitToStand`; the copied PNG's SHA-256 matches the supplied source. Existing audio and App Intents metadata warnings remain outside this change. Pending: visual review on iPad in both landscape orientations, dark mode, large text and VoiceOver; no physical-device acceptance claimed.
+
+
+## Finger-extension card photograph (2026-11-24)
+
+The user supplied `codex-clipboard-63fe448c-622c-453e-b5a4-e100acd0a169.png` for "Luruskan jari satu per satu" (`extensionSequence`). The original image is copied unchanged to `Tuntun/Assets.xcassets/exercise-card-extensionSequence.imageset/finger-extension-card.png`. Its source is the user attachment. Home's daily-plan card and History's daily progress card pass this asset to the existing `TMExerciseCardArtwork`; sit-to-stand keeps its supplied photo and all other cards keep their existing fallback. Exercise demonstrations remain unchanged.
+
+Verification: `xcodegen generate`, Debug Simulator build with `IPHONEOS_DEPLOYMENT_TARGET=17.0`, and `git diff --check` passed. Asset catalog inspection confirms the image is bundled; SHA-256 confirms the source bytes are preserved. Visual checks on the physical iPad, including large text, both landscape orientations and dark mode, remain pending.
+
+
+## Thumb-opposition card photograph (2026-11-24)
+
+The user supplied `codex-clipboard-ee026a1c-534b-4293-be80-4d576bafb0f4.png` for "Sentuh jempol ke jari" (`opposition`). The attachment is copied unchanged into `Tuntun/Assets.xcassets/exercise-card-opposition.imageset/thumb-opposition-card.png`. Beranda's daily-plan card and the daily progress history card use the existing `TMExerciseCardArtwork` to show it. The previously supplied photographs and exercise demonstration animations remain unchanged.
+
+Verification: `xcodegen generate`, Debug Simulator build with `IPHONEOS_DEPLOYMENT_TARGET=17.0`, and `git diff --check` passed. The compiled catalog contains `exercise-card-opposition`; SHA-256 matches the supplied image. Physical iPad visual verification in both orientations, dark mode and large text remains pending.
+
+
+## Balance card photograph (2026-11-24)
+
+The user supplied `codex-clipboard-7b620591-15c5-4639-a32f-edb50791fa79.png` for Keseimbangan, which the current exercise catalog identifies as `crossMidline` (`balance.title`). The attachment is copied unchanged into `Tuntun/Assets.xcassets/exercise-card-crossMidline.imageset/balance-card.png`. Its daily-plan card on Beranda and its history cards on the daily progress page use the existing `TMExerciseCardArtwork`. Previously supplied artwork and demonstration animations remain unchanged.
+
+Verification: `xcodegen generate`, Debug Simulator build with `IPHONEOS_DEPLOYMENT_TARGET=17.0`, and `git diff --check` passed. The compiled catalog contains `exercise-card-crossMidline`; SHA-256 matches the supplied source. Visual verification on the physical iPad in both landscape orientations, dark mode and large text remains pending.
+
+
+## Internal-rotation card photograph (2026-11-24)
+
+The user supplied `codex-clipboard-2e32499d-e967-4b0e-85ca-b3db1c1d2fc0.png` for "Putar bahu ke arah dalam" (`internalRotation`). The attachment is copied unchanged into `Tuntun/Assets.xcassets/exercise-card-internalRotation.imageset/internal-rotation-card.png`. Beranda's daily-plan card and daily progress history cards use the existing `TMExerciseCardArtwork`. Previously supplied artwork and demonstration animations remain unchanged.
+
+Verification: `xcodegen generate`, Debug Simulator build with `IPHONEOS_DEPLOYMENT_TARGET=17.0`, and `git diff --check` passed. The compiled catalog contains `exercise-card-internalRotation`; SHA-256 matches the supplied source. Physical iPad visual checks in both landscape orientations, dark mode and large text remain pending.
+
+
+## Hook-fist card photograph (2026-11-24)
+
+The user supplied `codex-clipboard-5131140a-496c-40a7-855e-deae2b27b7fe.png` for "Tekuk jari mengait" (`hookFist`). The attachment is copied unchanged into `Tuntun/Assets.xcassets/exercise-card-hookFist.imageset/hook-fist-card.png`. Beranda's daily-plan card and daily progress history cards use the existing `TMExerciseCardArtwork`. Previously supplied artwork and demonstration animations remain unchanged.
+
+Verification: `xcodegen generate`, Debug Simulator build with `IPHONEOS_DEPLOYMENT_TARGET=17.0`, and `git diff --check` passed. The compiled catalog contains `exercise-card-hookFist`; SHA-256 matches the supplied source. Physical iPad visual checks in both landscape orientations, dark mode and large text remain pending.
+
+
+## Forearm-rotation card photograph (2026-11-24)
+
+The user supplied `codex-clipboard-f165c9ae-8a37-4f1f-bd92-a8531f5a33c0.png` for "Rotasi lengan bawah" (`forearmRotation`). The attachment is copied unchanged into `Tuntun/Assets.xcassets/exercise-card-forearmRotation.imageset/forearm-rotation-card.png`. Beranda's daily-plan card and daily progress history cards use the existing `TMExerciseCardArtwork`. Previously supplied artwork and demonstration animations remain unchanged.
+
+Verification: `xcodegen generate`, Debug Simulator build with `IPHONEOS_DEPLOYMENT_TARGET=17.0`, and `git diff --check` passed. The compiled catalog contains `exercise-card-forearmRotation`; SHA-256 matches the supplied source. Physical iPad visual checks in both landscape orientations, dark mode and large text remain pending.
+
+
+## Full-fist card photograph (2026-11-24)
+
+The user supplied `codex-clipboard-b77f33c0-8576-4411-a11e-97cbdcfe9551.png` for "Kepal dan buka tangan" (`fullFist`). The attachment is copied unchanged into `Tuntun/Assets.xcassets/exercise-card-fullFist.imageset/full-fist-card.png`. Beranda's daily-plan card and daily progress history cards use the existing `TMExerciseCardArtwork`. Previously supplied artwork and demonstration animations remain unchanged.
+
+Verification: `xcodegen generate`, Debug Simulator build with `IPHONEOS_DEPLOYMENT_TARGET=17.0`, and `git diff --check` passed. The compiled catalog contains `exercise-card-fullFist`; SHA-256 matches the supplied source. Physical iPad visual checks in both landscape orientations, dark mode and large text remain pending.
+
+
+## Finger-spreading card photograph (2026-11-24)
+
+The user supplied `codex-clipboard-237f4766-d20e-4b35-abf8-9fd28cb606ed.png` for "Renggangkan jari" (`spreading`). The attachment is copied unchanged into `Tuntun/Assets.xcassets/exercise-card-spreading.imageset/finger-spreading-card.png`. Beranda's daily-plan card and daily progress history cards use the existing `TMExerciseCardArtwork`. Previously supplied artwork and demonstration animations remain unchanged.
+
+Verification: `xcodegen generate`, Debug Simulator build with `IPHONEOS_DEPLOYMENT_TARGET=17.0`, and `git diff --check` passed. The compiled catalog contains `exercise-card-spreading`; SHA-256 matches the supplied source. Physical iPad visual checks in both landscape orientations, dark mode and large text remain pending.
+
+
+## External-rotation card photograph (2026-11-24)
+
+The user supplied `codex-clipboard-e690cb75-170d-4d64-adbd-8836316398d1.png` for "Putar bahu ke arah luar" (`externalRotation`). The attachment is copied unchanged into `Tuntun/Assets.xcassets/exercise-card-externalRotation.imageset/external-rotation-card.png`. Beranda's daily-plan card and daily progress history cards use the existing `TMExerciseCardArtwork`. Previously supplied artwork and demonstration animations remain unchanged.
+
+Verification: `xcodegen generate`, Debug Simulator build with `IPHONEOS_DEPLOYMENT_TARGET=17.0`, and `git diff --check` passed. The compiled catalog contains `exercise-card-externalRotation`; SHA-256 matches the supplied source. Physical iPad visual checks in both landscape orientations, dark mode and large text remain pending.
+
+
+## Directional-reach card photograph (2026-11-24)
+
+The user supplied `codex-clipboard-a97df216-4172-43b3-9abc-c960beaa232c.png` for "Jangkauan terarah" (`directionalReach`). The attachment is copied unchanged into `Tuntun/Assets.xcassets/exercise-card-directionalReach.imageset/directional-reach-card.png`. Beranda's daily-plan card and daily progress history cards use the existing `TMExerciseCardArtwork`. Previously supplied artwork and demonstration animations remain unchanged.
+
+Verification: `xcodegen generate`, Debug Simulator build with `IPHONEOS_DEPLOYMENT_TARGET=17.0`, and `git diff --check` passed. The compiled catalog contains `exercise-card-directionalReach`; SHA-256 matches the supplied source. Physical iPad visual checks in both landscape orientations, dark mode and large text remain pending.
+
+
+## Shoulder-flexion card photograph (2026-11-24)
+
+The user supplied `codex-clipboard-9ce27e3f-a812-4b8b-bf5c-a38be34db92c.png` for "Fleksi bahu dengan rotasi" (`shoulderFlexion`). The attachment is copied unchanged into `Tuntun/Assets.xcassets/exercise-card-shoulderFlexion.imageset/shoulder-flexion-card.png`. Beranda's daily-plan card and daily progress history cards use the existing `TMExerciseCardArtwork`. Previously supplied artwork and demonstration animations remain unchanged.
+
+Verification: `xcodegen generate`, Debug Simulator build with `IPHONEOS_DEPLOYMENT_TARGET=17.0`, and `git diff --check` passed. The compiled catalog contains `exercise-card-shoulderFlexion`; SHA-256 matches the supplied source. Physical iPad visual checks in both landscape orientations, dark mode and large text remain pending.
+
+
+## Arm-raise card photograph (2026-11-24)
+
+The user supplied `codex-clipboard-1e9a1add-cc4d-4f44-bb6e-49b063c72c2d.png` for "Angkat lengan" (`armRaise`). The attachment is copied unchanged into `Tuntun/Assets.xcassets/exercise-card-armRaise.imageset/arm-raise-card.png`. Beranda's daily-plan card and daily progress history cards use the existing `TMExerciseCardArtwork`. Previously supplied artwork and demonstration animations remain unchanged.
+
+Verification: `xcodegen generate`, Debug Simulator build with `IPHONEOS_DEPLOYMENT_TARGET=17.0`, and `git diff --check` passed. The compiled catalog contains `exercise-card-armRaise`; SHA-256 matches the supplied source. Physical iPad visual checks in both landscape orientations, dark mode and large text remain pending.
+
+
+## Elbow-bend card photograph (2026-11-24)
+
+The user supplied `fix-elbow-bend-card.png` from Downloads for "Tekuk siku" (`elbowBend`). The original is copied unchanged into `Tuntun/Assets.xcassets/exercise-card-elbowBend.imageset/elbow-bend-card.png`. Beranda's daily-plan card and daily progress history cards use the existing `TMExerciseCardArtwork`. Previously supplied artwork and demonstration animations remain unchanged.
+
+Verification: `xcodegen generate`, Debug Simulator build with `IPHONEOS_DEPLOYMENT_TARGET=17.0`, and `git diff --check` passed. The compiled catalog contains `exercise-card-elbowBend`; SHA-256 matches the supplied source. Physical iPad visual checks in both landscape orientations, dark mode and large text remain pending.
+
+
+## Towel-folding card photograph (2026-11-24)
+
+The user supplied `fix-fold-towel-card.png` from Downloads for "Melipat handuk" (`foldTowel`). The original is copied unchanged into `Tuntun/Assets.xcassets/exercise-card-foldTowel.imageset/fold-towel-card.png`. Beranda's daily-plan card and daily progress history cards use the existing `TMExerciseCardArtwork`. Previously supplied artwork and demonstration animations remain unchanged.
+
+Verification: `xcodegen generate`, Debug Simulator build with `IPHONEOS_DEPLOYMENT_TARGET=17.0`, and `git diff --check` passed. The compiled catalog contains `exercise-card-foldTowel`; SHA-256 matches the supplied source. Physical iPad visual checks in both landscape orientations, dark mode and large text remain pending.
+
+## Muted locked plan artwork (2026-11-24)
+
+At the user's request, Beranda's upcoming (sequentially locked) exercise card images now use zero saturation and 40% opacity. `TMDailyPlanCard` derives this directly from the same `state.isAvailable` that chooses its text colour. Current and completed cards keep full-colour, opaque images; the separate history card remains unchanged. No exercise ordering or interaction rules changed.
+
+Verification: `xcodegen generate`, Debug Simulator build with `IPHONEOS_DEPLOYMENT_TARGET=17.0`, and `git diff --check` passed. Physical iPad visual comparison of current, upcoming and completed cards in both appearances remains pending.
+
+## Exercise card artwork border (2026-11-24)
+
+At the user's request, `TMExerciseCardArtwork` now draws a 1 pt inset border using the existing adaptive grey `TherapyPalette.outline` token, following its 12 pt continuous rounded corners. The shared component applies the reference's thin frame to both daily-plan and history card images. The border takes no taps. Beranda's existing locked-artwork saturation and opacity modifiers also mute this border.
+
+Verification: `xcodegen generate`, Debug Simulator build with `IPHONEOS_DEPLOYMENT_TARGET=17.0`, and `git diff --check` passed. Physical iPad visual checks in light/dark mode and locked/current card states remain pending.
+
+## Slightly thicker artwork border (2026-11-24)
+
+At the user's request, the shared exercise card artwork border increases from 1 pt to 1.5 pt. The existing colour, corner radius and locked-state treatment remain unchanged. This supersedes the width in *Exercise card artwork border*.
+
+Verification: Debug Simulator build with `IPHONEOS_DEPLOYMENT_TARGET=17.0` and `git diff --check` passed. Physical iPad visual review remains pending.
+
+## White home and progress page backgrounds (2026-11-24)
+
+At the user's request, Beranda now uses `TherapyPalette.progressCanvas`, matching the existing Progress root and daily progress page: #FFFFFF in light mode, with the existing dark-mode adaptation. The upcoming/current timeline marker's interior uses the same surface so its circular fill blends into the page. Exercise detail panels already use a white light-mode `surface`; their existing surface remains. Calendar and history card fills remain separate neutral surfaces.
+
+Verification: Debug Simulator build with `IPHONEOS_DEPLOYMENT_TARGET=17.0` and `git diff --check` passed. Physical iPad appearance review remains pending.
+
+## Updated directional-reach card photograph (2026-11-24)
+
+The user supplied `codex-clipboard-4162b3a0-61ee-45c1-bf8e-a5422b6107f5.png` as the revised Jangkauan terarah image. It replaces the previous PNG unchanged at `Tuntun/Assets.xcassets/exercise-card-directionalReach.imageset/directional-reach-card.png`. The existing shared asset reference updates both Beranda and progress history cards, retaining the border and locked-state appearance. This supersedes the image source in *Directional-reach card photograph*.
+
+Verification: XcodeGen generation, Debug Simulator build with `IPHONEOS_DEPLOYMENT_TARGET=17.0` and `git diff --check` passed. Physical iPad visual review remains pending.
+
+## Sit-to-stand photograph preserves the chair (2026-11-24)
+
+The user supplied `codex-clipboard-119dd414-6d66-4d03-829d-c6d45d23b014.png`, restoring the chair seat and legs in the sit-to-stand image. It replaces the previous PNG unchanged at `Tuntun/Assets.xcassets/exercise-card-sitToStand.imageset/sit-to-stand-card.png`. Existing references update Beranda and progress history cards together, retaining the border and locked-state treatment. This supersedes the source in *Sit-to-stand card photograph*.
+
+Verification: XcodeGen generation, Debug Simulator build with `IPHONEOS_DEPLOYMENT_TARGET=17.0` and `git diff --check` passed. Physical iPad visual review remains pending.

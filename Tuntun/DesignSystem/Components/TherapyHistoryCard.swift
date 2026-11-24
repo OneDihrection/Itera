@@ -8,7 +8,7 @@
 import SwiftUI
 
 /// One exercise on a day's progress page: its name on the left and the numbered progress badge
-/// on the right, on the neutral canvas surface.
+/// or supplied artwork on the right, on the neutral canvas surface.
 ///
 /// With an action the card is a button (for example to open that exercise's report); without
 /// one it is plain text. It takes values only.
@@ -16,6 +16,7 @@ struct TMHistoryCard: View {
     let title: LocalizedStringKey
     /// The exercise's position in the day, shown on the badge.
     let number: Int
+    var artwork: String? = nil
     var action: (() -> Void)? = nil
 
     var body: some View {
@@ -41,7 +42,11 @@ struct TMHistoryCard: View {
 
             Spacer(minLength: 12)
 
-            TMProgressBadge(number: number, height: 100)
+            if let artwork {
+                TMExerciseCardArtwork(name: artwork)
+            } else {
+                TMProgressBadge(number: number, height: 100)
+            }
         }
         .padding(.leading, 36)
         .padding(.trailing, 24)

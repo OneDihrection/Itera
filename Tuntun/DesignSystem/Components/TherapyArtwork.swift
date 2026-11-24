@@ -34,3 +34,20 @@ struct TMTherapyArtwork: View {
         name.hasPrefix("symbol:") ? Image(systemName: String(name.dropFirst(7))) : Image(name)
     }
 }
+
+/// Full-width exercise photography shared by plan and history card artwork slots.
+/// The exercise title already provides its accessible description.
+struct TMExerciseCardArtwork: View {
+    let name: String
+
+    var body: some View {
+        TMTherapyArtwork(name: name)
+            .frame(width: 300, height: 108)
+            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+            .overlay {
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .strokeBorder(TherapyPalette.outline, lineWidth: 1.5)
+                    .allowsHitTesting(false)
+            }
+    }
+}

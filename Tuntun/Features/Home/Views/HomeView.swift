@@ -107,7 +107,7 @@ struct TMHomeView<ViewModel: HomeViewModelProtocol, Builder: HomeContentBuildabl
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .padding(.top, 26)
         .foregroundStyle(TherapyPalette.ink)
-        .background(TherapyPalette.canvas)
+        .background(TherapyPalette.progressCanvas)
         .overlay(alignment: .bottom) {
             floatingAction
         }
@@ -286,7 +286,10 @@ struct TMHomeView<ViewModel: HomeViewModelProtocol, Builder: HomeContentBuildabl
                         duration: estimatedDuration(at: index),
                         state: cardState(for: row, index: index),
                         isLast: index == rows.index(before: rows.endIndex),
-                        isInteractionEnabled: canInteractWithCards
+                        isInteractionEnabled: canInteractWithCards,
+                        artwork: ["sitToStand", "extensionSequence", "opposition", "crossMidline", "internalRotation", "hookFist", "forearmRotation", "fullFist", "spreading", "externalRotation", "directionalReach", "shoulderFlexion", "armRaise", "elbowBend", "foldTowel"].contains(row.id)
+                            ? "exercise-card-" + row.id
+                            : nil
                     ) {
                         startPlan(from: row.id)
                     }

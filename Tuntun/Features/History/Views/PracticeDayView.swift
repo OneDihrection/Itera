@@ -66,7 +66,10 @@ struct TMPracticeDayView<ViewModel: PracticeDayViewModelProtocol>: View {
         ForEach(Array(viewModel.exercises.enumerated()), id: \.element.id) { index, exercise in
             TMHistoryCard(
                 title: LocalizedStringKey(exercise.titleKey),
-                number: index + 1
+                number: index + 1,
+                artwork: ["sitToStand", "extensionSequence", "opposition", "crossMidline", "internalRotation", "hookFist", "forearmRotation", "fullFist", "spreading", "externalRotation", "directionalReach", "shoulderFlexion", "armRaise", "elbowBend", "foldTowel"].contains(exercise.exerciseID)
+                    ? "exercise-card-" + exercise.exerciseID
+                    : nil
             ) {
                 viewModel.open(exercise)
             }
