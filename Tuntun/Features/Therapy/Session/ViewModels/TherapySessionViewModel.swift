@@ -466,7 +466,7 @@ final class TherapySessionViewModel: TherapySessionViewModelProtocol {
         }
         for effect in transition.effects {
             switch effect {
-            case .speak(let id, let key):
+            case .speak(let id, let key, let argument):
                 var text = Int(key).map(String.init)
                     ?? NarrationText.resolve(key, bundle: sessionLanguage.resourceBundle, locale: sessionLocale)
                 if key == "session.guidance", let activity = snapshot.activity {
@@ -481,7 +481,7 @@ final class TherapySessionViewModel: TherapySessionViewModelProtocol {
                 // A single-key sentence can use its bundled recording; numbers and the
                 // combined exercise/side/guidance cue keep the system voice.
                 if Int(key) == nil && key != "session.guidance" {
-                    audioService.speak(id: id, key: key)
+                    audioService.speak(id: id, key: key, argument: argument)
                 } else {
                     audioService.speak(id: id, text: text)
                 }

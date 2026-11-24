@@ -44,7 +44,7 @@ struct TMFingerSessionView<Service: FingerSessionServiceProtocol>: View {
                     }
                     .onChange(of: model.hasFinished) { _, finished in
                         if finished {
-                            plan.markOppositionRest(model.usesOppositionScript ? model.routine.side : nil)
+                            plan.markFingerScriptRest(model.usesFingerScript ? model.routine.side : nil)
                             router.showFingerSessionComplete()
                         }
                     }
@@ -90,9 +90,7 @@ struct TMFingerSessionView<Service: FingerSessionServiceProtocol>: View {
             if model.activity.phase == .countdown {
                 TMPracticeCountdown(
                     seconds: model.countdown,
-                    title: model.usesOppositionScript && model.activity.set > 1
-                        ? LocalizedStringKey(OppositionGuidance.prefix(for: model.routine.side) + "countdown.next")
-                        : "calibration.countdown",
+                    title: LocalizedStringKey(model.countdownTitleKey),
                     pause: model.pause,
                     stop: {
                         endRequested = true
@@ -170,7 +168,7 @@ struct TMFingerSessionView<Service: FingerSessionServiceProtocol>: View {
         case .rest:
             if let rest = model.scriptedRest {
                 TMTherapyBreathingRest(
-                    cue: LocalizedStringKey(rest.cueKey(prefix: OppositionGuidance.prefix(for: model.routine.side))),
+                    cue: LocalizedStringKey(rest.cueKey(prefix: model.scriptRestPrefix)),
                     intensity: rest.intensity,
                     paused: model.paused,
                     pause: model.pause,

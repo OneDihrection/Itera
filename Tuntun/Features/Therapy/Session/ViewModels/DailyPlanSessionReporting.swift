@@ -23,8 +23,10 @@ protocol DailyPlanSessionReporting: AnyObject {
     func finishAndEnd(completed: Bool)
     /// Leaving before a session could start ends the run.
     func end()
-    func markOppositionRest(_ side: HandSide?)
+    func markFingerScriptRest(_ side: HandSide?)
     func markArmRaiseRest(_ side: TherapySide?)
+    /// A Balancing session that a 2026-11-23 script narrated finished; the long rest follows suit.
+    func markBalanceScriptRest(_ scripted: Bool)
 }
 
 enum DailyPlanTiming {

@@ -13,8 +13,8 @@ enum FingerPhase: Equatable {
 struct FingerActivity {
     let kind: FingerExercise
     let routine: FingerRoutine
-    /// The approved Indonesian opposition script: three-second holds and a five-second
-    /// countdown before later sets.
+    /// An Indonesian hand script (`FingerScriptGuidance.isScripted`): three-second holds and a
+    /// five-second countdown before later sets.
     let scriptedGuidance: Bool
     let restAfterFinalSet: Bool
     private(set) var phase: FingerPhase = .baseline

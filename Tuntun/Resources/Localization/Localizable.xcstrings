@@ -267,6 +267,91 @@
         }
       }
     },
+    "armRaise.left.firstSet.rep.4.raise" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Left arm to the blue circle. Hold."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lengan kiri ke lingkaran. Tahan."
+          }
+        }
+      }
+    },
+    "armRaise.left.firstSet.rep.4.return" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lower it, hold."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Turunkan, tahan."
+          }
+        }
+      }
+    },
+    "armRaise.left.firstSet.rep.5.raise" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Last one, left arm to the blue circle."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Terakhir, lengan kiri ke lingkaran."
+          }
+        }
+      }
+    },
+    "armRaise.left.firstSet.rep.5.return" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lower it again slowly."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Turunkan kembali perlahan."
+          }
+        }
+      }
+    },
+    "armRaise.left.intro.calibration" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Like the previous exercise, we will first adjust to your position and how you can move."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sama seperti latihan sebelumnya, kita akan menyesuaikan posisi dan kemampuan gerakmu terlebih dahulu."
+          }
+        }
+      }
+    },
     "armRaise.left.intro.focus" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -297,6 +382,40 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Latihan ini terdiri dari dua set, dengan masing-masing set sebanyak lima repetisi."
+          }
+        }
+      }
+    },
+    "armRaise.left.intro.purpose" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This exercise helps your shoulder lift your arm higher, like reaching a shelf or combing your hair."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Latihan ini membantu bahu mengangkat lengan lebih tinggi, seperti saat meraih rak atau menyisir rambut."
+          }
+        }
+      }
+    },
+    "armRaise.left.intro.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Next, we will do Arm Raise."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Selanjutnya kita akan latihan Angkat Lengan."
           }
         }
       }
@@ -539,6 +658,159 @@
         }
       }
     },
+    "armRaise.left.prep.adjust" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Try adjusting your position again."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Coba sesuaikan kembali posisimu."
+          }
+        }
+      }
+    },
+    "armRaise.left.prep.armsDown" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rest both arms straight and relaxed at your sides."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Letakkan kedua lengan lurus dan rileks di samping badan."
+          }
+        }
+      }
+    },
+    "armRaise.left.prep.detected" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Great! Your body is visible. If it feels uncomfortable, you can adjust your position again."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bagus! Posisi tubuhmu sudah terlihat. Jika terasa kurang nyaman, kamu bisa menyesuaikan kembali posisimu."
+          }
+        }
+      }
+    },
+    "armRaise.left.prep.notVisible" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Make sure your shoulders, hips and wrists are visible to the camera."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pastikan bahu, pinggul, dan pergelangan tangan terlihat di kamera."
+          }
+        }
+      }
+    },
+    "armRaise.left.prep.posture" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "You can do this exercise sitting or standing; choose whichever is most comfortable."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kamu bisa melakukan latihan ini sambil duduk atau berdiri, pilih posisi yang paling nyaman."
+          }
+        }
+      }
+    },
+    "armRaise.left.prep.return" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lower your arm again."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Turunkan kembali lengannya."
+          }
+        }
+      }
+    },
+    "armRaise.left.prep.start" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Let both arms rest straight and relaxed at your sides. Hold for a moment."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Biarkan kedua lengan lurus dan rileks di samping badan. Tahan sebentar."
+          }
+        }
+      }
+    },
+    "armRaise.left.prep.target" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Then slowly raise your left arm straight out to the side, as far as is comfortable. Hold."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lalu angkat lengan kiri lurus ke samping, pelan-pelan senyamannya saja. Tahan."
+          }
+        }
+      }
+    },
+    "armRaise.left.prep.upright" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Keep your body upright, with your shoulders, elbows and waist visible to the camera."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Posisi tubuh tetap tegak, serta bahu, siku, dan pinggang terlihat di kamera."
+          }
+        }
+      }
+    },
     "armRaise.left.rep.1.complete" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -568,7 +840,7 @@
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Angkat lengan kiri ke lingkaran biru. Tahan."
+            "value" : "Angkat lengan kiri ke lingkaran. Tahan."
           }
         }
       }
@@ -619,7 +891,7 @@
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Angkat lengan kiri ke lingkaran biru. Tahan."
+            "value" : "Angkat lengan kiri ke lingkaran. Tahan."
           }
         }
       }
@@ -670,7 +942,7 @@
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Angkat lengan kiri ke lingkaran biru. Tahan."
+            "value" : "Angkat lengan kiri ke lingkaran. Tahan."
           }
         }
       }
@@ -721,7 +993,7 @@
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Angkat lengan kiri ke lingkaran biru. Tahan."
+            "value" : "Angkat lengan kiri ke lingkaran. Tahan."
           }
         }
       }
@@ -755,7 +1027,7 @@
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Angkat lengan kiri ke lingkaran biru. Tahan."
+            "value" : "Angkat lengan kiri ke lingkaran. Tahan."
           }
         }
       }
@@ -1418,7 +1690,7 @@
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Angkat lengan kanan ke lingkaran biru. Tahan."
+            "value" : "Angkat lengan kanan ke lingkaran. Tahan."
           }
         }
       }
@@ -1469,7 +1741,7 @@
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Angkat lengan kanan ke lingkaran biru. Tahan."
+            "value" : "Angkat lengan kanan ke lingkaran. Tahan."
           }
         }
       }
@@ -1520,7 +1792,7 @@
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Angkat lengan kanan ke lingkaran biru. Tahan."
+            "value" : "Angkat lengan kanan ke lingkaran. Tahan."
           }
         }
       }
@@ -1571,7 +1843,7 @@
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Angkat lengan kanan ke lingkaran biru. Tahan."
+            "value" : "Angkat lengan kanan ke lingkaran. Tahan."
           }
         }
       }
@@ -1605,7 +1877,7 @@
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Angkat lengan kanan ke lingkaran biru. Tahan."
+            "value" : "Angkat lengan kanan ke lingkaran. Tahan."
           }
         }
       }
@@ -2261,7 +2533,7 @@
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Selesai. Kembali ke lingkaran biru dan tahan 5 detik, lalu ganti sisi."
+            "value" : "Selesai. Kembali ke lingkaran dan tahan 5 detik, lalu ganti sisi."
           }
         }
       }
@@ -2278,7 +2550,7 @@
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Selesai. Kembali ke lingkaran biru dan tahan 5 detik, lalu gunakan tangan yang sama lagi."
+            "value" : "Selesai. Kembali ke lingkaran dan tahan 5 detik, lalu gunakan tangan yang sama lagi."
           }
         }
       }
@@ -2532,7 +2804,7 @@
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Sebelum mulai, kita kalibrasi dulu ya"
+            "value" : "Sebelum mulai, kita kalibrasi dulu"
           }
         }
       }
@@ -2813,6 +3085,278 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Ketuk hitungan untuk jeda. Akhiri tersedia di menu jeda."
+          }
+        }
+      }
+    },
+    "crossMidline.left.firstSet.rep.1.start" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Let's begin. Now rest both arms straight at your sides. Hold."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Yuk kita mulai. Sekarang letakkan kedua tangan lurus di samping tubuh. Tahan."
+          }
+        }
+      }
+    },
+    "crossMidline.left.firstSet.rep.1.target" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Slowly raise your left hand and touch your right shoulder. Hold."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Angkat tangan kiri perlahan dan sentuh bahu kananmu. Tahan."
+          }
+        }
+      }
+    },
+    "crossMidline.left.firstSet.rep.2.start" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Let's continue, bring your left arm back to your side."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kita lanjut, letakkan kembali tangan kiri di samping tubuh."
+          }
+        }
+      }
+    },
+    "crossMidline.left.firstSet.rep.2.target" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Raise your left hand again and touch your right shoulder."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Angkat kembali tangan kiri dan sentuh bahu kananmu."
+          }
+        }
+      }
+    },
+    "crossMidline.left.firstSet.rep.3.start" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Left arm back to your side. Hold."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tangan kiri kembali ke samping tubuh. Tahan."
+          }
+        }
+      }
+    },
+    "crossMidline.left.firstSet.rep.3.target" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Touch your right shoulder. Hold."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sentuh bahu kananmu. Tahan."
+          }
+        }
+      }
+    },
+    "crossMidline.left.firstSet.rep.4.start" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Let's go on, left arm at your side."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kita lanjut lagi, tangan kiri di samping tubuh."
+          }
+        }
+      }
+    },
+    "crossMidline.left.firstSet.rep.4.target" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Touch your right shoulder again."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sentuh lagi bahu kananmu."
+          }
+        }
+      }
+    },
+    "crossMidline.left.firstSet.rep.5.start" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Last one, left arm at your side. Hold."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Terakhir, tangan kiri di samping tubuh. Tahan."
+          }
+        }
+      }
+    },
+    "crossMidline.left.intro.purpose" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This exercise helps your shoulder and arm move across your body, like fastening a seat belt."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Latihan ini membantu melatih bahu dan lengan agar lebih mudah bergerak menyilang tubuh, seperti saat memasang sabuk pengaman."
+          }
+        }
+      }
+    },
+    "crossMidline.left.intro.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Next, we will do Balance."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Selanjutnya kita akan latihan Keseimbangan."
+          }
+        }
+      }
+    },
+    "crossMidline.left.laterSet.rep.1.start" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rest both arms straight at your sides. Hold."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Letakkan kedua tangan lurus di samping tubuh. Tahan."
+          }
+        }
+      }
+    },
+    "crossMidline.left.prep.return" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bring your left arm back straight to your side, relaxed."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kembalikan tangan kiri lurus di samping tubuh dengan rileks."
+          }
+        }
+      }
+    },
+    "crossMidline.left.prep.start" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Keep your left arm at your side."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Biarkan tangan kirimu tetap di samping tubuh."
+          }
+        }
+      }
+    },
+    "crossMidline.left.prep.target" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Now slowly raise your left hand and touch your right shoulder. Hold."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sekarang, angkat tangan kiri perlahan dan sentuh bahu kananmu. Tahan."
+          }
+        }
+      }
+    },
+    "crossMidline.left.prep.upright" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Keep your body upright, with your shoulders, wrists and hips visible to the camera."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pastikan posisi tubuh tegak, serta bahu, pergelangan tangan dan pinggul terlihat di kamera."
           }
         }
       }
@@ -5841,6 +6385,703 @@
         }
       }
     },
+    "extensionSequence.left.firstSet.rep.1.opening" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Let's begin. One repetition counts once you have straightened your index, middle, ring and little fingers in turn."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Yuk kita mulai, satu repetisi dihitung setelah kamu meluruskan jari telunjuk, tengah, manis, dan kelingking secara bergantian."
+          }
+        }
+      }
+    },
+    "extensionSequence.left.firstSet.rep.1.start" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Now bend all your fingers slightly, relaxed. Hold."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sekarang tekuk sedikit semua jari tanganmu dengan rileks. Tahan."
+          }
+        }
+      }
+    },
+    "extensionSequence.left.firstSet.rep.2.start" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Let's continue. Keep your fingers relaxed and bent, and hold for a moment."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kita lanjut. Jari tetap rileks menekuk dan tahan sebentar."
+          }
+        }
+      }
+    },
+    "extensionSequence.left.firstSet.rep.2.target.0" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Now try straightening your index finger again. Hold."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sekarang, coba luruskan lagi jari telunjuk. Tahan."
+          }
+        }
+      }
+    },
+    "extensionSequence.left.firstSet.rep.2.target.1" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Next, straighten your middle finger. Hold."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lanjut luruskan jari tengah. Tahan."
+          }
+        }
+      }
+    },
+    "extensionSequence.left.firstSet.rep.2.target.2" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Now the ring finger. Straighten it slowly and hold."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sekarang, jari manis. Luruskan perlahan dan tahan."
+          }
+        }
+      }
+    },
+    "extensionSequence.left.firstSet.rep.2.target.3" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Last, the little finger. Straighten it slowly and hold."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Terakhir, jari kelingking. Luruskan perlahan dan tahan."
+          }
+        }
+      }
+    },
+    "extensionSequence.left.firstSet.rep.3.start" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Go on, keep your fingers relaxed and bent, and hold."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lanjut, jari tetap rileks menekuk dan tahan."
+          }
+        }
+      }
+    },
+    "extensionSequence.left.firstSet.rep.3.target.0" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Now straighten your index finger, hold."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sekarang, luruskan jari telunjuk, tahan."
+          }
+        }
+      }
+    },
+    "extensionSequence.left.firstSet.rep.3.target.1" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Middle finger. Straighten it slowly and hold."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Jari tengah. Luruskan perlahan dan tahan."
+          }
+        }
+      }
+    },
+    "extensionSequence.left.firstSet.rep.3.target.2" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ring finger. Straighten it slowly. Hold."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Jari manis. Luruskan perlahan. Tahan."
+          }
+        }
+      }
+    },
+    "extensionSequence.left.firstSet.rep.3.target.3" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Little finger. Straighten it slowly. Hold."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kelingking. Luruskan perlahan. Tahan."
+          }
+        }
+      }
+    },
+    "extensionSequence.left.firstSet.rep.4.start" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Let's go on, hold your fingers bent and relaxed."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kita lanjut lagi, tahan jari dalam posisi menekuk dengan rileks."
+          }
+        }
+      }
+    },
+    "extensionSequence.left.firstSet.rep.4.target.0" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Try straightening your index finger."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Coba luruskan telunjuk."
+          }
+        }
+      }
+    },
+    "extensionSequence.left.firstSet.rep.4.target.1" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Try straightening your middle finger."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Coba luruskan jari tengah."
+          }
+        }
+      }
+    },
+    "extensionSequence.left.firstSet.rep.4.target.2" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ring finger."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Jari manis."
+          }
+        }
+      }
+    },
+    "extensionSequence.left.firstSet.rep.4.target.3" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Last, the little finger."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Terakhir, kelingking."
+          }
+        }
+      }
+    },
+    "extensionSequence.left.firstSet.rep.5.start" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hold your fingers bent and relaxed."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tahan jari dalam posisi menekuk dengan rileks."
+          }
+        }
+      }
+    },
+    "extensionSequence.left.firstSet.rep.5.target.0" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Straighten your index finger."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Luruskan telunjuk."
+          }
+        }
+      }
+    },
+    "extensionSequence.left.firstSet.rep.5.target.1" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Straighten your middle finger."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Luruskan jari tengah."
+          }
+        }
+      }
+    },
+    "extensionSequence.left.firstSet.return" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bend it again."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tekuk kembali."
+          }
+        }
+      }
+    },
+    "extensionSequence.left.intro.purpose" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This exercise helps your fingers move separately, like when pressing a button."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Latihan ini membantu melatih jari untuk bergerak secara terpisah, seperti saat menekan tombol."
+          }
+        }
+      }
+    },
+    "extensionSequence.left.intro.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Next, we will do Straighten One Finger at a Time."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Selanjutnya kita akan latihan Luruskan Jari Satu per Satu."
+          }
+        }
+      }
+    },
+    "extensionSequence.left.laterSet.rep.1.start" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bend all your fingers slightly, relaxed, and hold for a moment."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tekuk sedikit semua jari tanganmu dengan rileks dan tahan sebentar."
+          }
+        }
+      }
+    },
+    "extensionSequence.left.prep.end" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bend all your fingers slightly again, relaxed."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kembali tekuk sedikit semua jari tanganmu dengan rileks."
+          }
+        }
+      }
+    },
+    "extensionSequence.left.prep.return.0" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bend your index finger again."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tekuk kembali jari telunjuk."
+          }
+        }
+      }
+    },
+    "extensionSequence.left.prep.return.1" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bend your middle finger again."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tekuk kembali jari tengah."
+          }
+        }
+      }
+    },
+    "extensionSequence.left.prep.return.2" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bend your ring finger again."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tekuk kembali jari manis."
+          }
+        }
+      }
+    },
+    "extensionSequence.left.prep.return.3" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bend your little finger again."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tekuk kembali jari kelingking."
+          }
+        }
+      }
+    },
+    "extensionSequence.left.prep.start" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Start by bending all your fingers slightly and relaxed, like a half fist, without squeezing. Hold for a moment."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mulai dengan tekuk sedikit semua jari tanganmu dengan rileks, seperti posisi setengah mengepal, tetapi tidak perlu mengepalkan tangan terlalu kuat. Tahan sebentar."
+          }
+        }
+      }
+    },
+    "extensionSequence.left.prep.target.0" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Now try slowly straightening your index finger. Hold for a moment."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sekarang, coba luruskan jari telunjukmu perlahan. Tahan sebentar."
+          }
+        }
+      }
+    },
+    "extensionSequence.left.prep.target.1" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Now try slowly straightening your middle finger. Hold for a moment."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sekarang, coba luruskan jari tengah perlahan. Tahan sebentar."
+          }
+        }
+      }
+    },
+    "extensionSequence.left.prep.target.2" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Next, try slowly straightening your ring finger and hold."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lanjut, coba luruskan jari manis perlahan dan tahan."
+          }
+        }
+      }
+    },
+    "extensionSequence.left.prep.target.3" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Last, try slowly straightening your little finger and hold."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Terakhir, coba luruskan jari kelingking perlahan dan tahan."
+          }
+        }
+      }
+    },
+    "externalRotation.left.firstSet.rep.1.target" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Slowly turn your left forearm outward. Hold."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Perlahan, putar lengan kiri ke arah luar. Tahan."
+          }
+        }
+      }
+    },
+    "externalRotation.left.firstSet.rep.2.target" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Turn your left forearm outward again. Hold."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Putar kembali lengan kiri ke arah luar. Tahan."
+          }
+        }
+      }
+    },
+    "externalRotation.left.firstSet.rep.3.target" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Turn your left forearm outward. Hold."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Putar lengan kiri ke arah luar. Tahan."
+          }
+        }
+      }
+    },
+    "externalRotation.left.firstSet.rep.4.target" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Turn outward again."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Putar lagi ke arah luar."
+          }
+        }
+      }
+    },
+    "externalRotation.left.intro.purpose" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This exercise helps your shoulder turn outward, making it easier to open your arm to the side when dressing."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Latihan ini membantu melatih bahu berputar ke luar, supaya lebih mudah membuka lengan ke samping saat berpakaian."
+          }
+        }
+      }
+    },
+    "externalRotation.left.intro.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Next, we will do Outward Shoulder Rotation."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Selanjutnya kita akan latihan Putar Bahu ke Arah Luar."
+          }
+        }
+      }
+    },
+    "externalRotation.left.prep.target" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Then turn your left forearm outward as far as you can. Keep your elbow against your side. Hold."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lalu putar lengan kiri ke arah luar sejauh yang kamu bisa. Pastikan siku tetap menempel di sisi tubuh. Tahan."
+          }
+        }
+      }
+    },
     "feeling.comfortable" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -6007,6 +7248,601 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Jari kelingking"
+          }
+        }
+      }
+    },
+    "forearmRotation.left.firstSet.rep.1.start" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Let's begin. Now turn your left palm towards the camera. Hold."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Yuk kita mulai. Sekarang arahkan telapak tangan kiri ke kamera. Tahan."
+          }
+        }
+      }
+    },
+    "forearmRotation.left.firstSet.rep.1.target" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Slowly turn your forearm inward until the back of your hand faces the camera. Hold."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Putar lengan bawahmu perlahan ke arah dalam, sampai punggung tangan menghadap kamera. Tahan."
+          }
+        }
+      }
+    },
+    "forearmRotation.left.firstSet.rep.2.start" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Let's continue, turn your forearm back outward so your palm faces the camera. Hold."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kita lanjut, putar kembali lengan bawah ke arah luar agar telapak tangan menghadap kamera. Tahan."
+          }
+        }
+      }
+    },
+    "forearmRotation.left.firstSet.rep.2.target" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Turn inward again."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Putar lagi ke arah dalam."
+          }
+        }
+      }
+    },
+    "forearmRotation.left.firstSet.rep.3.start" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Turn your forearm back outward."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Putar kembali lengan bawah ke arah luar."
+          }
+        }
+      }
+    },
+    "forearmRotation.left.firstSet.rep.3.target" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Now turn inward."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sekarang putar ke arah dalam."
+          }
+        }
+      }
+    },
+    "forearmRotation.left.firstSet.rep.4.start" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Let's go on, turn outward."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kita lanjut lagi, putar ke arah luar."
+          }
+        }
+      }
+    },
+    "forearmRotation.left.firstSet.rep.4.target" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Turn inward."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Putar ke arah dalam."
+          }
+        }
+      }
+    },
+    "forearmRotation.left.firstSet.rep.5.start" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Last one, turn outward."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Terakhir, putar ke arah luar."
+          }
+        }
+      }
+    },
+    "forearmRotation.left.intro.purpose" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This exercise helps train turning your forearm, like turning a door handle or pouring water."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Latihan ini membantu melatih memutar lengan bawah, seperti saat memutar gagang pintu atau menuang air."
+          }
+        }
+      }
+    },
+    "forearmRotation.left.intro.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Next, we will do Forearm Rotation."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Selanjutnya kita akan latihan Rotasi Lengan Bawah."
+          }
+        }
+      }
+    },
+    "forearmRotation.left.laterSet.rep.1.start" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Now turn your left palm towards the camera. Hold."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sekarang arahkan telapak tangan kiri ke kamera. Tahan."
+          }
+        }
+      }
+    },
+    "forearmRotation.left.prep.detected" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Good, your arm is visible. If it feels tiring, rest your arm however is comfortable."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bagus, posisi lengan sudah terlihat. Jika terasa pegal, posisikan lengan sesuai kenyamananmu."
+          }
+        }
+      }
+    },
+    "forearmRotation.left.prep.return" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Turn your palm back towards the camera, relaxed."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kembali arahkan telapak tangan ke kamera dengan rileks."
+          }
+        }
+      }
+    },
+    "forearmRotation.left.prep.start" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Start with your palm facing the camera. Hold."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mulai dengan mengarahkan telapak tangan ke kamera. Tahan."
+          }
+        }
+      }
+    },
+    "forearmRotation.left.prep.target" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Now slowly turn your forearm inward until the back of your hand faces the camera. Hold."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sekarang, putar lengan bawahmu perlahan ke arah dalam, sampai punggung tangan menghadap kamera. Tahan."
+          }
+        }
+      }
+    },
+    "forearmRotation.left.prep.visible" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Make sure your left elbow, arm, wrist and palm are visible to the camera."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pastikan siku, lengan, pergelangan tangan, hingga telapak tangan kirimu terlihat di kamera."
+          }
+        }
+      }
+    },
+    "fullFist.left.firstSet.rep.1.return" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Then open your hand again slowly."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lalu buka kembali tanganmu perlahan."
+          }
+        }
+      }
+    },
+    "fullFist.left.firstSet.rep.1.start" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Let's begin, open your hand slowly. Hold for a moment."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Yuk kita mulai, buka tangan perlahan. Tahan sebentar."
+          }
+        }
+      }
+    },
+    "fullFist.left.firstSet.rep.1.target" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Now make a fist. Hold again for a moment."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sekarang, kepalkan tangan. Tahan lagi sebentar."
+          }
+        }
+      }
+    },
+    "fullFist.left.firstSet.rep.2.return" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Open again slowly. Hold for a moment."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Buka kembali perlahan. Tahan sebentar."
+          }
+        }
+      }
+    },
+    "fullFist.left.firstSet.rep.2.target" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Let's repeat the movement. Make a fist again. Hold again for a moment."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kita ulangi gerakannya. Kembali kepalkan tangan. Tahan lagi sebentar."
+          }
+        }
+      }
+    },
+    "fullFist.left.firstSet.rep.3.return" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Now open again slowly. Hold again for a moment."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sekarang, buka kembali perlahan. Tahan lagi sebentar."
+          }
+        }
+      }
+    },
+    "fullFist.left.firstSet.rep.3.target" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Make a fist again. Hold for a moment."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kepalkan kembali tanganmu. Tahan sebentar."
+          }
+        }
+      }
+    },
+    "fullFist.left.firstSet.rep.4.target" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Make a fist again."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kembali kepalkan tangan."
+          }
+        }
+      }
+    },
+    "fullFist.left.firstSet.rep.5.return" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Open again slowly."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Buka kembali perlahan."
+          }
+        }
+      }
+    },
+    "fullFist.left.firstSet.rep.5.target" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Slowly make a fist again. Hold again for a moment."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kembali kepalkan tangan perlahan. Tahan lagi sebentar."
+          }
+        }
+      }
+    },
+    "fullFist.left.intro.purpose" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This exercise helps train your hand to grip and release things, like holding a glass or a bottle."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Latihan ini membantu melatih tangan untuk menggenggam dan melepaskan benda, seperti memegang gelas atau botol."
+          }
+        }
+      }
+    },
+    "fullFist.left.intro.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Next, we will do Make a Fist and Open."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Selanjutnya kita akan latihan Kepal dan Buka Tangan."
+          }
+        }
+      }
+    },
+    "fullFist.left.laterSet.rep.1.return" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Open your hand again slowly."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Buka kembali tanganmu perlahan."
+          }
+        }
+      }
+    },
+    "fullFist.left.laterSet.rep.1.start" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Open your hand slowly. Hold."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Buka tangan perlahan. Tahan."
+          }
+        }
+      }
+    },
+    "fullFist.left.laterSet.rep.1.target" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Make a fist. Hold again for a moment."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kepalkan tangan. Tahan lagi sebentar."
+          }
+        }
+      }
+    },
+    "fullFist.left.prep.return" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Slowly straighten your fingers again."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kembali luruskan jari pelan-pelan."
+          }
+        }
+      }
+    },
+    "fullFist.left.prep.start" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Start with your palm open. Hold for a moment."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mulai dengan buka telapak tangan. Tahan sebentar."
+          }
+        }
+      }
+    },
+    "fullFist.left.prep.target" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Now try making a fist, as far as is comfortable. Hold for a moment."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sekarang coba kepalkan tangan senyamannya. Tahan sebentar."
           }
         }
       }
@@ -7331,6 +9167,261 @@
         }
       }
     },
+    "hookFist.left.firstSet.rep.1.return" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Then open your hand again slowly."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lalu buka kembali tanganmu perlahan."
+          }
+        }
+      }
+    },
+    "hookFist.left.firstSet.rep.1.start" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Let's begin, open your hand and slowly straighten your fingers. Hold."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Yuk kita mulai, buka tangan dan luruskan jari-jari perlahan. Tahan."
+          }
+        }
+      }
+    },
+    "hookFist.left.firstSet.rep.1.target" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bend the middle and tip joints as if hooking something. Hold again for a moment."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tekuk sendi tengah dan ujung jari seperti sedang mengait. Tahan lagi sebentar."
+          }
+        }
+      }
+    },
+    "hookFist.left.firstSet.rep.2.return" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Open again slowly. Hold for a moment."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Buka kembali perlahan. Tahan sebentar."
+          }
+        }
+      }
+    },
+    "hookFist.left.firstSet.rep.2.target" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bend the middle and tip joints again. Hold again for a moment."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kembali tekuk sendi tengah dan ujung jari. Tahan lagi sebentar."
+          }
+        }
+      }
+    },
+    "hookFist.left.firstSet.rep.3.return" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Open again slowly. Hold for a moment."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Buka kembali perlahan. Tahan sebentar."
+          }
+        }
+      }
+    },
+    "hookFist.left.firstSet.rep.3.target" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Let's continue, slowly bend the middle and tip joints again. Hold for a moment."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kita lanjut, tekuk kembali sendi tengah dan ujung jari perlahan. Tahan sebentar."
+          }
+        }
+      }
+    },
+    "hookFist.left.firstSet.rep.4.target" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bend again and hold."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tekuk lagi dan tahan."
+          }
+        }
+      }
+    },
+    "hookFist.left.firstSet.rep.5.target" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bend once again and hold."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kembali tekuk lagi dan tahan."
+          }
+        }
+      }
+    },
+    "hookFist.left.intro.purpose" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This exercise helps train your fingers to hold things in a hook, like carrying a shopping bag."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Latihan ini membantu melatih jari untuk memegang benda dengan posisi kait, seperti saat menenteng kantong belanja."
+          }
+        }
+      }
+    },
+    "hookFist.left.intro.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Next, we will do Hook Fist."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Selanjutnya kita akan latihan Tekuk Jari Mengait."
+          }
+        }
+      }
+    },
+    "hookFist.left.laterSet.rep.1.start" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Open your hand and slowly straighten your fingers. Hold."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Buka tangan dan luruskan jari perlahan. Tahan."
+          }
+        }
+      }
+    },
+    "hookFist.left.prep.return" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Slowly straighten your fingers again."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kembali luruskan jari pelan-pelan."
+          }
+        }
+      }
+    },
+    "hookFist.left.prep.start" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Start with your palm open and fingers straight. Hold for a moment."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mulai dengan buka telapak tangan dan luruskan jari. Tahan sebentar."
+          }
+        }
+      }
+    },
+    "hookFist.left.prep.target" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Then slowly bend the middle and tip joints of your fingers, as far as is comfortable, into a hook. Keep the part near your palm straight. Hold for a moment."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lalu tekuk sendi tengah dan ujung jari pelan-pelan senyamannya saja, sampai membentuk seperti kait. Bagian jari yang dekat telapak tetap lurus. Tahan sebentar."
+          }
+        }
+      }
+    },
     "internalRotation.animationAccessibility" : {
       "localizations" : {
         "en" : {
@@ -7377,6 +9468,125 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Putar lengan ke arah perut sejauh mungkin. Tahan 3 detik."
+          }
+        }
+      }
+    },
+    "internalRotation.left.firstSet.rep.1.target" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Slowly turn your left forearm inward. Hold."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Perlahan, putar lengan kiri ke arah dalam. Tahan."
+          }
+        }
+      }
+    },
+    "internalRotation.left.firstSet.rep.2.target" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Turn your left forearm inward again. Hold."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Putar kembali lengan kiri ke arah dalam. Tahan."
+          }
+        }
+      }
+    },
+    "internalRotation.left.firstSet.rep.3.target" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Turn your left forearm inward. Hold."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Putar lengan kiri ke arah dalam. Tahan."
+          }
+        }
+      }
+    },
+    "internalRotation.left.firstSet.rep.4.target" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Turn inward again."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Putar lagi ke arah dalam."
+          }
+        }
+      }
+    },
+    "internalRotation.left.intro.purpose" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This exercise helps your shoulder turn inward, making it easier to tidy clothes or put a hand in a pocket."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Latihan ini membantu melatih bahu berputar ke dalam, supaya lebih mudah saat merapikan pakaian atau memasukkan tangan ke saku."
+          }
+        }
+      }
+    },
+    "internalRotation.left.intro.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Next, we will do Inward Shoulder Rotation."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Selanjutnya kita akan latihan Putar Bahu ke Arah Dalam."
+          }
+        }
+      }
+    },
+    "internalRotation.left.prep.target" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Then turn your left forearm inward as far as you can. Keep your elbow against your side. Hold."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lalu putar lengan kiri ke arah dalam sejauh yang kamu bisa. Pastikan siku tetap menempel di sisi tubuh. Tahan."
           }
         }
       }
@@ -7776,7 +9986,7 @@
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Kita mulai dari tangan kiri dulu ya. Arahkan tangan kiri ke kamera. Tangan kanannya bisa ditaruh saja di pangkuan."
+            "value" : "Kita mulai dari tangan kiri dulu. Arahkan tangan kiri ke kamera. Tangan kanannya bisa ditaruh saja di pangkuan."
           }
         }
       }
@@ -7793,7 +10003,7 @@
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Sebelum mulai, kita cari tahu titik awal gerakan tangan kirimu dulu ya. Mulai dari buka tangan. Tahan sebentar."
+            "value" : "Sebelum mulai, kita cari tahu titik awal gerakan tangan kirimu dulu. Mulai dari buka tangan. Tahan sebentar."
           }
         }
       }
@@ -7917,6 +10127,91 @@
         }
       }
     },
+    "opposition.left.firstSet.rep.1.open.0" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Open again, and hold."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Buka kembali, dan tahan."
+          }
+        }
+      }
+    },
+    "opposition.left.firstSet.rep.1.opening" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Let's begin. One repetition counts once your thumb has touched every finger. Now open your hand slowly and hold for a moment."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Yuk kita mulai. Satu repetisi dihitung kalau jempol sudah menyentuh semua jari. Sekarang buka tangan perlahan, dan tahan sebentar."
+          }
+        }
+      }
+    },
+    "opposition.left.firstSet.rep.1.touch.1" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "On to the middle finger. Hold."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lanjut ke jari tengah. Tahan."
+          }
+        }
+      }
+    },
+    "opposition.left.firstSet.rep.2.touch.0" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Let's continue. Start with the index finger. Hold."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kita lanjut. Mulai dari telunjuk. Tahan."
+          }
+        }
+      }
+    },
+    "opposition.left.intro.calibration" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Before we start, we will adjust to your position and how you can move."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sebelum mulai latihan, kita akan menyesuaikan posisi dan kemampuan gerakmu terlebih dahulu."
+          }
+        }
+      }
+    },
     "opposition.left.intro.focus" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -7951,6 +10246,23 @@
         }
       }
     },
+    "opposition.left.intro.purpose" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This exercise helps your fingers pinch small things, like buttoning a shirt or holding a spoon."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Latihan ini membantu melatih jari tangan menjepit benda kecil, seperti mengancingkan baju atau memegang sendok."
+          }
+        }
+      }
+    },
     "opposition.left.intro.title" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -7981,6 +10293,176 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Jika kamu merasa tidak nyaman selama latihan, kamu bisa menggunakan perintah suara. Katakan 'Stop' untuk berhenti sejenak, dan 'Go' untuk melanjutkan latihan."
+          }
+        }
+      }
+    },
+    "opposition.left.laterSet.rep.1.touch.0" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Start with the index finger. Hold."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mulai dari telunjuk. Tahan."
+          }
+        }
+      }
+    },
+    "opposition.left.praise.2" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Good! Two repetitions done."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bagus! Dua repetisi sudah selesai."
+          }
+        }
+      }
+    },
+    "opposition.left.praise.3" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Great! Three repetitions done."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hebat! Tiga repetisi selesai."
+          }
+        }
+      }
+    },
+    "opposition.left.praise.4" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Great! Just one more repetition!"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hebat! Tinggal satu repetisi lagi!"
+          }
+        }
+      }
+    },
+    "opposition.left.prep.openPalm" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Open your palm again."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Buka kembali telapak tangan."
+          }
+        }
+      }
+    },
+    "opposition.left.prep.start" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Start with your palm open. Hold for a moment."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mulai dengan buka telapak tangan. Tahan sebentar."
+          }
+        }
+      }
+    },
+    "opposition.left.prep.touch.0" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Touch your thumb to your index finger, and hold for a moment."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sentuh jempol ke telunjuk, dan tahan sebentar."
+          }
+        }
+      }
+    },
+    "opposition.left.prep.touch.1" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Next, touch your thumb to your middle finger, and hold for a moment."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Selanjutnya sentuh jempol ke jari tengah, dan tahan sebentar."
+          }
+        }
+      }
+    },
+    "opposition.left.prep.touch.2" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Then touch your thumb to your ring finger."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lalu sentuh jempol ke jari manis."
+          }
+        }
+      }
+    },
+    "opposition.left.prep.touch.3" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Last, touch your thumb to your little finger."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Terakhir, sentuh jempol ke jari kelingking."
           }
         }
       }
@@ -8082,7 +10564,7 @@
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Yuk kita mulai. Satu repetisi dihitung kalau jempol sudah menyentuh semua jari, sampai kelingking, ya. Sekarang buka tangan perlahan, dan tahan sebentar."
+            "value" : "Yuk kita mulai. Satu repetisi dihitung kalau jempol sudah menyentuh semua jari, sampai kelingking. Sekarang buka tangan perlahan, dan tahan sebentar."
           }
         }
       }
@@ -8252,7 +10734,7 @@
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Kita ulangi gerakannya ya."
+            "value" : "Kita ulangi gerakannya."
           }
         }
       }
@@ -8422,7 +10904,7 @@
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Kita lanjut ke repetisi ketiga, ya."
+            "value" : "Kita lanjut ke repetisi ketiga."
           }
         }
       }
@@ -8507,7 +10989,7 @@
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Bagus! Sudah empat repetisi selesai. Semangat! Satu repetisi lagi ya."
+            "value" : "Bagus! Sudah empat repetisi selesai. Semangat! Satu repetisi lagi."
           }
         }
       }
@@ -8592,7 +11074,7 @@
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Kita lanjut ya."
+            "value" : "Kita lanjut."
           }
         }
       }
@@ -8954,6 +11436,91 @@
         }
       }
     },
+    "opposition.left.short.open" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Open again."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Buka kembali."
+          }
+        }
+      }
+    },
+    "opposition.left.short.touch.0" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Index finger. Hold."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Telunjuk. Tahan."
+          }
+        }
+      }
+    },
+    "opposition.left.short.touch.1" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Middle finger. Hold."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Jari tengah. Tahan."
+          }
+        }
+      }
+    },
+    "opposition.left.short.touch.2" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ring finger. Hold."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Jari manis. Tahan."
+          }
+        }
+      }
+    },
+    "opposition.left.short.touch.3" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Little finger. Hold."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kelingking. Tahan."
+          }
+        }
+      }
+    },
     "opposition.left.summary.final" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -8966,7 +11533,7 @@
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Usaha yang bagus! Kamu sudah menyelesaikan seluruh set, dengan total sepuluh repetisi. Terima kasih sudah berusaha mengikuti setiap gerakannya, ya. Sekarang, yuk istirahat sebentar sebelum lanjut ke latihan berikutnya."
+            "value" : "Usaha yang bagus! Kamu sudah menyelesaikan seluruh set, dengan total sepuluh repetisi. Terima kasih sudah berusaha mengikuti setiap gerakannya. Sekarang, yuk istirahat sebentar sebelum lanjut ke latihan berikutnya."
           }
         }
       }
@@ -9051,7 +11618,7 @@
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Sebelum mulai, kita cari tahu titik awal gerakan tangan kananmu dulu ya. Mulai dari buka tangan. Tahan sebentar."
+            "value" : "Sebelum mulai, kita cari tahu titik awal gerakan tangan kananmu dulu. Mulai dari buka tangan. Tahan sebentar."
           }
         }
       }
@@ -9561,7 +12128,7 @@
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Yuk kita mulai. Satu repetisi dihitung kalau jempol sudah menyentuh semua jari, sampai kelingking, ya. Sekarang buka tangan perlahan, dan tahan sebentar."
+            "value" : "Yuk kita mulai. Satu repetisi dihitung kalau jempol sudah menyentuh semua jari, sampai kelingking. Sekarang buka tangan perlahan, dan tahan sebentar."
           }
         }
       }
@@ -9731,7 +12298,7 @@
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Kita ulangi gerakannya ya."
+            "value" : "Kita ulangi gerakannya."
           }
         }
       }
@@ -9901,7 +12468,7 @@
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Kita lanjut ke repetisi ketiga, ya."
+            "value" : "Kita lanjut ke repetisi ketiga."
           }
         }
       }
@@ -9986,7 +12553,7 @@
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Bagus! Sudah empat repetisi selesai. Semangat! Satu repetisi lagi ya."
+            "value" : "Bagus! Sudah empat repetisi selesai. Semangat! Satu repetisi lagi."
           }
         }
       }
@@ -10071,7 +12638,7 @@
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Kita lanjut ya."
+            "value" : "Kita lanjut."
           }
         }
       }
@@ -10445,7 +13012,7 @@
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Usaha yang bagus! Kamu sudah menyelesaikan seluruh set, dengan total sepuluh repetisi. Terima kasih sudah berusaha mengikuti setiap gerakannya, ya. Sekarang, yuk istirahat sebentar sebelum lanjut ke latihan berikutnya."
+            "value" : "Usaha yang bagus! Kamu sudah menyelesaikan seluruh set, dengan total sepuluh repetisi. Terima kasih sudah berusaha mengikuti setiap gerakannya. Sekarang, yuk istirahat sebentar sebelum lanjut ke latihan berikutnya."
           }
         }
       }
@@ -14219,7 +16786,7 @@
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Selesai. Kembali ke lingkaran biru dan tahan 3 detik, lalu ganti lengan."
+            "value" : "Selesai. Kembali ke lingkaran dan tahan 3 detik, lalu ganti lengan."
           }
         }
       }
@@ -14236,7 +16803,7 @@
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Selesai. Kembali ke lingkaran biru dan tahan 3 detik, lalu gunakan lengan yang sama lagi."
+            "value" : "Selesai. Kembali ke lingkaran dan tahan 3 detik, lalu gunakan lengan yang sama lagi."
           }
         }
       }
@@ -14645,6 +17212,703 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Perintah suara di perangkat wajib tersedia. Tombol jeda dan akhiri sesi selalu tersedia."
+          }
+        }
+      }
+    },
+    "scripted.body.armsDown" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rest both arms straight and relaxed at your sides."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Letakkan kedua tangan lurus dan rileks di samping tubuh."
+          }
+        }
+      }
+    },
+    "scripted.calibration.complete" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Great! We now know where your hand movement starts. Now we are ready to begin."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bagus! Kita sudah tahu titik awal gerakan tanganmu. Sekarang, kita sudah siap untuk memulai latihan."
+          }
+        }
+      }
+    },
+    "scripted.calibration.prepared" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Great! The preparation is done. Now we are ready to begin."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bagus! Persiapan gerakan sudah selesai. Sekarang, kita sudah siap untuk memulai latihan."
+          }
+        }
+      }
+    },
+    "scripted.countdown.next" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The next set starts in"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Set selanjutnya akan dimulai dalam"
+          }
+        }
+      }
+    },
+    "scripted.intro.calibration" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "First, we will adjust to your position and how you can move."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sebelumnya, kita akan menyesuaikan posisi dan kemampuan gerakmu terlebih dahulu."
+          }
+        }
+      }
+    },
+    "scripted.intro.goalsTwoSets %lld" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "We will do this exercise in two sets, %lld times in each set."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kita akan melakukan latihan ini sebanyak dua set, dengan %lld kali di setiap setnya."
+          }
+        }
+      }
+    },
+    "scripted.intro.safety" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Follow the movement as far as you can, and don't push it if it hurts."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ikuti gerakan sesuai kemampuan, dan jangan dipaksakan jika terasa nyeri."
+          }
+        }
+      }
+    },
+    "scripted.intro.voice" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "If you feel uncomfortable during the exercise, you can use voice commands. Say 'Stop' to pause, and 'Go' to continue."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Jika merasa tidak nyaman selama latihan, kamu bisa menggunakan perintah suara. Katakan 'Stop' untuk berhenti sejenak, dan 'Go' untuk melanjutkan latihan."
+          }
+        }
+      }
+    },
+    "scripted.left.calibration.intro" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Next, we will first find the starting point of your left hand's movement."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Selanjutnya, kita akan menyesuaikan titik awal gerakan tangan kirimu terlebih dahulu."
+          }
+        }
+      }
+    },
+    "scripted.left.calibration.prepared" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Great! The left-hand preparation is done. Now we are ready to begin."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bagus! Persiapan gerakan tangan kiri sudah selesai. Sekarang, kita sudah siap untuk memulai latihan."
+          }
+        }
+      }
+    },
+    "scripted.left.hand.adjust" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Try turning your left palm towards the camera again."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Coba arahkan kembali telapak tangan kirimu ke kamera."
+          }
+        }
+      }
+    },
+    "scripted.left.hand.detected" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Good, your hand is visible. If it feels tiring, rest your arm however is comfortable."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bagus, posisi tangan sudah terlihat. Jika terasa pegal, posisikan lengan sesuai kenyamananmu."
+          }
+        }
+      }
+    },
+    "scripted.left.hand.position" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Now rest your right hand on your lap and turn your left palm towards the camera."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sekarang, letakkan tangan kanan di pangkuan dan arahkan telapak tangan kiri ke kamera."
+          }
+        }
+      }
+    },
+    "scripted.left.hand.sit" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "First, sit comfortably."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Duduk dengan nyaman terlebih dahulu."
+          }
+        }
+      }
+    },
+    "scripted.left.hand.visible" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Make sure every finger of your left hand is visible to the camera."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pastikan seluruh jari tangan kirimu terlihat di kamera."
+          }
+        }
+      }
+    },
+    "scripted.nextSet.2" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Let's start again for the second set."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Yuk kita mulai lagi untuk set kedua."
+          }
+        }
+      }
+    },
+    "scripted.nextSet.3" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Let's start again for the third set."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Yuk kita mulai lagi untuk set ketiga."
+          }
+        }
+      }
+    },
+    "scripted.nextSet.4" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Let's start again for the fourth set."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Yuk kita mulai lagi untuk set keempat."
+          }
+        }
+      }
+    },
+    "scripted.nextSet.5" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Let's start again for the fifth set."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Yuk kita mulai lagi untuk set kelima."
+          }
+        }
+      }
+    },
+    "scripted.praise.1" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Good! One repetition done."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bagus! Satu repetisi selesai."
+          }
+        }
+      }
+    },
+    "scripted.praise.2" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Great! Two repetitions done."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hebat! Dua repetisi sudah selesai."
+          }
+        }
+      }
+    },
+    "scripted.praise.3" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Three repetitions done, great!"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tiga repetisi sudah selesai, hebat!"
+          }
+        }
+      }
+    },
+    "scripted.praise.4" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Good! Four repetitions done. Keep going! One more repetition."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bagus! Sudah empat repetisi selesai. Semangat! Satu repetisi lagi."
+          }
+        }
+      }
+    },
+    "scripted.rest.closing" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Now we are ready to continue with the next set."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sekarang, kita siap melanjutkan set berikutnya."
+          }
+        }
+      }
+    },
+    "scripted.rest.exhale" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Breathe out slowly…"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hembuskan perlahan…"
+          }
+        }
+      }
+    },
+    "scripted.rest.exhale.last" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Breathe out slowly…"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hembuskan perlahan…"
+          }
+        }
+      }
+    },
+    "scripted.rest.hold" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hold for a moment…"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tahan sebentar…"
+          }
+        }
+      }
+    },
+    "scripted.rest.hold.first" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hold for a moment…"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tahan sebentar…"
+          }
+        }
+      }
+    },
+    "scripted.rest.inhale.1" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Breathe in slowly through your nose…"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tarik napas perlahan lewat hidung…"
+          }
+        }
+      }
+    },
+    "scripted.rest.inhale.2" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Breathe in slowly through your nose…"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tarik napas perlahan lewat hidung…"
+          }
+        }
+      }
+    },
+    "scripted.rest.inhale.3" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Breathe in slowly through your nose…"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tarik napas perlahan lewat hidung…"
+          }
+        }
+      }
+    },
+    "scripted.rest.opening.1" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Time for a short rest"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Waktunya istirahat sebentar"
+          }
+        }
+      }
+    },
+    "scripted.rest.opening.2" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Time for a short rest"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Waktunya istirahat sebentar"
+          }
+        }
+      }
+    },
+    "scripted.rest.opening.3" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Time for a short rest"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Waktunya istirahat sebentar"
+          }
+        }
+      }
+    },
+    "scripted.rest.opening.4" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Time for a short rest"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Waktunya istirahat sebentar"
+          }
+        }
+      }
+    },
+    "scripted.summary.final" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Good effort! You have finished every set."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Usaha yang bagus! Kamu sudah menyelesaikan seluruh set."
+          }
+        }
+      }
+    },
+    "scripted.summary.finalTotal %lld" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Good effort! You have finished every set, with %lld repetitions in total."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Usaha yang bagus! Kamu sudah menyelesaikan seluruh set, dengan total %lld repetisi."
+          }
+        }
+      }
+    },
+    "scripted.summary.first" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Good effort! You have finished the first set."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Usaha yang bagus! Kamu sudah menyelesaikan set pertama."
+          }
+        }
+      }
+    },
+    "scripted.summary.firstTotal %lld" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Good effort! You have finished the first set, with %lld repetitions in total."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Usaha yang bagus! Kamu sudah menyelesaikan set pertama, dengan total %lld repetisi."
+          }
+        }
+      }
+    },
+    "scripted.summary.restBeforeSecondSet" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Next, we will rest for a moment before the second set."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Selanjutnya, kita akan istirahat dulu sebentar sebelum lanjut ke set kedua."
+          }
+        }
+      }
+    },
+    "scripted.summary.thanks" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Thank you for following every movement. Now let's rest again before the next exercise."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Terima kasih sudah berusaha mengikuti setiap gerakannya. Sekarang, yuk istirahat lagi sebelum lanjut ke latihan berikutnya."
           }
         }
       }
@@ -17482,6 +20746,312 @@
         }
       }
     },
+    "shoulderFlexion.left.firstSet.rep.1.start" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Let's begin. Let both arms rest straight at your sides. Hold."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Yuk kita mulai. Biarkan kedua tangan lurus di samping tubuh. Tahan."
+          }
+        }
+      }
+    },
+    "shoulderFlexion.left.firstSet.rep.1.target" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Now slowly raise your left arm up. Keep your elbow straight and your palm facing forward. Hold."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sekarang angkat tangan kirimu perlahan ke atas. Pastikan siku tetap lurus dan telapak tangan menghadap depan. Tahan."
+          }
+        }
+      }
+    },
+    "shoulderFlexion.left.firstSet.rep.2.start" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Let's continue, lower your left arm back to your side."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kita lanjut, turunkan kembali tangan kiri ke samping tubuh."
+          }
+        }
+      }
+    },
+    "shoulderFlexion.left.firstSet.rep.2.target" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Slowly raise your left arm up, elbow straight."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Angkat tangan kiri perlahan ke atas dengan siku tetap lurus."
+          }
+        }
+      }
+    },
+    "shoulderFlexion.left.firstSet.rep.3.start" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bring your left arm back to your side. Hold."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kembalikan tangan kiri ke samping tubuh. Tahan."
+          }
+        }
+      }
+    },
+    "shoulderFlexion.left.firstSet.rep.3.target" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Raise your left arm up again. Keep your elbow straight and your palm facing forward. Hold."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Angkat kembali tangan kiri ke atas. Pastikan siku tetap lurus dan telapak tangan menghadap depan. Tahan."
+          }
+        }
+      }
+    },
+    "shoulderFlexion.left.firstSet.rep.4.start" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lower your left arm to your side."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Turunkan tangan kiri ke samping tubuh."
+          }
+        }
+      }
+    },
+    "shoulderFlexion.left.firstSet.rep.4.target" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Raise your left arm up again."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Angkat kembali tangan kiri ke atas."
+          }
+        }
+      }
+    },
+    "shoulderFlexion.left.firstSet.rep.5.start" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Last one, lower your left arm. Hold."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Terakhir, turunkan tangan kiri. Tahan."
+          }
+        }
+      }
+    },
+    "shoulderFlexion.left.intro.purpose" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This exercise helps train lifting your arm forward, like reaching a high shelf."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Latihan ini membantu melatih mengangkat lengan ke depan, seperti saat meraih rak yang tinggi."
+          }
+        }
+      }
+    },
+    "shoulderFlexion.left.intro.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Next, we will do Shoulder Flexion with Rotation."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Selanjutnya kita akan latihan Fleksi Bahu dengan Rotasi."
+          }
+        }
+      }
+    },
+    "shoulderFlexion.left.laterSet.rep.1.start" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Let both arms rest straight at your sides. Hold."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Biarkan kedua tangan lurus di samping tubuh. Tahan."
+          }
+        }
+      }
+    },
+    "shoulderFlexion.left.laterSet.rep.3.start" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Last one, bring your left arm back to your side. Hold."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Terakhir, kembalikan tangan kiri ke samping tubuh. Tahan."
+          }
+        }
+      }
+    },
+    "shoulderFlexion.left.prep.notVisible" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Make sure your shoulders, upper arms, forearms, wrists and palms are visible to the camera."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pastikan bahu, lengan atas, lengan bawah, pergelangan hingga telapak tangan terlihat di kamera."
+          }
+        }
+      }
+    },
+    "shoulderFlexion.left.prep.return" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Slowly lower your left arm again."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Turunkan kembali tangan kiri perlahan."
+          }
+        }
+      }
+    },
+    "shoulderFlexion.left.prep.start" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Let both arms rest straight and relaxed at your sides. Hold."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Biarkan kedua tangan lurus berada di samping tubuh dengan rileks. Tahan."
+          }
+        }
+      }
+    },
+    "shoulderFlexion.left.prep.target" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Now slowly try raising your left arm straight up, as if reaching for something on a high shelf. Keep your elbow straight and your palm facing forward. Hold."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sekarang, perlahan coba angkat tangan kiri lurus ke atas seperti ingin mengambil sesuatu di rak yang tinggi. Pastikan siku tetap lurus dan telapak tangan menghadap depan. Tahan."
+          }
+        }
+      }
+    },
+    "shoulderFlexion.left.prep.upright" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Keep your body upright, with your shoulders, upper arms, forearms, wrists and palms visible to the camera."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pastikan posisi tubuh tegak, serta bahu, lengan atas, lengan bawah, pergelangan hingga telapak tangan terlihat di kamera."
+          }
+        }
+      }
+    },
     "shoulderFlexion.return" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -17596,7 +21166,7 @@
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Selesai. Turunkan tangan ke lingkaran biru dan tahan 3 detik, lalu ganti lengan."
+            "value" : "Selesai. Turunkan tangan ke lingkaran dan tahan 3 detik, lalu ganti lengan."
           }
         }
       }
@@ -17613,7 +21183,7 @@
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Selesai. Turunkan tangan ke lingkaran biru dan tahan 3 detik, lalu gunakan lengan yang sama lagi."
+            "value" : "Selesai. Turunkan tangan ke lingkaran dan tahan 3 detik, lalu gunakan lengan yang sama lagi."
           }
         }
       }
@@ -17631,6 +21201,193 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Angkat lengan kanan ke depan, telapak menghadap atas."
+          }
+        }
+      }
+    },
+    "shoulderRotation.left.firstSet.rep.1.start" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Let's begin. Now bend your left arm to 90 degrees in front, as if to shake hands. Keep your left elbow against your side. Hold."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Yuk kita mulai. Sekarang tekuk lengan kiri 90 derajat ke arah depan, seperti ingin berjabat tangan. Pastikan siku kirimu tetap menempel di sisi tubuh. Tahan."
+          }
+        }
+      }
+    },
+    "shoulderRotation.left.firstSet.rep.2.start" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Let's continue, bring your left forearm forward again, elbow at 90 degrees. Hold."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kita lanjut, arahkan kembali lengan kiri ke depan dengan siku tetap 90 derajat. Tahan."
+          }
+        }
+      }
+    },
+    "shoulderRotation.left.firstSet.rep.3.start" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bring your left forearm forward again. Keep your elbow against your side. Hold."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kembalikan lengan kiri ke arah depan. Siku tetap menempel di sisi tubuh. Tahan."
+          }
+        }
+      }
+    },
+    "shoulderRotation.left.firstSet.rep.4.start" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Left forearm forward."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lengan kiri ke arah depan."
+          }
+        }
+      }
+    },
+    "shoulderRotation.left.firstSet.rep.5.start" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Last one, bring your left forearm forward again. Hold."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Terakhir, kembalikan lengan kiri ke arah depan. Tahan."
+          }
+        }
+      }
+    },
+    "shoulderRotation.left.laterSet.rep.1.start" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bend your left arm to 90 degrees in front, as if to shake hands. Keep your left elbow against your side. Hold."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tekuk lengan kiri 90 derajat ke arah depan, seperti ingin berjabat tangan. Pastikan siku kirimu tetap menempel di sisi tubuh. Tahan."
+          }
+        }
+      }
+    },
+    "shoulderRotation.left.prep.notVisible" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Make sure your shoulders, upper arms and elbows are visible to the camera."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pastikan bahu, lengan atas, dan siku terlihat di kamera."
+          }
+        }
+      }
+    },
+    "shoulderRotation.left.prep.otherArm" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Keep your right arm at your side."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Biarkan tangan kananmu berada di samping tubuh."
+          }
+        }
+      }
+    },
+    "shoulderRotation.left.prep.return" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lower your left arm straight to your side again, relaxed."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kembali turunkan lengan kiri lurus di samping tubuh dengan rileks."
+          }
+        }
+      }
+    },
+    "shoulderRotation.left.prep.start" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Now bend your left arm to 90 degrees in front, as if to shake hands. Keep your left elbow against your side. Hold."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sekarang, tekuk lengan kiri 90 derajat ke arah depan, seperti ingin berjabat tangan. Pastikan siku kirimu tetap menempel di sisi tubuh. Tahan."
+          }
+        }
+      }
+    },
+    "shoulderRotation.left.prep.upright" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Keep your body upright, with your shoulders, upper arms and elbows visible to the camera."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pastikan posisi tubuh tegak, serta bahu, lengan atas, dan siku terlihat di kamera."
           }
         }
       }
@@ -17754,6 +21511,227 @@
         }
       }
     },
+    "sitToStand.firstSet.rep.1.start" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Let's begin. Make sure you are sitting with both feet flat on the floor. Hold."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Yuk kita mulai. Pastikan kamu duduk dengan kedua kaki menapak di lantai. Tahan."
+          }
+        }
+      }
+    },
+    "sitToStand.firstSet.rep.1.target" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Now slowly stand up from the chair. Stand upright. Hold."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sekarang, perlahan berdiri dari kursi. Berdiri tegak. Tahan."
+          }
+        }
+      }
+    },
+    "sitToStand.firstSet.rep.2.return" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Now sit back down slowly. Hold."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sekarang, duduk kembali secara perlahan. Tahan."
+          }
+        }
+      }
+    },
+    "sitToStand.firstSet.rep.2.target" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Let's continue, stand up again from sitting. Hold."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kita lanjut, berdiri kembali dari posisi duduk. Tahan."
+          }
+        }
+      }
+    },
+    "sitToStand.firstSet.rep.3.return" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sit back down slowly. Hold."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Duduk kembali secara perlahan. Tahan."
+          }
+        }
+      }
+    },
+    "sitToStand.firstSet.rep.3.target" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Stand up from the chair again. Hold."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Berdiri kembali dari kursi. Tahan."
+          }
+        }
+      }
+    },
+    "sitToStand.firstSet.rep.4.target" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Stand up again. Hold."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Berdiri kembali. Tahan."
+          }
+        }
+      }
+    },
+    "sitToStand.firstSet.rep.5.target" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Last one, stand up again. Hold."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Terakhir, berdiri kembali. Tahan."
+          }
+        }
+      }
+    },
+    "sitToStand.intro.camera" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Place the chair so your shoulders, hips, knees and ankles are visible to the camera. You may sit turned slightly to the right or left."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Atur posisi kursi agar bahu, pinggul, lutut, dan pergelangan kakimu bisa terlihat di kamera. Kamu boleh mengatur posisi duduk sedikit menyerong ke kanan atau kiri."
+          }
+        }
+      }
+    },
+    "sitToStand.intro.chair" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Prepare a sturdy chair that does not slide. Avoid a sofa or a chair that is too soft."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Siapkan kursi yang kokoh dan tidak mudah bergeser. Hindari menggunakan sofa atau kursi yang terlalu empuk."
+          }
+        }
+      }
+    },
+    "sitToStand.intro.purpose" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This exercise helps train your balance so standing up from sitting is easier."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Latihan ini membantu melatih keseimbangan tubuh agar lebih mudah berdiri dari posisi duduk."
+          }
+        }
+      }
+    },
+    "sitToStand.intro.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Next, we will do Sit to Stand."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Selanjutnya kita akan latihan Berdiri dari Posisi Duduk."
+          }
+        }
+      }
+    },
+    "sitToStand.laterSet.rep.1.start" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Make sure you are sitting with both feet flat on the floor. Hold."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pastikan kamu duduk dengan kedua kaki menapak di lantai. Tahan."
+          }
+        }
+      }
+    },
     "sitToStand.metric.knee" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -17818,6 +21796,125 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Condongkan badan sedikit ke depan, lalu berdiri sesuai kemampuan Anda dan duduk kembali perlahan. Tuntun menghitung repetisi saat Anda condong dulu sebelum berdiri."
+          }
+        }
+      }
+    },
+    "sitToStand.prep.hands" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rest both hands on your lap, relaxed."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Letakkan kedua tangan di pangkuan dengan rileks."
+          }
+        }
+      }
+    },
+    "sitToStand.prep.intro" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Next, we will first find the starting point of your standing movement."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Selanjutnya, kita akan menyesuaikan titik awal gerakan berdirimu terlebih dahulu."
+          }
+        }
+      }
+    },
+    "sitToStand.prep.return" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Now sit back down slowly."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sekarang, duduk kembali secara perlahan."
+          }
+        }
+      }
+    },
+    "sitToStand.prep.sit" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sit on the chair with your body upright."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Duduk di kursi dengan posisi tubuh tegak."
+          }
+        }
+      }
+    },
+    "sitToStand.prep.start" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sit on the chair upright with both feet flat on the floor. Hold."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Duduk di kursi dengan posisi tubuh tegak dan kedua kaki menapak di lantai. Tahan."
+          }
+        }
+      }
+    },
+    "sitToStand.prep.target" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Now try standing up slowly from the chair. Stand upright and hold."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sekarang, coba berdiri perlahan dari kursi. Berdiri tegak dan tahan."
+          }
+        }
+      }
+    },
+    "sitToStand.prep.visible" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Make sure your shoulders, hips and knees are visible to the camera."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pastikan bahu, pinggul, dan lutut terlihat di kamera."
           }
         }
       }
@@ -18140,7 +22237,7 @@
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Kita akan mulai dari lengan kiri dulu ya. Sedangkan lengan kanan tetap di samping badan."
+            "value" : "Kita akan mulai dari lengan kiri dulu. Sedangkan lengan kanan tetap di samping badan."
           }
         }
       }
@@ -18174,7 +22271,7 @@
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Sebelum mulai, kita cari tahu titik awal gerakan lengan kirimu dulu ya. Mulai dari luruskan lengan kiri di samping badan, rileks. Tahan."
+            "value" : "Sebelum mulai, kita cari tahu titik awal gerakan lengan kirimu dulu. Mulai dari luruskan lengan kiri di samping badan, rileks. Tahan."
           }
         }
       }
@@ -18196,6 +22293,23 @@
         }
       }
     },
+    "speak.armRaise.left.longRest.restInvitation" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "let’s take a short break"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "kita istirahat sebentar"
+          }
+        }
+      }
+    },
     "speak.armRaise.left.rep.1.raise" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -18208,7 +22322,7 @@
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Yuk kita mulai. Lengan kiri lurus di samping badan. Sekarang, angkat lengan kiri, gerakkan ke arah lingkaran biru. Tahan."
+            "value" : "Yuk kita mulai. Lengan kiri lurus di samping badan. Sekarang, angkat lengan kiri, gerakkan ke arah lingkaran. Tahan."
           }
         }
       }
@@ -18242,7 +22356,7 @@
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Kita ulangi gerakannya ya. Angkat lengan kiri ke lingkaran biru. Tahan."
+            "value" : "Kita ulangi gerakannya. Angkat lengan kiri ke lingkaran. Tahan."
           }
         }
       }
@@ -18276,7 +22390,7 @@
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Kita lanjut, angkat lagi lengan kiri ke lingkaran biru, dan tahan."
+            "value" : "Kita lanjut, angkat lagi lengan kiri ke lingkaran, dan tahan."
           }
         }
       }
@@ -18310,7 +22424,7 @@
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Lanjut lagi, lengan kiri ke lingkaran biru. Tahan."
+            "value" : "Lanjut lagi, lengan kiri ke lingkaran. Tahan."
           }
         }
       }
@@ -18344,7 +22458,7 @@
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Satu repetisi lagi, lengan kiri ke lingkaran biru."
+            "value" : "Satu repetisi lagi, lengan kiri ke lingkaran."
           }
         }
       }
@@ -18429,7 +22543,7 @@
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Hebat, set satu sudah selesai. Sebelum lanjut ke set dua, kita beri tubuh waktu untuk rileks sebentar ya. Kita akan mengambil tiga kali napas secara perlahan. Ikuti panduan ini senyamanmu."
+            "value" : "Hebat, set satu sudah selesai. Sebelum lanjut ke set dua, kita beri tubuh waktu untuk rileks sebentar. Kita akan mengambil tiga kali napas secara perlahan. Ikuti panduan ini senyamanmu."
           }
         }
       }
@@ -18446,7 +22560,7 @@
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Usaha yang bagus! Kamu sudah menyelesaikan seluruh set, dengan total sepuluh repetisi. Terima kasih sudah berusaha mengikuti setiap gerakannya, ya. Sekarang, yuk istirahat sebentar sebelum lanjut ke latihan berikutnya."
+            "value" : "Usaha yang bagus! Kamu sudah menyelesaikan seluruh set, dengan total sepuluh repetisi. Terima kasih sudah berusaha mengikuti setiap gerakannya. Sekarang, yuk istirahat sebentar sebelum lanjut ke latihan berikutnya."
           }
         }
       }
@@ -18531,7 +22645,7 @@
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Sebelum mulai, kita cari tahu titik awal gerakan lengan kananmu dulu ya. Mulai dari luruskan lengan kanan di samping badan, rileks. Tahan."
+            "value" : "Sebelum mulai, kita cari tahu titik awal gerakan lengan kananmu dulu. Mulai dari luruskan lengan kanan di samping badan, rileks. Tahan."
           }
         }
       }
@@ -18553,6 +22667,23 @@
         }
       }
     },
+    "speak.armRaise.right.longRest.restInvitation" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "let’s take a short break"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "kita istirahat sebentar"
+          }
+        }
+      }
+    },
     "speak.armRaise.right.rep.1.raise" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -18565,7 +22696,7 @@
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Yuk kita mulai. Lengan kanan lurus di samping badan. Sekarang, angkat lengan kanan, gerakkan ke arah lingkaran biru. Tahan."
+            "value" : "Yuk kita mulai. Lengan kanan lurus di samping badan. Sekarang, angkat lengan kanan, gerakkan ke arah lingkaran. Tahan."
           }
         }
       }
@@ -18599,7 +22730,7 @@
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Kita ulangi gerakannya ya. Angkat lengan kanan ke lingkaran biru. Tahan."
+            "value" : "Kita ulangi gerakannya. Angkat lengan kanan ke lingkaran. Tahan."
           }
         }
       }
@@ -18633,7 +22764,7 @@
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Kita lanjut, angkat lagi lengan kanan ke lingkaran biru, dan tahan."
+            "value" : "Kita lanjut, angkat lagi lengan kanan ke lingkaran, dan tahan."
           }
         }
       }
@@ -18667,7 +22798,7 @@
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Lanjut lagi, lengan kanan ke lingkaran biru. Tahan."
+            "value" : "Lanjut lagi, lengan kanan ke lingkaran. Tahan."
           }
         }
       }
@@ -18701,7 +22832,7 @@
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Satu repetisi lagi, lengan kanan ke lingkaran biru."
+            "value" : "Satu repetisi lagi, lengan kanan ke lingkaran."
           }
         }
       }
@@ -18786,7 +22917,7 @@
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Hebat, set satu sudah selesai. Sebelum lanjut ke set dua, kita beri tubuh waktu untuk rileks sebentar ya. Kita akan mengambil tiga kali napas secara perlahan. Ikuti panduan ini senyamanmu."
+            "value" : "Hebat, set satu sudah selesai. Sebelum lanjut ke set dua, kita beri tubuh waktu untuk rileks sebentar. Kita akan mengambil tiga kali napas secara perlahan. Ikuti panduan ini senyamanmu."
           }
         }
       }
@@ -18803,7 +22934,7 @@
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Usaha yang bagus! Kamu sudah menyelesaikan seluruh set, dengan total sepuluh repetisi. Terima kasih sudah berusaha mengikuti setiap gerakannya, ya. Sekarang, yuk istirahat sebentar sebelum lanjut ke latihan berikutnya."
+            "value" : "Usaha yang bagus! Kamu sudah menyelesaikan seluruh set, dengan total sepuluh repetisi. Terima kasih sudah berusaha mengikuti setiap gerakannya. Sekarang, yuk istirahat sebentar sebelum lanjut ke latihan berikutnya."
           }
         }
       }
@@ -18821,6 +22952,57 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Usaha yang bagus! Kamu sudah menyelesaikan set pertama, dengan total lima repetisi. Sekarang, yuk istirahat sebentar sebelum lanjut ke set kedua."
+          }
+        }
+      }
+    },
+    "speak.opposition.left.rest.opening" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Well done, set one is complete. Before set two, let’s relax with three slow breaths. Follow as comfortably as you can."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hebat, set satu sudah selesai. Sebelum lanjut ke set dua, kita beri tubuh waktu untuk rileks sebentar. Kita akan mengambil tiga kali napas secara perlahan. Ikuti panduan ini senyamanmu."
+          }
+        }
+      }
+    },
+    "speak.opposition.right.longRest.restInvitation" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "let’s take a short break"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "kita istirahat sebentar"
+          }
+        }
+      }
+    },
+    "speak.opposition.right.rest.opening" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Well done, set one is complete. Before set two, let’s relax with three slow breaths. Follow as comfortably as you can."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hebat, set satu sudah selesai. Sebelum lanjut ke set dua, kita beri tubuh waktu untuk rileks sebentar. Kita akan mengambil tiga kali napas secara perlahan. Ikuti panduan ini senyamanmu."
           }
         }
       }
@@ -18866,6 +23048,193 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Kita mulai dengan enam kali tarikan napas."
+          }
+        }
+      }
+    },
+    "speak.rest.long.restInvitation" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "let’s take a short break"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "kita istirahat sebentar"
+          }
+        }
+      }
+    },
+    "speak.scripted.rest.exhale.last" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "And breathe out long…"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dan hembuskan panjang…"
+          }
+        }
+      }
+    },
+    "speak.scripted.rest.hold" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hold your breath…"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tahan napas…"
+          }
+        }
+      }
+    },
+    "speak.scripted.rest.hold.first" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hold your breath here…"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tahan napasnya di sini…"
+          }
+        }
+      }
+    },
+    "speak.scripted.rest.inhale.1" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Breathe in slowly through your nose…"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tarik napas pelan lewat hidung…"
+          }
+        }
+      }
+    },
+    "speak.scripted.rest.inhale.2" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Two more breaths, breathing in slowly through your nose…"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dua napas lagi dengan menarik napas pelan lewat hidung…"
+          }
+        }
+      }
+    },
+    "speak.scripted.rest.inhale.3" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Once more, breathe in slowly through your nose…"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sekali lagi, tarik napas pelan lewat hidung…"
+          }
+        }
+      }
+    },
+    "speak.scripted.rest.opening.1" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Great, set one is done. Before set two, let's give the body a moment to relax. We will take three slow breaths. Follow along as is comfortable."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hebat, set satu sudah selesai. Sebelum lanjut ke set dua, kita beri tubuh waktu untuk rileks sebentar. Kita akan mengambil tiga kali napas secara perlahan. Ikuti panduan ini senyamanmu."
+          }
+        }
+      }
+    },
+    "speak.scripted.rest.opening.2" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Great, set two is done. Before set three, let's give the body a moment to relax. We will take three slow breaths. Follow along as is comfortable."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hebat, set dua sudah selesai. Sebelum lanjut ke set tiga, kita beri tubuh waktu untuk rileks sebentar. Kita akan mengambil tiga kali napas secara perlahan. Ikuti panduan ini senyamanmu."
+          }
+        }
+      }
+    },
+    "speak.scripted.rest.opening.3" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Great, set three is done. Before set four, let's give the body a moment to relax. We will take three slow breaths. Follow along as is comfortable."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hebat, set tiga sudah selesai. Sebelum lanjut ke set empat, kita beri tubuh waktu untuk rileks sebentar. Kita akan mengambil tiga kali napas secara perlahan. Ikuti panduan ini senyamanmu."
+          }
+        }
+      }
+    },
+    "speak.scripted.rest.opening.4" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Great, set four is done. Before set five, let's give the body a moment to relax. We will take three slow breaths. Follow along as is comfortable."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hebat, set empat sudah selesai. Sebelum lanjut ke set lima, kita beri tubuh waktu untuk rileks sebentar. Kita akan mengambil tiga kali napas secara perlahan. Ikuti panduan ini senyamanmu."
           }
         }
       }
@@ -19125,6 +23494,261 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Satukan ibu jari dan jari telunjuk (jepit) di lingkaran yang bersinar, geser ke lingkaran berikutnya, lalu buka tangan.\nMulai setelah hitungan mundur, meskipun panduan masih berbicara."
+          }
+        }
+      }
+    },
+    "spreading.left.firstSet.rep.1.return" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bring your fingers together again. Hold."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rapatkan kembali jari. Tahan."
+          }
+        }
+      }
+    },
+    "spreading.left.firstSet.rep.1.start" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Let's begin, fingers straight and together. Hold."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Yuk kita mulai, lurus dan rapatkan jari-jari. Tahan."
+          }
+        }
+      }
+    },
+    "spreading.left.firstSet.rep.1.target" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Now spread your fingers as wide as you can. Hold again for a moment."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sekarang, renggangkan jari selebar yang kamu bisa. Tahan lagi sebentar."
+          }
+        }
+      }
+    },
+    "spreading.left.firstSet.rep.2.return" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Together again."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rapatkan kembali."
+          }
+        }
+      }
+    },
+    "spreading.left.firstSet.rep.2.target" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Let's continue, spread your fingers."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kita lanjut, renggangkan jari."
+          }
+        }
+      }
+    },
+    "spreading.left.firstSet.rep.3.return" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bring your fingers together again."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rapatkan kembali jari."
+          }
+        }
+      }
+    },
+    "spreading.left.firstSet.rep.3.target" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Spread your fingers slowly."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Renggangkan jari perlahan."
+          }
+        }
+      }
+    },
+    "spreading.left.firstSet.rep.4.target" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Let's go on, spread your fingers."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kita lanjut lagi, renggangkan jari."
+          }
+        }
+      }
+    },
+    "spreading.left.intro.purpose" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This exercise helps your fingers open wide, so holding big things like a plate or a bottle is easier."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Latihan ini membantu melatih jari membuka lebar, supaya lebih mudah memegang benda besar, seperti piring atau botol."
+          }
+        }
+      }
+    },
+    "spreading.left.intro.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Next, we will do Spread Your Fingers."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Selanjutnya kita akan latihan Renggangkan Jari."
+          }
+        }
+      }
+    },
+    "spreading.left.laterSet.rep.1.start" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fingers straight and together. Hold."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lurus dan rapatkan jari-jari. Tahan."
+          }
+        }
+      }
+    },
+    "spreading.left.laterSet.rep.3.target" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Last one, spread your fingers slowly."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Terakhir, renggangkan jari perlahan."
+          }
+        }
+      }
+    },
+    "spreading.left.prep.return" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bring your fingers together again, relaxed."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kembali rapatkan jari dengan rileks."
+          }
+        }
+      }
+    },
+    "spreading.left.prep.start" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Start with your fingers straight and together. Hold for a moment."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mulai dengan lurus dan rapatkan jari tangan. Tahan sebentar."
+          }
+        }
+      }
+    },
+    "spreading.left.prep.target" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Now spread your fingers as wide as you can. Hold for a moment."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sekarang renggangkan jari selebar yang kamu bisa. Tahan sebentar."
           }
         }
       }

@@ -241,8 +241,9 @@ private final class PreviewPlan: DailyPlanSessionReporting {
     func finish(completed: Bool) {}
     func finishAndEnd(completed: Bool) {}
     func end() {}
-    func markOppositionRest(_ side: HandSide?) {}
+    func markFingerScriptRest(_ side: HandSide?) {}
     func markArmRaiseRest(_ side: TherapySide?) {}
+    func markBalanceScriptRest(_ scripted: Bool) {}
 }
 
 @MainActor

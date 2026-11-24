@@ -23,7 +23,7 @@ final class DailyPlanIntroNarration {
     @ObservationIgnored private var requestID: UUID?
     @ObservationIgnored private var operationID: UUID?
     @ObservationIgnored private var lineIndex = 0
-    @ObservationIgnored private var lineKeys: [String] = []
+    @ObservationIgnored private var lines: [NarrationLine] = []
     @ObservationIgnored private var completion: (() -> Void)?
 
     func start(
@@ -32,7 +32,7 @@ final class DailyPlanIntroNarration {
         audioService: SessionAudioService,
         itemID: String,
         automatic: Bool,
-        lines: [String]
+        lines: [NarrationLine]
     ) async {
         guard !running else {
             return
@@ -47,7 +47,7 @@ final class DailyPlanIntroNarration {
               plan.nextSessionItemID == itemID else {
             return
         }
-        lineKeys = lines
+        self.lines = lines
         begin(audioService: audioService) {
             Task { @MainActor in
                 guard self.operationID == operation,
@@ -129,7 +129,7 @@ final class DailyPlanIntroNarration {
         guard running, !paused else {
             return
         }
-        guard lineKeys.indices.contains(lineIndex) else {
+        guard lines.indices.contains(lineIndex) else {
             running = false
             finished = true
             requestID = nil
@@ -139,9 +139,9 @@ final class DailyPlanIntroNarration {
             completion?()
             return
         }
-        let key = lineKeys[lineIndex]
+        let line = lines[lineIndex]
         let id = UUID()
         requestID = id
-        audioService?.speak(id: id, key: key)
+        audioService?.speak(id: id, key: line.key, argument: line.argument)
     }
 }

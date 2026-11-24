@@ -94,6 +94,22 @@ GROUP_STORAGE = {
     "opposition-right": ("OppositionRight", "opposition-right-narration-manifest.json"),
     "arm-raise-left": ("ArmRaiseLeft", "arm-raise-left-narration-manifest.json"),
     "arm-raise-right": ("ArmRaiseRight", "arm-raise-right-narration-manifest.json"),
+    # The 2026-11-23 left scripts. Lines every script says the same way (intro notes, praise,
+    # summaries, the short rest) are recorded once in scripted-common, or scripted-left when they
+    # name the left hand, so the exercises sound identical where their scripts are.
+    "scripted-common": ("ScriptedCommon", "scripted-common-narration-manifest.json"),
+    "scripted-left": ("ScriptedLeft", "scripted-left-narration-manifest.json"),
+    "full-fist-left": ("FullFistLeft", "full-fist-left-narration-manifest.json"),
+    "hook-fist-left": ("HookFistLeft", "hook-fist-left-narration-manifest.json"),
+    "spreading-left": ("SpreadingLeft", "spreading-left-narration-manifest.json"),
+    "extension-sequence-left": ("ExtensionSequenceLeft", "extension-sequence-left-narration-manifest.json"),
+    # The second 2026-11-23 batch: body exercises and forearm rotation. Internal and external
+    # rotation share one group, as their scripts differ only in "dalam" and "luar".
+    "sit-to-stand": ("SitToStand", "sit-to-stand-narration-manifest.json"),
+    "shoulder-flexion-left": ("ShoulderFlexionLeft", "shoulder-flexion-left-narration-manifest.json"),
+    "cross-midline-left": ("CrossMidlineLeft", "cross-midline-left-narration-manifest.json"),
+    "shoulder-rotation-left": ("ShoulderRotationLeft", "shoulder-rotation-left-narration-manifest.json"),
+    "forearm-rotation-left": ("ForearmRotationLeft", "forearm-rotation-left-narration-manifest.json"),
 }
 DEFAULT_GROUPS = ("finger", "body")
 
@@ -461,8 +477,8 @@ def main():
     parser.add_argument(
         "--groups",
         help=(
-            "Comma-separated registry groups (default: finger,body). An approved script "
-            "(opposition-left/right, arm-raise-left/right) is recorded on its own."
+            "Comma-separated registry groups (default: finger,body). A script group "
+            "(any group in GROUP_STORAGE) is recorded on its own."
         ),
     )
     parser.add_argument(
@@ -568,6 +584,17 @@ REPORT_GROUPS = (
     ("opposition-right", "Thumb opposition script, right"),
     ("arm-raise-left", "Arm raise script, left"),
     ("arm-raise-right", "Arm raise script, right"),
+    ("scripted-common", "Shared lines of the left scripts (2026-11-23)"),
+    ("scripted-left", "Shared left-hand lines of the left scripts (2026-11-23)"),
+    ("full-fist-left", "Full fist script, left"),
+    ("hook-fist-left", "Hook fist script, left"),
+    ("spreading-left", "Finger spreading script, left"),
+    ("extension-sequence-left", "Finger extension sequence script, left"),
+    ("sit-to-stand", "Sit to stand script"),
+    ("shoulder-flexion-left", "Shoulder flexion script, left"),
+    ("cross-midline-left", "Cross midline (Keseimbangan) script, left"),
+    ("shoulder-rotation-left", "Internal and external shoulder rotation scripts, left"),
+    ("forearm-rotation-left", "Forearm rotation script, left"),
 )
 CLIP_FOLDERS = {"id": OUTPUT, "en": OUTPUT_EN}
 

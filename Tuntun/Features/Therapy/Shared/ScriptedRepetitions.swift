@@ -38,4 +38,36 @@ enum ScriptedRepetitions {
 
         return 2 + (repetition - 2) % 3
     }
+
+    // MARK: - Scripts of 2026-11-23
+
+    /// The 2026-11-23 scripts write later sets for three repetitions: an opening one, a middle
+    /// one and a closing one.
+    static let recordedLaterSetRepetitions = 3
+
+    /// Repetition goals whose "dengan total … repetisi" and "… kali di setiap setnya" sentences
+    /// are recorded: the scripts' three and the app's default five.
+    static let recordedGoals: Set<Int> = [3, 5]
+
+    /// Exercise totals recorded in "seluruh set, dengan total … repetisi": two sets of either goal.
+    static let recordedTotals: Set<Int> = [6, 10]
+
+    /// The recorded later-set repetition whose lines guide `repetition` of `goal`: the first
+    /// keeps its opening, the last its closing wording, and every one between them the middle.
+    static func recordedLaterSetRepetition(_ repetition: Int, goal: Int) -> Int {
+        if repetition <= 1 {
+            return 1
+        }
+
+        if repetition >= goal {
+            return recordedLaterSetRepetitions
+        }
+
+        return 2
+    }
+
+    /// Whether "dua set, dengan … kali di setiap setnya" can be said with a recorded number.
+    static func hasRecordedGoals(sets: Int, repetitions: Int) -> Bool {
+        sets == 2 && recordedGoals.contains(repetitions)
+    }
 }

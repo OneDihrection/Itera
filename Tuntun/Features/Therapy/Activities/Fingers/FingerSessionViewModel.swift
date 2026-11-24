@@ -40,7 +40,10 @@ protocol FingerSessionViewModelProtocol: AnyObject, Observable {
     var countdown: Int { get }
     var restBreath: RestBreath? { get }
     var scriptedRest: BreathingRest? { get }
-    var usesOppositionScript: Bool { get }
+    var usesFingerScript: Bool { get }
+    /// The countdown's title and the scripted rest's cue prefix.
+    var countdownTitleKey: String { get }
+    var scriptRestPrefix: String { get }
     var upcoming: (exercise: FingerExercise, set: Int)? { get }
     var showsUpcomingPreview: Bool { get }
     var showsGuideIndicators: Bool { get }
@@ -129,12 +132,40 @@ final class FingerSessionViewModel: FingerSessionViewModelProtocol {
     private(set) var scriptedRest: BreathingRest?
     @ObservationIgnored private var lastHoldCount = ""
 
-    var usesOppositionScript: Bool {
+    /// Any Indonesian hand script: the 2026-11-23 left-hand scripts, or the right hand's
+    /// approved thumb-opposition script.
+    var usesFingerScript: Bool {
         sessionLanguage == .indonesian
-            && OppositionGuidance.applies(to: activity.kind)
+            && FingerScriptGuidance.isScripted(activity.kind, side: routine.side)
+    }
+
+    /// The 2026-11-23 script of the current exercise, or nil for the older opposition script and
+    /// unscripted sessions.
+    private var fingerScript: FingerScript? {
+        guard sessionLanguage == .indonesian else {
+            return nil
+        }
+
+        return FingerScriptGuidance.script(for: activity.kind, side: routine.side)
+    }
+
+    var countdownTitleKey: String {
+        guard usesFingerScript, activity.set > 1 else {
+            return "calibration.countdown"
+        }
+
+        return fingerScript == nil ? OppositionGuidance.prefix(for: routine.side) + "countdown.next" : "scripted.countdown.next"
+    }
+
+    var scriptRestPrefix: String {
+        fingerScript == nil ? OppositionGuidance.prefix(for: routine.side) : "scripted."
     }
 
     private var scriptedNarrationLines: [NarrationLine] {
+        if let fingerScript {
+            return newScriptNarrationLines(fingerScript)
+        }
+
         let prefix = OppositionGuidance.prefix(for: routine.side)
         if calibrationMessage == "calibration.intro" {
             return [NarrationLine(key: prefix + "calibration.position")]
@@ -144,6 +175,32 @@ final class FingerSessionViewModel: FingerSessionViewModelProtocol {
             return scriptedRest.key.map { [NarrationLine(key: prefix + $0)] } ?? []
         }
         return OppositionGuidance.movementLines(for: activity, side: routine.side)
+    }
+
+    private func newScriptNarrationLines(_ script: FingerScript) -> [NarrationLine] {
+        if calibrationMessage == "calibration.intro" {
+            return FingerScriptGuidance.setupLines(for: script)
+        }
+        if activity.phase == .rest, let scriptedRest {
+            // The quiet step speaks nothing.
+            return scriptedRest.key.map { [NarrationLine(key: scriptRestPrefix + $0)] } ?? []
+        }
+        return FingerScriptGuidance.movementLines(for: activity, script: script)
+    }
+
+    /// The scripted short rest after the set just finished.
+    private func makeScriptedRest() -> BreathingRest {
+        guard fingerScript != nil else {
+            return BreathingRest(
+                opensAfterFirstSet: activity.completedSets == 1,
+                minimumSeconds: Double(routine.restSeconds)
+            )
+        }
+
+        return BreathingRest(
+            openingAfterSet: activity.completedSets,
+            minimumSeconds: Double(routine.restSeconds)
+        )
     }
 
     var calibrationMessage: String? {
@@ -618,13 +675,10 @@ final class FingerSessionViewModel: FingerSessionViewModelProtocol {
         if activity.phase != .countdown {
             practiceCountdownReady = false
         }
-        if usesOppositionScript, activity.phase == .rest,
+        if usesFingerScript, activity.phase == .rest,
            activity.completedSets < routine.sets, activity.remaining > 0 {
             if scriptedRest == nil {
-                scriptedRest = BreathingRest(
-                    opensAfterFirstSet: activity.completedSets == 1,
-                    minimumSeconds: Double(routine.restSeconds)
-                )
+                scriptedRest = makeScriptedRest()
             }
             scriptedRest?.tick(now, ready: frameReady && !paused)
             if scriptedRest?.finished == true {
@@ -652,7 +706,7 @@ final class FingerSessionViewModel: FingerSessionViewModelProtocol {
     }
 
     private func updateHoldCount() {
-        guard usesOppositionScript, !paused, trackingReady,
+        guard usesFingerScript, !paused, trackingReady,
               speechGate == nil, activity.isHolding, activity.holdCompletionID == nil,
               activity.holdElapsed > 0,
               [.baseline, .target, .active].contains(activity.phase) else {
@@ -699,6 +753,12 @@ final class FingerSessionViewModel: FingerSessionViewModelProtocol {
 
     var recoveryGuidanceKey: String? {
         if trackingRecovery.showsGuidance(at: ProcessInfo.processInfo.systemUptime) {
+            if let fingerScript,
+               let problem = trackingRecovery.problem,
+               let key = FingerScriptGuidance.recoveryKey(for: problem, script: fingerScript) {
+                return key
+            }
+
             switch trackingRecovery.problem {
             case .position: return "recovery.position"
             case .selectedHand: return routine.side == .left ? "recovery.left" : "recovery.right"
@@ -743,12 +803,9 @@ final class FingerSessionViewModel: FingerSessionViewModelProtocol {
         guard !paused, previewAttached,
               ProcessInfo.processInfo.systemUptime - lastFrame <= 0.3 else { return }
 
-        if usesOppositionScript, activity.phase == .rest,
+        if usesFingerScript, activity.phase == .rest,
            activity.completedSets < routine.sets, scriptedRest == nil {
-            scriptedRest = BreathingRest(
-                opensAfterFirstSet: activity.completedSets == 1,
-                minimumSeconds: Double(routine.restSeconds)
-            )
+            scriptedRest = makeScriptedRest()
         }
 
         let flow = calibrationMessage
@@ -760,13 +817,13 @@ final class FingerSessionViewModel: FingerSessionViewModelProtocol {
             return
         }
 
-        if usesOppositionScript,
+        if usesFingerScript,
            flow == "calibration.try", activity.phase == .baseline, activity.finger == 0,
            !trackingReady {
             return
         }
 
-        let scriptIdentity = usesOppositionScript
+        let scriptIdentity = usesFingerScript
             ? "\(activity.set)-\(activity.repetitions)-\(activity.needsStart)-\(scriptedRest?.step ?? -1)"
             : ""
         let key = scriptIdentity + (flow ?? instructionKey) + instructionKey
@@ -783,7 +840,7 @@ final class FingerSessionViewModel: FingerSessionViewModelProtocol {
     private func completeNarration() {
         if spokenFlowKey == "calibration.intro" {
             announcedCalibrationIndex = engine.summary.exerciseIndex
-            if usesOppositionScript {
+            if usesFingerScript {
                 spokenFlowKey = nil
                 engine.guidanceStarted()
                 return
@@ -793,7 +850,7 @@ final class FingerSessionViewModel: FingerSessionViewModelProtocol {
             lastCountdownCue = ""
         }
         spokenFlowKey = nil
-        if usesOppositionScript, activity.phase == .rest {
+        if usesFingerScript, activity.phase == .rest {
             scriptedRest?.guidanceCompleted()
         }
         engine.guidanceCompleted()
@@ -805,14 +862,14 @@ final class FingerSessionViewModel: FingerSessionViewModelProtocol {
         }
 
         // The scripted rest's quiet step lets the short rest run out without a cue.
-        if usesOppositionScript, activity.phase == .rest, let scriptedRest, scriptedRest.key == nil {
+        if usesFingerScript, activity.phase == .rest, let scriptedRest, scriptedRest.key == nil {
             return
         }
 
         let flow = calibrationMessage
         let key = flow ?? instructionKey
         var lines: [NarrationLine]
-        if usesOppositionScript, !scriptedNarrationLines.isEmpty {
+        if usesFingerScript, !scriptedNarrationLines.isEmpty {
             lines = scriptedNarrationLines
         } else if flow == "calibration.try" {
             lines = [NarrationLine(key: key)] + narrationLines

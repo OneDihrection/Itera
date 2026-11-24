@@ -189,14 +189,12 @@ struct TMDailyPlanIntroView<ViewModel: DailyPlanIntroViewModelProtocol>: View {
     private var notes: some View {
         TMTherapyInfoCard(
             symbol: "info.circle",
-            tint: TherapyPalette.warning,
             title: Text("plan.intro.safety.title"),
             message: Text("plan.intro.safety.message")
         )
 
         TMTherapyInfoCard(
             symbol: "mic.fill",
-            tint: TherapyPalette.guidanceBlue,
             title: Text("plan.intro.voice.title"),
             message: Text("plan.intro.voice.message")
         )

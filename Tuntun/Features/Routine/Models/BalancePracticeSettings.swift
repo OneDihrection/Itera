@@ -12,7 +12,9 @@ import Foundation
 struct BalancePracticeSettings: Hashable {
     static let defaultRepetitions = 6
     static let defaultHoldSeconds = 10
-    static let defaultArmSelection = BalanceArmSelection.both
+    /// The left arm, which the Indonesian 2026-11-23 scripts are written for, unless a side was
+    /// chosen in Settings (sit to stand has none).
+    static let defaultArmSelection = BalanceArmSelection.left
     static let defaultSets = 1
     static let defaultRestSeconds = 15
     static let setsRange = 1...5

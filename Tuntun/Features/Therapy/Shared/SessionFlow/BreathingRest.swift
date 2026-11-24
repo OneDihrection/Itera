@@ -16,8 +16,8 @@ import Foundation
 /// cannot change their number. Instead the quiet step after the last exhale lasts until the whole
 /// rest has reached it; a short rest shorter than the script keeps the script's own length.
 ///
-/// Used by the Indonesian arm-raise script (`SessionEngine`) and thumb-opposition script
-/// (`FingerSessionViewModel`). The timed rest keeps its stateless rhythm, `RestBreath`.
+/// Used by the Indonesian arm-raise script (`SessionEngine`) and the hand scripts
+/// (`FingerSessionViewModel`); the 2026-11-23 scripts open every rest with its set number. The timed rest keeps its stateless rhythm, `RestBreath`.
 struct BreathingRest: Equatable {
     /// The silent step after the last exhale.
     private static let quietStep = 10
@@ -28,6 +28,8 @@ struct BreathingRest: Equatable {
     /// Credited seconds since the rest began, across every step.
     private(set) var totalElapsed = 0.0
     private let minimumSeconds: Double
+    /// The opening line's key, or nil when the rest starts with the first breath.
+    private let openingKey: String?
     private var lastTick: Double?
     private(set) var narrationFinished = false
 
@@ -40,12 +42,24 @@ struct BreathingRest: Equatable {
     init(opensAfterFirstSet: Bool, minimumSeconds: Double) {
         step = opensAfterFirstSet ? 0 : 1
         self.minimumSeconds = minimumSeconds
+        openingKey = opensAfterFirstSet ? "rest.opening" : nil
+    }
+
+    /// The 2026-11-23 scripts open every rest, naming the set just finished and the next one
+    /// ("rest.opening.2": set two is done, set three follows). Recorded for sets one to four.
+    ///
+    /// - Parameter minimumSeconds: the plan's short rest; the rest lasts at least this long.
+    init(openingAfterSet finishedSet: Int, minimumSeconds: Double) {
+        let recorded = (1...4).contains(finishedSet)
+        step = recorded ? 0 : 1
+        self.minimumSeconds = minimumSeconds
+        openingKey = recorded ? "rest.opening.\(finishedSet)" : nil
     }
 
     /// The recorded line of the current step, or nil during the quiet step, which speaks nothing.
     var key: String? {
         if step == 0 {
-            return "rest.opening"
+            return openingKey
         }
 
         if step == Self.quietStep {
