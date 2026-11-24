@@ -4636,7 +4636,6 @@
       }
     },
     "exercise.repetitionsUnit" : {
-      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -4670,7 +4669,6 @@
       }
     },
     "exercise.setsUnit" : {
-      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {

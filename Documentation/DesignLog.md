@@ -2580,3 +2580,51 @@ Verification: XcodeGen generation, Debug Simulator build with `IPHONEOS_DEPLOYME
 The user supplied `codex-clipboard-119dd414-6d66-4d03-829d-c6d45d23b014.png`, restoring the chair seat and legs in the sit-to-stand image. It replaces the previous PNG unchanged at `Tuntun/Assets.xcassets/exercise-card-sitToStand.imageset/sit-to-stand-card.png`. Existing references update Beranda and progress history cards together, retaining the border and locked-state treatment. This supersedes the source in *Sit-to-stand card photograph*.
 
 Verification: XcodeGen generation, Debug Simulator build with `IPHONEOS_DEPLOYMENT_TARGET=17.0` and `git diff --check` passed. Physical iPad visual review remains pending.
+
+## Numeric set and repetition counters (2026-11-24)
+
+At the user's request, the live exercise screen (`TMTherapyExerciseLiveLayout`) shows repetitions and sets as numbers again, and Settings' counts are no longer capped to fit a circle list. This supersedes the **Set list** and **Settings ranges** bullets of *Set list under the demonstration*; its camera-fill and text-removal changes stand.
+
+- **Counters.** The side column's slot between the demonstration and Pause/End shows "Repetisi n / goal" and "Set n / total" (`TMTherapyProgressStat`, restored to the design system; labels `exercise.repetitionsUnit` and `exercise.setsUnit`). They sit side by side with `TMTherapyStatDivider` when the column is wide enough and stack otherwise (`ViewThatFits`), scale with the layout and stay hidden during calibration with their space kept. `TMTherapySetProgress` (one circle per repetition, one row per set) had no other caller and was removed. `TMTherapyProgressDots` stays.
+- **Ranges.** Settings offers 0–5 sets and 0–20 repetitions (`DailyPlanOverrides.setsRange`, `repetitionsRange`); 0 still hides the exercise. Plan sessions clamp to 1–5 and 1–20 (`playableSets`, `playableRepetitions`), the limits saved routines and sessions validate against and the range of recorded count clips; these were Settings' ranges before the cap. Scripted guidance already covers later sets up to five (`scripted.nextSet.2…5`) and splices Marizka numbers for other counts.
+
+No narration changed.
+
+Verification: `xcodegen generate`, a Debug iOS Simulator build with `IPHONEOS_DEPLOYMENT_TARGET=17.0` and `git diff --check` passed. Nothing was run in the Simulator or on the iPad. Pending on the M1 iPad: the counters' fit on the smallest iPad and with large text in finger, Balancing and guided sessions; a 5 × 20 plan exercise with counts 13–20 narrated.
+
+## Clearer live counters (2026-11-24)
+
+At the user's request, after a design review of *Numeric set and repetition counters*, the live screen's counters were made easier to read at a glance from the patient's distance. Same slot and layout structure.
+
+- **Hierarchy.** "Repetisi n / goal" leads. The set is a quieter eyebrow above it ("Set n / total", the existing `session.setProgress` key, 24 pt muted), left out when the exercise has one set, which is the plan default, so "Set 1 / 1" no longer shows.
+- **Stable layout.** The row/stack `ViewThatFits` was replaced by a fixed stack. A wider count (9 → 10) could otherwise flip the layout mid-set. Digits are monospaced so "/ goal" never shifts.
+- **Feedback.** The count rolls to its new value (`.numericText()`, 0.2 s ease-out), a capsule bar under it fills toward the goal in `success` green (0.25 s ease-out), and the count turns green when the goal is reached. Under Reduce Motion the changes are immediate.
+- **Removed.** `setStat`, plus `TMTherapyStatRow` and `TMTherapyStatDivider`, which had no callers left. `exercise.setsUnit` is unused again.
+
+Verification: `xcodegen generate`, a Debug iOS Simulator build with `IPHONEOS_DEPLOYMENT_TARGET=17.0` and `git diff --check` passed. The `-TuntunScreen gallery:live` page (3 / 8, set 1 / 3) was checked in the iPad (A16) Simulator: eyebrow, count and bar are drawn above Pause/End. The count roll, the green goal state, a single-set screen, Reduce Motion and large text were not exercised. Pending on the M1 iPad: legibility at about 1 m, and the counters during a real session.
+
+## Live counters as equal rows (2026-11-24)
+
+At the user's request, the live counters from *Clearer live counters* were simplified. This supersedes that entry's bar and eyebrow.
+
+- **No bar.** The progress bar under the repetition count was removed (`TMTherapyProgressStat.showsBar`).
+- **Equal rows.** "Set n / total" (`exercise.setsUnit`) and "Repetisi n / goal" are both `TMTherapyProgressStat` rows at the same size. The set row is still left out for a single set.
+- **Label and number apart.** Each row puts its label on the leading edge and, after a spacer, its number on the trailing edge, so both rows' numbers line up. The set row does not turn green on its last set (`marksCompletion: false`). The repetition row still turns green at the goal.
+
+Verification: `xcodegen generate`, a Debug iOS Simulator build with `IPHONEOS_DEPLOYMENT_TARGET=17.0` and `git diff --check` passed. The `-TuntunScreen gallery:live` page (set 1 / 3, 3 / 8) was checked in the iPad (A16) Simulator: two equal rows, labels left, numbers right-aligned, no bar, Pause/End clear. Pending on the M1 iPad: legibility at about 1 m and large text.
+
+## Smaller set, larger repetitions (2026-11-24)
+
+After a design review requested by the user, the live counters step the set down and the repetitions up. Only the repetition count changes during a set, so it should be the one place the patient looks. This supersedes the equal-size bullet of *Live counters as equal rows*.
+
+- **Sizes.** The set row uses 0.65 of the layout scale and the repetition row 1.15. Row spacing is 8 pt × scale.
+- **Weight and colour.** `TMTherapyProgressStat.prominent` replaces `marksCompletion`. A secondary stat (the set) shows its value semibold in `ink` and never turns green. The repetitions stay bold `brandInk` and turn `success` green at the goal.
+- **Baseline.** Each label sits on its number's first baseline instead of being centred on it.
+
+Verification: `xcodegen generate`, a Debug iOS Simulator build with `IPHONEOS_DEPLOYMENT_TARGET=17.0` and `git diff --check` passed. The `-TuntunScreen gallery:live` page (set 1 / 3, 3 / 8) was checked in the iPad (A16) Simulator: the set row is clearly secondary, labels share their numbers' baselines, numbers are right-aligned, and Pause/End stay clear. Pending on the M1 iPad: whether the roughly 20 pt "Set" label is legible at about 1 m, and large text.
+
+## Readable set label (2026-11-24)
+
+At the user's request, the live set row's "Set" label was enlarged without changing its number. `TMTherapyProgressStat.labelScale` sizes the label apart from the value; it defaults to `textScale`. The set row keeps its number at 0.65 of the layout scale and draws its label at 0.85 (about 26 pt, against about 34 pt for "Repetisi"), so it stays secondary but readable.
+
+Verification: `xcodegen generate`, a Debug iOS Simulator build with `IPHONEOS_DEPLOYMENT_TARGET=17.0` and `git diff --check` passed. The `-TuntunScreen gallery:live` page was checked in the iPad (A16) Simulator: "Set" is larger, the set number is unchanged and the baselines line up. Pending on the M1 iPad: legibility at about 1 m.

@@ -90,26 +90,61 @@ struct TMTherapyTargetStat: View {
     }
 }
 
-/// Stats side by side with a thin divider between them.
-struct TMTherapyStatRow<Content: View>: View {
-    @ViewBuilder let content: Content
+/// "Repetisi 3 / 8": a label on the leading edge, and on the trailing edge the current value in
+/// dark ink and the total in grey, so stacked stats line up their numbers.
+///
+/// The value rolls to each new count. A prominent stat shows its value bold in `brandInk` and
+/// turns it green once it reaches the total; a secondary one (`prominent: false`, for context
+/// such as the set) steps down to semibold `ink` and never turns green. Digits are monospaced
+/// so "/ total" never shifts as the count changes. `labelScale` sizes the label apart from the
+/// number, so a small stat keeps a readable label.
+struct TMTherapyProgressStat: View {
+    let label: Text
+    let value: Int
+    let total: Int
+    var textScale: CGFloat = 1
+    /// Defaults to `textScale`.
+    var labelScale: CGFloat? = nil
+    var prominent = true
 
-    var body: some View {
-        HStack(spacing: 36) {
-            content
-        }
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    private var reachedTotal: Bool {
+        prominent && total > 0 && value >= total
     }
-}
 
-/// The thin vertical divider used between stats.
-struct TMTherapyStatDivider: View {
-    var thickness: CGFloat = 1.5
+    private var valueColor: Color {
+        if reachedTotal {
+            return TherapyPalette.success
+        }
+
+        return prominent ? TherapyPalette.brandInk : TherapyPalette.ink
+    }
 
     var body: some View {
-        Rectangle()
-            .fill(TherapyPalette.outline)
-            .frame(width: thickness, height: 64)
-            .accessibilityHidden(true)
+        HStack(alignment: .firstTextBaseline, spacing: 0) {
+            label
+                .typography(size: 30 * (labelScale ?? textScale), weight: .semiBold, relativeTo: .title2)
+                .foregroundStyle(TherapyPalette.muted)
+
+            Spacer(minLength: 18)
+
+            HStack(alignment: .firstTextBaseline, spacing: 8) {
+                Text(value, format: .number)
+                    .typography(size: 56 * textScale, weight: prominent ? .bold : .semiBold, relativeTo: .largeTitle)
+                    .monospacedDigit()
+                    .foregroundStyle(valueColor)
+                    .contentTransition(.numericText())
+
+                Text(verbatim: "/ \(total)")
+                    .typography(size: 48 * textScale, weight: .regular, relativeTo: .largeTitle)
+                    .monospacedDigit()
+                    .foregroundStyle(TherapyPalette.muted)
+            }
+        }
+        .frame(maxWidth: .infinity)
+        .animation(reduceMotion ? nil : .easeOut(duration: 0.2), value: value)
+        .accessibilityElement(children: .combine)
     }
 }
 
@@ -430,7 +465,7 @@ enum TherapyLiveCuePlacement {
 }
 
 /// The practice screen: the exercise title, the camera filling the left column, and beside it
-/// the demonstration, every set's repetitions (`TMTherapySetProgress`), and Pause and End.
+/// the demonstration, the repetition and set counters (`TMTherapyProgressStat`), and Pause and End.
 ///
 /// The camera keeps one position in this view for every state, so callers can layer stage
 /// pages and dialogs over it without remounting the preview.
@@ -443,7 +478,7 @@ struct TMTherapyExerciseLiveLayout<Camera: View, Demo: View, Accessories: View>:
     let pauseTitle: LocalizedStringKey
     let endTitle: LocalizedStringKey
     var pauseDisabled = false
-    /// Hides the set list while the activity calibrates; its space stays reserved so the
+    /// Hides the counters while the activity calibrates; their space stays reserved so the
     /// demonstration does not move when practice starts.
     var calibrating = false
     var demoWidthFraction: CGFloat = 0.9
@@ -459,7 +494,7 @@ struct TMTherapyExerciseLiveLayout<Camera: View, Demo: View, Accessories: View>:
     @ViewBuilder let accessories: Accessories
 
     // The heading and the Pause/End block take fixed shares of the height (about 12% and 20%);
-    // the demonstration takes what the set list leaves. The minimums keep a two-line heading
+    // the demonstration takes what the counters leave. The minimums keep a two-line heading
     // and the stacked buttons from clipping on the smallest iPad.
     private static var headerHeightFraction: CGFloat { 0.12 }
     private static var controlsHeightFraction: CGFloat { 0.20 }
@@ -546,7 +581,7 @@ struct TMTherapyExerciseLiveLayout<Camera: View, Demo: View, Accessories: View>:
         VStack(spacing: spacing) {
             demoMedia(maxMediaWidth: maxMediaWidth)
 
-            setProgress
+            progressStats(scale: scale)
                 .padding(.horizontal, 4)
                 .fixedSize(horizontal: false, vertical: true)
 
@@ -555,7 +590,7 @@ struct TMTherapyExerciseLiveLayout<Camera: View, Demo: View, Accessories: View>:
         }
     }
 
-    /// The square demonstration, shrinking to the height the set list and buttons leave.
+    /// The square demonstration, shrinking to the height the counters and buttons leave.
     private func demoMedia(maxMediaWidth: CGFloat) -> some View {
         Color.clear
             .aspectRatio(1, contentMode: .fit)
@@ -570,18 +605,39 @@ struct TMTherapyExerciseLiveLayout<Camera: View, Demo: View, Accessories: View>:
             .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
-    /// No repetitions are counted during calibration, so the list is hidden until practice.
-    private var setProgress: some View {
-        TMTherapySetProgress(
-            setNumber: sets?.number ?? 1,
-            setTotal: sets?.total ?? 1,
-            completed: repetitions.done,
-            goal: repetitions.goal
-        ) { number in
-            Text("session.setNumber \(number)")
+    /// A smaller "Set n / total" over a larger "Repetisi n / goal", numbers on the trailing edge.
+    /// Only the repetitions change during a set, so they lead; a single-set exercise shows no
+    /// set row. Always stacked, so a wider count never reflows the column mid-set. No repetitions
+    /// are counted during calibration, so the counters are hidden until practice.
+    private func progressStats(scale: CGFloat) -> some View {
+        VStack(alignment: .leading, spacing: 8 * scale) {
+            if let sets, sets.total > 1 {
+                TMTherapyProgressStat(
+                    label: Text("exercise.setsUnit"),
+                    value: sets.number,
+                    total: sets.total,
+                    textScale: scale * 0.65,
+                    labelScale: scale * 0.85,
+                    prominent: false
+                )
+            }
+
+            repetitionStat(scale: scale)
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
         .opacity(calibrating ? 0 : 1)
         .accessibilityHidden(calibrating)
+    }
+
+    private func repetitionStat(scale: CGFloat) -> some View {
+        let goal = max(0, repetitions.goal)
+
+        return TMTherapyProgressStat(
+            label: Text("exercise.repetitionsUnit"),
+            value: min(max(0, repetitions.done), goal),
+            total: goal,
+            textScale: scale * 1.15
+        )
     }
 
     private func controls(scale: CGFloat) -> some View {

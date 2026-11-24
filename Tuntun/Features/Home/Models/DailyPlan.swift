@@ -67,12 +67,13 @@ struct DailyPlanItem: Identifiable, Hashable {
 /// Zero sets or repetitions hides the exercise from the plan.
 struct DailyPlanOverrides: Equatable {
     /// What Settings offers; 0 hides the exercise.
-    static let setsRange = 0...3
-    static let repetitionsRange = 0...12
+    static let setsRange = 0...5
+    static let repetitionsRange = 0...20
 
-    /// What a plan session runs with, so the live set list never exceeds three rows of twelve.
-    static let playableSets = 1...3
-    static let playableRepetitions = 1...12
+    /// What a plan session runs with: the limits saved routines and sessions validate against,
+    /// and the highest repetition count with a recorded number clip.
+    static let playableSets = 1...5
+    static let playableRepetitions = 1...20
 
     var sets: Int?
     var repetitions: Int?
