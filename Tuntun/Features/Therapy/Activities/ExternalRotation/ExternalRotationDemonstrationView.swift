@@ -15,8 +15,8 @@ struct TMBalanceExerciseDemonstrationView: View {
     var arm: CrossingArm?
     /// The patient's arm choice; with both arms chosen, the demonstration follows the active arm.
     var selection: BalanceArmSelection?
-    /// Holds the target pose instead of looping, as during practice.
-    var holdsPeak = false
+    /// Loops, or moves to and holds the start or target pose, as during calibration and practice.
+    var playback: TherapyAnimationPlayback = .looping
 
     /// The bundled recording for this exercise. Every arm clip shows the right arm and is
     /// reflected for the right arm, so the moving arm sits on the same side of the screen as the
@@ -36,24 +36,21 @@ struct TMBalanceExerciseDemonstrationView: View {
         }
     }
 
-    /// Seconds into the recording where the target pose is held, at the middle of its keyframed
-    /// hold in `Tools/author_body_demonstrations.py` (24 FPS, frame 1 at zero). Sit to stand
-    /// holds the standing pose. Update these when a clip is re-exported with different timing.
-    private var peakSeconds: Double {
-        let frame: Double
-
+    /// The recording's rise and return, from the keyframes in `Tools/author_body_demonstrations.py`.
+    /// The rotations start from the ready pose (elbow bent 90°) and sit to stand from the seat,
+    /// so it sits down by playing the clip's opening stand-to-seat. Update these when a clip is
+    /// re-exported with different timing.
+    private var timeline: DemonstrationTimeline {
         switch exercise {
         case .crossMidline:
-            frame = 61
+            return DemonstrationTimeline(riseFrames: 13...61, returnFrames: 67...109)
         case .externalRotation, .internalRotation:
-            frame = 79
+            return DemonstrationTimeline(riseFrames: 49...79, returnFrames: 85...109)
         case .shoulderFlexion:
-            frame = 67
+            return DemonstrationTimeline(riseFrames: 13...67, returnFrames: 73...121)
         case .sitToStand:
-            frame = 121
+            return DemonstrationTimeline(riseFrames: 73...121, returnFrames: 13...37)
         }
-
-        return (frame - 1) / 24
     }
 
     private var accessibilityKey: LocalizedStringKey {
@@ -80,7 +77,8 @@ struct TMBalanceExerciseDemonstrationView: View {
             resource: resource,
             paused: paused,
             mirrored: exercise != .sitToStand && (arm ?? selection?.initialArm) == .right,
-            holdsPeakAt: holdsPeak ? peakSeconds : nil,
+            playback: playback,
+            timeline: timeline,
             accessibilityKey: accessibilityKey
         )
     }

@@ -24,7 +24,7 @@ protocol BalanceSessionViewModelProtocol: AnyObject, Observable {
     var demoRevision: Int { get }
     var calibrationMessage: String? { get }
     /// True once calibration finishes: practice shows the demonstration's target pose still.
-    var demoHoldsPeak: Bool { get }
+    var demoPlayback: TherapyAnimationPlayback { get }
     var countdownOverlaySeconds: Int? { get }
     /// Whether the patient is in position, for the camera's tracking-status chip; nil hides it.
     var trackingPositioned: Bool? { get }
@@ -106,8 +106,26 @@ final class BalanceSessionViewModel: BalanceSessionViewModelProtocol {
     @ObservationIgnored private var openingGate: GuidanceGate?
     @ObservationIgnored private var countdownDeadline: Double?
 
-    var demoHoldsPeak: Bool {
-        calibrationFinished
+    /// What the demonstration shows: it loops while the opening cue introduces the exercise,
+    /// then plays into and holds the pose the patient is asked for, as the finger examples do.
+    var demoPlayback: TherapyAnimationPlayback {
+        if openingCue == .intro {
+            return .looping
+        }
+
+        switch snapshot.phase {
+        case .calibratingRange, .reaching:
+            return .peak
+        case .holding:
+            // Sit to stand holds through rising, standing and lowering; only rising heads up.
+            guard exercise.isSitToStand else {
+                return .peak
+            }
+
+            return snapshot.risingToStand ? .peak : .neutral
+        case .findingBody, .calibrating, .returning, .complete:
+            return .neutral
+        }
     }
 
     var calibrationMessage: String? {

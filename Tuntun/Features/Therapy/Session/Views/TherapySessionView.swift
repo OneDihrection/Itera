@@ -735,7 +735,8 @@ struct TMTherapySessionView<ViewModel: TherapySessionViewModelProtocol>: View {
                 asset: activity.kind == .armRaise ? .armRaise : activity.kind == .elbowBend ? .elbowBend : .directionalReach,
                 mirrored: (model.snapshot.activeSide ?? activity.side) == .right,
                 mode: model.demoPlayback,
-                reachPose: model.demoReachPose
+                reachPose: model.demoReachPose,
+                paused: model.snapshot.paused || model.snapshot.cameraWaiting
             )
                 .id(activity.id)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)

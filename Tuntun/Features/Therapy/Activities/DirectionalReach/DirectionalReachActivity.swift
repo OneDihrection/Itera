@@ -79,6 +79,7 @@ struct DirectionalReachActivity: TherapyActivity {
         case .outward, .returning: value.phase = snapshot.rehearsal ? .rehearsal : .practice
         case .finished: value.phase = .finished
         }
+        value.towardTarget = phase == .assess || phase == .outward
         return .reach(value)
     }
 

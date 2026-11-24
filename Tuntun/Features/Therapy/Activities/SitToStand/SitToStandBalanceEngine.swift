@@ -98,6 +98,8 @@ struct SitToStandBalanceEngine: BalanceMovementEngine {
         snapshot.metrics.completedTouches = value.count
         snapshot.hipAngle = value.hipAngle
         snapshot.trunkLean = value.trunkLean
+        snapshot.risingToStand = value.phase == .practice
+            && (value.stage == .seated || value.stage == .rising)
         snapshot.instructionKey = value.trackingMessage ?? value.cue ?? value.instruction
         snapshot.trackingLost = value.trackingMessage != nil || value.joints == nil
 

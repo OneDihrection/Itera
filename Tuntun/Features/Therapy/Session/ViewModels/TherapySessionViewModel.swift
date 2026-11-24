@@ -687,22 +687,25 @@ private actor PresentationFixtureRepository: SessionRepository {
 
 extension TherapySessionViewModel {
     /// What the arm raise, elbow bend and reach example shows: it loops on the demonstration
-    /// card, holds the start or peak pose while that pose is being calibrated, and holds the peak
-    /// during practice so a looping clip does not distract from the exercise.
+    /// card; otherwise it plays into and holds the pose the activity asks for, the target while
+    /// the patient captures or moves toward it and the start while they hold or return to it, as
+    /// the finger examples play the half-cycle matching the current instruction.
     var demoPlayback: TherapyAnimationPlayback {
         if snapshot.stage == .demonstration {
             return .looping
         }
 
-        switch movementPose {
-        case .start:
-            return .staticStart
-        case .peak, .looping, nil:
-            return .staticPeak
+        switch snapshot.presentation {
+        case .movement(let movement):
+            return movement.towardTarget ? .peak : .neutral
+        case .reach(let reach):
+            return reach.towardTarget ? .peak : .neutral
+        case .towel, .timed, nil:
+            return .neutral
         }
     }
 
-    /// The reach clip's pose to hold: 0 outward, 1 across the body, 2 up.
+    /// The reach clip's pose to show: 0 outward, 1 across the body, 2 up.
     ///
     /// The poses are anatomical, so reflecting the clip does not change them: the screen's right
     /// is outward for the right arm and across the body for the left.

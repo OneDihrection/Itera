@@ -89,6 +89,17 @@ struct MovementActivity: TherapyActivity {
         } else {
             value.phase = start == nil ? .startCapture : .targetCapture
         }
+
+        // Practice phase 1 heads for the target; 0 and 2 wait at or return to the start.
+        switch value.phase {
+        case .targetCapture:
+            value.towardTarget = true
+        case .practice:
+            value.towardTarget = phase == 1
+        case .startCapture, .returnToStart, .countdown:
+            value.towardTarget = false
+        }
+
         return .movement(value)
     }
 

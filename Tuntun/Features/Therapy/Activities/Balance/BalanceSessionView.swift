@@ -162,7 +162,7 @@ struct TMBalanceSessionView<ViewModel: BalanceSessionViewModelProtocol>: View {
                 paused: model.paused || model.cameraWaiting,
                 arm: model.snapshot.activeArm,
                 selection: model.snapshot.armSelection,
-                holdsPeak: model.demoHoldsPeak
+                playback: model.demoPlayback
             )
         } accessories: {
             EmptyView()
