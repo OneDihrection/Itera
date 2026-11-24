@@ -53,7 +53,13 @@ struct SessionSnapshot {
     var seconds = 0
     var restBreath: RestBreath?
     var guidedSetBreathing: BreathingRest?
+    /// The arm-raise brief narrates the session; its screen titles follow this flag.
     var usesArmRaiseScript = false
+    /// Any Indonesian script narrates the session (`GuidedScriptGuidance`): arm raise, and on the
+    /// left arm elbow bend and directional reach.
+    var usesGuidedScript = false
+    /// The exercise whose script narrates; meaningful while `usesGuidedScript`.
+    var scriptKind = TherapyKind.armRaise
     /// The recorded arm-raise set summary just spoken, or nil when the counts did not match
     /// its numbers and the general ending was used.
     var armRaiseSummaryKey: String?
@@ -61,7 +67,7 @@ struct SessionSnapshot {
     var armRaiseScriptSide = TherapySide.left
     var armRaiseNarrationPrefix: String { ArmRaiseGuidance.prefix(for: armRaiseScriptSide) }
     /// Prefix of the scripted short rest's keys: the revised left script shares `scripted.`.
-    var armRaiseRestPrefix: String { ArmRaiseGuidance.restPrefix(for: armRaiseScriptSide) }
+    var scriptRestPrefix: String { GuidedScriptGuidance.restPrefix(scriptKind, side: armRaiseScriptSide) }
     /// The number filling `instruction` when it is a format key.
     var instructionArgument: Int?
     var paused = false
@@ -98,6 +104,8 @@ struct SessionEngine {
     /// keeps them; the replayed line continues them. Any other cue replaces them.
     private var scriptSequence: [NarrationLine] = []
     private var scriptSequenceTimed = false
+    /// The directional-reach script cue last spoken, so each moment is said once.
+    private var spokenReachCue: String?
     /// When the revised script began, or last repeated, its wait for the body to come into view.
     private var bodyCheckReminderAt = 0.0
     private var lastScriptHoldCount = ""
@@ -238,7 +246,7 @@ struct SessionEngine {
             enter(.summary)
             effects.append(.cancelSpeech)
             effects.append(.finalize(summary))
-            if !snapshot.usesArmRaiseScript || summary.stopped {
+            if !snapshot.usesGuidedScript || summary.stopped {
                 effects.append(.audio(UUID(), .closing(completed: !summary.stopped && summary.results.allSatisfy { $0.outcome == .completed })))
             }
         }
@@ -248,16 +256,16 @@ struct SessionEngine {
     // MARK: - Arm-raise script
 
     private var practiceCountdownKey: String {
-        guard snapshot.usesArmRaiseScript else {
+        guard snapshot.usesGuidedScript else {
             return "calibration.countdown"
         }
-        return progress.setNumber == 1 ? snapshot.armRaiseNarrationPrefix + "countdown.first" : snapshot.armRaiseNarrationPrefix + "countdown.next"
+        return GuidedScriptGuidance.countdownKey(snapshot.scriptKind, side: snapshot.armRaiseScriptSide, set: progress.setNumber)
     }
 
     private var currentScriptInstruction: String {
-        if snapshot.usesArmRaiseScript, snapshot.stage == .activity,
+        if snapshot.usesGuidedScript, snapshot.stage == .activity,
            !calibrationCueSpeaking, case .movement(let movement) = activity?.presentation {
-            return ArmRaiseGuidance.movementKey(movement, set: progress.setNumber, goal: scriptGoal, side: snapshot.armRaiseScriptSide)
+            return GuidedScriptGuidance.movementKey(snapshot.scriptKind, movement: movement, set: progress.setNumber, goal: scriptGoal, side: snapshot.armRaiseScriptSide)
         }
         return snapshot.instruction
     }
@@ -296,6 +304,45 @@ struct SessionEngine {
             pendingPrefix = .count(count)
         }
         return progress.setNumber < sets ? "session.good" : "session.feedback"
+    }
+
+    /// Speaks a movement cue, led by a later set's opening ("Yuk kita mulai lagi untuk set
+    /// kedua") when the script has one.
+    private mutating func announceScriptMovement(_ key: String, movement: MovementSnapshot) {
+        let opening = GuidedScriptGuidance.laterSetOpening(snapshot.scriptKind, movement: movement, set: progress.setNumber)
+        guard !opening.isEmpty else {
+            announce(key, timed: false)
+            return
+        }
+
+        announceScript((opening + [key]).map { NarrationLine(key: $0) }, timed: false)
+    }
+
+    /// The directional-reach script: the countdown keeps the shared countdown cue; every other
+    /// moment speaks its lines once, a credited round led by the repetition chime or, without a
+    /// recorded praise, by the Marizka number.
+    private mutating func announceReachScript(_ reach: ReachSnapshot, facts: [ActivityFact]) {
+        if reach.phase == .countdown {
+            if facts.requestsCountdown {
+                announcePracticeCountdown()
+            }
+            return
+        }
+
+        guard let cue = GuidedScriptGuidance.reachCue(reach, set: progress.setNumber, goal: scriptGoal),
+              cue.identity != spokenReachCue else {
+            return
+        }
+
+        spokenReachCue = cue.identity
+        var lines = cue.lines
+        if let first = lines.first, first.isNumber, let number = first.argument {
+            pendingPrefix = .count(number)
+            lines.removeFirst()
+        } else if cue.chime {
+            pendingPrefix = .target
+        }
+        announceScript(lines, timed: false)
     }
 
     /// Spoken seconds follow fresh, accepted hold progress. They never run from a wall timer.
@@ -353,13 +400,16 @@ struct SessionEngine {
         guard let configuration = progress.currentActivity else {
             return
         }
-        snapshot.usesArmRaiseScript = scriptedArmRaise && ArmRaiseGuidance.applies(to: configuration)
+        snapshot.usesGuidedScript = scriptedArmRaise && GuidedScriptGuidance.applies(to: configuration)
+        snapshot.scriptKind = configuration.kind
+        snapshot.usesArmRaiseScript = snapshot.usesGuidedScript && configuration.kind == .armRaise
         snapshot.armRaiseScriptSide = configuration.side
+        spokenReachCue = nil
         pendingScriptMovement = nil
         scriptSequence = []
         lastScriptHoldCount = ""
         recorder = KeyRepRecorder(activity: configuration)
-        let scripted = snapshot.usesArmRaiseScript
+        let scripted = snapshot.usesGuidedScript
 
         if configuration.alternatesSides {
             activity = AlternatingSidesActivity(configuration: configuration) { side in
@@ -387,7 +437,7 @@ struct SessionEngine {
         case .armRaise:
             return ArmRaiseActivity(configuration: configuration, scriptedGuidance: scriptedGuidance)
         case .elbowBend:
-            return ElbowBendActivity(configuration: configuration)
+            return ElbowBendActivity(configuration: configuration, scriptedGuidance: scriptedGuidance)
         case .directionalReach:
             return DirectionalReachActivity(configuration: configuration)
         case .sitToStand, .crossMidline, .externalRotation, .internalRotation, .shoulderFlexion:
@@ -436,9 +486,9 @@ struct SessionEngine {
             announce(sideCueKey(side), timed: false)
             return
         }
-        if snapshot.usesArmRaiseScript, case .movement(let movement) = presentation {
+        if snapshot.usesGuidedScript, case .movement(let movement) = presentation {
             announce(
-                ArmRaiseGuidance.movementKey(movement, set: progress.setNumber, goal: scriptGoal, side: snapshot.armRaiseScriptSide),
+                GuidedScriptGuidance.movementKey(snapshot.scriptKind, movement: movement, set: progress.setNumber, goal: scriptGoal, side: snapshot.armRaiseScriptSide),
                 timed: false
             )
         }
@@ -540,7 +590,7 @@ struct SessionEngine {
         }
         if waitsForBody, !lineSpeaking, bodyVisible(frame) {
             enter(.opening(.init(step: .scriptedStart)))
-            announceScript(ArmRaiseGuidance.calibrationStartLines(for: snapshot.armRaiseScriptSide), timed: false)
+            announceScript(GuidedScriptGuidance.calibrationStartLines(snapshot.scriptKind, side: snapshot.armRaiseScriptSide), timed: false)
             return
         }
         guard snapshot.stage == .activity, !awaitingCountdownCue else {
@@ -592,19 +642,19 @@ struct SessionEngine {
             }
             return
         }
-        if snapshot.usesArmRaiseScript,
+        if snapshot.usesGuidedScript,
            case .movement(let after) = result.presentation {
             if pendingScriptMovement != nil {
                 snapshot.instruction = previousInstruction
                 return
             }
-            let key = ArmRaiseGuidance.movementKey(after, set: progress.setNumber, goal: scriptGoal, side: snapshot.armRaiseScriptSide)
+            let key = GuidedScriptGuidance.movementKey(snapshot.scriptKind, movement: after, set: progress.setNumber, goal: scriptGoal, side: snapshot.armRaiseScriptSide)
             if after.phase == .countdown {
                 if facts.requestsCountdown {
                     announcePracticeCountdown()
                 }
             } else if facts.creditsRepetition {
-                if let praise = ArmRaiseGuidance.praiseKey(after: after.count, side: snapshot.armRaiseScriptSide) {
+                if let praise = GuidedScriptGuidance.praiseKey(snapshot.scriptKind, after: after.count, goal: scriptGoal, side: snapshot.armRaiseScriptSide) {
                     pendingScriptMovement = key
                     announce(praise, timed: false)
                 } else {
@@ -614,12 +664,16 @@ struct SessionEngine {
                     announce(key, timed: false)
                 }
             } else if case .movement(let before) = old,
-                      ArmRaiseGuidance.movementKey(before, set: progress.setNumber, goal: scriptGoal, side: snapshot.armRaiseScriptSide) != key {
-                announce(key, timed: false)
+                      GuidedScriptGuidance.movementKey(snapshot.scriptKind, movement: before, set: progress.setNumber, goal: scriptGoal, side: snapshot.armRaiseScriptSide) != key {
+                announceScriptMovement(key, movement: after)
             } else {
                 snapshot.instruction = key
             }
             speakScriptHoldCount(after)
+            return
+        }
+        if snapshot.usesGuidedScript, case .reach(let after) = result.presentation {
+            announceReachScript(after, facts: facts)
             return
         }
         if case .movement = result.presentation {
@@ -707,11 +761,11 @@ struct SessionEngine {
                     side: snapshot.activeSide,
                     includePositioning: positioningPending
                 )
-                if snapshot.usesArmRaiseScript {
+                if snapshot.usesGuidedScript {
                     calibrationCompletionPending = true
                     enter(.opening(.init(step: .scriptedPosition)))
                     snapshot.seconds = 0
-                    announceScript(ArmRaiseGuidance.setupLines(for: snapshot.armRaiseScriptSide), timed: false)
+                    announceScript(GuidedScriptGuidance.setupLines(snapshot.scriptKind, side: snapshot.armRaiseScriptSide), timed: false)
                 } else if plan.destination == .capture {
                     calibrationCompletionPending = true
                     enter(.opening(.init(step: .calibrationIntro)))
@@ -732,18 +786,19 @@ struct SessionEngine {
         }
         if waitsForBody, !lineSpeaking, now - bodyCheckReminderAt >= Self.bodyCheckReminderSeconds {
             bodyCheckReminderAt = now
-            announce(ArmRaiseGuidance.bodyNotVisibleKey(for: snapshot.armRaiseScriptSide), timed: false)
+            announce(GuidedScriptGuidance.bodyNotVisibleKey(snapshot.scriptKind, side: snapshot.armRaiseScriptSide), timed: false)
         }
         if snapshot.stage == .activity && !awaitingCountdownCue {
             finishCountdownIfDue()
             forward(.tick(now))
             snapshot.presentation = activity?.presentation
-            if snapshot.usesArmRaiseScript, pendingScriptMovement == nil,
+            if snapshot.usesGuidedScript, pendingScriptMovement == nil,
                case .movement(let movement) = snapshot.presentation,
                movement.phase != .countdown {
-                let key = ArmRaiseGuidance.movementKey(movement, set: progress.setNumber, goal: scriptGoal, side: snapshot.armRaiseScriptSide)
-                if snapshot.instruction != key {
-                    announce(key, timed: false)
+                let key = GuidedScriptGuidance.movementKey(snapshot.scriptKind, movement: movement, set: progress.setNumber, goal: scriptGoal, side: snapshot.armRaiseScriptSide)
+                // A later set's opening is still being spoken ahead of this cue.
+                if snapshot.instruction != key, scriptSequence.isEmpty {
+                    announceScriptMovement(key, movement: movement)
                 }
             }
             if case .towel(let after) = snapshot.presentation {
@@ -788,7 +843,7 @@ struct SessionEngine {
                 _ = progress.advanceAfterRest()
                 beginNextSet(recalibrating: rest.recalibrateBeforeNext)
             } else if step != breathing.step, let key = breathing.key {
-                announce(snapshot.armRaiseRestPrefix + key, timed: false)
+                announce(snapshot.scriptRestPrefix + key, timed: false)
             }
             return
         }
@@ -829,8 +884,9 @@ struct SessionEngine {
         }
 
         let breathing: BreathingRest?
-        if snapshot.usesArmRaiseScript, progress.hasNextSet {
-            breathing = ArmRaiseGuidance.breathingRest(
+        if snapshot.usesGuidedScript, progress.hasNextSet {
+            breathing = GuidedScriptGuidance.breathingRest(
+                snapshot.scriptKind,
                 afterSet: progress.setNumber,
                 side: snapshot.armRaiseScriptSide,
                 minimumSeconds: progress.routine.restSeconds
@@ -847,7 +903,7 @@ struct SessionEngine {
         snapshot.instruction = "session.rest"
 
         if let key = breathing?.key {
-            announce(snapshot.armRaiseRestPrefix + key, timed: false)
+            announce(snapshot.scriptRestPrefix + key, timed: false)
         } else if !progress.hasNextSet {
             announce("session.rest", timed: false)
         }
@@ -880,7 +936,7 @@ struct SessionEngine {
         calibrationCueSpeaking = false
         // A newer cue replaces the side cue, and with it the instruction owed after it.
         instructionFollowsSideCue = false
-        if timed || liveTowel || snapshot.usesArmRaiseScript {
+        if timed || liveTowel || snapshot.usesGuidedScript {
             effects.append(.handOffSpeech)
         }
         let id = UUID()
@@ -915,15 +971,10 @@ struct SessionEngine {
     /// The revised arm-raise script waits for the patient's shoulders, the practised side's hip
     /// and elbow, as `MovementActivity` reads them, before saying the body is in view.
     private func bodyVisible(_ frame: TrackingObservation) -> Bool {
-        let left = snapshot.armRaiseScriptSide == .left
-        let required: [(BodyJoint, Float)] = [
-            (.leftShoulder, 0.3),
-            (.rightShoulder, 0.3),
-            (left ? .leftHip : .rightHip, 0.3),
-            (left ? .leftElbow : .rightElbow, 0.2),
-        ]
-        return required.allSatisfy { frame.point($0.0, minimumConfidence: $0.1) != nil }
+        GuidedScriptGuidance.visibleJoints(snapshot.scriptKind, side: snapshot.armRaiseScriptSide)
+            .allSatisfy { frame.point($0.0, minimumConfidence: $0.1) != nil }
     }
+
 
     /// A cue has started and not yet completed.
     private var lineSpeaking: Bool {
@@ -940,7 +991,7 @@ struct SessionEngine {
     /// How long a cue may stay unfinished before it counts as spoken: scripted lines and feedback
     /// get 45 s, opening cards their plan's watchdog, everything else 20 s.
     private func watchdogSeconds(timed: Bool) -> Double {
-        if snapshot.usesArmRaiseScript || snapshot.stage == .feedback {
+        if snapshot.usesGuidedScript || snapshot.stage == .feedback {
             return 45
         }
 
@@ -957,7 +1008,7 @@ struct SessionEngine {
         countdown = activity?.presentation.countdownLength.map { Countdown(length: $0) }
         if calibrationCompletionPending {
             calibrationCompletionPending = false
-            announce(snapshot.usesArmRaiseScript ? ArmRaiseGuidance.calibrationCompleteKey(for: snapshot.armRaiseScriptSide) : "calibration.complete", timed: false)
+            announce(snapshot.usesGuidedScript ? GuidedScriptGuidance.calibrationCompleteKey(snapshot.scriptKind, side: snapshot.armRaiseScriptSide) : "calibration.complete", timed: false)
             calibrationCueSpeaking = true
         } else {
             announce(practiceCountdownKey, timed: false)
@@ -968,7 +1019,7 @@ struct SessionEngine {
         guard canProgress, gate?.complete(id) == true else {
             return
         }
-        if snapshot.usesArmRaiseScript {
+        if snapshot.usesGuidedScript {
             if !scriptSequence.isEmpty {
                 let next = scriptSequence.removeFirst()
                 announce(next.key, argument: next.argument, timed: scriptSequenceTimed, continuesSequence: true)
@@ -980,13 +1031,13 @@ struct SessionEngine {
             }
             if snapshot.stage == .preparationWait, case .opening(let opening) = stage {
                 if opening.step == .scriptedPosition {
-                    if ArmRaiseGuidance.usesRevisedScript(snapshot.armRaiseScriptSide) {
+                    if GuidedScriptGuidance.isRevised(snapshot.scriptKind, side: snapshot.armRaiseScriptSide) {
                         // Phase 2 starts once the body is in view (`observation`).
                         enter(.opening(.init(step: .scriptedBodyCheck)))
                         bodyCheckReminderAt = now
                     } else {
                         enter(.opening(.init(step: .scriptedStart)))
-                        announceScript(ArmRaiseGuidance.calibrationStartLines(for: snapshot.armRaiseScriptSide), timed: false)
+                        announceScript(GuidedScriptGuidance.calibrationStartLines(snapshot.scriptKind, side: snapshot.armRaiseScriptSide), timed: false)
                     }
                 } else if opening.step == .scriptedBodyCheck {
                     // A reminder finished; keep waiting for the body.
@@ -1101,7 +1152,7 @@ struct SessionEngine {
     private mutating func enterActivity() {
         enter(.practice(.init()))
         evidenceBoundary = now
-        snapshot.instruction = snapshot.usesArmRaiseScript
+        snapshot.instruction = snapshot.usesGuidedScript
             ? currentScriptInstruction
             : (activity?.presentation.instruction ?? "session.holdStart")
         if case .towel = activity?.presentation {
@@ -1141,18 +1192,18 @@ struct SessionEngine {
         case .movement, .towel: countsRepetitions = true
         default: break
         }
-        if !snapshot.usesArmRaiseScript, outcome == .completed, countsRepetitions, let count = presentation?.count, count > 0 {
+        if !snapshot.usesGuidedScript, outcome == .completed, countsRepetitions, let count = presentation?.count, count > 0 {
             pendingPrefix = .count(count)
         }
         snapshot.assistanceKey = nil
-        if snapshot.usesArmRaiseScript, outcome == .completed,
-           ArmRaiseGuidance.usesRevisedScript(snapshot.armRaiseScriptSide),
+        if snapshot.usesGuidedScript, outcome == .completed,
+           GuidedScriptGuidance.isRevised(snapshot.scriptKind, side: snapshot.armRaiseScriptSide),
            let summary = revisedScriptSummary() {
             snapshot.instruction = summary.screen
             if canProgress { announceScript(summary.spoken, timed: true) }
             return
         }
-        if snapshot.usesArmRaiseScript, outcome == .completed {
+        if snapshot.usesGuidedScript, outcome == .completed {
             snapshot.instruction = scriptedSummary(count: presentation?.count ?? 0)
         } else {
             snapshot.instruction = outcome == .skipped ? "session.skipped" : "session.feedback"
@@ -1402,7 +1453,7 @@ struct SessionEngine {
     /// Speaks the current stage's cue again with a new identity, after a pause or camera wait
     /// cancelled it: the countdown cue when a countdown is pending, otherwise the current line.
     private mutating func replayStageCue(timed: Bool) {
-        if snapshot.usesArmRaiseScript, waitsForBody {
+        if snapshot.usesGuidedScript, waitsForBody {
             // Nothing to repeat: the wait for the body speaks its own reminder.
             return
         }

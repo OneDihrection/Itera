@@ -53,8 +53,8 @@ final class DailyPlanViewModel: DailyPlanSessionReporting {
     private(set) var restingBeforeNext = false
     private(set) var fingerScriptRestSide: HandSide?
     private(set) var armRaiseRestSide: TherapySide?
-    /// The finished Balancing session was narrated by a 2026-11-23 script.
-    private(set) var balanceScriptRest = false
+    /// The finished Balancing, elbow-bend or directional-reach session was narrated by a script.
+    private(set) var scriptedSessionRest = false
     /// The second side of an item that runs one session per side (the scripted arm raise, a
     /// finger exercise on both hands), waiting behind its long rest. `nil` starts at the first
     /// side. The plan item is marked done only after its last side.
@@ -71,7 +71,7 @@ final class DailyPlanViewModel: DailyPlanSessionReporting {
     private(set) var longRestBreaths: Int
 
     var usesScriptedLongRest: Bool {
-        fingerScriptRestSide != nil || armRaiseRestSide != nil || balanceScriptRest
+        fingerScriptRestSide != nil || armRaiseRestSide != nil || scriptedSessionRest
     }
     private(set) var errorKey: String?
 
@@ -559,8 +559,41 @@ final class DailyPlanViewModel: DailyPlanSessionReporting {
         fingerScriptRestSide = side
     }
 
-    func markBalanceScriptRest(_ scripted: Bool) {
-        balanceScriptRest = scripted
+    func markScriptedRest(_ scripted: Bool) {
+        scriptedSessionRest = scripted
+    }
+
+    /// Whether the item's guided exercise runs a 2026-11-24 script: elbow bend or directional reach
+    /// on the left arm alone, in an Indonesian plan. Arm raise keeps `usesArmRaiseScript`.
+    func usesGuidedScript(itemID: String) -> Bool {
+        guidedScriptActivity(itemID: itemID) != nil
+    }
+
+    /// The scripted intro for this item's side and counts.
+    func guidedIntroductionLines(itemID: String) -> [NarrationLine] {
+        guard let activity = guidedScriptActivity(itemID: itemID) else {
+            return []
+        }
+
+        return GuidedScriptGuidance.introduction(
+            activity.kind,
+            side: activity.side,
+            sets: activity.sets,
+            repetitions: activity.goal
+        )
+    }
+
+    private func guidedScriptActivity(itemID: String) -> SessionActivity? {
+        guard AppLanguage.selected == .indonesian,
+              let item = items.first(where: { $0.id == itemID }),
+              case .therapy(let kind) = item.exercise,
+              kind == .elbowBend || kind == .directionalReach,
+              let activity = routineExercise(for: kind).activities.first,
+              GuidedScriptGuidance.applies(to: activity) else {
+            return nil
+        }
+
+        return activity
     }
 
     /// Whether the item's Balancing exercise runs a 2026-11-23 script: sit to stand, or a left-arm
@@ -604,7 +637,7 @@ final class DailyPlanViewModel: DailyPlanSessionReporting {
     /// generator rendered it. The other hand scripts therefore share those Marizka clips instead
     /// of falling back to the older generic `rest.long.*` recordings.
     var longRestNarrationPrefix: String? {
-        if fingerScriptRestSide != nil || balanceScriptRest {
+        if fingerScriptRestSide != nil || scriptedSessionRest {
             return "opposition.right.longRest."
         }
         return armRaiseRestSide.map { ArmRaiseGuidance.prefix(for: $0) + "longRest." }
@@ -892,7 +925,7 @@ final class DailyPlanViewModel: DailyPlanSessionReporting {
         currentIndex = index
         fingerScriptRestSide = nil
         armRaiseRestSide = nil
-        balanceScriptRest = false
+        scriptedSessionRest = false
         let route: PlanCoverRoute
 
         switch items[index].exercise {

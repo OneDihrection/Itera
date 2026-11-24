@@ -9,8 +9,9 @@ import Foundation
 
 struct ElbowBendActivity: TherapyActivity {
     private var movement: MovementActivity
-    init(configuration: SessionActivity) {
-        movement = MovementActivity(configuration: configuration)
+    /// - Parameter scriptedGuidance: the Indonesian script's 3 s holds and 5 s later-set countdown.
+    init(configuration: SessionActivity, scriptedGuidance: Bool = false) {
+        movement = MovementActivity(configuration: configuration, scriptedGuidance: scriptedGuidance)
     }
     var presentation: ActivityPresentation { movement.presentation }
     mutating func handle(_ event: ActivityEvent) -> ActivityTransition { movement.handle(event) }

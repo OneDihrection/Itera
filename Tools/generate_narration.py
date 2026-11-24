@@ -110,6 +110,9 @@ GROUP_STORAGE = {
     "cross-midline-left": ("CrossMidlineLeft", "cross-midline-left-narration-manifest.json"),
     "shoulder-rotation-left": ("ShoulderRotationLeft", "shoulder-rotation-left-narration-manifest.json"),
     "forearm-rotation-left": ("ForearmRotationLeft", "forearm-rotation-left-narration-manifest.json"),
+    # The 2026-11-24 scripts.
+    "directional-reach-left": ("DirectionalReachLeft", "directional-reach-left-narration-manifest.json"),
+    "elbow-bend-left": ("ElbowBendLeft", "elbow-bend-left-narration-manifest.json"),
 }
 DEFAULT_GROUPS = ("finger", "body")
 
@@ -595,6 +598,8 @@ REPORT_GROUPS = (
     ("cross-midline-left", "Cross midline (Keseimbangan) script, left"),
     ("shoulder-rotation-left", "Internal and external shoulder rotation scripts, left"),
     ("forearm-rotation-left", "Forearm rotation script, left"),
+    ("directional-reach-left", "Directional reach script, left"),
+    ("elbow-bend-left", "Elbow bend script, left"),
 )
 CLIP_FOLDERS = {"id": OUTPUT, "en": OUTPUT_EN}
 
