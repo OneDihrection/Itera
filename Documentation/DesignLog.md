@@ -2431,3 +2431,9 @@ Verification: `xcodegen generate` and an iOS Simulator build. Pending on the M1 
 At the product owner's request, the fold towel pinch-point cursor is smoothed more. The fingertip midpoint is much noisier than the palm centre, but lowering the single cursor filter's cutoff would make the whole hand lag. The cursor is now split into two parts. The palm centre carries hand movement through the existing `HandCursorFilter` (1 Hz at rest, speed gain 10). The palm-to-pinch offset goes through a second `HandCursorFilter` (0.5 Hz at rest, speed gain 3; starting values pending device tuning). When a fingertip is not measurable, the last smoothed offset is held, so the cursor no longer jumps back to the palm. This refines the fallback in *Fold towel cursor on the pinch point*. Drawing and acceptance still share the one resulting point, and the display spring is unchanged.
 
 Verification: `xcodegen generate` and an iOS Simulator build. Pending on the M1 iPad: the circle is steady at the pinch point while still, follows a slide without visible lag, does not jump on pinch, release or a hidden fingertip, and grab and release still trigger inside the zones.
+
+## Set results card fits its sets (2026-11-24)
+
+At the product owner's request, the results card on the set-done and all-done pages (`TMTherapySetSummary`) is sized to its sets instead of always spanning 65% of the width. The set columns share a minimum width so they stay evenly spaced, and the card is centred. When the sets need more than 65% of the width (the finger all-done page lists every movement's sets), they fall back to sharing that capped width as before (`ViewThatFits`). Colours, typography and contents are unchanged.
+
+Verification: `xcodegen generate` and an iOS Simulator build. The `allDone` and `setDone` debug galleries were checked in the Simulator. Pending on the M1 iPad.
