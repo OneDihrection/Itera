@@ -25,6 +25,8 @@ protocol FingerSessionCompleteViewModelProtocol: AnyObject, Observable {
     func save() async
     /// Leads on to the next exercise while the plan runs, otherwise to Progress.
     func close()
+    /// End on the finished page: the result counts as it would on moving on, then the plan ends.
+    func endPlan()
 }
 
 /// The finger exercises' all-done page: saves the finished session, then hands back to the plan.
@@ -101,5 +103,9 @@ final class FingerSessionCompleteViewModel: FingerSessionCompleteViewModelProtoc
 
         router.closeSession()
         tabs.showProgress()
+    }
+
+    func endPlan() {
+        plan.finishAndEnd(completed: completed)
     }
 }

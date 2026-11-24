@@ -36,8 +36,9 @@ struct TMTherapyProgressRing: View {
 /// `animationDuration` is how long the circle eases toward each `intensity` sample; `paused`
 /// stops its idle motion.
 ///
-/// The page shows the cue, a comfort line and the circle, with underlined Pause and End text
-/// actions at the bottom. Tapping elsewhere does nothing; Skip stays an accessibility action.
+/// The page shows the cue, a comfort line and the circle, with underlined Pause, End and (when
+/// the caller can end the rest early) Skip text actions at the bottom. Tapping elsewhere does
+/// nothing.
 struct TMTherapyBreathingRest: View {
     let cue: LocalizedStringKey
     let intensity: Double
@@ -65,24 +66,19 @@ struct TMTherapyBreathingRest: View {
 
             Spacer(minLength: 0)
 
-            // Raised clear of the debug Skip rest control pinned to the bottom centre.
-            TMTherapyRestActions(
+            TMTherapyFlowActions(
                 paused: paused,
                 disablesPauseWhilePaused: true,
                 pause: pause,
-                stop: stop
+                stop: stop,
+                skip: skip
             )
-            .padding(.bottom, 96)
+            .padding(.bottom, 40)
         }
         .padding(24)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .foregroundStyle(TherapyPalette.ink)
         .background(TherapyPalette.canvas.ignoresSafeArea())
-        .accessibilityActions {
-            if let skip {
-                Button("rest.skip", action: skip)
-            }
-        }
     }
 
     private var heading: some View {
@@ -99,15 +95,19 @@ struct TMTherapyBreathingRest: View {
     }
 }
 
-/// Underlined Pause and End text actions at the bottom of a rest page. With
-/// `disablesPauseWhilePaused`, Pause is disabled while paused (the pause dialog resumes);
-/// otherwise it reads "Lanjutkan latihan" and resumes.
-private struct TMTherapyRestActions: View {
+/// Underlined Pause, End and optional Skip text actions for a page that moves on by itself: the
+/// rests, the plan intro and the finished page. With `disablesPauseWhilePaused`, Pause is
+/// disabled while paused (the pause dialog resumes); otherwise it reads "Lanjutkan latihan" and
+/// resumes. Skip is shown only when the caller passes it, and is disabled while paused, since a
+/// pause holds the page where it is.
+struct TMTherapyFlowActions: View {
     let paused: Bool
     var disablesPauseWhilePaused = false
+    var disabled = false
     var tint: Color? = nil
     let pause: () -> Void
     let stop: () -> Void
+    var skip: (() -> Void)? = nil
 
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
@@ -120,7 +120,7 @@ private struct TMTherapyRestActions: View {
             TMTherapyButton(
                 title: showsResume ? "session.resumeExercise" : "session.pauseAction",
                 symbol: showsResume ? "play.fill" : "pause.fill",
-                disabled: disablesPauseWhilePaused && paused,
+                disabled: disabled || (disablesPauseWhilePaused && paused),
                 plain: true,
                 underlined: true,
                 tint: tint,
@@ -131,12 +131,26 @@ private struct TMTherapyRestActions: View {
             TMTherapyButton(
                 title: "session.endAction",
                 symbol: "stop.fill",
+                disabled: disabled,
                 plain: true,
                 underlined: true,
                 tint: tint,
                 action: stop
             )
             .fixedSize()
+
+            if let skip {
+                TMTherapyButton(
+                    title: "rest.skip",
+                    symbol: "forward.fill",
+                    disabled: disabled || paused,
+                    plain: true,
+                    underlined: true,
+                    tint: tint,
+                    action: skip
+                )
+                .fixedSize()
+            }
         }
     }
 
@@ -148,7 +162,7 @@ private struct TMTherapyRestActions: View {
 /// Full-screen rest waves. The caller supplies the breathing cue and animation progress.
 ///
 /// The page shows the centred cue and a comfort line over the waves, with underlined Pause (or
-/// Resume) and End text actions at the bottom; tapping elsewhere does nothing. Paused, the cue
+/// Resume), End and optional Skip text actions at the bottom; tapping elsewhere does nothing. Paused, the cue
 /// reads "Paused". `counter` (breaths remaining) is read to VoiceOver instead of drawn.
 struct TMTherapyLongRest: View {
     let cue: Text
@@ -158,6 +172,7 @@ struct TMTherapyLongRest: View {
     let paused: Bool
     let togglePause: () -> Void
     let stop: () -> Void
+    var skip: (() -> Void)? = nil
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
@@ -171,14 +186,14 @@ struct TMTherapyLongRest: View {
                 .padding(24)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
 
-            // Raised clear of the debug Skip rest control pinned to the bottom centre.
-            TMTherapyRestActions(
+            TMTherapyFlowActions(
                 paused: paused,
                 tint: TherapyPalette.onBrand,
                 pause: togglePause,
-                stop: stop
+                stop: stop,
+                skip: skip
             )
-            .padding(.bottom, 120)
+            .padding(.bottom, 64)
         }
         .foregroundStyle(TherapyPalette.onBrand)
         .animation(reduceMotion ? nil : .easeInOut(duration: 0.2), value: paused)

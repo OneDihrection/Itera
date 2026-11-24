@@ -376,6 +376,8 @@ extension TMTherapySessionView {
                 if let error = model.saveFailure {
                     saveError(error)
                 }
+
+                completionActions(summary)
             } else {
                 TMTherapyFinishActions(
                     title: summaryExitTitle,
@@ -439,6 +441,18 @@ extension TMTherapySessionView {
 
                 TMTherapyButton(title: "session.endAction", symbol: "stop.fill", destructive: true, pill: true) {
                     requestEnd()
+                }
+
+                // The set page stays up through the rest that follows it, so it can end that rest.
+                if model.snapshot.stage == .rest {
+                    TMTherapyButton(
+                        title: "rest.skip",
+                        symbol: "forward.fill",
+                        disabled: model.snapshot.paused,
+                        plain: true
+                    ) {
+                        model.command(.skipRest)
+                    }
                 }
             }
             .frame(maxWidth: 460)

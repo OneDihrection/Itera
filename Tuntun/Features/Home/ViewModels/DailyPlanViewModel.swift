@@ -759,15 +759,45 @@ final class DailyPlanViewModel: DailyPlanSessionReporting {
         }
 
         pendingSecondSide = nil
-        progress = progress.current(on: .now)
-        progress.completed.insert(items[currentIndex].id)
-        progress.planned = items.map(\.id)
-        Task { await saveProgress() }
+        markCompleted(currentIndex)
 
         let next = upcomingIndex
         self.currentIndex = next
         restingBeforeNext = next != nil
         presentPlanNext()
+    }
+
+    /// End on a finished page. A completed item is marked done (the last side of a two-pass item
+    /// only, as `finish` does); the plan then ends without the long rest.
+    func finishAndEnd(completed: Bool) {
+        guard isRunning, !restingBeforeNext, let currentIndex else {
+            return
+        }
+
+        if completed, !hasSideAfterCurrentPass(currentIndex) {
+            markCompleted(currentIndex)
+        }
+
+        end()
+    }
+
+    /// True when this session was the first side of a two-pass item, so the item is not done yet.
+    private func hasSideAfterCurrentPass(_ index: Int) -> Bool {
+        let exercise = items[index].exercise
+
+        guard let side = passSide(for: exercise) else {
+            return false
+        }
+
+        return passSide(after: side, for: exercise) != nil
+    }
+
+    /// Adds the item to today's completed set and saves the day.
+    private func markCompleted(_ index: Int) {
+        progress = progress.current(on: .now)
+        progress.completed.insert(items[index].id)
+        progress.planned = items.map(\.id)
+        Task { await saveProgress() }
     }
 
     private func presentPlanNext() {

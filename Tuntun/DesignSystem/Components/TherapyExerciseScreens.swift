@@ -137,17 +137,26 @@ struct TMTherapyInstructionBubble: View {
 
 // MARK: - Intro
 
+/// The intro's bottom actions: Pause (or "Lanjutkan latihan" while `paused`), End and Skip.
+struct TMTherapyIntroFlowActions {
+    var paused = false
+    var disabled = false
+    let pause: () -> Void
+    let stop: () -> Void
+    let skip: () -> Void
+}
+
 /// The page before an exercise, laid out like the product owner's mockup (2026-11-23): the
 /// exercise title and two columns. The left column is the exercise's own demonstration on a pale
 /// blue panel; the right column says what the exercise trains, shows the target as stat tiles, and
 /// ends with short notes. The panel and the notes end on one line.
 ///
-/// It draws no back control: the caller shows it inside a navigation bar, whose system back
-/// button (or bar button) leaves the page. There is no Start button either: the caller opens the
-/// session itself. The bar's trailing side carries the one control a caller may need when it
-/// cannot go on by itself (resume, or a readiness action), or, after a rest, the countdown; a
-/// message explaining it is a small muted line under the title. At accessibility text sizes the
-/// columns stack.
+/// It draws no back control and no Start button: the caller opens the session itself, and
+/// `flowActions` puts underlined Pause, End and Skip text actions at the bottom of the page, as on
+/// the rests. The caller shows it inside a navigation bar, whose trailing side carries the one
+/// control a caller may need when it cannot go on by itself (a readiness action), or, after a
+/// rest, the countdown; a message explaining it is a small muted line under the title. At
+/// accessibility text sizes the columns stack.
 struct TMTherapyExerciseIntro<Media: View, Targets: View, Notes: View>: View {
     let heading: TMTherapyExerciseHeading
     let focusTitle: LocalizedStringKey
@@ -158,6 +167,8 @@ struct TMTherapyExerciseIntro<Media: View, Targets: View, Notes: View>: View {
     var actionTitle: LocalizedStringKey? = nil
     var actionDisabled = false
     var onAction: () -> Void = {}
+    /// Pause, End and Skip at the bottom of the page, when the caller passes them.
+    var flowActions: TMTherapyIntroFlowActions? = nil
     @ViewBuilder let media: Media
     /// The stat tiles, laid out in one row of equal widths.
     @ViewBuilder let targets: Targets
@@ -183,6 +194,9 @@ struct TMTherapyExerciseIntro<Media: View, Targets: View, Notes: View>: View {
                 .padding(.bottom, metrics.bottomPadding)
             }
             .scrollBounceBehavior(.basedOnSize)
+        }
+        .safeAreaInset(edge: .bottom, spacing: 0) {
+            flowActionRow
         }
         .background(TherapyPalette.progressCanvas)
         .toolbar {
@@ -291,6 +305,22 @@ struct TMTherapyExerciseIntro<Media: View, Targets: View, Notes: View>: View {
     private var notesStack: some View {
         VStack(spacing: 16) {
             notes
+        }
+    }
+
+    @ViewBuilder
+    private var flowActionRow: some View {
+        if let flowActions {
+            TMTherapyFlowActions(
+                paused: flowActions.paused,
+                disabled: flowActions.disabled,
+                pause: flowActions.pause,
+                stop: flowActions.stop,
+                skip: flowActions.skip
+            )
+            .padding(.vertical, 16)
+            .frame(maxWidth: .infinity)
+            .background(TherapyPalette.progressCanvas)
         }
     }
 
@@ -669,9 +699,12 @@ struct TMTherapyPauseDialog<Extra: View>: View {
                 Text("session.endConfirmMessage")
                     .typography(.body)
                 HStack(spacing: 16) {
-                    TMTherapyButton(title: "session.endCancel", secondary: true, pill: true) {
-                        confirmingEnd = false
-                    }
+                    TMTherapyButton(
+                        title: "session.endCancel",
+                        secondary: true,
+                        pill: true,
+                        action: cancelEnd
+                    )
                     TMTherapyButton(title: "session.endConfirm", pill: true, brand: true, action: onEnd)
                 }
             }
@@ -690,6 +723,18 @@ struct TMTherapyPauseDialog<Extra: View>: View {
                 )
             }
         }
+    }
+
+    /// Opened from an End button, the session paused only to ask, so Cancel closes the dialog
+    /// and resumes in one tap. Reached from this card's own End, or while resuming is blocked,
+    /// Cancel goes back to the paused card.
+    private func cancelEnd() {
+        guard confirmingEndInitially, !resumeDisabled else {
+            confirmingEnd = false
+            return
+        }
+
+        onResume()
     }
 
     private static func clock(_ seconds: Int) -> String {

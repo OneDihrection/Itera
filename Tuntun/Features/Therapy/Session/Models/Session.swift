@@ -20,11 +20,11 @@ enum SessionCommand {
     case retryCalibration
     case skip
     case timedPractice
+    /// Skip on a rest page: ends the current rest now, as if it had run out.
+    case skipRest
     #if DEBUG
     /// Developer shortcut: records the current activity's remaining sets as completed at their goal.
     case debugFinish
-    /// Developer shortcut: ends the current rest now, as if it had run out.
-    case debugSkipRest
     #endif
 }
 

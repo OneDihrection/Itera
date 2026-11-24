@@ -28,38 +28,43 @@ protocol DailyPlanIntroViewModelProtocol: AnyObject, Observable {
     /// Shown when the plan opens this intro after a rest.
     var countdownSeconds: Int? { get }
     /// Opened by the plan inside its full-screen cover after a rest, rather than pushed on
-    /// Beranda's stack, so it has no system back button and needs its own way out.
+    /// Beranda's stack, so it brings its own navigation bar.
     var isAfterRest: Bool { get }
-    /// The one control the page shows, and only when the intro cannot go on by itself:
-    /// "Lanjutkan" while the narration is paused, or the readiness action ("Buka Pengaturan",
-    /// "Coba lagi"…) when a missing permission or voice failure stopped the session opening.
+    /// The bar's one control, shown only when the intro cannot go on by itself: the readiness
+    /// action ("Buka Pengaturan", "Coba lagi"…) when a missing permission or voice failure
+    /// stopped the session opening.
     var actionTitleKey: String? { get }
     var actionDisabled: Bool { get }
     /// True while readiness validates listening and opens the session.
     var isPreparingSession: Bool { get }
     /// Set only when something blocks the start, such as a missing permission.
     var readinessMessageKey: String? { get }
+    /// Pause, End and Skip are shown, except while the plan's countdown runs (the rest page
+    /// around it owns those) and while readiness opens the session.
+    var showsFlowActions: Bool { get }
+    /// The introduction's reading is paused by Pause or by leaving the app.
+    var narrationPaused: Bool { get }
 
     func appear()
     func disappear()
     func pauseNarration()
+    /// Pause on the page: pauses the reading, or resumes it.
+    func togglePause()
     /// The app is active again: resume a paused intro, or open the session if readiness was
     /// what held it back and is now satisfied (for example after Settings).
     func becameActive()
     func performAction()
-    func back()
-
-    #if DEBUG
-    /// Skips the intro narration and opens the session at once.
-    func startWithoutNarration()
-    #endif
+    /// End on the page: stops the reading and ends today's plan.
+    func exit()
+    /// Skip on the page: stops the reading and opens the session at once.
+    func skip()
 }
 
 /// The page before each daily-plan exercise. Every intro opened from Beranda reads its
 /// introduction first (the scripted brief, or the exercise's purpose), then validates readiness
-/// and opens the session on its own; there is no Start button (2026-11-23). A control appears
-/// only when the intro cannot go on by itself: "Lanjutkan" after an interruption, or the
-/// readiness action when a permission or voice check blocks the session.
+/// and opens the session on its own; there is no Start button (2026-11-23). Pause, End and Skip
+/// stay at the bottom of the page (2026-11-24); a bar control appears only when a permission or
+/// voice check blocks the session.
 @MainActor
 @Observable
 final class DailyPlanIntroViewModel: DailyPlanIntroViewModelProtocol {
@@ -131,10 +136,6 @@ final class DailyPlanIntroViewModel: DailyPlanIntroViewModelProtocol {
     }
 
     var actionTitleKey: String? {
-        if narration.paused {
-            return "session.resume"
-        }
-
         guard countdownSeconds == nil,
               !narration.running,
               !starting,
@@ -151,6 +152,14 @@ final class DailyPlanIntroViewModel: DailyPlanIntroViewModelProtocol {
 
     var isPreparingSession: Bool {
         readiness.preparingSession
+    }
+
+    var showsFlowActions: Bool {
+        countdownSeconds == nil && !isPreparingSession
+    }
+
+    var narrationPaused: Bool {
+        narration.paused
     }
 
     var readinessMessageKey: String? {
@@ -201,6 +210,15 @@ final class DailyPlanIntroViewModel: DailyPlanIntroViewModelProtocol {
 
     func pauseNarration() {
         narration.pause()
+    }
+
+    func togglePause() {
+        guard narration.paused else {
+            narration.pause()
+            return
+        }
+
+        narration.resume()
     }
 
     func becameActive() {
@@ -263,15 +281,13 @@ final class DailyPlanIntroViewModel: DailyPlanIntroViewModelProtocol {
         }
     }
 
-    #if DEBUG
-    func startWithoutNarration() {
+    func skip() {
         skipNarration()
     }
-    #endif
 
-    /// The after-rest intro's "Kembali" bar button. A pushed intro leaves through the system back
-    /// button instead, and Beranda's screen model ends the plan; `disappear()` stops the reading.
-    func back() {
+    /// Ends today's plan from either intro: `plan.end()` dismisses the cover and clears
+    /// Beranda's stack, so a pushed intro leaves too; `disappear()` would also stop the reading.
+    func exit() {
         narration.stop()
 
         if presetCountdown != nil {

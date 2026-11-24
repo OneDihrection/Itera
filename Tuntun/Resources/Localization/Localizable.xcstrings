@@ -2,6 +2,7 @@
   "sourceLanguage" : "en",
   "strings" : {
     "action.back" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {

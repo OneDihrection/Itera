@@ -85,9 +85,6 @@ struct TMDebugScreenGallery: View {
             }
         case "rest":
             rest
-                .overlay {
-                    TMDebugSkipRestButton {}
-                }
         case "longRest":
             TMTherapyLongRest(
                 cue: Text("rest.long.inhale"),
@@ -96,11 +93,9 @@ struct TMDebugScreenGallery: View {
                 intensity: 0.6,
                 paused: false,
                 togglePause: {},
-                stop: {}
+                stop: {},
+                skip: {}
             )
-            .overlay {
-                TMDebugSkipRestButton {}
-            }
         case "setDone":
             TMTherapySetSummary(
                 heading: heading,
@@ -119,7 +114,7 @@ struct TMDebugScreenGallery: View {
                 message: Text("session.allDoneMessage"),
                 results: results.map { TherapySetResult(number: $0.number, done: 8, goal: 8, state: .done) }
             ) {
-                TMTherapyButton(title: "plan.nextContinue", symbol: "play.fill", prominent: true) {}
+                TMTherapyFlowActions(paused: false, pause: {}, stop: {}, skip: {})
             }
         default:
             live
@@ -140,7 +135,8 @@ struct TMDebugScreenGallery: View {
                 cue: phase < 6 ? "rest.breath.inhale" : "rest.breath.exhale",
                 intensity: 0.25 + 0.75 * (1 - cos(expansion * .pi)) / 2,
                 pause: {},
-                stop: {}
+                stop: {},
+                skip: {}
             )
         }
     }

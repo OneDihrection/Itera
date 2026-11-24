@@ -55,9 +55,10 @@ protocol BalanceSessionViewModelProtocol: AnyObject, Observable {
     func end() async
     func openSettings()
     func retryHistorySave()
+    /// Skip on the rest page: ends the rest between sets and starts the next set.
+    func skipRest()
     #if DEBUG
     func finishExerciseForDebug()
-    func skipRestForDebug()
     #endif
 }
 
@@ -447,11 +448,12 @@ final class BalanceSessionViewModel: BalanceSessionViewModelProtocol {
         trackingService.stop()
         audioService.stopMusic()
     }
+    #endif
 
-    /// Developer shortcut: ends the rest between sets now and starts the next set the way an
+    /// Skip on the rest page: ends the rest between sets now and starts the next set the way an
     /// elapsed rest does. Cancelling the countdown task first makes its sleep throw, so it returns
     /// without calling `startNextSet()` a second time. Ignored while paused, like the rest itself.
-    func skipRestForDebug() {
+    func skipRest() {
         guard restRemaining != nil, !paused, !allSetsDone else {
             return
         }
@@ -461,7 +463,6 @@ final class BalanceSessionViewModel: BalanceSessionViewModelProtocol {
         audioService.cancelSpeech()
         startNextSet()
     }
-    #endif
 
     /// The camera frame in points, so the engine sizes bubbles like the other exercises.
     func viewport(_ size: CGSize) {
