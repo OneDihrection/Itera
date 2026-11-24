@@ -41,8 +41,7 @@ protocol FingerSessionViewModelProtocol: AnyObject, Observable {
     var restBreath: RestBreath? { get }
     var scriptedRest: BreathingRest? { get }
     var usesFingerScript: Bool { get }
-    /// The heading while calibrating, the countdown's title and the scripted rest's cue prefix.
-    var calibrationTitleKey: String { get }
+    /// The countdown's title and the scripted rest's cue prefix.
     var countdownTitleKey: String { get }
     var scriptRestPrefix: String { get }
     var upcoming: (exercise: FingerExercise, set: Int)? { get }
@@ -148,15 +147,6 @@ final class FingerSessionViewModel: FingerSessionViewModelProtocol {
         }
 
         return FingerScriptGuidance.script(for: activity.kind, side: routine.side)
-    }
-
-    /// Unchanged by the scripts: thumb opposition keeps its "Kalibrasi Tangan …" heading.
-    var calibrationTitleKey: String {
-        guard usesFingerScript, activity.kind == .opposition else {
-            return "stage.calibration"
-        }
-
-        return OppositionGuidance.prefix(for: routine.side) + "calibration.title"
     }
 
     var countdownTitleKey: String {

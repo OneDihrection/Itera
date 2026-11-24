@@ -2,6 +2,7 @@
   "sourceLanguage" : "en",
   "strings" : {
     "action.back" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -2981,13 +2982,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Hide decorative motion during rest and celebrations."
+            "value" : "Less motion during rests and celebrations."
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Sembunyikan animasi hias saat istirahat dan perayaan."
+            "value" : "Kurangi animasi saat istirahat dan perayaan."
           }
         }
       }
@@ -3029,13 +3030,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Comfort"
+            "value" : "Preferences"
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Kenyamanan"
+            "value" : "Preferensi"
           }
         }
       }
@@ -3045,13 +3046,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Spoken instructions and exercise cues stay on."
+            "value" : "Spoken guidance stays on."
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Panduan suara dan aba-aba latihan tetap aktif."
+            "value" : "Panduan suara tetap aktif."
           }
         }
       }
@@ -4651,6 +4652,7 @@
       }
     },
     "exercise.repetitionsUnit" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -4684,6 +4686,7 @@
       }
     },
     "exercise.setsUnit" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -4852,23 +4855,6 @@
         }
       }
     },
-    "exerciseDetail.callout.first" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "your first move"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "gerakan pertamamu"
-          }
-        }
-      }
-    },
     "exerciseDetail.callout.hardest.lead" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -4920,23 +4906,6 @@
         }
       }
     },
-    "exerciseDetail.callout.last" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "your last move"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "gerakan terakhirmu"
-          }
-        }
-      }
-    },
     "exerciseDetail.callout.set %lld" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -4950,40 +4919,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : " (set %lld)"
-          }
-        }
-      }
-    },
-    "exerciseDetail.callout.this" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "This is "
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ini "
-          }
-        }
-      }
-    },
-    "exerciseDetail.callout.today" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : " today."
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : " hari ini."
           }
         }
       }
@@ -5294,40 +5229,6 @@
         }
       }
     },
-    "exerciseDetail.comparison.caption %@" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Faded blue: %@ · Yellow: today"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Biru samar: %@ · Kuning: hari ini"
-          }
-        }
-      }
-    },
-    "exerciseDetail.comparison.label" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Drawing of your movement: the earlier session faded, today highlighted"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Gambar gerakanmu: sesi sebelumnya samar, hari ini disorot"
-          }
-        }
-      }
-    },
     "exerciseDetail.deleteRecord" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -5596,6 +5497,40 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Semua repetisi stabil, selisih hanya %lld%%"
+          }
+        }
+      }
+    },
+    "exerciseDetail.insight.fairAngle %lld" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Your reach was fairly steady, up to %lld° apart"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Jangkauanmu cukup stabil, selisih hingga %lld°"
+          }
+        }
+      }
+    },
+    "exerciseDetail.insight.fairRange %lld" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Your reach was fairly steady, up to %lld%% apart"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Jangkauanmu cukup stabil, selisih hingga %lld%%"
           }
         }
       }
@@ -9560,6 +9495,23 @@
         }
       }
     },
+    "home.dailyPlan.missed" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Didn't get a chance to exercise? Let's try again in the next session!"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Belum sempat latihan? Yuk, coba lagi di sesi berikutnya!"
+          }
+        }
+      }
+    },
     "home.dailyPlan.noSchedule" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -9573,6 +9525,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Belum ada jadwal latihan"
+          }
+        }
+      }
+    },
+    "home.dailyPlan.partial" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Some exercises were missed. Try again in the next session!"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ada beberapa latihan yang terlewatkan, coba lagi di sesi berikutnya!"
           }
         }
       }
@@ -18824,6 +18793,38 @@
         }
       }
     },
+    "session.calibrationHeading" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Movement setup"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Persiapan Gerakan"
+          }
+        }
+      }
+    },
+    "session.calibrationSubtitle" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Not counted as practice yet"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Belum termasuk latihan"
+          }
+        }
+      }
+    },
     "session.cameraWait" : {
       "localizations" : {
         "en" : {
@@ -19398,6 +19399,7 @@
       }
     },
     "session.nextMovementIn %lld" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -19430,6 +19432,7 @@
       }
     },
     "session.nextSetIn %lld %lld" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -19446,6 +19449,7 @@
       }
     },
     "session.nextSideIn %lld" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -19724,6 +19728,38 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Latihan dijeda"
+          }
+        }
+      }
+    },
+    "session.positionGood" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "In position"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Posisi sudah pas"
+          }
+        }
+      }
+    },
+    "session.positionPoor" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Not in position yet"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Posisi belum pas"
           }
         }
       }
@@ -20239,6 +20275,54 @@
         }
       }
     },
+    "session.restBeforeMovement %lld" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rest %lld seconds before the next movement"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Istirahat %lld detik sebelum lanjut ke gerakan berikutnya"
+          }
+        }
+      }
+    },
+    "session.restBeforeSet %lld %lld" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rest %1$lld seconds before set %2$lld"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Istirahat %1$lld detik sebelum lanjut ke set %2$lld"
+          }
+        }
+      }
+    },
+    "session.restBeforeSide %lld" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rest %lld seconds before the other side"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Istirahat %lld detik sebelum lanjut ke sisi berikutnya"
+          }
+        }
+      }
+    },
     "session.restInstruction" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -20434,6 +20518,7 @@
       }
     },
     "session.setDone %lld" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -20445,6 +20530,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Set %lld selesai!"
+          }
+        }
+      }
+    },
+    "session.setDoneCheer %lld" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Great! You've finished set %lld"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hebat! Kamu sudah menyelesaikan set %lld"
           }
         }
       }
@@ -20483,6 +20584,7 @@
       }
     },
     "session.setRest %lld" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -20730,6 +20832,7 @@
       }
     },
     "session.totalOf %lld %lld" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -20741,6 +20844,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Total **%lld dari %lld repetisi** diselesaikan"
+          }
+        }
+      }
+    },
+    "session.totalOfCheer %lld %lld" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Total **%1$lld of %2$lld repetitions** completed. Keep going!"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Total **%1$lld dari %2$lld repetisi** diselesaikan. Teruskan!"
           }
         }
       }
@@ -20766,13 +20885,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Drag to change the order. Switch an exercise off to leave it out of today's plan."
+            "value" : "Drag to reorder. Switch off to hide."
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Seret untuk mengubah urutan. Matikan latihan agar tidak masuk rencana hari ini."
+            "value" : "Seret untuk mengubah urutan. Matikan untuk menyembunyikan."
           }
         }
       }
@@ -20845,6 +20964,22 @@
         }
       }
     },
+    "settings.displayTitle" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Display"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tampilan"
+          }
+        }
+      }
+    },
     "settings.hidden" : {
       "localizations" : {
         "en" : {
@@ -20866,61 +21001,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Rest between exercises (breaths)"
+            "value" : "Between exercises (breaths)"
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Istirahat antar latihan (napas)"
-          }
-        }
-      }
-    },
-    "settings.patientName" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Name, for example Bu Yuli"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Nama, misalnya Bu Yuli"
-          }
-        }
-      }
-    },
-    "settings.patientNameHelp" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Used only to greet the patient on Home and Progress. Stored on this iPad only."
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Hanya dipakai untuk menyapa pasien di Beranda dan Progres. Hanya disimpan di iPad ini."
-          }
-        }
-      }
-    },
-    "settings.patientNameTitle" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Patient name"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Nama pasien"
+            "value" : "Antar latihan (napas)"
           }
         }
       }
@@ -20930,13 +21017,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Applies from the next session. Each exercise has its own side, sets, repetitions and rest. Both sides alternate after every repetition; finger exercises run once for each hand. Counts other than the recorded two sets of five change what the Indonesian scripts say."
+            "value" : "Applies from the next session. Set 0 to hide an exercise."
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Berlaku mulai sesi berikutnya. Tiap latihan punya sisi, set, repetisi, dan istirahatnya sendiri. Kedua sisi bergantian setiap repetisi; latihan jari dilakukan sekali untuk tiap tangan. Jumlah selain dua set lima repetisi yang direkam mengubah narasi naskah bahasa Indonesia."
+            "value" : "Berlaku mulai sesi berikutnya. Isi 0 untuk menyembunyikan latihan."
           }
         }
       }
@@ -20997,13 +21084,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Only each repetition's numbers (time and range) are saved. No skeleton or video is kept."
+            "value" : "Only each repetition's numbers are saved."
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Hanya angka setiap repetisi (waktu dan rentang) yang disimpan. Tidak ada kerangka atau video yang disimpan."
+            "value" : "Hanya angka tiap repetisi yang disimpan."
           }
         }
       }
@@ -21031,13 +21118,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "The report replays the first, hardest and last repetition of each set as a moving skeleton. No video is saved."
+            "value" : "Key repetitions are saved as a moving skeleton."
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Laporan memutar repetisi pertama, tersulit, dan terakhir setiap set sebagai kerangka bergerak. Tidak ada video yang disimpan."
+            "value" : "Repetisi penting disimpan sebagai kerangka bergerak."
           }
         }
       }
@@ -21082,13 +21169,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Also keeps a short, low-resolution video of the first, hardest and last repetition of each set. Faces are pixelated and the room is blurred on this iPad before anything is saved. Hand exercises see no body, so only faces the camera recognizes are pixelated there."
+            "value" : "Short videos of key repetitions, with faces and the room blurred. Hand exercises blur only detected faces."
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Juga menyimpan video singkat beresolusi rendah dari repetisi pertama, tersulit, dan terakhir setiap set. Wajah disamarkan dan ruangan dikaburkan di iPad ini sebelum disimpan. Latihan tangan tidak melihat tubuh, jadi hanya wajah yang dikenali kamera yang disamarkan."
+            "value" : "Video singkat repetisi penting, dengan wajah dan ruangan disamarkan. Latihan tangan hanya menyamarkan wajah yang terdeteksi."
           }
         }
       }
@@ -21099,13 +21186,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "The room will be visible in saved videos. Faces are still pixelated."
+            "value" : "The room will be visible in videos."
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Ruangan akan terlihat di video yang disimpan. Wajah tetap disamarkan."
+            "value" : "Ruangan akan terlihat di video."
           }
         }
       }
@@ -21116,13 +21203,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Faces will be visible in saved videos; the room is still blurred. Choose this only with the patient's consent."
+            "value" : "Faces will be visible. Needs the patient's consent."
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Wajah akan terlihat di video yang disimpan; ruangan tetap dikaburkan. Pilih ini hanya dengan persetujuan pasien."
+            "value" : "Wajah akan terlihat. Perlu persetujuan pasien."
           }
         }
       }
@@ -21133,13 +21220,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Faces and the room will be visible in saved videos, without any blur. Choose this only with the patient's consent."
+            "value" : "Faces and the room will be visible. Needs the patient's consent."
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Wajah dan ruangan akan terlihat di video yang disimpan tanpa samaran. Pilih ini hanya dengan persetujuan pasien."
+            "value" : "Wajah dan ruangan akan terlihat. Perlu persetujuan pasien."
           }
         }
       }
@@ -21165,13 +21252,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "The short rest follows every set of every exercise. The long rest between exercises is a guided breathing break of about %lld seconds."
+            "value" : "The rest between exercises takes about %lld seconds."
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Istirahat singkat dilakukan setelah setiap set di semua latihan. Istirahat panjang di antara latihan berupa panduan napas sekitar %lld detik."
+            "value" : "Istirahat antar latihan sekitar %lld detik."
           }
         }
       }
@@ -21197,13 +21284,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Rest between sets (seconds)"
+            "value" : "Between sets (seconds)"
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Istirahat antar set (detik)"
+            "value" : "Antar set (detik)"
           }
         }
       }
@@ -21240,6 +21327,22 @@
         }
       }
     },
+    "settings.soundTitle" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sound"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Suara"
+          }
+        }
+      }
+    },
     "settings.videoCensoring" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -21262,13 +21365,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Always on during exercises. Say \"stop\" to pause and \"go\" to resume. Uses microphone and speech recognition access."
+            "value" : "Say \"stop\" to pause and \"go\" to resume."
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Selalu aktif selama latihan. Ucapkan \"stop\" untuk menjeda dan \"go\" untuk melanjutkan. Menggunakan akses mikrofon dan pengenalan ucapan."
+            "value" : "Ucapkan \"stop\" untuk jeda dan \"go\" untuk lanjut."
           }
         }
       }
@@ -21279,13 +21382,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Exercises can't start until microphone and speech recognition access are allowed."
+            "value" : "Allow microphone and speech recognition to start exercising."
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Latihan belum bisa dimulai sampai akses mikrofon dan pengenalan ucapan diizinkan."
+            "value" : "Izinkan mikrofon dan pengenalan ucapan untuk mulai latihan."
           }
         }
       }

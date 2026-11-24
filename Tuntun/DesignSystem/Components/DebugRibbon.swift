@@ -111,30 +111,6 @@ struct TMDebugMenu<Content: View>: View {
     }
 }
 
-/// "Skip rest" for a full-screen rest page, pinned to its bottom centre so it never meets the
-/// header's debug "Finish exercise" action. The caller decides when a rest can be skipped and
-/// sends its own session command; the button only forwards the tap.
-struct TMDebugSkipRestButton: View {
-    var title: LocalizedStringKey = "debug.skipRest"
-    let action: () -> Void
-
-    private static var cornerRadius: CGFloat { 10 }
-
-    var body: some View {
-        // A solid white plate keeps the quiet label readable on the long rest's yellow waves,
-        // where the plain debug button nearly disappears.
-        TMTherapyTextButton(title: title, symbol: "forward.fill", action: action)
-            .debugOnly()
-            .background(
-                Color.white,
-                in: RoundedRectangle(cornerRadius: Self.cornerRadius, style: .continuous)
-            )
-            .shadow(color: .black.opacity(0.15), radius: 8, y: 2)
-            .padding(.bottom, 40)
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
-    }
-}
-
 extension View {
     /// Marks a debug-build control with a dashed orange outline and a "DEBUG" corner ribbon.
     /// Use only inside `#if DEBUG`; the modifier itself does not exist in Release builds.

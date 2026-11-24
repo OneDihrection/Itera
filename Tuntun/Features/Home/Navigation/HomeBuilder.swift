@@ -14,6 +14,8 @@ protocol HomeDependency {
     var armRoutine: RoutineViewModel { get }
     var taskRoutine: RoutineViewModel { get }
     var dailyPlan: DailyPlanViewModel { get }
+    /// The same repository the plan writes, read here to distinguish completed and missed days.
+    var dailyPlanProgressRepository: any DailyPlanProgressRepository { get }
     /// The intro reads its narration and validates readiness before a session opens.
     var audioService: SessionAudioService { get }
     var permissionService: PermissionService { get }
@@ -64,6 +66,7 @@ final class HomeBuilder: HomeContentBuildable {
         armRoutine: dependency.armRoutine,
         taskRoutine: dependency.taskRoutine,
         plan: dependency.dailyPlan,
+        progressRepository: dependency.dailyPlanProgressRepository,
         router: dependency.homeRouter
     )
 

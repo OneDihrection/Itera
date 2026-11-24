@@ -63,10 +63,18 @@ struct SitToStandBalanceEngine: BalanceMovementEngine {
         present(activity.presentation)
     }
 
+    /// Follows only whether the torso is visible, so the tracking chip stays live while a cue
+    /// plays. Unscored frames would suspend the activity (restarting its holds and countdown),
+    /// so the activity sees nothing and the overlay is left as it is.
+    mutating func preview(_ frame: TrackingObservation) {
+        snapshot.trackingLost = !activity.hasTorsoEvidence(in: frame)
+    }
+
     mutating func invalidateCalibration() {
         activity.recalibrate()
         snapshot.phase = .findingBody
         snapshot.overlay = nil
+        snapshot.trackingLost = true
         snapshot.calibrationProgress = 0
         snapshot.calibrationCountdown = nil
         snapshot.instructionKey = "sitToStand.tracking"
@@ -91,6 +99,7 @@ struct SitToStandBalanceEngine: BalanceMovementEngine {
         snapshot.hipAngle = value.hipAngle
         snapshot.trunkLean = value.trunkLean
         snapshot.instructionKey = value.trackingMessage ?? value.cue ?? value.instruction
+        snapshot.trackingLost = value.trackingMessage != nil || value.joints == nil
 
         if value.count >= goal {
             snapshot.phase = .complete

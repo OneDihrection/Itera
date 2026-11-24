@@ -11,7 +11,7 @@ import Observation
 @MainActor
 protocol HomeViewModelProtocol: AnyObject, Observable {
     var path: [HomeRoute] { get set }
-    var sheet: HomeSheet? { get set }
+    var panel: HomePanel? { get set }
     var cover: PlanCover? { get set }
     var rows: [DailyPlanRow] { get }
     var errorKey: String? { get }
@@ -22,6 +22,8 @@ protocol HomeViewModelProtocol: AnyObject, Observable {
     var selectedDate: Date { get }
     var visibleWeek: [Date] { get }
     var selectedDayState: HomeDayState { get }
+    /// Exercise IDs completed on the selected historical date.
+    var selectedCompletedItemIDs: Set<String> { get }
 
     func refresh() async
     func openPracticePreferences()
@@ -33,7 +35,7 @@ protocol HomeViewModelProtocol: AnyObject, Observable {
     func begin(from itemID: String?)
 }
 
-/// Beranda: exposes `HomeRouter`'s navigation stack, sheet and the full-screen cover that runs
+/// Beranda: exposes `HomeRouter`'s navigation stack, Preferences panel and the full-screen cover that runs
 /// today's plan.
 @MainActor
 @Observable
@@ -42,7 +44,9 @@ final class HomeScreenViewModel: HomeViewModelProtocol {
     private let plan: DailyPlanViewModel
     @ObservationIgnored private let armRoutine: RoutineViewModel
     @ObservationIgnored private let taskRoutine: RoutineViewModel
+    @ObservationIgnored private let progressRepository: any DailyPlanProgressRepository
     @ObservationIgnored private let router: HomeRouter
+    private var historicalProgress: [DailyPlanProgress]?
     private(set) var selectedDate = Calendar.autoupdatingCurrent.startOfDay(for: .now)
     private var visibleWeekAnchor = Calendar.autoupdatingCurrent.startOfDay(for: .now)
     private var referenceToday = Calendar.autoupdatingCurrent.startOfDay(for: .now)
@@ -52,12 +56,14 @@ final class HomeScreenViewModel: HomeViewModelProtocol {
         armRoutine: RoutineViewModel,
         taskRoutine: RoutineViewModel,
         plan: DailyPlanViewModel,
+        progressRepository: any DailyPlanProgressRepository,
         router: HomeRouter
     ) {
         self.fingers = fingers
         self.armRoutine = armRoutine
         self.taskRoutine = taskRoutine
         self.plan = plan
+        self.progressRepository = progressRepository
         self.router = router
     }
 
@@ -84,12 +90,12 @@ final class HomeScreenViewModel: HomeViewModelProtocol {
         }
     }
 
-    var sheet: HomeSheet? {
+    var panel: HomePanel? {
         get {
-            router.sheet
+            router.panel
         }
         set {
-            router.sheet = newValue
+            router.panel = newValue
         }
     }
 
@@ -144,7 +150,24 @@ final class HomeScreenViewModel: HomeViewModelProtocol {
 
         switch offset {
         case ..<0:
-            return .completed
+            guard historicalProgress != nil else {
+                return .completed
+            }
+
+            guard let progress = historicalProgress(on: selected) else {
+                return .missed
+            }
+
+            let plannedItemIDs = progress.planned.isEmpty
+                ? Set(rows.map(\.id))
+                : Set(progress.planned)
+            let completedItemIDs = progress.completed.intersection(plannedItemIDs)
+
+            if completedItemIDs.isEmpty {
+                return .missed
+            }
+
+            return plannedItemIDs.isSubset(of: completedItemIDs) ? .completed : .partial
         case 0:
             return plan.isFinishedToday ? .completed : .current
         case 1:
@@ -154,12 +177,18 @@ final class HomeScreenViewModel: HomeViewModelProtocol {
         }
     }
 
+    var selectedCompletedItemIDs: Set<String> {
+        let visibleItemIDs = Set(rows.map(\.id))
+        return historicalProgress(on: selectedDate)?.completed.intersection(visibleItemIDs) ?? []
+    }
+
     func refresh() async {
         synchronizeCalendarDay()
         await fingers.refresh()
         await armRoutine.load()
         await taskRoutine.load()
         await plan.load()
+        await loadHistoricalProgress()
     }
 
     func openPracticePreferences() {
@@ -205,5 +234,20 @@ final class HomeScreenViewModel: HomeViewModelProtocol {
 
     func begin(from itemID: String?) {
         plan.begin(from: itemID)
+    }
+
+    private func loadHistoricalProgress() async {
+        do {
+            historicalProgress = try await progressRepository.history()
+        } catch {
+            // Keep the previous completed-day fallback when history cannot be read safely.
+            historicalProgress = nil
+        }
+    }
+
+    private func historicalProgress(on date: Date) -> DailyPlanProgress? {
+        historicalProgress?.first {
+            Calendar.autoupdatingCurrent.isDate($0.day, inSameDayAs: date)
+        }
     }
 }

@@ -31,6 +31,7 @@ struct TMDailyPlanCard: View {
     let duration: ClosedRange<Int>
     let state: TMDailyPlanCardState
     let isLast: Bool
+    var isInteractionEnabled = true
     let action: () -> Void
 
     var body: some View {
@@ -60,7 +61,7 @@ struct TMDailyPlanCard: View {
         switch state {
         case .completed:
             Circle()
-                .fill(TherapyPalette.success)
+                .fill(TherapyPalette.planMarker)
                 .overlay {
                     Image(systemName: "checkmark")
                         .typography(size: 28, weight: .bold, relativeTo: .title2)
@@ -83,7 +84,7 @@ struct TMDailyPlanCard: View {
 
             Circle()
                 .strokeBorder(
-                    dashed ? TherapyPalette.success : TherapyPalette.actionMuted,
+                    dashed ? TherapyPalette.planMarker : TherapyPalette.actionMuted,
                     style: StrokeStyle(
                         lineWidth: 4,
                         lineCap: .round,
@@ -129,7 +130,7 @@ struct TMDailyPlanCard: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(TMTherapySoundButtonStyle())
-        .disabled(!state.isAvailable)
+        .disabled(!state.isAvailable || !isInteractionEnabled)
     }
 
     private var metrics: some View {
@@ -152,7 +153,7 @@ struct TMDailyPlanCard: View {
     }
 
     private var connectorColor: Color {
-        state == .completed ? TherapyPalette.success : TherapyPalette.actionMuted
+        state == .completed ? TherapyPalette.planMarker : TherapyPalette.actionMuted
     }
 
     private var contentColor: Color {

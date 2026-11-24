@@ -12,7 +12,9 @@ import SwiftUI
 /// One gesture is shown at a time: pinch on the glowing circle, slide to the goal circle, then open.
 /// The towel's moving edge follows the fold progress, so the picture matches the hand. Activity
 /// coordinates already include the selected preview reflection, exactly once, so nothing here
-/// reflects them again.
+/// reflects them again. They are workspace coordinates: 0…1 spans the visible part of the
+/// aspect-fill preview (`CameraDisplayGeometry.visibleRect`), so they map straight onto this
+/// view and nothing falls in the cropped sides of the image.
 struct TMTowelWorkspaceView: View {
     let snapshot: TowelSnapshot
 
@@ -29,12 +31,12 @@ struct TMTowelWorkspaceView: View {
 
     var body: some View {
         GeometryReader { proxy in
-            let geometry = CameraDisplayGeometry(aspect: snapshot.imageAspect, viewport: proxy.size)
+            let workspace = proxy.size
 
             ZStack {
-                board(geometry)
-                trail(geometry)
-                indicator(geometry)
+                board(workspace)
+                trail(workspace)
+                indicator(workspace)
 
                 if showsHeader {
                     header
@@ -49,7 +51,7 @@ struct TMTowelWorkspaceView: View {
 
     // MARK: - Layers
 
-    private func board(_ geometry: CameraDisplayGeometry) -> some View {
+    private func board(_ workspace: CGSize) -> some View {
         let size = TowelBoard.panelFraction(foldIndex: snapshot.foldIndex)
 
         return TMTherapyFoldPanel(
@@ -59,17 +61,17 @@ struct TMTowelWorkspaceView: View {
             fillOpacity: 0.35
         )
         .frame(
-            width: geometry.imageRect.width * size.width,
-            height: geometry.imageRect.height * size.height
+            width: workspace.width * size.width,
+            height: workspace.height * size.height
         )
-        .position(x: geometry.imageRect.midX, y: geometry.imageRect.midY)
+        .position(x: workspace.width / 2, y: workspace.height / 2)
         .animation(motion, value: snapshot.foldProgress)
     }
 
-    private func trail(_ geometry: CameraDisplayGeometry) -> some View {
+    private func trail(_ workspace: CGSize) -> some View {
         TMTowelTrail(
-            from: screen(snapshot.grabPoint, geometry),
-            to: screen(snapshot.destination, geometry),
+            from: TowelBoard.screen(snapshot.grabPoint, in: workspace),
+            to: TowelBoard.screen(snapshot.destination, in: workspace),
             progress: snapshot.foldProgress,
             grabbed: step > 0
         )
@@ -77,7 +79,7 @@ struct TMTowelWorkspaceView: View {
 
     /// Only the zone of the current step, with the hand as a small circle that joins it while the
     /// hand counts as inside (`TMTherapyMergingGuide`, the finger exercises' indicator).
-    private func indicator(_ geometry: CameraDisplayGeometry) -> some View {
+    private func indicator(_ workspace: CGSize) -> some View {
         let zone = step == 0 ? snapshot.grabPoint : snapshot.destination
 
         return TMTowelIndicator(
@@ -87,7 +89,7 @@ struct TMTowelWorkspaceView: View {
             symbol: step == 0 ? Self.grabSymbol : destinationSymbol,
             progress: snapshot.interaction == .readyToRelease ? snapshot.holdProgress : 0,
             showsTimer: snapshot.interaction == .readyToRelease,
-            geometry: geometry
+            workspace: workspace
         )
         .animation(motion, value: snapshot.handPosition)
     }
@@ -133,10 +135,6 @@ struct TMTowelWorkspaceView: View {
 
         return snapshot.foldIndex % 2 == 0 ? "arrow.left" : "arrow.up"
     }
-
-    private func screen(_ point: TherapyPoint, _ geometry: CameraDisplayGeometry) -> CGPoint {
-        geometry.point(CGPoint(x: point.x, y: point.y))
-    }
 }
 
 // MARK: - Board layout
@@ -166,6 +164,14 @@ enum TowelBoard {
 
         return CGSize(width: across, height: reach)
     }
+
+    /// A workspace point on screen; y is bottom-origin, as in Vision.
+    static func screen(_ point: TherapyPoint, in workspace: CGSize) -> CGPoint {
+        CGPoint(
+            x: point.x * workspace.width,
+            y: (1 - point.y) * workspace.height
+        )
+    }
 }
 
 // MARK: - Indicator
@@ -176,14 +182,14 @@ enum TowelBoard {
 /// carries no glyph, and it joins the zone with a short ease, without bounce, only while the hand
 /// is within the activity's 0.12 acceptance distance. Animatable over the hand position, so the
 /// display spring eases the hand between frames. The zone is drawn as a circle as tall as the 0.24
-/// acceptance region; on a wider image the region reaches a little further sideways.
+/// acceptance region; on a wider workspace the region reaches a little further sideways.
 private struct TMTowelIndicator: View, Animatable {
     var hand: TherapyPoint
     let zone: TherapyPoint
     let symbol: String
     let progress: Double
     let showsTimer: Bool
-    let geometry: CameraDisplayGeometry
+    let workspace: CGSize
 
     private static let handDiameter: CGFloat = 48
 
@@ -196,7 +202,7 @@ private struct TMTowelIndicator: View, Animatable {
         TMTherapyMergingGuide(
             first: screen(hand),
             second: screen(zone),
-            diameter: geometry.imageRect.height * TowelBoard.zoneDiameter,
+            diameter: workspace.height * TowelBoard.zoneDiameter,
             firstDiameter: Self.handDiameter,
             merge: inside ? 1 : 0,
             anchor: .fixed,
@@ -213,7 +219,7 @@ private struct TMTowelIndicator: View, Animatable {
     }
 
     private func screen(_ point: TherapyPoint) -> CGPoint {
-        geometry.point(CGPoint(x: point.x, y: point.y))
+        TowelBoard.screen(point, in: workspace)
     }
 }
 

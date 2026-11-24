@@ -94,7 +94,7 @@ final class SessionAudioService: NSObject, SessionAudioServiceProtocol, AVSpeech
             forName: AVAudioSession.routeChangeNotification, object: nil, queue: .main
         ) { [weak self] _ in
             NarrationAudioSession.handleRouteChange()
-            Task { @MainActor in self?.logAudioConfiguration("route changed") }
+            Self.logAudioConfiguration("route changed")
         }
         interruption = NotificationCenter.default.addObserver(
             forName: AVAudioSession.interruptionNotification, object: nil, queue: .main
@@ -117,7 +117,15 @@ final class SessionAudioService: NSObject, SessionAudioServiceProtocol, AVSpeech
     }
 
     func prepare() {
-        language = AppLanguage.selected
+        let selected = AppLanguage.selected
+
+        // The long rest prepares again right after a session did; reloading every clip then
+        // stalled the move from the summary to the rest.
+        guard selected != language || clips.isEmpty else {
+            return
+        }
+
+        language = selected
         synthesisLocale = language.speechIdentifier
         voice = NarrationVoice.best(for: synthesisLocale)
         clips = [:]
@@ -313,7 +321,11 @@ final class SessionAudioService: NSObject, SessionAudioServiceProtocol, AVSpeech
         closingWatchdog?.cancel()
         closingWatchdog = nil
         utteranceIDs.removeAll()
-        synthesizer.stopSpeaking(at: .immediate)
+        // A synchronous call into the speech service; every countdown number cancels first, so
+        // it is skipped when nothing is queued.
+        if synthesizer.isSpeaking {
+            synthesizer.stopSpeaking(at: .immediate)
+        }
         music.setDucked(false)
         for id in cancelled { events.send(.cancelled(id)) }
     }
@@ -729,7 +741,7 @@ final class SessionAudioService: NSObject, SessionAudioServiceProtocol, AVSpeech
         }
         listeningActive = true
         beginUtterance(recognizer)
-        logAudioConfiguration("listening started")
+        Self.logAudioConfiguration("listening started")
         events.send(.listening(true))
         return .started
     }
@@ -802,16 +814,21 @@ final class SessionAudioService: NSObject, SessionAudioServiceProtocol, AVSpeech
         }
     }
 
-    private func logAudioConfiguration(_ context: String) {
-        let session = AVAudioSession.sharedInstance()
-        let outputs = session.currentRoute.outputs.map { $0.portType.rawValue }.joined(separator: ",")
-        LogManager.shared.notice("Audio \(context): category=\(session.category.rawValue) mode=\(session.mode.rawValue) outputs=\(outputs) systemVolume=\(session.outputVolume)", category: .audio)
+    /// Reading the session's route and volume waits for the audio server, which is busy exactly
+    /// when this is logged, so it is read off the main thread.
+    nonisolated private static func logAudioConfiguration(_ context: String) {
+        DispatchQueue.global(qos: .utility).async {
+            let session = AVAudioSession.sharedInstance()
+            let outputs = session.currentRoute.outputs.map { $0.portType.rawValue }.joined(separator: ",")
+            LogManager.shared.notice("Audio \(context): category=\(session.category.rawValue) mode=\(session.mode.rawValue) outputs=\(outputs) systemVolume=\(session.outputVolume)", category: .audio)
+        }
     }
 
     func stopListening() {
         #if DEBUG
-        // Temporary: diagnosing stop/go recognition on device.
-        LogManager.shared.notice("Voice listening stopped (wasActive=\(self.listeningActive)) from \(Thread.callStackSymbols.dropFirst().prefix(3).joined(separator: " | "))", category: .voice)
+        // Temporary: diagnosing stop/go recognition on device. No call stack: symbolicating it
+        // stalled the main thread at every summary.
+        LogManager.shared.notice("Voice listening stopped (wasActive=\(self.listeningActive))", category: .voice)
         #endif
 
         inputWorker.replaceRequest(nil)

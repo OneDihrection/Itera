@@ -29,6 +29,12 @@ enum AppLanguage: String, CaseIterable {
         return bundle
     }
 
+    /// A catalog string in this language with its Markdown kept as attributes, so a view can
+    /// restyle its bold runs.
+    func attributedString(_ key: String.LocalizationValue) -> AttributedString {
+        AttributedString(localized: key, bundle: resourceBundle, locale: locale)
+    }
+
     var locale: Locale { Locale(identifier: rawValue) }
     var speechIdentifier: String { self == .indonesian ? "id-ID" : "en-US" }
 }

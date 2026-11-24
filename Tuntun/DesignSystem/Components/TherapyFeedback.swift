@@ -36,9 +36,9 @@ struct TMTherapyProgressRing: View {
 /// `animationDuration` is how long the circle eases toward each `intensity` sample; `paused`
 /// stops its idle motion.
 ///
-/// The page shows only the cue, a comfort line and the circle. Like the practice countdown, a tap
-/// anywhere pauses (the pause menu offers End), and End and Skip stay available as accessibility
-/// actions.
+/// The page shows the cue, a comfort line and the circle, with underlined Pause, End and (when
+/// the caller can end the rest early) Skip text actions at the bottom. Tapping elsewhere does
+/// nothing.
 struct TMTherapyBreathingRest: View {
     let cue: LocalizedStringKey
     let intensity: Double
@@ -49,33 +49,36 @@ struct TMTherapyBreathingRest: View {
     var skip: (() -> Void)? = nil
 
     var body: some View {
-        Button(action: pause) {
-            VStack(spacing: 0) {
-                heading
+        VStack(spacing: 0) {
+            Spacer(minLength: 0)
 
-                TMTherapyBreathingCircle(
-                    intensity: intensity,
-                    paused: paused,
-                    smoothing: animationDuration
-                )
-                .aspectRatio(1, contentMode: .fit)
-                .frame(maxWidth: 240, maxHeight: 240)
-                .padding(.top, 56)
-            }
-            .padding(24)
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .contentShape(Rectangle())
+            heading
+
+            TMTherapyBreathingCircle(
+                intensity: intensity,
+                paused: paused,
+                smoothing: animationDuration
+            )
+            .aspectRatio(1, contentMode: .fit)
+            .frame(maxWidth: 240, maxHeight: 240)
+            .padding(.top, 56)
+            .accessibilityHidden(true)
+
+            Spacer(minLength: 0)
+
+            TMTherapyFlowActions(
+                paused: paused,
+                disablesPauseWhilePaused: true,
+                pause: pause,
+                stop: stop,
+                skip: skip
+            )
+            .padding(.bottom, 40)
         }
-        .buttonStyle(.plain)
+        .padding(24)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .foregroundStyle(TherapyPalette.ink)
         .background(TherapyPalette.canvas.ignoresSafeArea())
-        .accessibilityHint("countdown.pauseHint")
-        .accessibilityAction(named: Text("action.end"), stop)
-        .accessibilityActions {
-            if let skip {
-                Button("rest.skip", action: skip)
-            }
-        }
     }
 
     private var heading: some View {
@@ -92,11 +95,75 @@ struct TMTherapyBreathingRest: View {
     }
 }
 
+/// Underlined Pause, End and optional Skip text actions for a page that moves on by itself: the
+/// rests, the plan intro and the finished page. With `disablesPauseWhilePaused`, Pause is
+/// disabled while paused (the pause dialog resumes); otherwise it reads "Lanjutkan latihan" and
+/// resumes. Skip is shown only when the caller passes it, and is disabled while paused, since a
+/// pause holds the page where it is.
+struct TMTherapyFlowActions: View {
+    let paused: Bool
+    var disablesPauseWhilePaused = false
+    var disabled = false
+    var tint: Color? = nil
+    let pause: () -> Void
+    let stop: () -> Void
+    var skip: (() -> Void)? = nil
+
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+
+    var body: some View {
+        let layout = dynamicTypeSize.isAccessibilitySize
+            ? AnyLayout(VStackLayout(spacing: 8))
+            : AnyLayout(HStackLayout(spacing: 24))
+
+        layout {
+            TMTherapyButton(
+                title: showsResume ? "session.resumeExercise" : "session.pauseAction",
+                symbol: showsResume ? "play.fill" : "pause.fill",
+                disabled: disabled || (disablesPauseWhilePaused && paused),
+                plain: true,
+                underlined: true,
+                tint: tint,
+                action: pause
+            )
+            .fixedSize()
+
+            TMTherapyButton(
+                title: "session.endAction",
+                symbol: "stop.fill",
+                disabled: disabled,
+                plain: true,
+                underlined: true,
+                tint: tint,
+                action: stop
+            )
+            .fixedSize()
+
+            if let skip {
+                TMTherapyButton(
+                    title: "rest.skip",
+                    symbol: "forward.fill",
+                    disabled: disabled || paused,
+                    plain: true,
+                    underlined: true,
+                    tint: tint,
+                    action: skip
+                )
+                .fixedSize()
+            }
+        }
+    }
+
+    private var showsResume: Bool {
+        paused && !disablesPauseWhilePaused
+    }
+}
+
 /// Full-screen rest waves. The caller supplies the breathing cue and animation progress.
 ///
-/// The page shows only the centred cue and a comfort line over the waves, with no buttons: a tap
-/// anywhere pauses or resumes, and paused the cue reads "Paused". End is an accessibility action.
-/// `counter` (breaths remaining) is read to VoiceOver instead of drawn.
+/// The page shows the centred cue and a comfort line over the waves, with underlined Pause (or
+/// Resume), End and optional Skip text actions at the bottom; tapping elsewhere does nothing. Paused, the cue
+/// reads "Paused". `counter` (breaths remaining) is read to VoiceOver instead of drawn.
 struct TMTherapyLongRest: View {
     let cue: Text
     let cueID: String
@@ -105,6 +172,7 @@ struct TMTherapyLongRest: View {
     let paused: Bool
     let togglePause: () -> Void
     let stop: () -> Void
+    var skip: (() -> Void)? = nil
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
@@ -112,16 +180,20 @@ struct TMTherapyLongRest: View {
         ZStack(alignment: .bottom) {
             TMTherapyLongRestWaves(intensity: intensity, paused: paused)
                 .ignoresSafeArea()
+                .accessibilityHidden(true)
 
-            Button(action: togglePause) {
-                heading
-                    .padding(24)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-            .accessibilityHint(paused ? Text("session.resume") : Text("session.pause"))
-            .accessibilityAction(named: Text("action.end"), stop)
+            heading
+                .padding(24)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+
+            TMTherapyFlowActions(
+                paused: paused,
+                tint: TherapyPalette.onBrand,
+                pause: togglePause,
+                stop: stop,
+                skip: skip
+            )
+            .padding(.bottom, 64)
         }
         .foregroundStyle(TherapyPalette.onBrand)
         .animation(reduceMotion ? nil : .easeInOut(duration: 0.2), value: paused)

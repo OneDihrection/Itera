@@ -43,11 +43,21 @@ protocol BalanceMovementEngine {
     /// The camera frame in points, so bubbles keep the shared on-screen size.
     var viewport: TherapyViewport? { get set }
     mutating func consume(_ frame: TrackingObservation, scoringEnabled: Bool)
+    /// Takes a frame shown while spoken guidance or the countdown holds practice back: the
+    /// overlay and tracking state follow it, but nothing is scored.
+    mutating func preview(_ frame: TrackingObservation)
     mutating func invalidateCalibration()
     mutating func restart()
     /// Starts another set with the same calibration: the count and per-repetition state reset,
     /// while the captured starting position and targets are kept.
     mutating func nextSet()
+}
+
+extension BalanceMovementEngine {
+    /// The arm engines draw and track from unscored frames without side effects.
+    mutating func preview(_ frame: TrackingObservation) {
+        consume(frame, scoringEnabled: false)
+    }
 }
 
 struct BalanceMetrics: Codable, Equatable {
@@ -137,6 +147,9 @@ struct BalanceSnapshot: Equatable {
 
     var phase: Phase = .findingBody
     var instructionKey = "balance.tracking"
+    /// True while the latest frames give the engine no usable body, for the camera's
+    /// tracking-status chip. It starts true until the body is first found.
+    var trackingLost = true
     var calibrationProgress = 0.0
     /// Seconds left of the end-pose hold during calibration; `nil` until the patient holds still.
     var calibrationCountdown: Int?

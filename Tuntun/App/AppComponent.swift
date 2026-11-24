@@ -129,6 +129,11 @@ final class AppComponent: HistoryDependency, HomeDependency, TherapySessionDepen
         planProgressRepository
     }
 
+    /// Beranda reads earlier daily-plan entries to distinguish completed and missed dates.
+    var dailyPlanProgressRepository: any DailyPlanProgressRepository {
+        planProgressRepository
+    }
+
     // MARK: - Feature builders
 
     lazy var historyBuilder = HistoryBuilder(dependency: self)

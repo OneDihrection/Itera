@@ -8,6 +8,8 @@ The body-exercise demonstrations are the connected-joint renders of the light-br
 
 Since 2026-11-17 the seven seated-exercise clips (arm raise, elbow bend, directional reach, cross midline, external and internal rotation, shoulder flexion) are framed from the waist up by `frame_torso` in the same tool, so the standing rig does not suggest standing practice; `sit_to_stand_demonstration.mp4` keeps the full body. Re-export with `export_clip` (see the tool's run comment).
 
+Since 2026-11-23 the body clips and the five finger clips (`full_fist`, `hook_fist`, `opposition`, `spreading`, `extension_sequence`, each `_demonstration.mp4`) are rendered with a smooth skin texture (`ArtSource/Textures/skin_albedo.png`, `skin_height.png`) on both rigs, and the right hand grips naturally with the arm (`author_grip` in the body tool). Each body clip is rendered from its own `Cam_<clip>` camera stored in the blend; sit to stand is turned slightly to the side. The finger clips follow the same standard (768 × 768, 24 FPS, silent H.264 over `#F5F5F5`) and replace the old `Fingers/*.mov`; `FingerExercise.demonstrationResourceName` maps each exercise to its clip. The hold-time constants in the paragraph below are unchanged because the arm timing is unchanged.
+
 During practice the app holds each body clip on its target pose instead of looping. The held times are the middle of each keyframed hold in the authoring tool (`ExerciseAnimationAsset.peakSeconds(reachPose:)` and `TMBalanceExerciseDemonstrationView.peakSeconds`); a re-export that changes timing must update them.
 
 Physical-device verification of the new MP4s remains pending.
