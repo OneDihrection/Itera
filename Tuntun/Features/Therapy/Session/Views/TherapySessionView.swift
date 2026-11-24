@@ -66,8 +66,10 @@ struct TMTherapySessionView<ViewModel: TherapySessionViewModelProtocol>: View {
                     }
                     .disabled(model.validating)
                     .buttonStyle(TMSessionButtonStyle())
-                    Button("home.openSettings") { model.openSettings() }
-                        .buttonStyle(TMSessionButtonStyle())
+                    if model.entryOffersSettings {
+                        Button("home.openSettings") { model.openSettings() }
+                            .buttonStyle(TMSessionButtonStyle())
+                    }
                     Button("home.back") { leaveWithoutResult() }
                         .buttonStyle(TMSessionButtonStyle())
                 }
@@ -451,7 +453,7 @@ struct TMTherapySessionView<ViewModel: TherapySessionViewModelProtocol>: View {
     @ViewBuilder
     private var presentationContent: some View {
         if model.cameraDenied {
-            recoveryPanel("therapy.session.cameraDenied")
+            recoveryPanel(cameraDeniedMessage)
         } else if model.snapshot.paused {
             ScrollView {
                 TMSessionPanel(light: usesLightTheme) {
@@ -804,7 +806,8 @@ struct TMTherapySessionView<ViewModel: TherapySessionViewModelProtocol>: View {
         ScrollView {
             TMSessionPanel(light: usesLightTheme) {
                 VStack(spacing: 16) {
-                    Text("home.entryBlocked").typography(.title2)
+                    Text(LocalizedStringKey(model.permissionMessageKey ?? "home.entryBlocked"))
+                        .typography(.title2)
                     Button("home.openSettings") {
                         model.openSettings()
                     }.buttonStyle(TMSessionButtonStyle())
@@ -850,6 +853,11 @@ struct TMTherapySessionView<ViewModel: TherapySessionViewModelProtocol>: View {
             Button("session.skip") { model.command(.skip) }
                 .buttonStyle(TMSessionButtonStyle())
         }
+    }
+
+    /// Names every missing permission, not only the camera that blocked capture.
+    var cameraDeniedMessage: LocalizedStringKey {
+        LocalizedStringKey(model.permissionMessageKey ?? "therapy.session.cameraDenied")
     }
 
     func recoveryPanel(_ key: LocalizedStringKey) -> some View {

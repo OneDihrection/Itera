@@ -2383,3 +2383,22 @@ Therapy is touch-free, so several pages moved on by themselves and gave the care
 - **Pause-dialog Cancel.** End on a live or rest page pauses and opens the dialog on its confirmation; Cancel only returned to the paused card, so a second tap (Resume) was needed. When the dialog opened on the confirmation, Cancel now calls `onResume` and closes it in one tap; after the card's own End, or while resuming is blocked, it still returns to the paused card.
 
 Verification: `xcodegen generate`, then Debug and Release iOS Simulator builds with `IPHONEOS_DEPLOYMENT_TARGET=17.0` succeeded. Nothing was run in the Simulator or on the iPad. Pending on the M1 iPad: intro Pause/End/Skip for scripted and unscripted intros pushed from Beranda and after a long rest; countdown intro Pause freezing the count and Skip opening the session; short-rest Skip in guided, finger (scripted opposition included) and Balancing sessions; long-rest Skip; finished-page Pause, Skip and End (item marked done, Beranda shown); pause-dialog Cancel after End in one tap; both languages and accessibility text sizes.
+
+## Complete permission denial handling (2026-11-24)
+
+A review of denied camera, microphone and speech recognition found four gaps:
+- **One denial per trip.** Readiness named only the first missing permission, and its prompt loop stopped at the first refusal, so a patient fixed the camera in Settings only to return and meet the microphone.
+- **Catch-all session message.** Guided session entry said `home.entryBlocked` ("needs camera access and working voice controls") whatever was missing.
+- **Balancing went silent.** `BalanceSessionViewModel.start` ran without voice when microphone or speech was refused (`voiceAvailable = false`, read by no view), against ADR-005 and the mandatory-readiness constraint, while guided sessions blocked and finger sessions paused. Its foreground handler also cleared the camera panel and started tracking for a session whose `start` had never run.
+- **Settings' voice row** named only one of microphone and speech.
+
+Decisions:
+- **`PermissionRequirement`** (Shared/Permissions) evaluates a set of permissions at once: restricted, then unasked (`needsPrompt`, prompted before any denial message so that message is complete), then every denied one, then unavailable. Readiness, guided sessions, Balancing and the Settings voice row all use it.
+- **One catalog entry per combination** (`home.cameraMicrophoneDenied`, `home.cameraSpeechDenied`, `home.voiceDenied`, `home.allPermissionsDenied`, beside the three single keys) instead of runtime list formatting: messages travel as String keys into `LocalizedStringKey`, sessions read their own language bundle, and three permissions give only seven sentences, each natural in both languages.
+- **Prompt loops no longer stop at a refusal**, in readiness and the voice row.
+- **Guided sessions** name the missing permissions on entry, in the camera recovery panel and in the voice-unavailable panel; `home.entryBlocked` remains for a listening start failure. Open Settings is hidden on the entry page when Settings cannot help (restricted access, listening failure).
+- **Balancing blocks** on any of the three behind its permission panel (the message, Open Settings when denied, Retry, Back; `balance.cameraRequired` is removed). Granting in Settings starts the session on return; a `startingSession` guard keeps the foreground that follows a system prompt from starting a second session or showing the panel under the prompt.
+- **Finger sessions are unchanged**: they already pause with `recovery.cameraPermission` or `recovery.voicePermission`.
+- iOS terminates an app when one of its privacy permissions is revoked in Settings, so revocation during a session arrives as a relaunch; no new polling was added.
+
+Verification: `xcodegen generate`, then a Debug iOS Simulator build with `IPHONEOS_DEPLOYMENT_TARGET=17.0` succeeded. Nothing was run in the Simulator or on the iPad. Pending in the Simulator and on the M1 iPad, after resetting privacy: all three prompts appear in one pass even after the first refusal; the intro then names every refused permission with Buka Pengaturan, and granting them opens the session on return; guided session entry names the missing permissions; Balancing with only the microphone refused shows the panel, and Retry or granting starts it; the voice row with both refused shows `home.voiceDenied`; both languages and large text.

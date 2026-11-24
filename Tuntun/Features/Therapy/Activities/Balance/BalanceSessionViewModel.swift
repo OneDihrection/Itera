@@ -14,6 +14,10 @@ protocol BalanceSessionViewModelProtocol: AnyObject, Observable {
     var exercise: BalanceExercise { get }
     var snapshot: BalanceSnapshot { get }
     var permissionDenied: Bool { get }
+    /// Names every missing permission together while `permissionDenied`.
+    var permissionMessageKey: String { get }
+    /// False when Settings cannot fix it (restricted access).
+    var permissionOffersSettings: Bool { get }
     var cameraWaiting: Bool { get }
     var failure: String? { get }
     var paused: Bool { get }
@@ -48,6 +52,8 @@ protocol BalanceSessionViewModelProtocol: AnyObject, Observable {
 
     func start(permissionService: any PermissionServiceProtocol) async
     func foreground(permissionService: any PermissionServiceProtocol)
+    /// Rechecks permissions from the permission panel and continues or starts when all are granted.
+    func retryPermissions(permissionService: any PermissionServiceProtocol)
     func background()
     func viewport(_ size: CGSize)
     func previewReady(_ ready: Bool)
@@ -71,7 +77,9 @@ protocol BalanceSessionViewModelProtocol: AnyObject, Observable {
 @Observable
 final class BalanceSessionViewModel: BalanceSessionViewModelProtocol {
     private(set) var snapshot = BalanceSnapshot()
-    private(set) var permissionDenied = false
+    /// Camera, microphone and speech recognition are all required: there is no session without
+    /// voice commands (ADR-005), so a missing one blocks like the camera instead of going silent.
+    private var permissionRequirement = PermissionRequirement.granted
     private(set) var isPreparing = true
     private(set) var isFinishing = false
     private(set) var cameraWaiting = true
@@ -169,6 +177,9 @@ final class BalanceSessionViewModel: BalanceSessionViewModelProtocol {
     @ObservationIgnored private var subscriptions = Set<AnyCancellable>()
     @ObservationIgnored private var viewport: TherapyViewport?
     @ObservationIgnored private var started = false
+    /// Guards `start` while it awaits prompts: those turn the scene inactive and active again,
+    /// and that foreground must neither start a second session nor show the panel under a prompt.
+    @ObservationIgnored private var startingSession = false
     @ObservationIgnored private var wasIdleTimerDisabled = false
     @ObservationIgnored private var lastSpokenCountdown: Int?
     /// The calibration pose already explained aloud, so each is spoken once per calibration.
@@ -296,18 +307,26 @@ final class BalanceSessionViewModel: BalanceSessionViewModelProtocol {
     }
 
     func start(permissionService: any PermissionServiceProtocol) async {
-        guard !started else { return }
-        defer { isPreparing = false }
+        guard !started, !startingSession else { return }
+        startingSession = true
+        // A retry after the permission panel shows the loading overlay again.
+        isPreparing = true
+        defer {
+            startingSession = false
+            isPreparing = false
+        }
 
         // Preparing audio blocks the main actor, so the loading overlay is drawn first.
         try? await Task.sleep(for: TMLoadingOverlay.presentationDelay)
-        let status = await permissionService.request(.camera)
-        guard status == .authorized else {
-            permissionDenied = true
+
+        // Readiness has usually asked already; each request prompts only while still unasked.
+        for permission in AppPermission.allCases {
+            _ = await permissionService.request(permission)
+        }
+        guard updatePermissions(permissionService) else {
             return
         }
 
-        permissionDenied = false
         started = true
         wasIdleTimerDisabled = UIApplication.shared.isIdleTimerDisabled
         UIApplication.shared.isIdleTimerDisabled = true
@@ -393,13 +412,39 @@ final class BalanceSessionViewModel: BalanceSessionViewModelProtocol {
             audioService.startMusic()
         }
         isPreparing = false
-        let microphone = await permissionService.request(.microphone)
-        let speech = await permissionService.request(.speechRecognition)
-        if microphone == .authorized, speech == .authorized {
-            startVoiceListening()
-        } else {
-            voiceAvailable = false
+        startVoiceListening()
+    }
+
+    // MARK: - Permissions
+
+    var permissionDenied: Bool {
+        permissionRequirement != .granted
+    }
+
+    var permissionMessageKey: String {
+        permissionRequirement.messageKey ?? "home.permissionUnavailable"
+    }
+
+    var permissionOffersSettings: Bool {
+        guard case .denied = permissionRequirement else {
+            return false
         }
+
+        return true
+    }
+
+    /// Evaluates all three permissions and returns whether the session may run.
+    private func updatePermissions(_ permissionService: any PermissionServiceProtocol) -> Bool {
+        permissionRequirement = PermissionRequirement.evaluate(
+            AppPermission.allCases,
+            in: permissionService
+        )
+
+        return permissionRequirement == .granted
+    }
+
+    func retryPermissions(permissionService: any PermissionServiceProtocol) {
+        foreground(permissionService: permissionService)
     }
 
     // MARK: - Sets and rest
@@ -724,20 +769,27 @@ final class BalanceSessionViewModel: BalanceSessionViewModelProtocol {
     }
 
     func foreground(permissionService: any PermissionServiceProtocol) {
-        permissionService.refresh()
-        guard permissionService.status(for: .camera) == .authorized else {
-            permissionDenied = true
+        guard !startingSession else {
             return
         }
-        permissionDenied = false
+
+        permissionService.refresh()
+        guard updatePermissions(permissionService) else {
+            return
+        }
+
+        // A start blocked by permissions never ran; granting them in Settings starts it now.
+        guard started else {
+            Task {
+                await start(permissionService: permissionService)
+            }
+            return
+        }
+
         if !allSetsDone {
             trackingService.start()
         }
-        if permissionService.status(for: .microphone) == .authorized,
-            permissionService.status(for: .speechRecognition) == .authorized
-        {
-            startVoiceListening()
-        }
+        startVoiceListening()
     }
 
     func background() {

@@ -195,21 +195,20 @@ final class PracticePreferencesViewModel: PracticePreferencesViewModelProtocol {
     }
 
     var voiceFallback: VoicePermissionFallback? {
-        guard let missing = Self.voicePermissions.first(where: { permission in
-            permissionService.status(for: permission) != .authorized
-        }) else {
-            return nil
-        }
+        let requirement = PermissionRequirement.evaluate(
+            Self.voicePermissions,
+            in: permissionService
+        )
 
-        switch permissionService.status(for: missing) {
+        switch requirement {
+        case .granted:
+            return nil
         case .denied:
-            let messageKey = missing == .microphone
-                ? "home.microphoneDenied"
-                : "home.speechDenied"
-            return .openSettings(messageKey: messageKey)
+            // Names both when both are off, so one trip to Settings fixes them.
+            return .openSettings(messageKey: requirement.messageKey ?? "home.microphoneDenied")
         case .restricted:
             return .restricted
-        case .notDetermined, .unknown, .authorized:
+        case .needsPrompt, .unavailable:
             return .request
         }
     }
@@ -223,10 +222,9 @@ final class PracticePreferencesViewModel: PracticePreferencesViewModelProtocol {
 
         switch voiceFallback {
         case .request:
+            // Both are asked in one pass, even after a refusal, so the row then names all missing.
             for permission in Self.voicePermissions {
-                guard await permissionService.request(permission) == .authorized else {
-                    break
-                }
+                _ = await permissionService.request(permission)
             }
         case .openSettings:
             guard let url = URL(string: UIApplication.openSettingsURLString) else {

@@ -30,6 +30,10 @@ protocol TherapySessionViewModelProtocol: AnyObject, Observable {
     var elapsedSeconds: Int { get }
     var entryFailure: Bool { get }
     var entryMessage: String { get }
+    /// False when Settings cannot fix the entry failure (restricted access, listening failure).
+    var entryOffersSettings: Bool { get }
+    /// Names every missing permission together; nil once all are granted.
+    var permissionMessageKey: String? { get }
     var validating: Bool { get }
     var isStarting: Bool { get }
     /// True from End or leaving the summary until the session has wound down.
@@ -90,6 +94,7 @@ final class TherapySessionViewModel: TherapySessionViewModelProtocol {
     @ObservationIgnored private var permissionService: (any PermissionServiceProtocol)?
     private(set) var entryFailure = false
     private(set) var entryMessage = "home.entryBlocked"
+    private(set) var entryOffersSettings = true
     private(set) var validating = false
 
     /// True until the first `start` has validated entry and begun capture. Startup is not a failure,
@@ -163,9 +168,20 @@ final class TherapySessionViewModel: TherapySessionViewModelProtocol {
         guard !exited else { return }
         permissionService.refresh()
         audioService.prepare()
-        guard allPermissionsGranted, await audioService.startListening() == .started else {
+
+        let requirement = permissionRequirement(permissionService)
+        guard requirement == .granted else {
+            audioService.stop()
+            entryMessage = requirement.messageKey ?? "home.entryBlocked"
+            entryOffersSettings = requirement != .restricted
+            entryFailure = true
+            return
+        }
+
+        guard await audioService.startListening() == .started else {
             audioService.stop()
             entryMessage = "home.entryBlocked"
+            entryOffersSettings = false
             entryFailure = true
             return
         }
@@ -237,6 +253,23 @@ final class TherapySessionViewModel: TherapySessionViewModelProtocol {
         return AppPermission.allCases.allSatisfy {
             permissionService.status(for: $0) == .authorized
         }
+    }
+
+    var permissionMessageKey: String? {
+        guard let permissionService else {
+            return nil
+        }
+
+        return permissionRequirement(permissionService).messageKey
+    }
+
+    private func permissionRequirement(
+        _ permissionService: any PermissionServiceProtocol
+    ) -> PermissionRequirement {
+        PermissionRequirement.evaluate(
+            AppPermission.allCases,
+            in: permissionService
+        )
     }
 
     func openSettings() {
