@@ -19,8 +19,7 @@ struct TMTowelDemonstrationView: View {
             let elapsed = max(0, context.date.timeIntervalSince(start))
 
             TMTowelWorkspaceView(
-                snapshot: TowelDemoScript.snapshot(at: elapsed, staticPose: reduceMotion),
-                showsHeader: false
+                snapshot: TowelDemoScript.snapshot(at: elapsed, staticPose: reduceMotion)
             )
             .aspectRatio(4.0 / 3.0, contentMode: .fit)
             .frame(maxWidth: .infinity, maxHeight: .infinity)

@@ -199,7 +199,7 @@ extension TMTherapySessionView {
     @ViewBuilder
     private var lightStageContent: some View {
         if model.cameraDenied {
-            recoveryPanel("therapy.session.cameraDenied")
+            recoveryPanel(cameraDeniedMessage)
         } else if !model.voiceReady {
             controlChoice
         } else if model.snapshot.stage == .preparing {

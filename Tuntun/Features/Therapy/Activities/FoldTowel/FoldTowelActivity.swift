@@ -19,6 +19,12 @@ struct FoldTowelActivity: TherapyActivity {
     private var stableGrip: TowelFoldSequence.Grip?
     private var stableGripTime = 0.0
     private var cursorFilter = HandCursorFilter()
+    /// Fingertip jitter is far larger than the palm's, and the pinch offset changes slowly, so it
+    /// is smoothed much harder than the palm. Starting values pending device tuning.
+    private var offsetFilter = HandCursorFilter(minimumCutoff: 0.5, speedGain: 3)
+    /// The last smoothed pinch offset, held while a fingertip is not measurable so the cursor
+    /// does not jump back to the palm.
+    private var heldOffset: TherapyPoint?
     private var pinchFilter = ScalarCursorFilter()
     /// Joints used last frame, so a joint hovering at the confidence cutoff does not flicker.
     private var measuredJoints: Set<Int> = []
@@ -58,7 +64,7 @@ struct FoldTowelActivity: TherapyActivity {
             }
         case .suspend:
             suspended = true
-            cursorFilter.reset()
+            resetCursor()
             sequence.suspend()
             loseTracking()
         case .resume:
@@ -75,7 +81,7 @@ struct FoldTowelActivity: TherapyActivity {
             setPhase(.countdown)
         case .viewport(let value):
             if let viewport, viewport != value {
-                cursorFilter.reset()
+                resetCursor()
                 sequence.suspend()
                 loseTracking()
             }
@@ -104,7 +110,7 @@ struct FoldTowelActivity: TherapyActivity {
         let count = sequence.repetitions
         let practiceSeconds = snapshot.practiceSeconds
         generation = nil
-        cursorFilter.reset()
+        resetCursor()
         sequence.suspend()
         snapshot = TowelSnapshot()
         snapshot.count = count
@@ -195,14 +201,28 @@ struct FoldTowelActivity: TherapyActivity {
         }
 
         // Cursor and acceptance share one filtered point, so what is drawn is what is scored. The
-        // filter keeps its image-coordinate tuning; the workspace is mapped afterwards.
-        let filtered = cursorFilter.consume(
+        // palm carries the movement through the responsive filter; the pinch offset is smoothed
+        // harder and held through fingertip dropouts. Both keep their image-coordinate tuning;
+        // the workspace is mapped afterwards.
+        let palm = cursorFilter.consume(
             TherapyPoint(
-                x: frame.workspaceMirrored ? 1 - measurement.position.x : measurement.position.x,
-                y: measurement.position.y
+                x: frame.workspaceMirrored ? 1 - measurement.palm.x : measurement.palm.x,
+                y: measurement.palm.y
             ),
             at: frame.timestamp
         )
+
+        if let offset = measurement.pinchOffset {
+            heldOffset = offsetFilter.consume(
+                TherapyPoint(
+                    x: frame.workspaceMirrored ? -offset.x : offset.x,
+                    y: offset.y
+                ),
+                at: frame.timestamp
+            )
+        }
+
+        let filtered = palm + (heldOffset ?? TherapyPoint(x: 0, y: 0))
         let position = workspacePoint(filtered, aspect: frame.aspect)
         snapshot.handPosition = position
         if snapshot.phase == .practice {
@@ -211,6 +231,12 @@ struct FoldTowelActivity: TherapyActivity {
             snapshot.practiceSeconds += gap > 0 && gap <= 0.3 ? min(0.2, gap) : 0
             sequence.consume(position: position, grip: snapshot.grip, timestamp: frame.timestamp)
         }
+    }
+
+    private mutating func resetCursor() {
+        cursorFilter.reset()
+        offsetFilter.reset()
+        heldOffset = nil
     }
 
     // MARK: - Workspace

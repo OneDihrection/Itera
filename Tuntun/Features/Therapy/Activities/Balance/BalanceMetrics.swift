@@ -167,4 +167,7 @@ struct BalanceSnapshot: Equatable {
     /// Live hip angle and forward trunk lean, in degrees (sit-to-stand only).
     var hipAngle = 0.0
     var trunkLean = 0.0
+    /// Sit to stand only: the patient should be standing up (practice seated or rising), not
+    /// sitting back down, so the demonstration shows the matching half of the movement.
+    var risingToStand = false
 }

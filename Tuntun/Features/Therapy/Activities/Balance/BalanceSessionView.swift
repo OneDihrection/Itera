@@ -162,7 +162,7 @@ struct TMBalanceSessionView<ViewModel: BalanceSessionViewModelProtocol>: View {
                 paused: model.paused || model.cameraWaiting,
                 arm: model.snapshot.activeArm,
                 selection: model.snapshot.armSelection,
-                holdsPeak: model.demoHoldsPeak
+                playback: model.demoPlayback
             )
         } accessories: {
             EmptyView()
@@ -387,11 +387,18 @@ struct TMBalanceSessionView<ViewModel: BalanceSessionViewModelProtocol>: View {
 
     private var permissionPanel: some View {
         VStack(spacing: 24) {
-            Image(systemName: "camera.fill")
+            Image(systemName: "lock.shield.fill")
                 .typography(size: 64, weight: .bold)
                 .foregroundStyle(TherapyPalette.warning)
-            Text("balance.cameraRequired").typography(.title).multilineTextAlignment(.center)
-            TMTherapyButton(title: "home.openSettings", symbol: "gear") { model.openSettings() }
+            Text(LocalizedStringKey(model.permissionMessageKey))
+                .typography(.title)
+                .multilineTextAlignment(.center)
+            if model.permissionOffersSettings {
+                TMTherapyButton(title: "home.openSettings", symbol: "gear") { model.openSettings() }
+            }
+            TMTherapyButton(title: "home.retry", symbol: "arrow.clockwise", secondary: true) {
+                model.retryPermissions(permissionService: permissionService)
+            }
             TMTherapyButton(title: "home.back", symbol: "chevron.left", secondary: true) { leaveWithoutResult() }
         }
         .padding(32)

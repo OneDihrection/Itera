@@ -57,6 +57,10 @@ struct MovementSnapshot {
     var count = 0
     var guide: TargetGuide?
     var pose: ExamplePose = .start
+    /// The patient should now move to, or hold, the target; false while they hold or return to
+    /// the start. It follows the activity's step, not tracking, so the demonstration does not flip
+    /// on a lost frame.
+    var towardTarget = false
     var countingDown = false
     var seconds = 3
     var trackingMessage: String?
@@ -74,6 +78,10 @@ struct ReachSnapshot {
     var seconds = 0
     var guide: TargetGuide?
     var rehearsal = false
+    /// The patient should now move to, or hold, the target; false while they hold or return to
+    /// the start. It follows the activity's step, not tracking, so the demonstration does not flip
+    /// on a lost frame.
+    var towardTarget = false
     var outcomes: [ReachOutcome] = []
     var practiceSeconds = 0.0
     var direction = 0

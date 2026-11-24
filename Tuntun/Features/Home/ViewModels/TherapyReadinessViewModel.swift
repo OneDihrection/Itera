@@ -50,23 +50,25 @@ final class TherapyReadinessViewModel {
             action = "home.retry"
             return
         }
-        if let missing = AppPermission.allCases.first(where: {
-            permissionService.status(for: $0) != .authorized
-        }) {
-            switch permissionService.status(for: missing) {
-            case .denied:
-                message = permissionMessage(missing)
-                action = "home.openSettings"
-            case .restricted:
-                message = "home.restricted"
-                action = "home.recheck"
-            case .notDetermined:
-                message = "home.setup"
-                action = "home.enablePermissions"
-            default:
-                message = "home.permissionUnavailable"
-                action = "home.recheck"
-            }
+        let requirement = PermissionRequirement.evaluate(
+            AppPermission.allCases,
+            in: permissionService
+        )
+        switch requirement {
+        case .granted:
+            break
+        case .needsPrompt:
+            message = "home.setup"
+            action = "home.enablePermissions"
+            return
+        case .denied:
+            // Names every refused permission, so one trip to Settings can fix them all.
+            message = requirement.messageKey ?? "home.permissionUnavailable"
+            action = "home.openSettings"
+            return
+        case .restricted, .unavailable:
+            message = requirement.messageKey ?? "home.permissionUnavailable"
+            action = "home.recheck"
             return
         }
         switch audioService.capability() {
@@ -120,20 +122,15 @@ final class TherapyReadinessViewModel {
         } else {
             // Permission prompts are system UI; the overlay must not sit beneath them.
             preparingSession = false
+
+            // Every unasked permission is prompted in this one pass, even after a refusal, so
+            // the message that follows names all that are still missing.
             for permission in AppPermission.allCases {
-                guard await permissionService.request(permission) == .authorized else { break }
+                _ = await permissionService.request(permission)
             }
         }
         busy = false
         refresh()
         return false
-    }
-
-    private func permissionMessage(_ permission: AppPermission) -> String {
-        switch permission {
-        case .camera: return "home.cameraDenied"
-        case .microphone: return "home.microphoneDenied"
-        case .speechRecognition: return "home.speechDenied"
-        }
     }
 }

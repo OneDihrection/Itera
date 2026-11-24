@@ -848,7 +848,28 @@ struct TMTherapySetSummary<Actions: View>: View {
         return text
     }
 
+    /// The card hugs its sets, up to 65% of the width. When the sets need more room than that
+    /// (the finger all-done page lists every movement's sets), they share the capped width.
+    /// The background belongs to each candidate, not the capping frame: a `maxWidth` frame takes
+    /// all the width it is offered, which would stretch the card again.
     private func panel(scale: CGFloat, width: CGFloat) -> some View {
+        ViewThatFits(in: .horizontal) {
+            card(setRow(scale: scale, fills: false), scale: scale)
+            card(setRow(scale: scale, fills: true), scale: scale)
+        }
+        .frame(maxWidth: width * 0.65)
+    }
+
+    private func card(_ row: some View, scale: CGFloat) -> some View {
+        row
+            .padding(.vertical, 28 * scale)
+            .padding(.horizontal, 24 * scale)
+            .background(TherapyPalette.historyCard, in: RoundedRectangle(cornerRadius: 28 * scale))
+    }
+
+    /// Fitted columns share one minimum width so the sets stay evenly spaced; filling columns
+    /// split whatever width the card offers.
+    private func setRow(scale: CGFloat, fills: Bool) -> some View {
         HStack(spacing: 0) {
             ForEach(results) { result in
                 if result.number != results.first?.number {
@@ -856,14 +877,17 @@ struct TMTherapySetSummary<Actions: View>: View {
                         .fill(TherapyPalette.outline)
                         .frame(width: 1.5, height: 80 * scale)
                 }
-                setColumn(result, scale: scale)
-                    .frame(maxWidth: .infinity)
+
+                if fills {
+                    setColumn(result, scale: scale)
+                        .frame(maxWidth: .infinity)
+                } else {
+                    setColumn(result, scale: scale)
+                        .frame(minWidth: 150 * scale)
+                        .padding(.horizontal, 12 * scale)
+                }
             }
         }
-        .padding(.vertical, 28 * scale)
-        .padding(.horizontal, 24 * scale)
-        .frame(maxWidth: width * 0.65)
-        .background(TherapyPalette.historyCard, in: RoundedRectangle(cornerRadius: 28 * scale))
     }
 
     private func setColumn(_ result: TherapySetResult, scale: CGFloat) -> some View {

@@ -2219,22 +2219,6 @@
         }
       }
     },
-    "balance.cameraRequired" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Camera access is needed to track your posture and movement."
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Akses kamera diperlukan untuk melacak postur dan gerakan Anda."
-          }
-        }
-      }
-    },
     "balance.cameraWaiting" : {
       "localizations" : {
         "en" : {
@@ -9343,6 +9327,23 @@
         }
       }
     },
+    "home.allPermissionsDenied" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Camera, microphone and speech recognition access are off. Enable them in Settings."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Akses kamera, mikrofon, dan pengenalan ucapan nonaktif. Aktifkan di Pengaturan."
+          }
+        }
+      }
+    },
     "home.armPractice" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -9423,6 +9424,40 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Akses kamera nonaktif. Aktifkan di Pengaturan."
+          }
+        }
+      }
+    },
+    "home.cameraMicrophoneDenied" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Camera and microphone access are off. Enable them in Settings."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Akses kamera dan mikrofon nonaktif. Aktifkan di Pengaturan."
+          }
+        }
+      }
+    },
+    "home.cameraSpeechDenied" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Camera and speech recognition access are off. Enable them in Settings."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Akses kamera dan pengenalan ucapan nonaktif. Aktifkan di Pengaturan."
           }
         }
       }
@@ -9844,6 +9879,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Mulai Latihan"
+          }
+        }
+      }
+    },
+    "home.voiceDenied" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Microphone and speech recognition access are off. Enable them in Settings."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Akses mikrofon dan pengenalan ucapan nonaktif. Aktifkan di Pengaturan."
           }
         }
       }

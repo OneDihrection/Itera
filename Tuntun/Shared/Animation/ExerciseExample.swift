@@ -11,8 +11,10 @@ struct TMExerciseExample: View {
     let asset: ExerciseAnimationAsset
     let mirrored: Bool
     let mode: TherapyAnimationPlayback
-    /// The reach clip's pose to hold (see `ExerciseAnimationAsset.peakSeconds(reachPose:)`).
+    /// The reach clip's pose to show (see `ExerciseAnimationAsset.timeline(reachPose:)`).
     var reachPose = 0
+    /// Holds the visible frame, as while the session is paused.
+    var paused = false
     @Environment(\.accessibilityReduceMotion) private var reducedMotion
     @State private var failed = false
 
@@ -22,7 +24,8 @@ struct TMExerciseExample: View {
                 TMExerciseVideoView(
                     resource: asset.demonstrationResource,
                     mode: mode,
-                    peakSeconds: asset.peakSeconds(reachPose: reachPose),
+                    timeline: asset.timeline(reachPose: reachPose),
+                    paused: paused,
                     reducedMotion: reducedMotion
                 ) { event in
                     handle(event)

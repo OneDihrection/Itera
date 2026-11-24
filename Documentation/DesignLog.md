@@ -2383,3 +2383,57 @@ Therapy is touch-free, so several pages moved on by themselves and gave the care
 - **Pause-dialog Cancel.** End on a live or rest page pauses and opens the dialog on its confirmation; Cancel only returned to the paused card, so a second tap (Resume) was needed. When the dialog opened on the confirmation, Cancel now calls `onResume` and closes it in one tap; after the card's own End, or while resuming is blocked, it still returns to the paused card.
 
 Verification: `xcodegen generate`, then Debug and Release iOS Simulator builds with `IPHONEOS_DEPLOYMENT_TARGET=17.0` succeeded. Nothing was run in the Simulator or on the iPad. Pending on the M1 iPad: intro Pause/End/Skip for scripted and unscripted intros pushed from Beranda and after a long rest; countdown intro Pause freezing the count and Skip opening the session; short-rest Skip in guided, finger (scripted opposition included) and Balancing sessions; long-rest Skip; finished-page Pause, Skip and End (item marked done, Beranda shown); pause-dialog Cancel after End in one tap; both languages and accessibility text sizes.
+
+## Complete permission denial handling (2026-11-24)
+
+A review of denied camera, microphone and speech recognition found four gaps:
+- **One denial per trip.** Readiness named only the first missing permission, and its prompt loop stopped at the first refusal, so a patient fixed the camera in Settings only to return and meet the microphone.
+- **Catch-all session message.** Guided session entry said `home.entryBlocked` ("needs camera access and working voice controls") whatever was missing.
+- **Balancing went silent.** `BalanceSessionViewModel.start` ran without voice when microphone or speech was refused (`voiceAvailable = false`, read by no view), against ADR-005 and the mandatory-readiness constraint, while guided sessions blocked and finger sessions paused. Its foreground handler also cleared the camera panel and started tracking for a session whose `start` had never run.
+- **Settings' voice row** named only one of microphone and speech.
+
+Decisions:
+- **`PermissionRequirement`** (Shared/Permissions) evaluates a set of permissions at once: restricted, then unasked (`needsPrompt`, prompted before any denial message so that message is complete), then every denied one, then unavailable. Readiness, guided sessions, Balancing and the Settings voice row all use it.
+- **One catalog entry per combination** (`home.cameraMicrophoneDenied`, `home.cameraSpeechDenied`, `home.voiceDenied`, `home.allPermissionsDenied`, beside the three single keys) instead of runtime list formatting: messages travel as String keys into `LocalizedStringKey`, sessions read their own language bundle, and three permissions give only seven sentences, each natural in both languages.
+- **Prompt loops no longer stop at a refusal**, in readiness and the voice row.
+- **Guided sessions** name the missing permissions on entry, in the camera recovery panel and in the voice-unavailable panel; `home.entryBlocked` remains for a listening start failure. Open Settings is hidden on the entry page when Settings cannot help (restricted access, listening failure).
+- **Balancing blocks** on any of the three behind its permission panel (the message, Open Settings when denied, Retry, Back; `balance.cameraRequired` is removed). Granting in Settings starts the session on return; a `startingSession` guard keeps the foreground that follows a system prompt from starting a second session or showing the panel under the prompt.
+- **Finger sessions are unchanged**: they already pause with `recovery.cameraPermission` or `recovery.voicePermission`.
+- iOS terminates an app when one of its privacy permissions is revoked in Settings, so revocation during a session arrives as a relaunch; no new polling was added.
+
+Verification: `xcodegen generate`, then a Debug iOS Simulator build with `IPHONEOS_DEPLOYMENT_TARGET=17.0` succeeded. Nothing was run in the Simulator or on the iPad. Pending in the Simulator and on the M1 iPad, after resetting privacy: all three prompts appear in one pass even after the first refusal; the intro then names every refused permission with Buka Pengaturan, and granting them opens the session on return; guided session entry names the missing permissions; Balancing with only the microphone refused shows the panel, and Retry or granting starts it; the voice row with both refused shows `home.voiceDenied`; both languages and large text.
+
+## Body demonstrations follow the movement (2026-11-24)
+
+At the product owner's request, every body exercise's demonstration now shows the movement the patient is asked for, as the hand exercises do: the start pose while they should be at or return to the start, and the move into the peak, then the held peak, while they should move to the target. This supersedes *Still demonstration during practice*, which held the peak for all of practice (so the demo showed a raised arm while the patient was told to return), and Balancing's loop during calibration.
+
+- `TherapyAnimationPlayback` is now `looping`, `neutral` and `peak`. `TMExerciseVideoView` plays a plain `AVPlayer`: moving between `neutral` and `peak` of the same segment plays the rise or return once (ending through `forwardPlaybackEndTime`) and holds its last frame; any other change, or Reduce Motion, jumps to the pose. A pause or camera wait freezes the frame and resuming continues the move. `TMShoulderRotationMovieView` now renders through it; its private looping player was removed.
+- Guided: `MovementSnapshot.towardTarget` and `ReachSnapshot.towardTarget`, derived in each activity's `presentation` from its step (target capture and practice phase 1; reach assessment and outward), not from tracking, so a lost frame does not flip the clip. `TherapySessionViewModel.demoPlayback` loops on the demonstration stage and otherwise follows them. The step title and chime still follow `pose`.
+- Balancing: `BalanceSessionViewModel.demoPlayback` (replacing `demoHoldsPeak`) loops during the opening `calibration.intro` cue, then `calibratingRange`, `reaching` and `holding` show the peak and `calibrating`, `returning`, `complete` and `findingBody` the start pose. Sit to stand's `holding` covers rising, standing and lowering, so `BalanceSnapshot.risingToStand` (practice seated or rising) decides it: it sits down as soon as the stand pops and "sit down" plays.
+- Segments, in authoring frames (24 FPS, seconds = (frame − 1) / 24), rise / return: arm raise and elbow bend 13–55 / 61–97; reach outward 13–40 / 43–67, across 67–100 / 103–133, up 133–166 / 169–199; cross midline 13–61 / 67–109; external and internal rotation 49–79 / 85–109 (start pose is the ready pose, elbow bent 90°); shoulder flexion 13–67 / 73–121; sit to stand 73–121 / 13–37 (seated start; sitting down uses the clip's opening stand-to-seat). The peak frames are the previous held times.
+
+Verification: `xcodegen generate`, then Debug and Release iOS Simulator builds with `IPHONEOS_DEPLOYMENT_TARGET=17.0` succeeded. Nothing was run in the Simulator or on the iPad. Pending on the M1 iPad, for each body exercise and both sides: the intro, demonstration card and History detail still loop; calibration's start capture shows the start pose and the target capture plays up to the peak; each repetition plays up on "move to the target" and back on "return"; reach changes segment with each direction; sit to stand rises on "stand up" and sits on "sit down"; pause and camera waits freeze and resume continues; Reduce Motion jumps to the poses; Balancing with both arms flips at the switch.
+
+## Fold towel camera without header (2026-11-24)
+
+At the product owner's request, the towel workspace no longer draws the step strip (Grab, Slide, Release) or the four fold dots over the camera. The strip sat in the preview's top-left corner over the tracking status chip, which stays where it is. The fold number is still shown in the session's side panel, and the grab handle, chevron trail and goal zone still mark the current step. This supersedes the top-corner step strip and fold dots in *Towel folding: smooth tracking and guided path* and the "step strip still follow every phase" wording in *Quiet towel practice*. The demonstration already left them out. `TMTherapyStepStrip` and `TMTherapyProgressDots` stay in the design system.
+
+Verification: `xcodegen generate` and an iOS Simulator build. Pending on the M1 iPad: during fold towel practice only the tracking status chip shows in the camera's top-left corner and nothing shows in the top-right corner.
+
+## Fold towel cursor on the pinch point (2026-11-24)
+
+At the product owner's request, the fold towel hand circle sits at the midpoint of the thumb and index fingertips instead of the palm centre, so it marks where the patient pinches. `TowelHandMeasurement` still needs at least three usable palm joints (wrist and knuckles 5, 9, 13, 17) to count a hand as present. When either fingertip is not measurable it falls back to the palm centre, and the grip is then uncertain anyway. Drawing and acceptance still share one filtered point, so the grab and goal zones are judged at the pinch point too. This supersedes the palm-centre cursor chosen because it barely moves while pinching: the fingertips meet near their midpoint and `HandCursorFilter` smooths the remaining movement.
+
+Verification: `xcodegen generate` and an iOS Simulator build. Pending on the M1 iPad: the circle stays between the thumb and index tip while open and pinched, does not visibly jump on pinch or release, and grab and release still trigger inside the zones.
+
+## Smoother fold towel pinch cursor (2026-11-24)
+
+At the product owner's request, the fold towel pinch-point cursor is smoothed more. The fingertip midpoint is much noisier than the palm centre, but lowering the single cursor filter's cutoff would make the whole hand lag. The cursor is now split into two parts. The palm centre carries hand movement through the existing `HandCursorFilter` (1 Hz at rest, speed gain 10). The palm-to-pinch offset goes through a second `HandCursorFilter` (0.5 Hz at rest, speed gain 3; starting values pending device tuning). When a fingertip is not measurable, the last smoothed offset is held, so the cursor no longer jumps back to the palm. This refines the fallback in *Fold towel cursor on the pinch point*. Drawing and acceptance still share the one resulting point, and the display spring is unchanged.
+
+Verification: `xcodegen generate` and an iOS Simulator build. Pending on the M1 iPad: the circle is steady at the pinch point while still, follows a slide without visible lag, does not jump on pinch, release or a hidden fingertip, and grab and release still trigger inside the zones.
+
+## Set results card fits its sets (2026-11-24)
+
+At the product owner's request, the results card on the set-done and all-done pages (`TMTherapySetSummary`) is sized to its sets instead of always spanning 65% of the width. The set columns share a minimum width so they stay evenly spaced, and the card is centred. When the sets need more than 65% of the width (the finger all-done page lists every movement's sets), they fall back to sharing that capped width as before (`ViewThatFits`). Colours, typography and contents are unchanged.
+
+Verification: `xcodegen generate` and an iOS Simulator build. The `allDone` and `setDone` debug galleries were checked in the Simulator. Pending on the M1 iPad.
