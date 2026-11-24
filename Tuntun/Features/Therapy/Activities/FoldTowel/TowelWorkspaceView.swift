@@ -19,8 +19,6 @@ struct TMTowelWorkspaceView: View {
     let snapshot: TowelSnapshot
 
     var interpolates = false
-    /// The demonstration is small, so it leaves out the step strip and fold dots.
-    var showsHeader = true
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     /// A critically damped spring retargets from the current value when a new frame arrives, so a
@@ -37,10 +35,6 @@ struct TMTowelWorkspaceView: View {
                 board(workspace)
                 trail(workspace)
                 indicator(workspace)
-
-                if showsHeader {
-                    header
-                }
             }
             .clipped()
         }
@@ -94,24 +88,6 @@ struct TMTowelWorkspaceView: View {
         .animation(motion, value: snapshot.handPosition)
     }
 
-    /// Kept to the top corners, away from the path (grab and drop zones sit at the center column
-    /// for vertical folds).
-    private var header: some View {
-        HStack(alignment: .top) {
-            TMTherapyStepStrip(steps: TowelBoard.steps, current: step)
-
-            Spacer(minLength: 12)
-
-            TMTherapyProgressDots(
-                completed: snapshot.foldIndex,
-                total: TowelBoard.foldCount,
-                label: "towel.foldNumber \(snapshot.foldIndex + 1)"
-            )
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-        .padding(12)
-    }
-
     // MARK: - State
 
     /// 0 grab, 1 slide, 2 release.
@@ -145,12 +121,6 @@ enum TowelBoard {
 
     /// The acceptance radius is 0.12 of the workspace, so zones are drawn 0.24 across.
     static let zoneDiameter = 0.24
-
-    static let steps = [
-        TherapyStep(id: 0, title: "towel.step.grab", symbol: "hand.pinch.fill"),
-        TherapyStep(id: 1, title: "towel.step.slide", symbol: "arrow.left.and.right"),
-        TherapyStep(id: 2, title: "towel.step.release", symbol: "hand.raised.fingers.spread")
-    ]
 
     /// The towel spans the reach along the fold axis and halves across it after each fold there.
     static func panelFraction(foldIndex: Int) -> CGSize {
