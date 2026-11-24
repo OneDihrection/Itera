@@ -47,8 +47,9 @@ struct TMFingerLandmarkOverlay: View {
     /// Whole-hand circle diameter around a closed fist, in palm lengths.
     private static let closedHandCircleRatio: CGFloat = 1.3
     private static let minimumHandCircle: CGFloat = 100
-    /// Eases the whole-hand circle between 30 Hz tracking samples without visible lag.
-    private static let handCircleGlide: Animation = .interpolatingSpring(duration: 0.15, bounce: 0)
+    /// Eases the whole-hand and thumb-opposition circles between 30 Hz tracking samples without
+    /// visible lag.
+    private static let circleGlide: Animation = .interpolatingSpring(duration: 0.15, bounce: 0)
 
     // MARK: - Thumb opposition merge
 
@@ -60,7 +61,8 @@ struct TMFingerLandmarkOverlay: View {
 
     var body: some View {
         GeometryReader { geometry in
-            let scale = min(geometry.size.width / evidence.width, geometry.size.height / evidence.height)
+            // The preview fills its frame (aspect-fill), so the image covers it and overflows the sides.
+            let scale = max(geometry.size.width / evidence.width, geometry.size.height / evidence.height)
             let width = evidence.width * scale
             let height = evidence.height * scale
             let origin = CGPoint(x: (geometry.size.width - width) / 2, y: (geometry.size.height - height) / 2)
@@ -129,7 +131,7 @@ struct TMFingerLandmarkOverlay: View {
                     onCompletionPresented: onCompletionPresented,
                     popsOnCompletion: true,
                     filled: false,
-                    glide: Self.handCircleGlide
+                    glide: Self.circleGlide
                 )
             }
         } else {
@@ -137,14 +139,16 @@ struct TMFingerLandmarkOverlay: View {
                 TMTherapyMergingGuide(
                     first: pair.thumb,
                     second: pair.target,
-                    diameter: fingertipDiameter(active: true, palm: palm),
+                    // Unstepped: the glide smooths it, and steps would show as jumps.
+                    diameter: fingertipDiameter(active: true, palm: palm, stepped: false),
                     merge: pair.merge,
                     progress: progress,
                     active: true,
                     showsTimer: showsTimer,
                     completionID: completionID,
                     onCompletionPresented: onCompletionPresented,
-                    popsOnCompletion: true
+                    popsOnCompletion: true,
+                    glide: Self.circleGlide
                 )
             }
 
@@ -196,10 +200,17 @@ struct TMFingerLandmarkOverlay: View {
         return hypot(wrist.x - knuckle.x, wrist.y - knuckle.y)
     }
 
-    private func fingertipDiameter(active: Bool, palm: CGFloat) -> CGFloat {
+    /// `stepped: false` keeps the exact size, for a circle that glides between samples.
+    private func fingertipDiameter(active: Bool, palm: CGFloat, stepped: Bool = true) -> CGFloat {
         let ratio = active ? Self.activeCircleRatio : Self.inactiveCircleRatio
         let range = active ? Self.activeCircleRange : Self.inactiveCircleRange
-        return Self.stepped(min(range.upperBound, max(range.lowerBound, palm * ratio)))
+        let diameter = min(range.upperBound, max(range.lowerBound, palm * ratio))
+
+        guard stepped else {
+            return diameter
+        }
+
+        return Self.stepped(diameter)
     }
 
     private static func stepped(_ value: CGFloat) -> CGFloat {

@@ -126,11 +126,12 @@ final class DailyPlanViewModel: DailyPlanSessionReporting {
         )
 
         let layout = DailyPlanLayout.load(for: items)
+        let overrides = Self.loadOverrides(for: items)
         self.layout = layout
-        self.items = layout.items(from: items)
+        self.overrides = overrides
+        self.items = Self.shownItems(layout: layout, standard: items, overrides: overrides)
 
         sideChoices = Self.loadSideChoices(for: items)
-        overrides = Self.loadOverrides(for: items)
     }
 
     // MARK: - Layout
@@ -145,7 +146,28 @@ final class DailyPlanViewModel: DailyPlanSessionReporting {
         let reconciled = layout.reconciled(with: standardItems)
         reconciled.save()
         self.layout = reconciled
-        items = reconciled.items(from: standardItems)
+        refreshShownItems()
+    }
+
+    /// The layout's shown items, less any whose sets or repetitions Settings set to 0.
+    private static func shownItems(
+        layout: DailyPlanLayout,
+        standard: [DailyPlanItem],
+        overrides: [String: DailyPlanOverrides]
+    ) -> [DailyPlanItem] {
+        layout.items(from: standard).filter { item in
+            overrides[item.id]?.hidesExercise != true
+        }
+    }
+
+    /// Rearranges Beranda after a layout or count change. Ignored while a plan runs, so the open
+    /// item's index never shifts under it; `end()` applies it afterwards.
+    private func refreshShownItems() {
+        guard !isRunning else {
+            return
+        }
+
+        items = Self.shownItems(layout: layout, standard: standardItems, overrides: overrides)
     }
 
     /// Every exercise shown, in the standard order.
@@ -173,6 +195,15 @@ final class DailyPlanViewModel: DailyPlanSessionReporting {
             }
         }
 
+        // A zero chosen in Settings is shown as is; the exercise is hidden rather than run.
+        let custom = overrides[item.id]
+        if custom?.sets == 0 {
+            sets = 0
+        }
+        if custom?.repetitions == 0 {
+            repetitions = 0
+        }
+
         return (sets, repetitions)
     }
 
@@ -180,12 +211,28 @@ final class DailyPlanViewModel: DailyPlanSessionReporting {
         let value = DailyPlanOverrides.clamped(sets, to: DailyPlanOverrides.setsRange)
         overrides[item.id, default: DailyPlanOverrides()].sets = value
         UserDefaults.standard.set(value, forKey: PracticePreferences.exerciseSets(item.id))
+        refreshShownItems()
     }
 
     func setRepetitions(_ repetitions: Int, for item: DailyPlanItem) {
         let value = DailyPlanOverrides.clamped(repetitions, to: DailyPlanOverrides.repetitionsRange)
         overrides[item.id, default: DailyPlanOverrides()].repetitions = value
         UserDefaults.standard.set(value, forKey: PracticePreferences.exerciseRepetitions(item.id))
+        refreshShownItems()
+    }
+
+    /// Settings' choice, or the program's own, within the plan's playable ranges.
+    private func playableCounts(
+        for itemID: String,
+        sets: Int,
+        repetitions: Int
+    ) -> (sets: Int, repetitions: Int) {
+        let custom = overrides[itemID]
+
+        return (
+            DailyPlanOverrides.clamped(custom?.sets ?? sets, to: DailyPlanOverrides.playableSets),
+            DailyPlanOverrides.clamped(custom?.repetitions ?? repetitions, to: DailyPlanOverrides.playableRepetitions)
+        )
     }
 
     // MARK: - Rest
@@ -495,11 +542,14 @@ final class DailyPlanViewModel: DailyPlanSessionReporting {
     /// The category's saved finger routine with this exercise's custom counts, if any.
     private func fingerRoutine(for exercise: FingerExercise) -> FingerRoutine {
         var routine = homeModel(for: exercise.category).routine
+        let counts = playableCounts(
+            for: exercise.rawValue,
+            sets: routine.sets,
+            repetitions: routine.repetitions
+        )
 
-        if let counts = customCounts(for: exercise.rawValue) {
-            routine.sets = counts.sets ?? routine.sets
-            routine.repetitions = counts.repetitions ?? routine.repetitions
-        }
+        routine.sets = counts.sets
+        routine.repetitions = counts.repetitions
 
         return routine
     }
@@ -605,12 +655,13 @@ final class DailyPlanViewModel: DailyPlanSessionReporting {
                 ?? settings.armSelection
         }
 
-        if let counts = customCounts(for: exercise.rawValue) {
-            let range = BalancePracticeSettings.setsRange
-            let sets = counts.sets ?? settings.sets
-            settings.sets = min(range.upperBound, max(range.lowerBound, sets))
-            settings.repetitions = counts.repetitions ?? settings.repetitions
-        }
+        let counts = playableCounts(
+            for: exercise.rawValue,
+            sets: settings.sets,
+            repetitions: settings.repetitions
+        )
+        settings.sets = counts.sets
+        settings.repetitions = counts.repetitions
 
         settings.restSeconds = shortRestSeconds
 
@@ -646,24 +697,36 @@ final class DailyPlanViewModel: DailyPlanSessionReporting {
         var exercise = configuredExercise(for: kind)
         exercise.sides = side(of: .therapy(kind))
 
-        if let counts = customCounts(for: kind.rawValue) {
-            exercise.sets = counts.sets ?? exercise.sets
+        let custom = customCounts(for: kind.rawValue)
+        exercise.sets = DailyPlanOverrides.clamped(
+            custom?.sets ?? exercise.sets,
+            to: DailyPlanOverrides.playableSets
+        )
 
-            // Arm movements and the towel count goals per side; directional reach counts rounds.
-            if let repetitions = counts.repetitions {
-                exercise.leftGoal = repetitions
-                exercise.rightGoal = repetitions
-                exercise.rounds = repetitions
-            }
+        // Arm movements and the towel count goals per side; directional reach counts rounds.
+        let goals = DailyPlanOverrides.playableRepetitions
+        if let repetitions = custom?.repetitions {
+            let repetitions = DailyPlanOverrides.clamped(repetitions, to: goals)
+            exercise.leftGoal = repetitions
+            exercise.rightGoal = repetitions
+            exercise.rounds = repetitions
+        } else {
+            exercise.leftGoal = DailyPlanOverrides.clamped(exercise.leftGoal, to: goals)
+            exercise.rightGoal = DailyPlanOverrides.clamped(exercise.rightGoal, to: goals)
+            exercise.rounds = DailyPlanOverrides.clamped(exercise.rounds, to: goals)
         }
 
         // The briefs run one arm per session, two sets of five unless the plan's counts are
         // customized; the script then speaks only the recordings that match the counts.
         if kind == .armRaise, let side = armRaiseScriptSide {
-            let counts = customCounts(for: kind.rawValue)
-            let repetitions = counts?.repetitions ?? ScriptedRepetitions.recordedRepetitions
+            let counts = playableCounts(
+                for: kind.rawValue,
+                sets: ScriptedRepetitions.recordedSets,
+                repetitions: ScriptedRepetitions.recordedRepetitions
+            )
+            let repetitions = counts.repetitions
             exercise.sides = side == .left ? .left : .right
-            exercise.sets = counts?.sets ?? ScriptedRepetitions.recordedSets
+            exercise.sets = counts.sets
             exercise.leftGoal = repetitions
             exercise.rightGoal = repetitions
         }
@@ -754,15 +817,45 @@ final class DailyPlanViewModel: DailyPlanSessionReporting {
         }
 
         pendingSecondSide = nil
-        progress = progress.current(on: .now)
-        progress.completed.insert(items[currentIndex].id)
-        progress.planned = items.map(\.id)
-        Task { await saveProgress() }
+        markCompleted(currentIndex)
 
         let next = upcomingIndex
         self.currentIndex = next
         restingBeforeNext = next != nil
         presentPlanNext()
+    }
+
+    /// End on a finished page. A completed item is marked done (the last side of a two-pass item
+    /// only, as `finish` does); the plan then ends without the long rest.
+    func finishAndEnd(completed: Bool) {
+        guard isRunning, !restingBeforeNext, let currentIndex else {
+            return
+        }
+
+        if completed, !hasSideAfterCurrentPass(currentIndex) {
+            markCompleted(currentIndex)
+        }
+
+        end()
+    }
+
+    /// True when this session was the first side of a two-pass item, so the item is not done yet.
+    private func hasSideAfterCurrentPass(_ index: Int) -> Bool {
+        let exercise = items[index].exercise
+
+        guard let side = passSide(for: exercise) else {
+            return false
+        }
+
+        return passSide(after: side, for: exercise) != nil
+    }
+
+    /// Adds the item to today's completed set and saves the day.
+    private func markCompleted(_ index: Int) {
+        progress = progress.current(on: .now)
+        progress.completed.insert(items[index].id)
+        progress.planned = items.map(\.id)
+        Task { await saveProgress() }
     }
 
     private func presentPlanNext() {
@@ -788,6 +881,7 @@ final class DailyPlanViewModel: DailyPlanSessionReporting {
         restingBeforeNext = false
         currentIndex = nil
         pendingSecondSide = nil
+        refreshShownItems()
         router.endRun()
     }
 

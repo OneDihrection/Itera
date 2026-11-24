@@ -239,6 +239,7 @@ private final class PreviewPlan: DailyPlanSessionReporting {
     let hasAutomaticRest = false
 
     func finish(completed: Bool) {}
+    func finishAndEnd(completed: Bool) {}
     func end() {}
     func markFingerScriptRest(_ side: HandSide?) {}
     func markArmRaiseRest(_ side: TherapySide?) {}

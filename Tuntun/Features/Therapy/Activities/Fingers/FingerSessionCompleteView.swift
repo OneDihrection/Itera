@@ -13,6 +13,8 @@ struct TMFingerSessionCompleteView<ViewModel: FingerSessionCompleteViewModelProt
     @State private var viewModel: ViewModel
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    /// Pause on the page holds the plan's automatic move to the long rest.
+    @State private var completionHeld = false
 
     init(viewModel: ViewModel) {
         _viewModel = State(initialValue: viewModel)
@@ -34,6 +36,11 @@ struct TMFingerSessionCompleteView<ViewModel: FingerSessionCompleteViewModelProt
         viewModel.automaticallyRests
     }
 
+    /// The plan moves on by itself once saved, unless Pause holds the page.
+    private var automaticallyContinues: Bool {
+        savingFinished && automaticallyRests && !completionHeld
+    }
+
     var body: some View {
         TMTherapySetSummary(
             heading: TMTherapyExerciseHeading(
@@ -41,9 +48,11 @@ struct TMFingerSessionCompleteView<ViewModel: FingerSessionCompleteViewModelProt
                 title: Text(verbatim: viewModel.exerciseTitle)
             ),
             headline: Text(completed ? "session.allDoneTitle" : "done.titlePartial"),
+            total: viewModel.sessionLanguage.attributedString(
+                "session.total \(summary?.totalRepetitions ?? 0)"
+            ),
             message: Text(completed ? "session.allDoneMessage" : "done.messagePartial"),
-            results: results,
-            total: Text("session.total \(summary?.totalRepetitions ?? 0)")
+            results: results
         ) {
             closingAction
         }
@@ -54,17 +63,17 @@ struct TMFingerSessionCompleteView<ViewModel: FingerSessionCompleteViewModelProt
         }
         .animation(reduceMotion ? nil : .easeInOut(duration: 0.2), value: savingFinished)
         .environment(\.colorScheme, .light)
-        .environment(\.locale, viewModel.sessionLocale)
+        .environment(\.locale, viewModel.sessionLanguage.locale)
         .interactiveDismissDisabled()
         .task { await viewModel.save() }
-        .task(id: savingFinished && scenePhase == .active && automaticallyRests) {
-            guard savingFinished, scenePhase == .active, automaticallyRests else {
+        .task(id: automaticallyContinues && scenePhase == .active) {
+            guard automaticallyContinues, scenePhase == .active else {
                 return
             }
 
             try? await Task.sleep(for: DailyPlanTiming.completionPreview)
 
-            guard !Task.isCancelled, scenePhase == .active, automaticallyRests else {
+            guard !Task.isCancelled, scenePhase == .active, automaticallyContinues else {
                 return
             }
 
@@ -76,7 +85,15 @@ struct TMFingerSessionCompleteView<ViewModel: FingerSessionCompleteViewModelProt
     /// patient is never stuck on this page. The loading overlay covers the page while it saves.
     @ViewBuilder
     private var closingAction: some View {
-        if !automaticallyRests {
+        if automaticallyRests {
+            TMTherapyFlowActions(
+                paused: completionHeld,
+                disabled: !savingFinished,
+                pause: { completionHeld.toggle() },
+                stop: viewModel.endPlan,
+                skip: viewModel.close
+            )
+        } else {
             TMTherapyFinishActions(
                 title: closingTitle,
                 symbol: viewModel.isPlanRunning ? "play.fill" : nil,
@@ -137,7 +154,7 @@ private final class MockFingerSessionCompleteViewModel: FingerSessionCompleteVie
         exerciseIndex: 0
     )
     let exerciseTitle = "Sentuh Jempol ke Jari"
-    let sessionLocale = AppLanguage.selected.locale
+    let sessionLanguage = AppLanguage.selected
     let exerciseNumber: Int? = 1
     let isPlanRunning = true
     let completed = true
@@ -146,6 +163,7 @@ private final class MockFingerSessionCompleteViewModel: FingerSessionCompleteVie
 
     func save() async {}
     func close() {}
+    func endPlan() {}
 }
 
 #Preview("Finger complete") {

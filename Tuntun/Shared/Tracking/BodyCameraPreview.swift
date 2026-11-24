@@ -18,7 +18,7 @@ struct TMBodyCameraPreview: UIViewRepresentable {
     func makeUIView(context: Context) -> TMPreviewView {
         let view = TMPreviewView()
         TMPreviewView.active = view
-        view.previewLayer.videoGravity = .resizeAspect
+        view.previewLayer.videoGravity = .resizeAspectFill
         view.previewLayer.session = session
         view.onReady = onReady
         view.onOrientation = onOrientation
@@ -33,9 +33,20 @@ struct TMBodyCameraPreview: UIViewRepresentable {
         return view
     }
 
+    /// The session screen redraws on every tick and frame. Relaying out each time touched the
+    /// preview connection 20–50 times a second, and every touch waits while the capture session
+    /// stops or reconfigures, which froze the screen at a session's end. Layout is requested
+    /// only when mirroring or the video mask changes; size, window and `isPreviewing` changes
+    /// request their own.
     func updateUIView(_ view: TMPreviewView, context: Context) {
-        view.front = front
+        let masksChanged = (view.onVideoBounds == nil) != (onVideoBounds == nil)
         view.onVideoBounds = onVideoBounds
+
+        guard view.front != front || masksChanged else {
+            return
+        }
+
+        view.front = front
         view.setNeedsLayout()
     }
 
@@ -127,8 +138,12 @@ struct TMBodyCameraPreview: UIViewRepresentable {
                 }
                 #endif
                 if connection.isVideoMirroringSupported {
-                    connection.automaticallyAdjustsVideoMirroring = false
-                    connection.isVideoMirrored = front
+                    if connection.automaticallyAdjustsVideoMirroring {
+                        connection.automaticallyAdjustsVideoMirroring = false
+                    }
+                    if connection.isVideoMirrored != front {
+                        connection.isVideoMirrored = front
+                    }
                 }
             }
             if onVideoBounds != nil {

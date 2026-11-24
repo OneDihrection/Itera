@@ -188,6 +188,7 @@ struct CrossMidlineBalanceEngine: BalanceMovementEngine {
 
         updateJointCache(from: frame, smoothed: landmarkSmoother.consume(frame))
         guard let geometry = geometry(from: frame) else {
+            snapshot.trackingLost = true
             snapshot.phase = baseline == nil ? .findingBody : snapshot.phase
             snapshot.instructionKey = "balance.tracking"
             if let previous = snapshot.overlay,
@@ -203,6 +204,7 @@ struct CrossMidlineBalanceEngine: BalanceMovementEngine {
         }
 
         guard geometry.rootIsObserved else {
+            snapshot.trackingLost = true
             snapshot.phase = baseline == nil ? .findingBody : snapshot.phase
             snapshot.instructionKey = "balance.pelvisMissing"
             snapshot.overlay = overlay(
@@ -217,6 +219,8 @@ struct CrossMidlineBalanceEngine: BalanceMovementEngine {
             interruptHolds(at: frame.timestamp)
             return
         }
+
+        snapshot.trackingLost = false
 
         if !scoringEnabled {
             let target: TherapyPoint? = if baseline == nil {
@@ -261,6 +265,7 @@ struct CrossMidlineBalanceEngine: BalanceMovementEngine {
         baselineCapture = nil
         snapshot.phase = .findingBody
         snapshot.instructionKey = "balance.tracking"
+        snapshot.trackingLost = true
         snapshot.calibrationProgress = 0
         snapshot.overlay = nil
         cachedJoints.removeAll()

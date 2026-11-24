@@ -12,7 +12,7 @@ import Observation
 protocol FingerSessionCompleteViewModelProtocol: AnyObject, Observable {
     var summary: FingerSessionSummary? { get }
     var exerciseTitle: String { get }
-    var sessionLocale: Locale { get }
+    var sessionLanguage: AppLanguage { get }
     /// The item's position in today's plan while the plan runs.
     var exerciseNumber: Int? { get }
     var isPlanRunning: Bool { get }
@@ -25,6 +25,8 @@ protocol FingerSessionCompleteViewModelProtocol: AnyObject, Observable {
     func save() async
     /// Leads on to the next exercise while the plan runs, otherwise to Progress.
     func close()
+    /// End on the finished page: the result counts as it would on moving on, then the plan ends.
+    func endPlan()
 }
 
 /// The finger exercises' all-done page: saves the finished session, then hands back to the plan.
@@ -62,8 +64,8 @@ final class FingerSessionCompleteViewModel: FingerSessionCompleteViewModelProtoc
         fingerSessionService.session?.exerciseTitle ?? ""
     }
 
-    var sessionLocale: Locale {
-        fingerSessionService.session?.sessionLanguage.locale ?? AppLanguage.selected.locale
+    var sessionLanguage: AppLanguage {
+        fingerSessionService.session?.sessionLanguage ?? AppLanguage.selected
     }
 
     var exerciseNumber: Int? {
@@ -101,5 +103,9 @@ final class FingerSessionCompleteViewModel: FingerSessionCompleteViewModelProtoc
 
         router.closeSession()
         tabs.showProgress()
+    }
+
+    func endPlan() {
+        plan.finishAndEnd(completed: completed)
     }
 }

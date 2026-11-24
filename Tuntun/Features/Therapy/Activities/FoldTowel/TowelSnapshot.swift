@@ -25,6 +25,8 @@ struct TowelSnapshot {
     var grabPoint = TherapyPoint(x: 0.8, y: 0.5)
     var destination = TherapyPoint(x: 0.2, y: 0.5)
     var trackingMessage: String?
+    /// Seconds of practice in the current set, credited only while the hand is measured.
+    var practiceSeconds = 0.0
 }
 
 /// Camera-derived pinch is a visible gesture estimate, never grip force.

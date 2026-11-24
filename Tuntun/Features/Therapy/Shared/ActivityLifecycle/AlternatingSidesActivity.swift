@@ -84,15 +84,17 @@ struct AlternatingSidesActivity: TherapyActivity {
         switch current {
         case .movement(var value):
             value.count = total
+            value.practiceSeconds = practiceSeconds
             return .movement(value)
         case .towel(var value):
             value.count = total
+            value.practiceSeconds = practiceSeconds
             return .towel(value)
         case .reach(var value):
             value.count = total
             value.round = total + 1
             value.outcomes = reachSnapshots.flatMap(\.outcomes)
-            value.practiceSeconds = reachSnapshots.reduce(0) { $0 + $1.practiceSeconds }
+            value.practiceSeconds = practiceSeconds
             value.caregiverSkippedSteps = reachSnapshots.flatMap(\.caregiverSkippedSteps)
             return .reach(value)
         case .timed:
@@ -241,6 +243,11 @@ struct AlternatingSidesActivity: TherapyActivity {
 
             active = next
         }
+    }
+
+    /// Both sides' practice time together, as the set's one result covers both.
+    private var practiceSeconds: Double {
+        sides.reduce(0) { $0 + $1.activity.presentation.practiceSeconds }
     }
 
     private var reachSnapshots: [ReachSnapshot] {

@@ -23,6 +23,8 @@ struct TMTherapySessionView<ViewModel: TherapySessionViewModelProtocol>: View {
     @State var restTotal = 0.0
     /// Set when End was tapped on the live screen, so the pause dialog opens on its confirmation.
     @State var endRequested = false
+    /// Pause on the finished page holds the plan's automatic move to the long rest.
+    @State var completionHeld = false
     @State var videoBounds: CGRect?
     @State var model: ViewModel
     let plan: any DailyPlanSessionReporting
@@ -96,9 +98,6 @@ struct TMTherapySessionView<ViewModel: TherapySessionViewModelProtocol>: View {
         }
         .overlay(alignment: .topTrailing) {
             lightDebugFinishButton
-        }
-        .overlay {
-            debugSkipRestButton
         }
         .overlay {
             if let celebrationStart, !reduceMotion, !calmMode {
@@ -237,6 +236,42 @@ struct TMTherapySessionView<ViewModel: TherapySessionViewModelProtocol>: View {
         }
     }
 
+    /// Whether the patient is in position, for the chip over the camera; nil hides it. The
+    /// activities already debounce `trackingMessage` (shown after 1 s of loss, cleared after
+    /// 0.5 s), so the chip does not flicker on a single dropped frame.
+    private var trackingPositioned: Bool? {
+        guard usesLightLayout,
+              showsBodyIndicator,
+              !hasFullScreenPresentation else {
+            return nil
+        }
+
+        switch model.snapshot.presentation {
+        case .movement(let value):
+            return value.trackingMessage == nil
+        case .reach(let value):
+            return value.trackingMessage == nil
+        case .towel(let value):
+            return value.trackingMessage == nil
+        default:
+            return nil
+        }
+    }
+
+    /// Whether the chip is muted: tracking is shown but the session is not acting on movement,
+    /// because an opening cue, the preparation or the countdown holds evidence back. Calibration
+    /// and practice keep it at full strength.
+    private var trackingMuted: Bool {
+        switch model.snapshot.stage {
+        case .instruction, .demonstration, .preparationWait:
+            return true
+        case .activity:
+            return model.snapshot.presentation?.countdownLength != nil
+        case .preparing, .feedback, .rest, .summary:
+            return false
+        }
+    }
+
     /// Completed calibration captures, so each one pops its capture circle.
     private var captureCompletions: Int {
         guard case .movement(let movement) = model.snapshot.presentation else {
@@ -255,7 +290,8 @@ struct TMTherapySessionView<ViewModel: TherapySessionViewModelProtocol>: View {
                 intensity: breath.intensity,
                 paused: model.snapshot.paused,
                 pause: { model.command(.pause) },
-                stop: { requestEnd() }
+                stop: { requestEnd() },
+                skip: { model.command(.skipRest) }
             )
         } else if model.snapshot.stage == .rest, let breath = model.snapshot.restBreath,
            !model.cameraDenied, model.voiceReady, !model.snapshot.paused || usesLightLayout {
@@ -270,7 +306,8 @@ struct TMTherapySessionView<ViewModel: TherapySessionViewModelProtocol>: View {
                     } else {
                         endSession()
                     }
-                }
+                },
+                skip: { model.command(.skipRest) }
             )
         } else if model.snapshot.stage == .activity,
            let seconds = model.snapshot.countdown?.seconds,
@@ -592,6 +629,11 @@ struct TMTherapySessionView<ViewModel: TherapySessionViewModelProtocol>: View {
                     .allowsHitTesting(false)
                 }
             }
+            .trackingStatusChip(
+                trackingPositioned,
+                muted: trackingMuted,
+                videoBounds: videoBounds
+            )
             .background(usesLightLayout ? TherapyPalette.canvas : Color.black)
             .clipShape(RoundedRectangle(cornerRadius: usesLightLayout ? 28 : 36))
             .onAppear { model.viewport(width: geometry.size.width, height: geometry.size.height) }
@@ -868,7 +910,10 @@ struct TMTherapySessionView<ViewModel: TherapySessionViewModelProtocol>: View {
             Section {
                 Text("session.summaryCaution")
                 if model.saving { ProgressView("session.saving") }
-                if !automaticallyRests(after: summary) {
+                if automaticallyRests(after: summary) {
+                    completionActions(summary)
+                        .frame(maxWidth: .infinity)
+                } else {
                     Button(summaryExitTitle) { leaveSummary(summary) }
                         .buttonStyle(TMSessionButtonStyle())
                         .disabled(model.saving || model.saveFailure != nil)
@@ -878,26 +923,6 @@ struct TMTherapySessionView<ViewModel: TherapySessionViewModelProtocol>: View {
         .listStyle(.insetGrouped)
         .scrollContentBackground(.hidden)
         .background(usesLightTheme ? TherapyPalette.canvas : Color.black)
-    }
-
-    // MARK: - Debug
-
-    /// Debug builds only: ends a running rest between sets or activities through the engine's
-    /// `debugSkipRest`, which moves on exactly as an elapsed rest does. Hidden while paused or
-    /// waiting for the camera, when the engine would ignore it.
-    @ViewBuilder
-    private var debugSkipRestButton: some View {
-        #if DEBUG
-        if model.snapshot.stage == .rest,
-           model.snapshot.summary == nil,
-           !model.snapshot.paused,
-           !model.snapshot.cameraWaiting,
-           !model.entryFailure {
-            TMDebugSkipRestButton {
-                model.command(.debugSkipRest)
-            }
-        }
-        #endif
     }
 
     // MARK: - Loading
@@ -930,7 +955,10 @@ struct TMTherapySessionView<ViewModel: TherapySessionViewModelProtocol>: View {
         guard !presentationOnly, let summary = model.snapshot.summary else {
             return false
         }
-        return automaticallyRests(after: summary) && !model.saving && model.saveFailure == nil
+        return automaticallyRests(after: summary)
+            && !completionHeld
+            && !model.saving
+            && model.saveFailure == nil
     }
 
     func automaticallyRests(after summary: SessionSummary) -> Bool {
@@ -948,6 +976,25 @@ struct TMTherapySessionView<ViewModel: TherapySessionViewModelProtocol>: View {
 
             plan.finish(completed: !summary.stopped && !summary.interrupted)
         }
+    }
+
+    /// End on the finished page: the result counts as it would on moving on, then the plan ends.
+    func leaveSummaryAndEndPlan(_ summary: SessionSummary) {
+        Task {
+            await model.leave()
+            plan.finishAndEnd(completed: !summary.stopped && !summary.interrupted)
+        }
+    }
+
+    /// Pause, End and Skip while the finished page waits to move on to the long rest by itself.
+    func completionActions(_ summary: SessionSummary) -> some View {
+        TMTherapyFlowActions(
+            paused: completionHeld,
+            disabled: model.saving || model.saveFailure != nil,
+            pause: { completionHeld.toggle() },
+            stop: { leaveSummaryAndEndPlan(summary) },
+            skip: { leaveSummary(summary) }
+        )
     }
 
     /// Leaving before the session could start ends a running plan instead of skipping ahead.

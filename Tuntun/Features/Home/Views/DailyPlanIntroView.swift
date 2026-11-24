@@ -9,7 +9,8 @@ import SwiftUI
 
 /// The page before each daily-plan exercise: what it trains, today's sets, repetitions and an
 /// estimate of the minutes, a safety note and the voice commands. It reads its introduction,
-/// then validates readiness and opens the session on its own; there is no Start button.
+/// then validates readiness and opens the session on its own; there is no Start button and no
+/// back button. Pause, End and Skip sit at the bottom of the page.
 struct TMDailyPlanIntroView<ViewModel: DailyPlanIntroViewModelProtocol>: View {
     @State private var viewModel: ViewModel
     @Environment(\.scenePhase) private var scenePhase
@@ -22,21 +23,12 @@ struct TMDailyPlanIntroView<ViewModel: DailyPlanIntroViewModelProtocol>: View {
     var body: some View {
         if let row = viewModel.row {
             if viewModel.isAfterRest {
-                // The plan's cover has no stack to go back through, so the page gets its own
-                // navigation bar with a system bar button that leaves the plan.
+                // The plan's cover has no stack of its own; the bar holds a readiness action.
                 NavigationStack {
                     page(row)
-                        .toolbar {
-                            ToolbarItem(placement: .cancellationAction) {
-                                if !viewModel.isPreparingSession {
-                                    Button("action.back", action: viewModel.back)
-                                }
-                            }
-                        }
                 }
             } else {
-                // Pushed on Beranda's stack: the system back button pops it, and Beranda's
-                // screen model ends the plan when the intro leaves the path.
+                // Pushed on Beranda's stack; End leaves it, ending the plan.
                 page(row)
             }
         }
@@ -44,9 +36,6 @@ struct TMDailyPlanIntroView<ViewModel: DailyPlanIntroViewModelProtocol>: View {
 
     private func page(_ row: DailyPlanRow) -> some View {
         intro(row)
-            .overlay(alignment: .topLeading) {
-                debugStartButton
-            }
             .overlay {
                 if viewModel.isPreparingSession {
                     TMLoadingOverlay(message: "loading.preparingSession")
@@ -57,8 +46,8 @@ struct TMDailyPlanIntroView<ViewModel: DailyPlanIntroViewModelProtocol>: View {
                 value: viewModel.isPreparingSession
             )
             .navigationBarTitleDisplayMode(.inline)
-            // No way back while readiness opens the session.
-            .navigationBarBackButtonHidden(viewModel.isPreparingSession)
+            // End on the page is the way out, so a swipe or back tap cannot skip the plan's end.
+            .navigationBarBackButtonHidden(true)
             .toolbar(.hidden, for: .tabBar)
             .task {
                 viewModel.appear()
@@ -86,7 +75,8 @@ struct TMDailyPlanIntroView<ViewModel: DailyPlanIntroViewModelProtocol>: View {
             countdownSeconds: viewModel.countdownSeconds,
             actionTitle: viewModel.actionTitleKey.map { LocalizedStringKey($0) },
             actionDisabled: viewModel.actionDisabled,
-            onAction: viewModel.performAction
+            onAction: viewModel.performAction,
+            flowActions: flowActions
         ) {
             demonstration
         } targets: {
@@ -96,22 +86,22 @@ struct TMDailyPlanIntroView<ViewModel: DailyPlanIntroViewModelProtocol>: View {
         }
     }
 
-    // MARK: - Content
-
-    /// Debug builds only: skips the intro narration and opens the session at once. It sits at the
-    /// top left under the navigation bar, clear of the centred title.
-    @ViewBuilder
-    private var debugStartButton: some View {
-        #if DEBUG
-        if viewModel.countdownSeconds == nil {
-            TMDebugActionButton(title: "debug.startExercise", symbol: "forward.end.fill") {
-                viewModel.startWithoutNarration()
-            }
-            .padding(.top, 8)
-            .padding(.leading, 24)
+    /// Pause, End and Skip, except while the plan's countdown runs; the rest page around that
+    /// intro shows its own.
+    private var flowActions: TMTherapyIntroFlowActions? {
+        guard viewModel.showsFlowActions else {
+            return nil
         }
-        #endif
+
+        return TMTherapyIntroFlowActions(
+            paused: viewModel.narrationPaused,
+            pause: viewModel.togglePause,
+            stop: viewModel.exit,
+            skip: viewModel.skip
+        )
     }
+
+    // MARK: - Content
 
     /// Each exercise's own instruction video or animation.
     @ViewBuilder
@@ -228,14 +218,17 @@ private final class MockDailyPlanIntroViewModel: DailyPlanIntroViewModelProtocol
     let actionDisabled = false
     let isPreparingSession = false
     let readinessMessageKey: String? = nil
+    let showsFlowActions = true
+    let narrationPaused = false
 
     func appear() {}
     func disappear() {}
     func pauseNarration() {}
+    func togglePause() {}
     func becameActive() {}
     func performAction() {}
-    func back() {}
-    func startWithoutNarration() {}
+    func exit() {}
+    func skip() {}
 }
 
 /// The page renders only with a plan row, so this preview checks that the screen builds

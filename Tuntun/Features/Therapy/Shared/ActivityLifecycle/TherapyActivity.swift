@@ -62,6 +62,8 @@ struct MovementSnapshot {
     var trackingMessage: String?
     /// Counts completed start and target captures; each increase pops the capture circle.
     var captureCompletions = 0
+    /// Seconds of scored practice in the current set, credited from fresh tracked frames only.
+    var practiceSeconds = 0.0
 }
 
 struct ReachSnapshot {
@@ -113,6 +115,16 @@ enum ActivityPresentation {
         case .movement(let value): return value.phase == .countdown ? value.seconds : nil
         case .reach(let value): return value.phase == .countdown ? value.seconds : nil
         case .timed(let value): return value.countdownSeconds
+        }
+    }
+
+    /// Seconds of practice credited in the current set, saved as the set's practice time.
+    var practiceSeconds: Double {
+        switch self {
+        case .towel(let value): return value.practiceSeconds
+        case .movement(let value): return value.practiceSeconds
+        case .reach(let value): return value.practiceSeconds
+        case .timed(let value): return value.seconds
         }
     }
 
@@ -264,7 +276,8 @@ func fixedBubbleRadius(diameter: Double, aspect: Double, viewport: TherapyViewpo
         return 0.05
     }
 
-    let height = min(viewport.height, viewport.width / aspect)
+    // The preview fills its frame (aspect-fill), as `CameraDisplayGeometry` maps it.
+    let height = max(viewport.height, viewport.width / aspect)
 
     return diameter / (height * 2)
 }

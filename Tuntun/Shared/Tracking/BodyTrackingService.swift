@@ -39,6 +39,10 @@ final class BodyTrackingService: NSObject, AVCaptureVideoDataOutputSampleBufferD
     /// Keeps tracking the patient while bystanders are in view. Confined to `inferenceQueue`.
     private var subjects = BodySubjectSelector()
     private var lastInferenceFailure = 0.0
+    /// The last logged selection, so the log follows changes and is otherwise throttled to 1 s.
+    /// Confined to `inferenceQueue`.
+    private var lastLoggedDecision: BodySubjectSelector.Decision?
+    private var lastSelectionLog = 0.0
     private var watchdogIdentity = UUID()
     private var frameWatchdog: DispatchWorkItem?
     private var awaitingFirstFrame = false
@@ -363,11 +367,11 @@ final class BodyTrackingService: NSObject, AVCaptureVideoDataOutputSampleBufferD
             let people = handEnabled ? [] : (request.results ?? [])
             let personPoints = people.map { (try? $0.recognizedPoints(.all)) ?? [:] }
             let imageAspect = Double(CVPixelBufferGetWidth(image)) / Double(CVPixelBufferGetHeight(image))
-            let subject = subjects.select(
-                personPoints.map { Self.candidate(for: $0, aspect: imageAspect, originalY: originalY) },
-                at: time,
-                generation: generation
-            )
+            let candidates = personPoints.map {
+                Self.candidate(for: $0, aspect: imageAspect, originalY: originalY)
+            }
+            let subject = subjects.select(candidates, at: time, generation: generation)
+            logSelection(candidates, subject: subject, at: time)
 
             if clips.claimFrame(at: time) {
                 clips.offer(image, time: time, heads: clipHeads(personPoints, originalY: originalY))
@@ -433,6 +437,40 @@ final class BodyTrackingService: NSObject, AVCaptureVideoDataOutputSampleBufferD
                 personCount: 0, joints: [:]
             ))
         }
+    }
+
+    /// Logs which rule picked the patient, on every change and at most once a second otherwise,
+    /// so a session that stops following the patient can be told apart from a body Vision misses.
+    private func logSelection(
+        _ candidates: [BodySubjectSelector.Candidate],
+        subject: Int?,
+        at time: Double
+    ) {
+        let decision = subjects.lastDecision
+
+        guard decision != lastLoggedDecision || time - lastSelectionLog >= 1 else {
+            return
+        }
+
+        lastLoggedDecision = decision
+        lastSelectionLog = time
+
+        let trackable = candidates.filter { $0.torso.x.isFinite && $0.torso.y.isFinite }.count
+        let anchorAge = subjects.anchorAge(at: time).map { String(format: "%.1f", $0) } ?? "none"
+        let chosen = subject.map { index in
+            let candidate = candidates[index]
+            return String(
+                format: "torso=(%.2f, %.2f) size=%.3f",
+                candidate.torso.x,
+                candidate.torso.y,
+                candidate.size
+            )
+        } ?? "none"
+
+        LogManager.shared.info(
+            "Body subject decision=\(decision.rawValue) people=\(candidates.count) trackable=\(trackable) anchorAge=\(anchorAge) epoch=\(subjects.epoch) chosen=\(chosen)",
+            category: .tracking
+        )
     }
 
     /// - Parameters:

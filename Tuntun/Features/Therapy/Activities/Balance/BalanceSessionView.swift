@@ -29,6 +29,8 @@ struct TMBalanceSessionView<ViewModel: BalanceSessionViewModelProtocol>: View {
 
     /// Set when End was tapped on the live screen, so the pause dialog opens on its confirmation.
     @State private var endRequested = false
+    /// Pause on the finished page holds the plan's automatic move to the long rest.
+    @State private var completionHeld = false
     @State private var videoBounds: CGRect?
 
     var body: some View {
@@ -43,14 +45,15 @@ struct TMBalanceSessionView<ViewModel: BalanceSessionViewModelProtocol>: View {
             if model.allSetsDone {
                 allDonePage
                     .zIndex(2)
-            } else if let cue = model.restCueKey {
+            } else if let breath = model.restBreath {
                 TMTherapyBreathingRest(
-                    cue: LocalizedStringKey(cue),
-                    intensity: model.restIntensity,
+                    cue: LocalizedStringKey(breath.phase.key),
+                    intensity: breath.intensity,
                     animationDuration: 1,
                     paused: model.paused,
                     pause: model.pause,
-                    stop: requestEnd
+                    stop: requestEnd,
+                    skip: model.skipRest
                 )
                 .zIndex(2)
             }
@@ -70,9 +73,6 @@ struct TMBalanceSessionView<ViewModel: BalanceSessionViewModelProtocol>: View {
             debugFinishButton
                 .zIndex(4)
 
-            debugSkipRestButton
-                .zIndex(4)
-
             loadingOverlay
                 .zIndex(5)
         }
@@ -84,10 +84,10 @@ struct TMBalanceSessionView<ViewModel: BalanceSessionViewModelProtocol>: View {
         .toolbar(.hidden, for: .navigationBar)
         .toolbar(.hidden, for: .tabBar)
         .task { await model.start(permissionService: permissionService) }
-        .task(id: automaticallyRests && scenePhase == .active) {
-            guard automaticallyRests, scenePhase == .active else { return }
+        .task(id: automaticallyContinues && scenePhase == .active) {
+            guard automaticallyContinues, scenePhase == .active else { return }
             try? await Task.sleep(for: DailyPlanTiming.completionPreview)
-            guard !Task.isCancelled, automaticallyRests else { return }
+            guard !Task.isCancelled, automaticallyContinues else { return }
             leave()
         }
         .onDisappear { model.stop() }
@@ -138,27 +138,12 @@ struct TMBalanceSessionView<ViewModel: BalanceSessionViewModelProtocol>: View {
         #endif
     }
 
-    /// Debug builds only: ends the running rest between sets and starts the next set's countdown.
-    @ViewBuilder
-    private var debugSkipRestButton: some View {
-        #if DEBUG
-        if model.restCueKey != nil, !model.paused, !model.allSetsDone {
-            TMDebugSkipRestButton {
-                model.skipRestForDebug()
-            }
-        }
-        #endif
-    }
-
     // MARK: - Live
 
     private var live: some View {
         TMTherapyExerciseLiveLayout(
-            heading: model.calibrationMessage == nil
-                ? heading
-                : TMTherapyExerciseHeading(eyebrow: eyebrow, title: Text("stage.calibration")),
+            heading: model.calibrationMessage == nil ? heading : .calibration,
             cuePlacement: .video(videoBounds),
-            demoTitle: "session.followMovement",
             repetitions: (model.snapshot.metrics.completedTouches, model.snapshot.goal),
             sets: (model.setNumber, model.totalSets),
             pauseTitle: "session.pauseAction",
@@ -200,6 +185,11 @@ struct TMBalanceSessionView<ViewModel: BalanceSessionViewModelProtocol>: View {
 
             cameraStatus
         }
+        .trackingStatusChip(
+            model.trackingPositioned,
+            muted: model.trackingMuted,
+            videoBounds: videoBounds
+        )
         .background(TherapyPalette.canvas)
         .background {
             GeometryReader { proxy in
@@ -356,15 +346,27 @@ struct TMBalanceSessionView<ViewModel: BalanceSessionViewModelProtocol>: View {
         model.allSetsDone && plan.hasAutomaticRest
     }
 
+    /// The plan moves on by itself unless Pause holds the finished page.
+    private var automaticallyContinues: Bool {
+        automaticallyRests && !completionHeld
+    }
+
     private var allDonePage: some View {
         TMTherapySetSummary(
             heading: heading,
             headline: Text("session.allDoneTitle"),
+            total: AppLanguage.selected.attributedString("session.total \(repetitionsDone)"),
             message: Text("session.allDoneMessage"),
-            results: results,
-            total: Text("session.total \(repetitionsDone)")
+            results: results
         ) {
-            if !automaticallyRests {
+            if automaticallyRests {
+                TMTherapyFlowActions(
+                    paused: completionHeld,
+                    pause: { completionHeld.toggle() },
+                    stop: leaveAndEndPlan,
+                    skip: leave
+                )
+            } else {
                 TMTherapyFinishActions(
                     title: plan.isRunning ? "plan.nextContinue" : "balance.completion.end",
                     symbol: plan.isRunning ? "play.fill" : nil,
@@ -414,7 +416,6 @@ struct TMBalanceSessionView<ViewModel: BalanceSessionViewModelProtocol>: View {
                 return
             }
 
-            plan.markBalanceScriptRest(model.usesScript)
             plan.finish(completed: completed)
         }
     }
@@ -436,6 +437,16 @@ struct TMBalanceSessionView<ViewModel: BalanceSessionViewModelProtocol>: View {
     }
 
     /// Without camera access the session never started, so a running plan ends here.
+    /// End on the finished page: the result counts as it would on moving on, then the plan ends.
+    private func leaveAndEndPlan() {
+        let completed = model.allSetsDone
+
+        Task {
+            await model.end()
+            plan.finishAndEnd(completed: completed)
+        }
+    }
+
     private func leaveWithoutResult() {
         guard plan.isRunning else {
             router.closeSession()

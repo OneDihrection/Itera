@@ -18,6 +18,9 @@ protocol DailyPlanSessionReporting: AnyObject {
 
     /// Called by a session's finishing action. Only a session that reached its goal counts.
     func finish(completed: Bool)
+    /// End on a finished page: records the result as `finish(completed:)` does, then ends the
+    /// run instead of resting before the next exercise.
+    func finishAndEnd(completed: Bool)
     /// Leaving before a session could start ends the run.
     func end()
     func markFingerScriptRest(_ side: HandSide?)

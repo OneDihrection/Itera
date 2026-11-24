@@ -17,7 +17,6 @@ struct TMPracticePreferencesView<ViewModel: PracticePreferencesViewModelProtocol
     @AppStorage(PracticePreferences.buttonSounds) private var buttonSounds = true
 
     @AppStorage(PracticePreferences.celebrationSounds) private var celebrationSounds = true
-    @AppStorage(PracticePreferences.patientName) private var patientName = ""
     // Defaults carry over a choice made with the earlier settings.
     @AppStorage(PracticePreferences.replayRecording) private var replayRecording = PracticePreferences.replayRecordingLevel
     @AppStorage(PracticePreferences.videoCensoring) private var videoCensoring = PracticePreferences.videoCensoringChoice
@@ -31,48 +30,19 @@ struct TMPracticePreferencesView<ViewModel: PracticePreferencesViewModelProtocol
         Form {
             exercisesSection
             restSection
-            Section {
-                TMLanguageSelector(language: $language)
-                    .frame(minHeight: 64)
-            } header: {
-                Text("language.title").typography(.headline)
-            }
+            languageSection
             voiceSection
-            Section {
-                TextField("settings.patientName", text: $patientName)
-                    .textContentType(.name)
-                    .autocorrectionDisabled()
-                    .frame(minHeight: 64)
-            } header: {
-                Text("settings.patientNameTitle").typography(.headline)
-            } footer: {
-                Text("settings.patientNameHelp").typography(.body)
-            }
             recordingSection
-            Section {
-                Toggle("cognitive.calm", isOn: $calmMode)
-                    .frame(minHeight: 64)
-            } footer: {
-                Text("cognitive.calmHelp").typography(.body)
-            }
-            Section {
-                Picker("music.title", selection: $musicTrack) {
-                    ForEach(ExerciseMusicTrack.allCases) { track in
-                        Text(LocalizedStringKey(track.titleKey)).tag(track.rawValue)
-                    }
-                }
-                .frame(minHeight: 64)
-                Toggle("cognitive.clicks", isOn: $buttonSounds)
-                    .frame(minHeight: 64)
-                Toggle("cognitive.celebrationSounds", isOn: $celebrationSounds)
-                    .frame(minHeight: 64)
-            } footer: {
-                Text("cognitive.soundHelp").typography(.body)
-            }
+            displaySection
+            soundSection
         }
         .environment(\.editMode, .constant(arranging ? .active : .inactive))
+        .scrollContentBackground(.hidden)
+        .background(TherapyPalette.canvas)
+        .listSectionSpacing(24)
         .typography(.body)
-        .tint(TherapyPalette.green)
+        // Yellow is too light for checkmarks and chevrons on white; switches use it below.
+        .tint(TherapyPalette.brandInk)
         .navigationTitle("cognitive.settings")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
@@ -84,7 +54,6 @@ struct TMPracticePreferencesView<ViewModel: PracticePreferencesViewModelProtocol
                     .frame(minHeight: 64)
             }
         }
-        .presentationDetents([.large])
         .onAppear { viewModel.refreshPermissions() }
         // Returning from the system Settings updates the voice row.
         .onChange(of: scenePhase) { _, phase in
@@ -94,6 +63,14 @@ struct TMPracticePreferencesView<ViewModel: PracticePreferencesViewModelProtocol
 
             viewModel.refreshPermissions()
         }
+    }
+
+    // MARK: - Styling
+
+    private func footer(_ key: LocalizedStringKey) -> some View {
+        Text(key)
+            .typography(.footnote)
+            .foregroundStyle(TherapyPalette.muted)
     }
 
     // MARK: - Exercises
@@ -125,27 +102,21 @@ struct TMPracticePreferencesView<ViewModel: PracticePreferencesViewModelProtocol
         } header: {
             exercisesHeader
         } footer: {
-            Text(arranging ? "settings.arrangeHelp" : "settings.planExercisesHelp")
-                .typography(.body)
+            footer(arranging ? "settings.arrangeHelp" : "settings.planExercisesHelp")
         }
+        .listRowBackground(TherapyPalette.progressCanvas)
     }
 
     private var exercisesHeader: some View {
-        HStack {
-            Text("settings.planExercisesTitle")
-                .typography(.headline)
-
-            Spacer()
-
+        TMSettingsSectionHeader(title: "settings.planExercisesTitle", symbol: "figure.arms.open") {
             Button(arranging ? "action.done" : "settings.arrange") {
                 withAnimation {
                     arranging.toggle()
                 }
             }
             .typography(.headline)
-            .textCase(nil)
             // Section headers draw text in the secondary style; keep the action visibly tappable.
-            .foregroundStyle(TherapyPalette.green)
+            .foregroundStyle(TherapyPalette.brandInk)
             .frame(minHeight: 44)
         }
     }
@@ -155,6 +126,7 @@ struct TMPracticePreferencesView<ViewModel: PracticePreferencesViewModelProtocol
             Text(LocalizedStringKey(viewModel.titleKey(for: item)))
                 .typography(.headline)
         }
+        .tint(TherapyPalette.brand)
         .frame(minHeight: 64)
     }
 
@@ -176,13 +148,23 @@ struct TMPracticePreferencesView<ViewModel: PracticePreferencesViewModelProtocol
                 .typography(.body)
                 .foregroundStyle(.secondary)
         }
-        .opacity(entry.isShown ? 1 : 0.6)
+        .opacity(isShown(entry, item: item) ? 1 : 0.6)
         .accessibilityElement(children: .combine)
+    }
+
+    /// Hidden in Arrange, or with 0 sets or repetitions, which also hides the exercise. Its
+    /// controls stay open, so raising the count to 1 shows it again.
+    private func isShown(_ entry: DailyPlanLayout.Entry, item: DailyPlanItem) -> Bool {
+        let counts = viewModel.counts(for: item)
+
+        return entry.isShown
+            && counts.sets > 0
+            && counts.repetitions > 0
     }
 
     @ViewBuilder
     private func exerciseSummary(_ entry: DailyPlanLayout.Entry, item: DailyPlanItem) -> some View {
-        if entry.isShown {
+        if isShown(entry, item: item) {
             let counts = viewModel.counts(for: item)
 
             HStack(spacing: 6) {
@@ -286,11 +268,11 @@ struct TMPracticePreferencesView<ViewModel: PracticePreferencesViewModelProtocol
                 showsBackground: false
             )
         } header: {
-            Text("settings.restTitle").typography(.headline)
+            TMSettingsSectionHeader(title: "settings.restTitle", symbol: "timer")
         } footer: {
-            Text("settings.restHelp \(viewModel.longRestBreaths * Int(LongRestBreath.cycleDuration))")
-                .typography(.body)
+            footer("settings.restHelp \(viewModel.longRestBreaths * Int(LongRestBreath.cycleDuration))")
         }
+        .listRowBackground(TherapyPalette.progressCanvas)
     }
 
     private var shortRestBinding: Binding<Int> {
@@ -307,6 +289,18 @@ struct TMPracticePreferencesView<ViewModel: PracticePreferencesViewModelProtocol
         )
     }
 
+    // MARK: - Language
+
+    private var languageSection: some View {
+        Section {
+            TMLanguageSelector(language: $language)
+                .frame(minHeight: 64)
+        } header: {
+            TMSettingsSectionHeader(title: "language.title", symbol: "globe")
+        }
+        .listRowBackground(TherapyPalette.progressCanvas)
+    }
+
     // MARK: - Voice control
 
     /// Voice control cannot be switched off: the toggle shows whether permissions allow it, and
@@ -314,6 +308,7 @@ struct TMPracticePreferencesView<ViewModel: PracticePreferencesViewModelProtocol
     private var voiceSection: some View {
         Section {
             Toggle("plan.voice", isOn: voiceBinding)
+                .tint(TherapyPalette.brand)
                 .frame(minHeight: 64)
 
             if let actionKey = viewModel.voiceFallback?.actionKey {
@@ -325,10 +320,11 @@ struct TMPracticePreferencesView<ViewModel: PracticePreferencesViewModelProtocol
                 .frame(minHeight: 64)
             }
         } header: {
-            Text("plan.voice").typography(.headline)
+            TMSettingsSectionHeader(title: "plan.voice", symbol: "mic.fill")
         } footer: {
             voiceFooter
         }
+        .listRowBackground(TherapyPalette.progressCanvas)
     }
 
     private var voiceBinding: Binding<Bool> {
@@ -350,7 +346,7 @@ struct TMPracticePreferencesView<ViewModel: PracticePreferencesViewModelProtocol
         if let fallback = viewModel.voiceFallback {
             visibilityWarning(LocalizedStringKey(fallback.messageKey))
         } else {
-            Text("settings.voiceHelp").typography(.body)
+            footer("settings.voiceHelp")
         }
     }
 
@@ -378,21 +374,22 @@ struct TMPracticePreferencesView<ViewModel: PracticePreferencesViewModelProtocol
                 .frame(minHeight: 64)
             }
         } header: {
-            Text("settings.recordingTitle").typography(.headline)
+            TMSettingsSectionHeader(title: "settings.recordingTitle", symbol: "video.fill")
         } footer: {
             recordingFooter
         }
+        .listRowBackground(TherapyPalette.progressCanvas)
     }
 
     @ViewBuilder
     private var recordingFooter: some View {
         switch (replayRecording, videoCensoring) {
         case (.off, _):
-            Text("settings.recordingOffHelp").typography(.body)
+            footer("settings.recordingOffHelp")
         case (.skeleton, _):
-            Text("settings.recordingSkeletonHelp").typography(.body)
+            footer("settings.recordingSkeletonHelp")
         case (.video, .both):
-            Text("settings.recordingVideoHelp").typography(.body)
+            footer("settings.recordingVideoHelp")
         case (.video, .face):
             visibilityWarning("settings.recordingWarningBackground")
         case (.video, .background):
@@ -402,9 +399,48 @@ struct TMPracticePreferencesView<ViewModel: PracticePreferencesViewModelProtocol
         }
     }
 
+    // MARK: - Display and sound
+
+    private var displaySection: some View {
+        Section {
+            Toggle("cognitive.calm", isOn: $calmMode)
+                .tint(TherapyPalette.brand)
+                .frame(minHeight: 64)
+        } header: {
+            TMSettingsSectionHeader(title: "settings.displayTitle", symbol: "eye")
+        } footer: {
+            footer("cognitive.calmHelp")
+        }
+        .listRowBackground(TherapyPalette.progressCanvas)
+    }
+
+    private var soundSection: some View {
+        Section {
+            Picker("music.title", selection: $musicTrack) {
+                ForEach(ExerciseMusicTrack.allCases) { track in
+                    Text(LocalizedStringKey(track.titleKey)).tag(track.rawValue)
+                }
+            }
+            .frame(minHeight: 64)
+
+            Toggle("cognitive.clicks", isOn: $buttonSounds)
+                .tint(TherapyPalette.brand)
+                .frame(minHeight: 64)
+
+            Toggle("cognitive.celebrationSounds", isOn: $celebrationSounds)
+                .tint(TherapyPalette.brand)
+                .frame(minHeight: 64)
+        } header: {
+            TMSettingsSectionHeader(title: "settings.soundTitle", symbol: "speaker.wave.2.fill")
+        } footer: {
+            footer("cognitive.soundHelp")
+        }
+        .listRowBackground(TherapyPalette.progressCanvas)
+    }
+
     private func visibilityWarning(_ key: LocalizedStringKey) -> some View {
         Label(key, systemImage: "exclamationmark.triangle")
-            .typography(.body)
+            .typography(.footnote)
             .foregroundStyle(TherapyPalette.warning)
     }
 }

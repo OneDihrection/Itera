@@ -33,10 +33,8 @@ struct TMDailyPlanNextView<
     @State private var paused = false
     /// The long rest's breath count, fixed when the page opens so a rest never changes length.
     @State private var breathCount: Int
-    #if DEBUG
-    /// Counts debug skips; each one restarts the transition loop from the stage it jumped to.
-    @State private var debugSkips = 0
-    #endif
+    /// Counts skips; each one restarts the transition loop from the stage it jumped to.
+    @State private var skips = 0
 
     private static var countdownDuration: Double { 10.0 }
 
@@ -87,6 +85,9 @@ struct TMDailyPlanNextView<
                     countdownSeconds: usesNextScript ? nil : countdownSeconds,
                     automatic: usesNextScript
                 )
+                    .safeAreaInset(edge: .bottom, spacing: 0) {
+                        countdownActions
+                    }
                     .environment(\.colorScheme, .light)
                     .transition(.opacity)
             } else {
@@ -99,13 +100,11 @@ struct TMDailyPlanNextView<
                     intensity: breath?.intensity ?? 0.25,
                     paused: paused,
                     togglePause: { paused.toggle() },
-                    stop: stop
+                    stop: stop,
+                    skip: skipRest
                 )
                 .transition(.opacity)
             }
-        }
-        .overlay {
-            debugSkipControls
         }
         .animation(reduceMotion ? nil : .easeInOut(duration: 0.25), value: showingNextIntro)
         .onReceive(viewModel.audioEvents) { event in
@@ -123,17 +122,11 @@ struct TMDailyPlanNextView<
         }
     }
 
-    /// Restarts the transition loop when it pauses or resumes and, in Debug builds, after a skip:
-    /// the loop keeps its start time locally, so a jump needs a fresh run to time the new stage.
-    #if DEBUG
+    /// Restarts the transition loop when it pauses or resumes and after a skip: the loop keeps
+    /// its start time locally, so a jump needs a fresh run to time the new stage.
     private var transitionRunID: [Int] {
-        [paused || scenePhase != .active ? 1 : 0, debugSkips]
+        [paused || scenePhase != .active ? 1 : 0, skips]
     }
-    #else
-    private var transitionRunID: Bool {
-        paused || scenePhase != .active
-    }
-    #endif
 
     private func runTransition() async {
         if !audioPrepared {
@@ -395,48 +388,43 @@ struct TMDailyPlanNextView<
         return String(localized: key, bundle: language.resourceBundle, locale: language.locale)
     }
 
-    // MARK: - Debug
+    // MARK: - Skip
 
-    /// Debug builds only: "Skip rest" while breathing, then "Skip countdown" on the next intro's
-    /// countdown. A scripted next intro has no countdown; its own debug start skips its brief.
+    /// Pause, End and Skip under the next intro's countdown. The countdown is timed here, so this
+    /// page owns them; a scripted next intro reads its brief and shows its own.
     @ViewBuilder
-    private var debugSkipControls: some View {
-        #if DEBUG
-        if paused || scenePhase != .active {
-            EmptyView()
-        } else if !showingNextIntro {
-            TMDebugSkipRestButton(action: skipRestForDebug)
-        } else if !usesNextScript {
-            TMDebugActionButton(title: "debug.skipCountdown", symbol: "forward.end.fill") {
-                skipCountdownForDebug()
-            }
-            .padding(.top, 24)
-            .padding(.trailing, 48)
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
+    private var countdownActions: some View {
+        if !usesNextScript {
+            TMTherapyFlowActions(
+                paused: paused,
+                pause: { paused.toggle() },
+                stop: stop,
+                skip: skipCountdown
+            )
+            .padding(.vertical, 16)
+            .frame(maxWidth: .infinity)
+            .background(TherapyPalette.progressCanvas)
         }
-        #endif
     }
 
-    #if DEBUG
     /// Leaves the breathing for the next exercise's intro, as the loop does after `.exerciseName`:
     /// music and the current line stop, and a fresh loop times the intro from zero.
-    private func skipRestForDebug() {
+    private func skipRest() {
         viewModel.stopMusic()
         viewModel.cancelSpeech()
         narrationID = nil
         narrationFinished = false
         stage = .countdownIntro
         elapsed = 0
-        debugSkips += 1
+        skips += 1
     }
 
     /// Ends the after-rest countdown and opens the session, exactly as the countdown's end does.
     /// The plan clears its resting flag, so a late loop iteration cannot launch it again.
-    private func skipCountdownForDebug() {
+    private func skipCountdown() {
         viewModel.cancelSpeech()
         viewModel.launchAfterRest()
     }
-    #endif
 
     private func stop() {
         viewModel.stopMusic()
